@@ -1,0 +1,67 @@
+{
+  "info": {
+    "name": "package-install",
+    "version": "1.0.0"
+  },
+  "install": [
+    {
+      "type": "exec",
+      "command": [
+        "touch",
+        "postinstall.log"
+      ]
+    },
+    {
+      "type": "exec",
+      "command": [
+        "sh",
+        "-c",
+        "echo @{DIR} > ${LEAF_TARGET_FILE}"
+      ],
+      "env": {
+        "LEAF_TARGET_FILE": "targetFileFromEnv"
+      }
+    },
+    {
+      "type": "exec",
+      "command": [
+        "env"
+      ],
+      "env": {
+        "LEAF_FOO": "/FOO/BAR"
+      }
+    },
+    {
+      "type": "exec",
+      "command": [
+        "mkdir",
+        "folder2"
+      ]
+    },
+    {
+      "type": "link",
+      "target": "folder/data2",
+      "name": "folder2/data2-symlink"
+    },
+    {
+      "type": "copy",
+      "source": "@{DIR}/folder/data2",
+      "destination": "data2-copy"
+    },
+    {
+      "type": "download",
+      "relativeUrl": "package-env_1.0.0.tar.xz",
+      "filename": "downloadedFile"
+    },
+    {
+      "type": "download",
+      "relativeUrl": "package-env_1.0.0.tar.xz"
+    },
+    {
+      "type": "delete",
+      "files": [
+        "folder/data2-hardlink"
+      ]
+    }
+  ]
+}

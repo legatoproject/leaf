@@ -1,0 +1,11 @@
+{
+  "info": {
+    "name": "package-deb",
+    "version": "1.0.1",
+    "depends": {
+      "deb": [
+        "git-core"
+      ]
+    }
+  }
+}

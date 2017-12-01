@@ -1,0 +1,13 @@
+{
+  "info": {
+    "name": "container",
+    "version": "1.0.0",
+    "description": "My master container",
+    "master": true,
+    "depends": {
+      "leaf": [
+        "package_1.0.0"
+      ]
+    }
+  }
+}

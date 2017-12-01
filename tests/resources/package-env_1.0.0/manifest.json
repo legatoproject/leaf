@@ -1,0 +1,10 @@
+{
+  "info": {
+    "name": "package-env",
+    "version": "1.0.0"
+  },
+  "env": {
+    "LEAF_ENV": "FOO",
+    "PATH": "$PATH:@{DIR}/folder"
+  }
+}

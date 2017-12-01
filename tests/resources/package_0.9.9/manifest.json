@@ -1,0 +1,14 @@
+{
+  "info": {
+    "name": "package",
+    "version": "0.9.9"
+  },
+  "install": [
+    {
+      "type": "exec",
+      "command": [
+        "false"
+      ]
+    }
+  ]
+}

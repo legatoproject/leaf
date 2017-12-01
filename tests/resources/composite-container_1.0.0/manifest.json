@@ -1,0 +1,14 @@
+{
+  "info": {
+    "name": "composite-container",
+    "version": "1.0.0",
+    "description": "My composite container",
+    "master": true,
+    "depends": {
+      "leaf": [
+        "package_1.0.0",
+        "composite-package_1.0.0"
+      ]
+    }
+  }
+}
