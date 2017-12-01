@@ -9,11 +9,13 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 
 '''
+__version__ = 0.1
+MIN_PYTHON_VERSION = (3, 5)
+
 from _collections import OrderedDict
 import apt
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import argparse
-from builtins import str, filter, map
 import datetime
 from functools import total_ordering
 import hashlib
@@ -32,10 +34,7 @@ from urllib.parse import urlparse, urlunparse
 import urllib.request
 
 
-__version__ = 0.1
-
-
-class LeafConstants(object):
+class LeafConstants():
     '''
     Constants needed by Leaf
     '''
@@ -53,7 +52,7 @@ class LeafConstants(object):
     VAR_DIR = 'DIR'
 
 
-class JsonConstants(object):
+class JsonConstants():
     '''
     Constants for Json grammar
     '''
@@ -110,7 +109,7 @@ class JsonConstants(object):
     INFO_SUPPORTEDOS = 'supportedOs'
 
 
-class LeafUtils(object):
+class LeafUtils():
     '''
     Useful simple methods
     '''
@@ -119,6 +118,18 @@ class LeafUtils(object):
                  '.bz2': 'bz2',
                  '.tgz': 'gz',
                  '.gz': 'gz'}
+
+    @staticmethod
+    def jsonGet(json, path, default=None):
+        '''
+        Utility to browse json and reduce None testing
+        '''
+        if path is None or len(path) == 0:
+            return json
+        k = path[0]
+        if not isinstance(json, dict) or k not in json:
+            return default
+        return LeafUtils.jsonGet(json.get(k), path[1:], default)
 
     @staticmethod
     def isFolderIgnored(folder):
@@ -135,11 +146,11 @@ class LeafUtils(object):
         return out
 
     @staticmethod
-    def guessCompression(path):
+    def guessCompression(path, prefix=""):
         '''
         Guess the compression from the file extension
         '''
-        return LeafUtils._LEAF_EXT.get(path.suffix, 'xz')
+        return prefix + LeafUtils._LEAF_EXT.get(path.suffix, 'xz')
 
     @staticmethod
     def now():
@@ -160,6 +171,7 @@ class LeafUtils(object):
             pi = PackageIdentifier.fromString(motif)
             if pi is None:
                 for pi in sorted(filter(lambda pi: pi.name == motif, contentDict.keys())):
+                    # loop to get the last item
                     pass
             if pi is not None and pi not in out:
                 out.append(pi)
@@ -183,19 +195,12 @@ class LeafUtils(object):
         '''
         List all apt missing packages needed by given leaf available packages
         '''
-        out = []
+        out = set()
         cache = apt.Cache()
         for ap in availablePackages:
-            info = ap.getNodeInfo()
-            depends = info.get(JsonConstants.INFO_DEPENDS)
-            if depends is not None:
-                debs = depends.get(JsonConstants.INFO_DEPENDS_DEB)
-                if debs is not None:
-                    for deb in debs:
-                        if deb not in out:
-                            if deb not in cache or not cache[deb].installed:
-                                out.append(deb)
-        return out
+            out.update(LeafUtils.jsonGet(
+                ap.getNodeInfo(), [JsonConstants.INFO_DEPENDS, JsonConstants.INFO_DEPENDS_DEB], []))
+        return [deb for deb in out if deb not in cache or not cache[deb].installed]
 
     @staticmethod
     def getDependencies(piList, content, outList):
@@ -259,7 +264,7 @@ class LeafUtils(object):
             if len(inList) == 0:
                 break
             elif len(packagesWithSatisfiedDependencies) == 0:
-                raise ValueError('Dependency error: ' +
+                raise ValueError('Dependency error:',
                                  ', '.join(str(m.getIdentifier()) for m in inList))
         if masterFirst:
             outList.reverse()
@@ -305,12 +310,12 @@ class LeafUtils(object):
             print("File downloaded", targetFile)
             if sha1sum is not None and sha1sum != LeafUtils.sha1sum(targetFile):
                 raise ValueError(
-                    "Invalid SHA1 sum for " + targetFile.name + ", expecting " + sha1sum)
+                    "Invalid SHA1 sum for", targetFile.name, ", expecting", sha1sum)
         return targetFile
 
 
 @total_ordering
-class PackageIdentifier (object):
+class PackageIdentifier ():
 
     _REGEX = re.compile('^([a-zA-Z-]+)$')
     _SEPARATOR = '_'
@@ -328,7 +333,7 @@ class PackageIdentifier (object):
 
     def __init__(self, name, version):
         if not PackageIdentifier.isValidName(name):
-            raise ValueError("Invalid package name: " + name)
+            raise ValueError("Invalid package name: ", name)
         self.name = name
         self.version = version
 
@@ -355,7 +360,7 @@ class PackageIdentifier (object):
         return self.name < other.name
 
 
-class Manifest(object):
+class Manifest():
     '''
     Represent a Manifest model object
     '''
@@ -386,15 +391,10 @@ class Manifest(object):
         return JsonConstants.INFO_MASTER in info and info[JsonConstants.INFO_MASTER]
 
     def getLeafDepends(self):
-        out = []
-        info = self.getNodeInfo()
-        depends = info.get(JsonConstants.INFO_DEPENDS)
-        if depends is not None:
-            leaf = depends.get(JsonConstants.INFO_DEPENDS_LEAF)
-            if leaf is not None:
-                for pis in leaf:
-                    out.append(PackageIdentifier.fromString(pis))
-        return out
+        return map(PackageIdentifier.fromString,
+                   LeafUtils.jsonGet(self.getNodeInfo(),
+                                     [JsonConstants.INFO_DEPENDS,
+                                         JsonConstants.INFO_DEPENDS_LEAF], []))
 
     def getSupportedModules(self):
         return self.getNodeInfo().get(JsonConstants.INFO_SUPPORTEDMODULES)
@@ -461,21 +461,18 @@ class InstalledPackage(Manifest):
         return "{pi} [{path}]".format(pi=self.getIdentifier(), path=str(self.folder))
 
     def setDetail(self, key, value):
-        details = self.json.get(JsonConstants.INSTALLED_DETAILS)
-        if details is None:
-            details = {}
-            self.json[JsonConstants.INSTALLED_DETAILS] = details
+        details = LeafUtils.jsonGet(
+            self.json, [JsonConstants.INSTALLED_DETAILS], {})
         details[key] = value
+        self.json[JsonConstants.INSTALLED_DETAILS] = details
         with open(str(self.folder / LeafConstants.MANIFEST), 'w') as output:
             json.dump(self.json, output, indent=4, separators=(',', ': '))
 
     def getDetail(self, key):
-        details = self.json.get(JsonConstants.INSTALLED_DETAILS)
-        if details is not None:
-            return details.get(key)
+        return LeafUtils.jsonGet(self.json, [JsonConstants.INSTALLED_DETAILS, key])
 
 
-class StepExecutor(object):
+class StepExecutor():
     '''
     Used to execute post install & pre uninstall steps
     '''
@@ -499,7 +496,6 @@ class StepExecutor(object):
                   installedPackage.getIdentifier())
             self.runSteps(
                 installedPackage.json[JsonConstants.INSTALL], installedPackage)
-        return
 
     def preUninstall(self, installedPackage):
         if JsonConstants.UNINSTALL in installedPackage.json:
@@ -507,7 +503,6 @@ class StepExecutor(object):
                   installedPackage.getIdentifier())
             self.runSteps(
                 installedPackage.json[JsonConstants.UNINSTALL], installedPackage)
-        return
 
     def runSteps(self, stepsJsonArray, ip):
         for step in stepsJsonArray:
@@ -527,12 +522,8 @@ class StepExecutor(object):
         command = [self.resolve(arg)
                    for arg in step[JsonConstants.STEP_EXEC_COMMAND]]
         print("Exec:", ' '.join(command))
-        env = os.environ
-        customenv = step.get(JsonConstants.STEP_EXEC_ENV)
-        if customenv is not None:
-            for k, v in customenv.items():
-                env[k] = v
-
+        env = dict(os.environ)
+        env.update(LeafUtils.jsonGet(step, [JsonConstants.STEP_EXEC_ENV], {}))
         stdout = None if self.verbose else subprocess.DEVNULL
         subprocess.run(command,
                        cwd=str(self.targetFolder),
@@ -568,27 +559,27 @@ class StepExecutor(object):
         if JsonConstants.STEP_DOWNLOAD_URL in step:
             url = step[JsonConstants.STEP_DOWNLOAD_URL]
         elif JsonConstants.STEP_DOWNLOAD_RELATIVEURL in step:
-            url = LeafUtils.resolveUrl(ip.getDetail(
-                JsonConstants.INSTALLED_DETAILS_SOURCE), step[JsonConstants.STEP_DOWNLOAD_RELATIVEURL])
+            url = LeafUtils.resolveUrl(ip.getDetail(JsonConstants.INSTALLED_DETAILS_SOURCE),
+                                       step[JsonConstants.STEP_DOWNLOAD_RELATIVEURL])
         else:
             raise ValueError("No url to download")
-
-        filename = step.get(JsonConstants.STEP_DOWNLOAD_FILENAME)
-        sha1sum = step.get(JsonConstants.STEP_DOWNLOAD_SHA1SUM)
-        LeafUtils.download(url, self.targetFolder, filename, sha1sum)
+        LeafUtils.download(url,
+                           self.targetFolder,
+                           step.get(JsonConstants.STEP_DOWNLOAD_FILENAME),
+                           step.get(JsonConstants.STEP_DOWNLOAD_SHA1SUM))
 
     def resolve(self, value, failOnUnknownVariable=True, prefixWithFolder=False):
         out = str(value)
         for key, value in self.variables.items():
             out = out.replace(key, value)
         if failOnUnknownVariable and (LeafConstants.VAR_PREFIX + '{') in out:
-            raise ValueError("Cannot resolve all variables for: " + out)
+            raise ValueError("Cannot resolve all variables for:", out)
         if prefixWithFolder:
             return str(self.targetFolder / out)
         return out
 
 
-class LeafRepository(object):
+class LeafRepository():
     '''
     Methods needed for releng, ie generate packages and maintain repository
     '''
@@ -608,11 +599,10 @@ class LeafRepository(object):
             else:
                 print("Create tar:", manifestFile, "-->", outputFile)
                 with TarFile.open(str(outputFile),
-                                  'w:' +
-                                  LeafUtils.guessCompression(outputFile)) as tf:
+                                  LeafUtils.guessCompression(outputFile, prefix="w:")) as tf:
                     for file in manifestFile.parent.glob('*'):
-                        tf.add(str(file), str(
-                            file.relative_to(manifestFile.parent)))
+                        tf.add(str(file),
+                               str(file.relative_to(manifestFile.parent)))
 
     def index(self, outputFile, artifacts, name=None, description=None, composites=[]):
         '''
@@ -779,7 +769,10 @@ class LeafApp(LeafRepository):
         '''
         content = OrderedDict()
         for remote in self.remoteList():
-            self.fetchUrl(remote, content)
+            try:
+                self.fetchUrl(remote, content)
+            except Exception as e:
+                print("Error fetching:", remote, ":", e)
 
         with open(str(LeafConstants.REMOTES_CACHE_FILE), 'w') as output:
             json.dump(content, output)
@@ -819,11 +812,12 @@ class LeafApp(LeafRepository):
 
         # Check dependencies
         missingAptDepends = LeafUtils.getMissingAptDepends(apToInstall)
-        if len(missingAptDepends) > 0 and not forceInstall:
+        if len(missingAptDepends) > 0:
             print(
                 "Missing some system dependencies. You may have to install them by running:")
             print("$ sudo apt-get install", ' '.join(missingAptDepends))
-            return False
+            if not forceInstall and not downloadOnly:
+                return False
 
         print("Packages to be installed:",
               ', '.join(str(m.getIdentifier()) for m in apToInstall))
@@ -854,7 +848,7 @@ class LeafApp(LeafRepository):
 
         targetFolder = self.getInstallFolder() / str(leafArtifact.getIdentifier())
         if targetFolder.is_dir():
-            raise ValueError("Folder already exists: " + str(targetFolder))
+            raise ValueError("Folder already exists:", targetFolder)
 
         # Create folder
         targetFolder.mkdir(parents=True, exist_ok=False)
@@ -941,7 +935,7 @@ class LeafApp(LeafRepository):
         return out
 
 
-class LeafCli(object):
+class LeafCli():
     _PROG_NAME = os.path.basename(sys.argv[0])
     _PROG_VERSION = "v%s" % __version__
     _PROG_LICENSE = '''
@@ -1004,7 +998,7 @@ USAGE
         subparser.add_argument('--root',
                                dest='root_folder',
                                metavar='DIR',
-                               help="set the root folder (default " + str(LeafConstants.DEFAULT_LEAF_ROOT) + ")")
+                               help="set the root folder, default: " + str(LeafConstants.DEFAULT_LEAF_ROOT))
 
         # CLEAN
 
@@ -1062,7 +1056,7 @@ USAGE
         subparser.add_argument("--force",
                                dest="force",
                                action="store_true",
-                               help="force operation in case of warnings")
+                               help="force installation in case of warnings")
         subparser.add_argument("--download-only",
                                dest="downloadOnly",
                                action="store_true",
@@ -1264,4 +1258,10 @@ USAGE
 
 
 if __name__ == "__main__":
+    # Check python version
+    currentPythonVersion = sys.version_info
+    if (currentPythonVersion[0], currentPythonVersion[1]) < MIN_PYTHON_VERSION:
+        print('Unsuported Python version, please use at least Python %d.%d.' % MIN_PYTHON_VERSION,
+              file=sys.stderr)
+        sys.exit(1)
     sys.exit(LeafCli().execute())
