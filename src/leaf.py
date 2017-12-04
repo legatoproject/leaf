@@ -523,7 +523,11 @@ class StepExecutor():
                    for arg in step[JsonConstants.STEP_EXEC_COMMAND]]
         print("Exec:", ' '.join(command))
         env = dict(os.environ)
-        env.update(LeafUtils.jsonGet(step, [JsonConstants.STEP_EXEC_ENV], {}))
+        for k, v in LeafUtils.jsonGet(step, [JsonConstants.STEP_EXEC_ENV], {}).items():
+            v = self.resolve(v)
+            env[k] = v
+            if self.verbose:
+                print("ENV: %s=%s" % (k, v))
         stdout = None if self.verbose else subprocess.DEVNULL
         subprocess.run(command,
                        cwd=str(self.targetFolder),
@@ -1052,27 +1056,29 @@ USAGE
         # INSTALL
         subparser = newParser(LeafCli._ACTION_INSTALL,
                               "install packages")
-        subparser.add_argument('packages', nargs=argparse.REMAINDER)
-        subparser.add_argument("--force",
+        subparser.add_argument('-f', "--force",
                                dest="force",
                                action="store_true",
                                help="force installation in case of warnings")
-        subparser.add_argument("--download-only",
+        subparser.add_argument('-d', "--download-only",
                                dest="downloadOnly",
                                action="store_true",
                                help="only download artifacts in cache, do not install them")
-        subparser.add_argument("--keep",
+        subparser.add_argument('-k', "--keep",
                                dest="keepOnError",
                                action="store_true",
                                help="keep package folder in case of installation error")
+        subparser.add_argument('packages', nargs=argparse.REMAINDER)
 
         # REMOVE
         subparser = newParser(LeafCli._ACTION_REMOVE,
-                              "remove packages").add_argument('packages', nargs=argparse.REMAINDER)
+                              "remove packages")
+        subparser.add_argument('packages', nargs=argparse.REMAINDER)
 
         # ENV
         subparser = newParser(LeafCli._ACTION_ENV,
-                              "display environment variables exported by packages").add_argument('packages', nargs=argparse.REMAINDER)
+                              "display environment variables exported by packages")
+        subparser.add_argument('packages', nargs=argparse.REMAINDER)
 
         # PACK
         subparser = newParser(LeafCli._ACTION_PACK,
