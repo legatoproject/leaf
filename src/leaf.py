@@ -140,7 +140,7 @@ class LeafUtils():
         oldname = folder.name
         newname = oldname + "_ignored" + str(int(time.time()))
         if LeafUtils._IGNORED_PATTERN.match(newname) is None:
-            raise ValueError('Invalid ignored folder name', newname)
+            raise ValueError('Invalid ignored folder name: ' + newname)
         out = folder.parent / newname
         folder.rename(out)
         return out
@@ -177,7 +177,7 @@ class LeafUtils():
                 out.append(pi)
             else:
                 raise ValueError(
-                    "Cannot findPackageIdentifiers package matching:", motif)
+                    "Cannot find package matching: " + motif)
         return out
 
     @staticmethod
@@ -211,7 +211,7 @@ class LeafUtils():
             pack = content.get(pi)
             if pack is None:
                 raise ValueError(
-                    "Cannot findPackageIdentifiers package: ", pi)
+                    "Cannot findPackageIdentifiers package: " + pi)
             if pack not in outList:
                 outList.append(pack)
                 LeafUtils.getDependencies(
@@ -264,7 +264,7 @@ class LeafUtils():
             if len(inList) == 0:
                 break
             elif len(packagesWithSatisfiedDependencies) == 0:
-                raise ValueError('Dependency error:',
+                raise ValueError('Dependency error: ' + 
                                  ', '.join(str(m.getIdentifier()) for m in inList))
         if masterFirst:
             outList.reverse()
@@ -310,7 +310,7 @@ class LeafUtils():
             print("File downloaded", targetFile)
             if sha1sum is not None and sha1sum != LeafUtils.sha1sum(targetFile):
                 raise ValueError(
-                    "Invalid SHA1 sum for", targetFile.name, ", expecting", sha1sum)
+                    "Invalid SHA1 sum for " + targetFile.name + ", expecting " + sha1sum)
         return targetFile
 
 
@@ -333,7 +333,7 @@ class PackageIdentifier ():
 
     def __init__(self, name, version):
         if not PackageIdentifier.isValidName(name):
-            raise ValueError("Invalid package name: ", name)
+            raise ValueError("Invalid package name: " + name)
         self.name = name
         self.version = version
 
@@ -577,7 +577,7 @@ class StepExecutor():
         for key, value in self.variables.items():
             out = out.replace(key, value)
         if failOnUnknownVariable and (LeafConstants.VAR_PREFIX + '{') in out:
-            raise ValueError("Cannot resolve all variables for:", out)
+            raise ValueError("Cannot resolve all variables for: " + out)
         if prefixWithFolder:
             return str(self.targetFolder / out)
         return out
@@ -852,7 +852,7 @@ class LeafApp(LeafRepository):
 
         targetFolder = self.getInstallFolder() / str(leafArtifact.getIdentifier())
         if targetFolder.is_dir():
-            raise ValueError("Folder already exists:", targetFolder)
+            raise ValueError("Folder already exists: " + targetFolder)
 
         # Create folder
         targetFolder.mkdir(parents=True, exist_ok=False)
@@ -1213,9 +1213,7 @@ USAGE
         except Exception as e:
             if args.verbose:
                 raise e
-            indent = len(LeafCli._PROG_NAME) * " "
-            sys.stderr.write(LeafCli._PROG_NAME + ": " + repr(e) + "\n")
-            sys.stderr.write(indent + "  for help use --help\n")
+            print(e, file=sys.stderr)
             return 2
 
     def filterPackageList(self, content, keywords=None, modules=None, sort=True):
