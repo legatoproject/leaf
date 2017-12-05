@@ -875,7 +875,7 @@ class LeafApp(LeafRepository):
                 forceInstall=False,
                 downloadOnly=False,
                 keepFolderOnError=False,
-                autoAcceptLicense=False):
+                skipLicenses=False):
         '''
         To download & install packages with dependencies
         '''
@@ -898,16 +898,17 @@ class LeafApp(LeafRepository):
         # Check dependencies
         missingAptDepends = LeafUtils.getMissingAptDepends(apToInstall)
         if len(missingAptDepends) > 0:
-            print(
-                "Missing some system dependencies. You may have to install them by running:")
-            print("$ sudo apt-get install", ' '.join(missingAptDepends))
+            print("You may have to install missing dependencies by running:")
+            print("  $ sudo apt-get install", ' '.join(missingAptDepends))
             if not forceInstall and not downloadOnly:
-                return False
+                raise ValueError("Missing dependencies: " +
+                                 ' '.join(missingAptDepends))
 
-        lm = LicenseManager()
-        for lic in lm.checkLicenses(apToInstall):
-            if not lm.acceptLicense(lic):
-                return False
+        if not skipLicenses:
+            lm = LicenseManager()
+            for lic in lm.checkLicenses(apToInstall):
+                if not lm.acceptLicense(lic):
+                    raise ValueError("License must be accepted: " + lic)
 
         print("Packages to be installed:",
               ', '.join(str(m.getIdentifier()) for m in apToInstall))
@@ -926,8 +927,6 @@ class LeafApp(LeafRepository):
                                     ap.getUrl(),
                                     verbose=verbose,
                                     keepFolderOnError=keepFolderOnError)
-
-        return True
 
     def extractPackage(self, leafArtifact, installedPackages=None, urlSource=None, verbose=False, keepFolderOnError=False):
         '''
@@ -1142,10 +1141,10 @@ USAGE
         # INSTALL
         subparser = newParser(LeafCli._ACTION_INSTALL,
                               "install packages")
-        subparser.add_argument('-y', "--accept-license",
-                               dest="acceptLicense",
+        subparser.add_argument("--skip-licenses",
+                               dest="skipLicenses",
                                action="store_true",
-                               help="automatically accept new licenses")
+                               help="skip license display and accept, assume yes")
         subparser.add_argument('-f', "--force",
                                dest="force",
                                action="store_true",
@@ -1286,7 +1285,7 @@ USAGE
                             forceInstall=args.force,
                             verbose=args.verbose,
                             keepFolderOnError=args.keepOnError,
-                            autoAcceptLicense=args.acceptLicense)
+                            skipLicenses=args.skipLicenses)
             elif action == LeafCli._ACTION_REMOVE:
                 app.uninstall(args.packages,
                               verbose=args.verbose)
