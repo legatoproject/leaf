@@ -41,6 +41,7 @@ class LeafAppTest():
         "package-deb_1.0.1": '.tar.xz',
         "package-env_1.0.0": '.tar.xz',
         "package-install_1.0.0": '.tar.xz',
+        "package-license_1.0.0": '.tar.xz',
         "package-uninstall_1.0.0": '.tar.xz'}
     PACKAGES_COMPOSITE = {
         "composite-container_1.0.0": '.tar.xz',
@@ -139,6 +140,11 @@ class LeafAppTest():
         self.assertTrue(self.app.install([packageId], verbose=_VERBOSE))
         self.checkContent(self.app.listInstalledPackages(), [packageId])
         self.checkExtracted(packageId)
+        
+    def testInstallWithLicense(self):
+        packageId = "package-license_1.0.0"
+        self.assertTrue(self.app.install([packageId], verbose=_VERBOSE))
+        self.checkContent(self.app.listInstalledPackages(), [packageId])
 
     def testPostinstallError(self):
         packageId = "package_0.9.9"

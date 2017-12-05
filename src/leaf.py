@@ -12,10 +12,12 @@ Leaf Package Manager
 __version__ = 0.1
 MIN_PYTHON_VERSION = (3, 5)
 
+
 from _collections import OrderedDict
 import apt
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import argparse
+from code import InteractiveConsole
 import datetime
 from functools import total_ordering
 import hashlib
@@ -41,7 +43,9 @@ class LeafConstants():
     DEFAULT_LEAF_ROOT = Path.home() / 'legato' / 'packages'
     DEFAULT_CONFIG_FILE = Path.home() / '.leaf-config.json'
     CACHE_FOLDER = Path.home() / '.cache' / 'leaf'
+    FILES_CACHE_FOLDER = CACHE_FOLDER / "files"
     REMOTES_CACHE_FILE = CACHE_FOLDER / 'remotes.json'
+    LICENSES_CACHE_FILE = CACHE_FOLDER / 'licenses.json'
 
     DEFAULT_CONFIGURATION = {
         'remotes': [
@@ -80,6 +84,7 @@ class JsonConstants():
     INFO_DEPENDS_DEB = 'deb'
     INFO_MASTER = 'master'
     INFO_DESCRIPTION = 'description'
+    INFO_LICENSES = 'licenses'
     INSTALL = 'install'
     UNINSTALL = 'uninstall'
     STEP_TYPE = 'type'
@@ -118,6 +123,26 @@ class LeafUtils():
                  '.bz2': 'bz2',
                  '.tgz': 'gz',
                  '.gz': 'gz'}
+
+    @staticmethod
+    def askYesNo(message, default=None):
+        label = " (yes/no)"
+        if default == True:
+            label = " (YES/no)"
+        elif default == False:
+            label = " (yes/NO)"
+        while True:
+            answer = InteractiveConsole().raw_input(
+                message + label + "\n").strip()
+            if answer == "":
+                if default == True:
+                    answer = 'y'
+                elif default == False:
+                    answer = 'n'
+            if answer.lower() == 'y' or answer.lower() == 'yes':
+                return True
+            if answer.lower() == 'n' or answer.lower() == 'no':
+                return False
 
     @staticmethod
     def jsonGet(json, path, default=None):
@@ -264,7 +289,7 @@ class LeafUtils():
             if len(inList) == 0:
                 break
             elif len(packagesWithSatisfiedDependencies) == 0:
-                raise ValueError('Dependency error: ' + 
+                raise ValueError('Dependency error: ' +
                                  ', '.join(str(m.getIdentifier()) for m in inList))
         if masterFirst:
             outList.reverse()
@@ -390,11 +415,14 @@ class Manifest():
         info = self.getNodeInfo()
         return JsonConstants.INFO_MASTER in info and info[JsonConstants.INFO_MASTER]
 
+    def getLicenses(self):
+        return LeafUtils.jsonGet(self.getNodeInfo(), [JsonConstants.INFO_LICENSES], [])
+
     def getLeafDepends(self):
-        return map(PackageIdentifier.fromString,
-                   LeafUtils.jsonGet(self.getNodeInfo(),
-                                     [JsonConstants.INFO_DEPENDS,
-                                         JsonConstants.INFO_DEPENDS_LEAF], []))
+        return [PackageIdentifier.fromString(pis)
+                for pis in LeafUtils.jsonGet(self.getNodeInfo(),
+                                             [JsonConstants.INFO_DEPENDS,
+                                              JsonConstants.INFO_DEPENDS_LEAF], [])]
 
     def getSupportedModules(self):
         return self.getNodeInfo().get(JsonConstants.INFO_SUPPORTEDMODULES)
@@ -470,6 +498,54 @@ class InstalledPackage(Manifest):
 
     def getDetail(self, key):
         return LeafUtils.jsonGet(self.json, [JsonConstants.INSTALLED_DETAILS, key])
+
+
+class LicenseManager ():
+    '''
+    Handle license acceptation
+    '''
+
+    def readLicenses(self):
+        '''
+        Read license cache
+        '''
+        out = {}
+        if LeafConstants.LICENSES_CACHE_FILE.exists():
+            with open(str(LeafConstants.LICENSES_CACHE_FILE), 'r') as fp:
+                out = json.load(fp)
+        return out
+
+    def writeLicenses(self, licenses):
+        '''
+        Write the given licenses
+        '''
+        with open(str(LeafConstants.LICENSES_CACHE_FILE), 'w') as fp:
+            json.dump(licenses, fp, indent=2)
+
+    def checkLicenses(self, packageList):
+        '''
+        Checks that all given packages have their licenses accepted
+        '''
+        out = []
+        licenses = self.readLicenses()
+        for pack in packageList:
+            for lic in pack.getLicenses():
+                if lic not in out and lic not in licenses:
+                    out.append(lic)
+        return out
+
+    def acceptLicense(self, lic):
+        print("You need to accept the license:", lic)
+        if LeafUtils.askYesNo("Do you want to display the license text?", default=False):
+            with urllib.request.urlopen(lic) as req:
+                text = io.TextIOWrapper(req).read()
+                print(text)
+        out = LeafUtils.askYesNo("Do you accept the license?", default=True)
+        if out:
+            licenses = self.readLicenses()
+            licenses[lic] = LeafUtils.now()
+            self.writeLicenses(licenses)
+        return out
 
 
 class StepExecutor():
@@ -654,7 +730,7 @@ class LeafApp(LeafRepository):
         '''
         self.configurationFile = configurationFile
         # Create folders if needed
-        LeafConstants.CACHE_FOLDER.mkdir(parents=True, exist_ok=True)
+        LeafConstants.FILES_CACHE_FOLDER.mkdir(parents=True, exist_ok=True)
 
     def readConfiguration(self):
         '''
@@ -794,7 +870,12 @@ class LeafApp(LeafRepository):
                     out[ip.getIdentifier()] = ip
         return out
 
-    def install(self, motifList, downloadOnly=False, forceInstall=False, verbose=False, keepFolderOnError=False):
+    def install(self, motifList,
+                verbose=False,
+                forceInstall=False,
+                downloadOnly=False,
+                keepFolderOnError=False,
+                autoAcceptLicense=False):
         '''
         To download & install packages with dependencies
         '''
@@ -823,6 +904,11 @@ class LeafApp(LeafRepository):
             if not forceInstall and not downloadOnly:
                 return False
 
+        lm = LicenseManager()
+        for lic in lm.checkLicenses(apToInstall):
+            if not lm.acceptLicense(lic):
+                return False
+
         print("Packages to be installed:",
               ', '.join(str(m.getIdentifier()) for m in apToInstall))
 
@@ -830,7 +916,7 @@ class LeafApp(LeafRepository):
         # Download package if needed
         for ap in apToInstall:
             toInstall[ap] = LeafArtifact(LeafUtils.download(
-                ap.getUrl(), LeafConstants.CACHE_FOLDER, sha1sum=ap.getSha1sum()))
+                ap.getUrl(), LeafConstants.FILES_CACHE_FOLDER, sha1sum=ap.getSha1sum()))
 
         if not downloadOnly:
             # Extract package
@@ -1056,6 +1142,10 @@ USAGE
         # INSTALL
         subparser = newParser(LeafCli._ACTION_INSTALL,
                               "install packages")
+        subparser.add_argument('-y', "--accept-license",
+                               dest="acceptLicense",
+                               action="store_true",
+                               help="automatically accept new licenses")
         subparser.add_argument('-f', "--force",
                                dest="force",
                                action="store_true",
@@ -1121,7 +1211,9 @@ USAGE
                                help='leaf artifacts')
 
     def execute(self, argv=None):
-        '''Command line options.'''
+        '''
+        Entry point
+        '''
 
         if argv is None:
             argv = sys.argv
@@ -1156,7 +1248,10 @@ USAGE
                                      separators=(',', ': ')))
             elif action == LeafCli._ACTION_CLEAN:
                 print("Clean cache folder: ", LeafConstants.CACHE_FOLDER)
-                shutil.rmtree(str(LeafConstants.CACHE_FOLDER), True)
+                shutil.rmtree(str(LeafConstants.FILES_CACHE_FOLDER), True)
+                if LeafConstants.REMOTES_CACHE_FILE.exists():
+                    os.remove(str(LeafConstants.REMOTES_CACHE_FILE))
+                shutil.rmtree(str(LeafConstants.FILES_CACHE_FOLDER), True)
             elif action == LeafCli._ACTION_REMOTE:
                 if args.remote_add is not None:
                     for url in args.remote_add:
@@ -1165,16 +1260,16 @@ USAGE
                     for url in args.remote_rm:
                         app.remoteRemove(url)
                 for remote, info in app.remoteList().items():
+                    content = OrderedDict()
                     if info is None:
-                        print(remote, "(not fetched yet)")
+                        content["Status"] = "not fetched yet"
                     else:
-                        print(remote)
-                        self.printKeyValue("Name", info.get(
-                            JsonConstants.REMOTE_NAME))
-                        self.printKeyValue("Description", info.get(
-                            JsonConstants.REMOTE_DESCRIPTION))
-                        self.printKeyValue("Last update", info.get(
-                            JsonConstants.REMOTE_DATE))
+                        content["Name"] = info.get(JsonConstants.REMOTE_NAME)
+                        content["Description"] = info.get(
+                            JsonConstants.REMOTE_DESCRIPTION)
+                        content["Last update"] = info.get(
+                            JsonConstants.REMOTE_DATE)
+                    self.printContent(remote, content)
             elif action == LeafCli._ACTION_FETCH:
                 app.fetchRemotes()
             elif action == LeafCli._ACTION_LIST:
@@ -1190,7 +1285,8 @@ USAGE
                             downloadOnly=args.downloadOnly,
                             forceInstall=args.force,
                             verbose=args.verbose,
-                            keepFolderOnError=args.keepOnError)
+                            keepFolderOnError=args.keepOnError,
+                            autoAcceptLicense=args.acceptLicense)
             elif action == LeafCli._ACTION_REMOVE:
                 app.uninstall(args.packages,
                               verbose=args.verbose)
@@ -1217,6 +1313,9 @@ USAGE
             return 2
 
     def filterPackageList(self, content, keywords=None, modules=None, sort=True):
+        '''
+        Filter a list of packages given optional criteria
+        '''
         out = list(content)
 
         def my_filter(p):
@@ -1241,24 +1340,57 @@ USAGE
         return out
 
     def displayPackage(self, pack, verbose):
-        print(pack.getIdentifier())
-        if verbose:
-            self.printKeyValue("Description", pack.getDescription())
-            if isinstance(pack, AvailablePackage):
-                self.printKeyValue("Size", pack.getSize(), "bytes")
-                self.printKeyValue("Source", pack.getUrl())
-            elif isinstance(pack, InstalledPackage):
-                self.printKeyValue("Folder", pack.folder)
-                self.printKeyValue("Installation date", pack.getDetail(
-                    JsonConstants.INSTALLED_DETAILS_DATE))
-            self.printKeyValue("Depends", ', '.join(
-                map(lambda pi: str(pi), pack.getLeafDepends())))
-            self.printKeyValue("Supported modules",
-                               ', '.join(pack.getSupportedModules()))
+        '''
+        Display information of an installed/available package
+        '''
+        content = OrderedDict()
+        content["Description"] = pack.getDescription()
+        if isinstance(pack, AvailablePackage):
+            content["Size"] = (pack.getSize(), 'bytes')
+            content["Source:"] = pack.getUrl()
+        elif isinstance(pack, InstalledPackage):
+            content["Folder"] = pack.folder
+            content["Installation date"] = pack.getDetail(
+                JsonConstants.INSTALLED_DETAILS_DATE)
+        content["Depends"] = pack.getLeafDepends()
+        content["Modules"] = pack.getSupportedModules()
+        content["Licenses"] = pack.getLicenses()
+        self.printContent(pack.getIdentifier(), content, verbose=verbose)
 
-    def printKeyValue(self, key, value, endOfLine=""):
-        if value is not None and (not isinstance(value, str) or len(value) > 0):
-            print("    " + key + ":", value, endOfLine)
+    def printContent(self, firstLine, content, indent=4, separator=':', ralign=False, verbose=True):
+        '''
+        Display formatted content 
+        '''
+        if firstLine is not None:
+            print(firstLine)
+        if verbose and content is not None:
+            maxlen = 0
+            if ralign:
+                maxlen = len(
+                    max(filter(lambda k: content.get(k) is not None, content), key=len))
+            for k, v in content.items():
+                if isinstance(v, dict) or isinstance(v, list):
+                    if len(v) > 0:
+                        print(" " * indent,
+                              k.rjust(maxlen),
+                              separator,
+                              str(v[0]))
+                        for o in v[1:]:
+                            print(" " * indent,
+                                  (' ' * len(k)).rjust(maxlen),
+                                  ' ' * len(separator),
+                                  str(o))
+                elif isinstance(v, tuple):
+                    if len(v) > 0 and v[0] is not None:
+                        print(" " * indent,
+                              k.rjust(maxlen),
+                              separator,
+                              ' '.join(map(str, v)))
+                elif v is not None:
+                    print(" " * indent,
+                          k.rjust(maxlen),
+                          separator,
+                          str(v))
 
 
 if __name__ == "__main__":
