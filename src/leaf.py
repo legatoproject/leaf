@@ -520,7 +520,7 @@ class LicenseManager ():
         Write the given licenses
         '''
         with open(str(LeafConstants.LICENSES_CACHE_FILE), 'w') as fp:
-            json.dump(licenses, fp, indent=2)
+            json.dump(licenses, fp, indent=2, separators=(',', ': '))
 
     def checkLicenses(self, packageList):
         '''
@@ -749,7 +749,7 @@ class LeafApp(LeafRepository):
         Write the given configuration
         '''
         with open(str(self.configurationFile), 'w') as fp:
-            json.dump(config, fp)
+            json.dump(config, fp, indent=2, separators=(',', ': '))
 
     def readRemotesCache(self):
         if LeafConstants.REMOTES_CACHE_FILE.exists():
