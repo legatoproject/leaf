@@ -10,9 +10,6 @@ Leaf Package Manager
 
 '''
 __version__ = 0.1
-MIN_PYTHON_VERSION = (3, 5)
-
-
 from _collections import OrderedDict
 import apt
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
@@ -40,6 +37,7 @@ class LeafConstants():
     '''
     Constants needed by Leaf
     '''
+    MIN_PYTHON_VERSION = (3, 5)
     DEFAULT_LEAF_ROOT = Path.home() / 'legato' / 'packages'
     DEFAULT_CONFIG_FILE = Path.home() / '.leaf-config.json'
     CACHE_FOLDER = Path.home() / '.cache' / 'leaf'
@@ -53,7 +51,6 @@ class LeafConstants():
     EXTENSION_JSON = '.json'
     MANIFEST = 'manifest' + EXTENSION_JSON
     VAR_PREFIX = '@'
-    VAR_DIR = 'DIR'
 
 
 class JsonConstants():
@@ -62,6 +59,7 @@ class JsonConstants():
     '''
     # Configuration
     CONFIG_REMOTES = 'remotes'
+    CONFIG_ENV = 'env'
     CONFIG_ROOT = 'rootfolder'
     CONFIG_VARIABLES = 'variables'
 
@@ -91,6 +89,7 @@ class JsonConstants():
     STEP_EXEC = 'exec'
     STEP_EXEC_ENV = 'env'
     STEP_EXEC_COMMAND = 'command'
+    STEP_EXEC_VERBOSE = 'verbose'
     STEP_LINK = 'link'
     STEP_LINK_NAME = 'name'
     STEP_LINK_TARGET = 'target'
@@ -553,17 +552,19 @@ class StepExecutor():
     Used to execute post install & pre uninstall steps
     '''
 
-    def __init__(self, installedPackages, targetFolder):
-        self.targetFolder = targetFolder
-        self.variables = dict()
+    def __init__(self, package, otherPackages, extraEnv=None):
+        self.extraEnv = extraEnv
         self.verbose = False
-
-        key = "%s{%s}" % (LeafConstants.VAR_PREFIX, LeafConstants.VAR_DIR)
-        self.variables[key] = str(targetFolder)
-        for pi, pack in installedPackages.items():
-            key = "%s{%s:%s}" % (LeafConstants.VAR_PREFIX,
-                                 LeafConstants.VAR_DIR,
-                                 str(pi))
+        self.targetFolder = package.folder
+        self.variables = dict()
+        self.variables[LeafConstants.VAR_PREFIX +
+                       "{DIR}"] = str(package.folder)
+        self.variables[LeafConstants.VAR_PREFIX +
+                       "{NAME}"] = package.getName()
+        self.variables[LeafConstants.VAR_PREFIX +
+                       "{VERSION}"] = package.getVersion()
+        for pi, pack in otherPackages.items():
+            key = "%s{DIR:%s}" % (LeafConstants.VAR_PREFIX, str(pi))
             self.variables[key] = str(pack.folder)
 
     def postInstall(self, installedPackage):
@@ -603,8 +604,17 @@ class StepExecutor():
             v = self.resolve(v)
             env[k] = v
             if self.verbose:
-                print("ENV: %s=%s" % (k, v))
-        stdout = None if self.verbose else subprocess.DEVNULL
+                print("(manifest) ENV: %s=%s" % (k, v))
+        if self.extraEnv is not None:
+            for k, v in self.extraEnv.items():
+                v = self.resolve(v)
+                env[k] = v
+                if self.verbose:
+                    print("(user) ENV: %s=%s" % (k, v))
+        env["LEAF_VERSION"] = str(__version__)
+        stdout = subprocess.DEVNULL
+        if self.verbose or LeafUtils.jsonGet(step, [JsonConstants.STEP_EXEC_VERBOSE], default=False):
+            stdout = None
         subprocess.run(command,
                        cwd=str(self.targetFolder),
                        env=env,
@@ -766,14 +776,27 @@ class LeafApp(LeafRepository):
         out.mkdir(parents=True, exist_ok=True)
         return out
 
-    def updateConfiguration(self, rootFolder=None):
+    def updateConfiguration(self, rootFolder=None, env=None):
         '''
         Update the configuration file
         '''
         config = self.readConfiguration()
         if rootFolder is not None:
             config[JsonConstants.CONFIG_ROOT] = str(rootFolder)
+        if env is not None:
+            for line in env:
+                k, v = line.split('=', 1)
+                if JsonConstants.CONFIG_ENV not in config:
+                    config[JsonConstants.CONFIG_ENV] = OrderedDict()
+                config[JsonConstants.CONFIG_ENV][k.strip()] = v.strip()
         self.writeConfiguration(config)
+
+    def getUserEnvVariables(self):
+        '''
+        Returns the user custom env variables
+        '''
+        config = self.readConfiguration()
+        return LeafUtils.jsonGet(config, [JsonConstants.CONFIG_ENV], {})
 
     def remoteAdd(self, url):
         '''
@@ -957,7 +980,8 @@ class LeafApp(LeafRepository):
             if urlSource is not None:
                 newPackage.setDetail(
                     JsonConstants.INSTALLED_DETAILS_SOURCE, urlSource)
-            stepExec = StepExecutor(installedPackages, targetFolder)
+            stepExec = StepExecutor(
+                newPackage, installedPackages, extraEnv=self.getUserEnvVariables())
             stepExec.verbose = verbose
             stepExec.postInstall(newPackage)
             newPackage.setDetail(
@@ -985,21 +1009,22 @@ class LeafApp(LeafRepository):
             motifList, installedPackages)
 
         # List of packages to install
-        apToRemove = LeafUtils.computePackagesToUninstall(
+        ipToRemove = LeafUtils.computePackagesToUninstall(
             packageIdentifiers, installedPackages)
-        if len(apToRemove) == 0:
+        if len(ipToRemove) == 0:
             print("No package to remove (to keep dependencies)")
         else:
             print("Packages to be removed:",
-                  ', '.join(str(m.getIdentifier()) for m in apToRemove))
-            for ap in apToRemove:
-                stepExec = StepExecutor(installedPackages, ap.folder)
+                  ', '.join(str(m.getIdentifier()) for m in ipToRemove))
+            for ip in ipToRemove:
+                stepExec = StepExecutor(
+                    ip, installedPackages, extraEnv=self.getUserEnvVariables())
                 stepExec.verbose = verbose
-                stepExec.preUninstall(ap)
-                print("Remove folder:", ap.folder)
-                shutil.rmtree(str(ap.folder))
-                print("Package removed:", ap.getIdentifier())
-                del [installedPackages[ap.getIdentifier()]]
+                stepExec.preUninstall(ip)
+                print("Remove folder:", ip.folder)
+                shutil.rmtree(str(ip.folder))
+                print("Package removed:", ip.getIdentifier())
+                del [installedPackages[ip.getIdentifier()]]
 
     def getEnv(self, motifList):
         '''
@@ -1017,7 +1042,7 @@ class LeafApp(LeafRepository):
         for ip in ipList:
             env = ip.json.get(JsonConstants.ENV)
             if env is not None:
-                stepExec = StepExecutor(installedPackages, ip.folder)
+                stepExec = StepExecutor(ip, installedPackages)
                 for key, value in env.items():
                     value = stepExec.resolve(value, True, False)
                     out[key] = value
@@ -1088,6 +1113,11 @@ USAGE
                                dest='root_folder',
                                metavar='DIR',
                                help="set the root folder, default: " + str(LeafConstants.DEFAULT_LEAF_ROOT))
+        subparser.add_argument('--env',
+                               dest='config_env',
+                               action='append',
+                               metavar='KEY=VALUE',
+                               help="set custom env variables for exec steps")
 
         # CLEAN
 
@@ -1239,12 +1269,13 @@ USAGE
             if action == LeafCli._ACTION_CONFIG:
                 if args.root_folder is not None:
                     app.updateConfiguration(rootFolder=args.root_folder)
-                else:
-                    print("Configuration file:", app.configurationFile)
-                    print(json.dumps(app.readConfiguration(),
-                                     sort_keys=True,
-                                     indent=2,
-                                     separators=(',', ': ')))
+                if args.config_env is not None:
+                    app.updateConfiguration(env=args.config_env)
+                print("Configuration file:", app.configurationFile)
+                print(json.dumps(app.readConfiguration(),
+                                 sort_keys=True,
+                                 indent=2,
+                                 separators=(',', ': ')))
             elif action == LeafCli._ACTION_CLEAN:
                 print("Clean cache folder: ", LeafConstants.CACHE_FOLDER)
                 shutil.rmtree(str(LeafConstants.FILES_CACHE_FOLDER), True)
@@ -1395,8 +1426,8 @@ USAGE
 if __name__ == "__main__":
     # Check python version
     currentPythonVersion = sys.version_info
-    if (currentPythonVersion[0], currentPythonVersion[1]) < MIN_PYTHON_VERSION:
-        print('Unsuported Python version, please use at least Python %d.%d.' % MIN_PYTHON_VERSION,
+    if (currentPythonVersion[0], currentPythonVersion[1]) < LeafConstants.MIN_PYTHON_VERSION:
+        print('Unsuported Python version, please use at least Python %d.%d.' % LeafConstants.MIN_PYTHON_VERSION,
               file=sys.stderr)
         sys.exit(1)
     sys.exit(LeafCli().execute())
