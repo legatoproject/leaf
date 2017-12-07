@@ -87,6 +87,7 @@ class JsonConstants():
     INSTALL = 'install'
     UNINSTALL = 'uninstall'
     STEP_TYPE = 'type'
+    STEP_LABEL = 'label'
     STEP_EXEC = 'exec'
     STEP_EXEC_ENV = 'env'
     STEP_EXEC_COMMAND = 'command'
@@ -118,11 +119,54 @@ class LeafUtils():
     '''
     Useful simple methods
     '''
+
+    _VERBOSE = False
+    _VERBOZITY = {
+        'info': False
+    }
     _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
     _LEAF_EXT = {'.xz': 'xz',
                  '.bz2': 'bz2',
                  '.tgz': 'gz',
                  '.gz': 'gz'}
+
+    @staticmethod
+    def printMessage(*args, kind=None, **kwargs):
+        if LeafUtils._VERBOSE or kind is None or (kind in LeafUtils._VERBOZITY and LeafUtils._VERBOZITY[kind]):
+            print(*args, **kwargs)
+
+    @staticmethod
+    def printContent(firstLine, content, indent=4, separator=':', ralign=False):
+        '''
+        Display formatted content 
+        '''
+        if firstLine is not None:
+            LeafUtils.printMessage(firstLine)
+        if content is not None:
+            maxlen = 0
+            indentString = ' ' * indent
+            if ralign:
+                maxlen = len(
+                    max(filter(lambda k: content.get(k) is not None, content), key=len))
+            for k, v in content.items():
+                if isinstance(v, dict) or isinstance(v, list):
+                    if len(v) > 0:
+                        LeafUtils.printMessage(indentString + k.rjust(maxlen),
+                                               separator,
+                                               str(v[0]))
+                        for o in v[1:]:
+                            LeafUtils.printMessage(indentString + (' ' * len(k)).rjust(maxlen),
+                                                   ' ' * len(separator),
+                                                   str(o))
+                elif isinstance(v, tuple):
+                    if len(v) > 0 and v[0] is not None:
+                        LeafUtils.printMessage(indentString + k.rjust(maxlen),
+                                               separator,
+                                               ' '.join(map(str, v)))
+                elif v is not None:
+                    LeafUtils.printMessage(indentString + k.rjust(maxlen),
+                                           separator,
+                                           str(v))
 
     @staticmethod
     def askYesNo(message, default=None):
@@ -133,7 +177,7 @@ class LeafUtils():
             label = " (yes/NO)"
         while True:
             answer = InteractiveConsole().raw_input(
-                message + label + "\n").strip()
+                message + label + " ").strip()
             if answer == "":
                 if default == True:
                     answer = 'y'
@@ -320,28 +364,33 @@ class LeafUtils():
         targetFile = folder / filename
         if targetFile.exists():
             if sha1sum is None:
-                print("File exists but cannot be verified,",
-                      targetFile.name, " will be re-downloaded")
+                LeafUtils.printMessage("File exists but cannot be verified,",
+                                       targetFile.name, " will be re-downloaded", kind='info')
                 os.remove(str(targetFile))
             elif sha1sum != LeafUtils.sha1sum(targetFile):
-                print("File exists but SHA1 differs,",
-                      targetFile.name, " will be re-downloaded")
+                LeafUtils.printMessage("File exists but SHA1 differs,",
+                                       targetFile.name, " will be re-downloaded", kind='info')
                 os.remove(str(targetFile))
             else:
-                print("File already in cache:", targetFile.name)
+                LeafUtils.printMessage(
+                    "File already in cache:", targetFile.name, kind='info')
         if not targetFile.exists():
             req = requests.get(url, stream=True)
             total_size = int(req.headers.get('content-length', 0))
+            LeafUtils.printMessage(
+                "Downloading", url, "size:", total_size, kind='info')
             current_size = 0
             with open(str(targetFile), 'wb') as fp:
                 for data in req.iter_content(1024 * 1024):
                     current_size += len(data)
-                    progress = "[{0}%]".format(
-                        int(current_size * 100 / total_size))
-                    print("Downloading", targetFile.name, progress,
-                          end='\r', flush=True)
+                    progress = "{0} bytes".format(current_size)
+                    if total_size > 0 and current_size <= total_size:
+                        progress = "[{0}%]".format(
+                            int(current_size * 100 / total_size))
+                    LeafUtils.printMessage("Downloading", targetFile.name, progress,
+                                           end='\r', flush=True)
                     fp.write(data)
-            print("File downloaded", targetFile)
+            LeafUtils.printMessage("File downloaded", targetFile)
             if sha1sum is not None and sha1sum != LeafUtils.sha1sum(targetFile):
                 raise ValueError(
                     "Invalid SHA1 sum for " + targetFile.name + ", expecting " + sha1sum)
@@ -544,11 +593,11 @@ class LicenseManager ():
         return out
 
     def acceptLicense(self, lic):
-        print("You need to accept the license:", lic)
+        LeafUtils.printMessage("You need to accept the license:", lic)
         if LeafUtils.askYesNo("Do you want to display the license text?", default=False):
             with urllib.request.urlopen(lic) as req:
                 text = io.TextIOWrapper(req).read()
-                print(text)
+                LeafUtils.printMessage(text)
         out = LeafUtils.askYesNo("Do you accept the license?", default=True)
         if out:
             licenses = self.readLicenses()
@@ -564,7 +613,6 @@ class StepExecutor():
 
     def __init__(self, package, otherPackages, extraEnv=None):
         self.extraEnv = extraEnv
-        self.verbose = False
         self.targetFolder = package.folder
         self.variables = dict()
         self.variables[LeafConstants.VAR_PREFIX +
@@ -579,20 +627,23 @@ class StepExecutor():
 
     def postInstall(self, installedPackage):
         if JsonConstants.INSTALL in installedPackage.json:
-            print("Execute post-install steps for:",
-                  installedPackage.getIdentifier())
+            LeafUtils.printMessage("Execute post-install steps for:",
+                                   installedPackage.getIdentifier(), kind='info')
             self.runSteps(
                 installedPackage.json[JsonConstants.INSTALL], installedPackage)
 
     def preUninstall(self, installedPackage):
         if JsonConstants.UNINSTALL in installedPackage.json:
-            print("Execute pre-uninstall steps for:",
-                  installedPackage.getIdentifier())
+            LeafUtils.printMessage("Execute pre-uninstall steps for:",
+                                   installedPackage.getIdentifier(), kind='info')
             self.runSteps(
                 installedPackage.json[JsonConstants.UNINSTALL], installedPackage)
 
     def runSteps(self, stepsJsonArray, ip):
         for step in stepsJsonArray:
+            if JsonConstants.STEP_LABEL in step:
+                LeafUtils.printMessage(
+                    "[step]", step[JsonConstants.STEP_LABEL])
             stepType = step[JsonConstants.STEP_TYPE]
             if stepType == JsonConstants.STEP_EXEC:
                 self.doExec(step)
@@ -608,22 +659,18 @@ class StepExecutor():
     def doExec(self, step):
         command = [self.resolve(arg)
                    for arg in step[JsonConstants.STEP_EXEC_COMMAND]]
-        print("Exec:", ' '.join(command))
+        LeafUtils.printMessage("Exec:", ' '.join(command), kind='info')
         env = dict(os.environ)
         for k, v in LeafUtils.jsonGet(step, [JsonConstants.STEP_EXEC_ENV], {}).items():
             v = self.resolve(v)
             env[k] = v
-            if self.verbose:
-                print("(manifest) ENV: %s=%s" % (k, v))
         if self.extraEnv is not None:
             for k, v in self.extraEnv.items():
                 v = self.resolve(v)
                 env[k] = v
-                if self.verbose:
-                    print("(user) ENV: %s=%s" % (k, v))
         env["LEAF_VERSION"] = str(__version__)
         stdout = subprocess.DEVNULL
-        if self.verbose or LeafUtils.jsonGet(step, [JsonConstants.STEP_EXEC_VERBOSE], default=False):
+        if LeafUtils._VERBOSE or LeafUtils.jsonGet(step, [JsonConstants.STEP_EXEC_VERBOSE], default=False):
             stdout = None
         subprocess.run(command,
                        cwd=str(self.targetFolder),
@@ -637,7 +684,7 @@ class StepExecutor():
             step[JsonConstants.STEP_COPY_SOURCE], prefixWithFolder=True)
         dst = self.resolve(
             step[JsonConstants.STEP_COPY_DESTINATION], prefixWithFolder=True)
-        print("Copy:", src, "->", dst)
+        LeafUtils.printMessage("Copy:", src, "->", dst, kind='info')
         shutil.copy2(src, dst)
 
     def doLink(self, step):
@@ -645,13 +692,13 @@ class StepExecutor():
             step[JsonConstants.STEP_LINK_NAME], prefixWithFolder=True)
         source = self.resolve(
             step[JsonConstants.STEP_LINK_TARGET], prefixWithFolder=True)
-        print("Link:", source, " -> ", target)
+        LeafUtils.printMessage("Link:", source, " -> ", target, kind='info')
         os.symlink(source, target)
 
     def doDelete(self, step):
         for file in step[JsonConstants.STEP_DELETE_FILES]:
             resolvedFile = self.resolve(file, prefixWithFolder=True)
-            print("Delete:", resolvedFile)
+            LeafUtils.printMessage("Delete:", resolvedFile, kind='info')
             os.remove(resolvedFile)
 
     def doDownload(self, step, ip):
@@ -692,12 +739,14 @@ class LeafRepository():
         '''
         with open(str(manifestFile), 'r') as fp:
             manifest = Manifest(json.load(fp))
-            print("Found:", manifest.getIdentifier())
+            LeafUtils.printMessage("Found:", manifest.getIdentifier())
             if outputFile.suffix == LeafConstants.EXTENSION_JSON:
                 shutil.copy(str(manifestFile), str(outputFile))
-                print("Manifest copied:", manifestFile, "-->", outputFile)
+                LeafUtils.printMessage(
+                    "Manifest copied:", manifestFile, "-->", outputFile)
             else:
-                print("Create tar:", manifestFile, "-->", outputFile)
+                LeafUtils.printMessage(
+                    "Create tar:", manifestFile, "-->", outputFile)
                 with TarFile.open(str(outputFile),
                                   LeafUtils.guessCompression(outputFile, prefix="w:")) as tf:
                     for file in manifestFile.parent.glob('*'):
@@ -724,7 +773,7 @@ class LeafRepository():
         rootNode[JsonConstants.REMOTE_PACKAGES] = packagesNode
         for a in artifacts:
             la = LeafArtifact(a)
-            print("Found:", la.getIdentifier())
+            LeafUtils.printMessage("Found:", la.getIdentifier())
             fileNode = OrderedDict()
             fileNode[JsonConstants.REMOTE_PACKAGE_FILE] = str(
                 Path(a).relative_to(outputFile.parent))
@@ -736,7 +785,7 @@ class LeafRepository():
 
         with open(str(outputFile), 'w') as out:
             json.dump(rootNode, out, indent=2)
-            print("Index created:", str(outputFile))
+            LeafUtils.printMessage("Index created:", outputFile)
 
 
 class LeafApp(LeafRepository):
@@ -820,6 +869,10 @@ class LeafApp(LeafRepository):
         if url not in remotes:
             remotes.append(url)
             self.writeConfiguration(config)
+            if LeafConstants.REMOTES_CACHE_FILE.exists():
+                os.remove(str(LeafConstants.REMOTES_CACHE_FILE))
+                LeafUtils.printMessage(
+                    "Remotes have changed, you need to fetch content")
 
     def remoteRemove(self, url):
         '''
@@ -831,6 +884,10 @@ class LeafApp(LeafRepository):
             if url in remotes:
                 remotes.remove(url)
                 self.writeConfiguration(config)
+                if LeafConstants.REMOTES_CACHE_FILE.exists():
+                    os.remove(str(LeafConstants.REMOTES_CACHE_FILE))
+                    LeafUtils.printMessage(
+                        "Remotes have changed, you need to fetch content")
 
     def remoteList(self):
         '''
@@ -866,15 +923,18 @@ class LeafApp(LeafRepository):
         Fetch an URL content and keep it in the given dict
         '''
         if remoteurl not in content:
-            print("Fetch:", remoteurl)
-            with urllib.request.urlopen(remoteurl) as url:
-                data = json.loads(url.read().decode())
-                content[remoteurl] = data
-                composites = data.get(JsonConstants.REMOTE_COMPOSITE)
-                if composites is not None:
-                    for composite in composites:
-                        self.fetchUrl(LeafUtils.resolveUrl(
-                            remoteurl, composite), content)
+            try:
+                LeafUtils.printMessage("Fetch:", remoteurl)
+                with urllib.request.urlopen(remoteurl) as url:
+                    data = json.loads(url.read().decode())
+                    content[remoteurl] = data
+                    composites = data.get(JsonConstants.REMOTE_COMPOSITE)
+                    if composites is not None:
+                        for composite in composites:
+                            self.fetchUrl(LeafUtils.resolveUrl(
+                                remoteurl, composite), content)
+            except Exception as e:
+                LeafUtils.printMessage("Error fetching", remoteurl, ":", e)
 
     def fetchRemotes(self):
         '''
@@ -882,11 +942,7 @@ class LeafApp(LeafRepository):
         '''
         content = OrderedDict()
         for remote in self.remoteList():
-            try:
-                self.fetchUrl(remote, content)
-            except Exception as e:
-                print("Error fetching:", remote, ":", e)
-
+            self.fetchUrl(remote, content)
         with open(str(LeafConstants.REMOTES_CACHE_FILE), 'w') as output:
             json.dump(content, output)
 
@@ -925,14 +981,16 @@ class LeafApp(LeafRepository):
         apToInstall[:] = [
             ap for ap in apToInstall if not ap.getIdentifier() in installedPackages]
         if len(apToInstall) == 0:
-            print("All packages are already installed")
+            LeafUtils.printMessage("All packages are already installed")
             return True
 
         # Check dependencies
         missingAptDepends = LeafUtils.getMissingAptDepends(apToInstall)
         if len(missingAptDepends) > 0:
-            print("You may have to install missing dependencies by running:")
-            print("  $ sudo apt-get install", ' '.join(missingAptDepends))
+            LeafUtils.printMessage(
+                "You may have to install missing dependencies by running:")
+            LeafUtils.printMessage(
+                "  $ sudo apt-get install", ' '.join(missingAptDepends))
             if not forceInstall and not downloadOnly:
                 raise ValueError("Missing dependencies: " +
                                  ' '.join(missingAptDepends))
@@ -943,8 +1001,9 @@ class LeafApp(LeafRepository):
                 if not lm.acceptLicense(lic):
                     raise ValueError("License must be accepted: " + lic)
 
-        print("Packages to be installed:",
-              ', '.join(str(m.getIdentifier()) for m in apToInstall))
+        LeafUtils.printContent(None, {"Packages to install":
+                                      [m.getIdentifier() for m in apToInstall]},
+                               indent=0)
 
         toInstall = OrderedDict()
         # Download package if needed
@@ -965,7 +1024,7 @@ class LeafApp(LeafRepository):
         '''
         Extract & post install given package
         '''
-        print("Installing", leafArtifact.getIdentifier())
+        LeafUtils.printMessage("Installing", leafArtifact.getIdentifier())
 
         if installedPackages is None:
             installedPackages = self.listInstalledPackages()
@@ -978,11 +1037,13 @@ class LeafApp(LeafRepository):
         targetFolder.mkdir(parents=True, exist_ok=False)
         try:
             if leafArtifact.isJsonOnly():
-                print("Copy manifest in", targetFolder)
+                LeafUtils.printMessage(
+                    "Copy manifest in", targetFolder, kind='info')
                 shutil.copy(str(leafArtifact.path), str(
                     targetFolder / LeafConstants.MANIFEST))
             else:
-                print("Extract", leafArtifact.path, "in", targetFolder)
+                LeafUtils.printMessage(
+                    "Extract", leafArtifact.path, "in", targetFolder, kind='info')
                 with TarFile.open(str(leafArtifact.path)) as tf:
                     tf.extractall(str(targetFolder))
 
@@ -994,21 +1055,23 @@ class LeafApp(LeafRepository):
                     JsonConstants.INSTALLED_DETAILS_SOURCE, urlSource)
             stepExec = StepExecutor(
                 newPackage, installedPackages, extraEnv=self.getUserEnvVariables())
-            stepExec.verbose = verbose
             stepExec.postInstall(newPackage)
             newPackage.setDetail(
                 JsonConstants.INSTALLED_DETAILS_DATE, LeafUtils.now())
             installedPackages[newPackage.getIdentifier()] = newPackage
-            print("Package", newPackage.getIdentifier(), "has been installed")
+            LeafUtils.printMessage(
+                "Package", newPackage.getIdentifier(), "has been installed")
             return newPackage
         except Exception as e:
-            print("Error during installation:", e)
+            LeafUtils.printMessage("Error during installation:", e)
             if keepFolderOnError:
                 targetFolderIgnored = LeafUtils.markFolderAsIgnored(
                     targetFolder)
-                print("Mark folder as ignored:", targetFolderIgnored)
+                LeafUtils.printMessage(
+                    "Mark folder as ignored:", targetFolderIgnored, kind='info')
             else:
-                print("Remove folder:", targetFolder)
+                LeafUtils.printMessage(
+                    "Remove folder:", targetFolder, kind='info')
                 shutil.rmtree(str(targetFolder), True)
             raise e
 
@@ -1024,18 +1087,21 @@ class LeafApp(LeafRepository):
         ipToRemove = LeafUtils.computePackagesToUninstall(
             packageIdentifiers, installedPackages)
         if len(ipToRemove) == 0:
-            print("No package to remove (to keep dependencies)")
+            LeafUtils.printMessage(
+                "No package to remove (to keep dependencies)")
         else:
-            print("Packages to be removed:",
-                  ', '.join(str(m.getIdentifier()) for m in ipToRemove))
+            LeafUtils.printContent(None, {"Packages to remove":
+                                          [m.getIdentifier() for m in ipToRemove]},
+                                   indent=0)
             for ip in ipToRemove:
+                LeafUtils.printMessage("Removing", ip.getIdentifier())
                 stepExec = StepExecutor(
                     ip, installedPackages, extraEnv=self.getUserEnvVariables())
-                stepExec.verbose = verbose
                 stepExec.preUninstall(ip)
-                print("Remove folder:", ip.folder)
+                LeafUtils.printMessage(
+                    "Remove folder:", ip.folder, kind='info')
                 shutil.rmtree(str(ip.folder))
-                print("Package removed:", ip.getIdentifier())
+                LeafUtils.printMessage("Package removed:", ip.getIdentifier())
                 del [installedPackages[ip.getIdentifier()]]
 
     def getEnv(self, motifList):
@@ -1264,6 +1330,7 @@ USAGE
         try:
             # Process arguments
             args = self.parser.parse_args()
+            LeafUtils._VERBOSE = args.verbose
 
             configFile = LeafConstants.DEFAULT_CONFIG_FILE
             if args.customConfig is not None:
@@ -1276,20 +1343,20 @@ USAGE
                 if action in v:
                     action = k
                     break
-            # DEBUG only, print parsed args
-            # print(args)
             if action == LeafCli._ACTION_CONFIG:
                 if args.root_folder is not None:
                     app.updateConfiguration(rootFolder=args.root_folder)
                 if args.config_env is not None:
                     app.updateConfiguration(env=args.config_env)
-                print("Configuration file:", app.configurationFile)
-                print(json.dumps(app.readConfiguration(),
-                                 sort_keys=True,
-                                 indent=2,
-                                 separators=(',', ': ')))
+                LeafUtils.printMessage(
+                    "Configuration file:", app.configurationFile)
+                LeafUtils.printMessage(json.dumps(app.readConfiguration(),
+                                                  sort_keys=True,
+                                                  indent=2,
+                                                  separators=(',', ': ')))
             elif action == LeafCli._ACTION_CLEAN:
-                print("Clean cache folder: ", LeafConstants.CACHE_FOLDER)
+                LeafUtils.printMessage(
+                    "Clean cache folder: ", LeafConstants.CACHE_FOLDER)
                 shutil.rmtree(str(LeafConstants.FILES_CACHE_FOLDER), True)
                 if LeafConstants.REMOTES_CACHE_FILE.exists():
                     os.remove(str(LeafConstants.REMOTES_CACHE_FILE))
@@ -1311,17 +1378,17 @@ USAGE
                             JsonConstants.REMOTE_DESCRIPTION)
                         content["Last update"] = info.get(
                             JsonConstants.REMOTE_DATE)
-                    self.printContent(remote, content)
+                    LeafUtils.printContent(remote, content)
             elif action == LeafCli._ACTION_FETCH:
                 app.fetchRemotes()
             elif action == LeafCli._ACTION_LIST:
                 for pack in self.filterPackageList(app.listInstalledPackages().values(), keywords=args.keywords, modules=args.modules):
                     if args.allPackages or pack.isMaster():
-                        self.displayPackage(pack, args.verbose)
+                        self.displayPackage(pack)
             elif action == LeafCli._ACTION_SEARCH:
                 for pack in self.filterPackageList(app.listAvailablePackages().values(), args.keywords, args.modules):
                     if args.allPackages or pack.isMaster():
-                        self.displayPackage(pack, args.verbose)
+                        self.displayPackage(pack)
             elif action == LeafCli._ACTION_INSTALL:
                 app.install(args.packages,
                             downloadOnly=args.downloadOnly,
@@ -1334,7 +1401,7 @@ USAGE
                               verbose=args.verbose)
             elif action == LeafCli._ACTION_ENV:
                 for k, v in app.getEnv(args.packages).items():
-                    print('export %s="%s"' % (k, v))
+                    LeafUtils.printMessage('export %s="%s"' % (k, v))
             elif action == LeafCli._ACTION_PACK:
                 app.pack(args.manifest, args.pack_output)
             elif action == LeafCli._ACTION_INDEX:
@@ -1351,7 +1418,7 @@ USAGE
         except Exception as e:
             if args.verbose:
                 raise e
-            print(e, file=sys.stderr)
+            LeafUtils.printMessage(e, file=sys.stderr)
             return 2
 
     def filterPackageList(self, content, keywords=None, modules=None, sort=True):
@@ -1381,7 +1448,7 @@ USAGE
             out = sorted(out, key=Manifest.getIdentifier)
         return out
 
-    def displayPackage(self, pack, verbose):
+    def displayPackage(self, pack):
         '''
         Display information of an installed/available package
         '''
@@ -1397,42 +1464,8 @@ USAGE
         content["Depends"] = pack.getLeafDepends()
         content["Modules"] = pack.getSupportedModules()
         content["Licenses"] = pack.getLicenses()
-        self.printContent(pack.getIdentifier(), content, verbose=verbose)
-
-    def printContent(self, firstLine, content, indent=4, separator=':', ralign=False, verbose=True):
-        '''
-        Display formatted content 
-        '''
-        if firstLine is not None:
-            print(firstLine)
-        if verbose and content is not None:
-            maxlen = 0
-            if ralign:
-                maxlen = len(
-                    max(filter(lambda k: content.get(k) is not None, content), key=len))
-            for k, v in content.items():
-                if isinstance(v, dict) or isinstance(v, list):
-                    if len(v) > 0:
-                        print(" " * indent,
-                              k.rjust(maxlen),
-                              separator,
-                              str(v[0]))
-                        for o in v[1:]:
-                            print(" " * indent,
-                                  (' ' * len(k)).rjust(maxlen),
-                                  ' ' * len(separator),
-                                  str(o))
-                elif isinstance(v, tuple):
-                    if len(v) > 0 and v[0] is not None:
-                        print(" " * indent,
-                              k.rjust(maxlen),
-                              separator,
-                              ' '.join(map(str, v)))
-                elif v is not None:
-                    print(" " * indent,
-                          k.rjust(maxlen),
-                          separator,
-                          str(v))
+        LeafUtils.printContent(pack.getIdentifier(),
+                               content if LeafUtils._VERBOSE else None)
 
 
 if __name__ == "__main__":
