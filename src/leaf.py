@@ -23,6 +23,7 @@ import json
 import os
 from pathlib import Path
 import re
+import requests
 import semver
 import shutil
 import subprocess
@@ -329,8 +330,17 @@ class LeafUtils():
             else:
                 print("File already in cache:", targetFile.name)
         if not targetFile.exists():
-            print("Downloading", url)
-            urllib.request.urlretrieve(url, str(targetFile))
+            req = requests.get(url, stream=True)
+            total_size = int(req.headers.get('content-length', 0))
+            current_size = 0
+            with open(str(targetFile), 'wb') as fp:
+                for data in req.iter_content(1024 * 1024):
+                    current_size += len(data)
+                    progress = "[{0}%]".format(
+                        int(current_size * 100 / total_size))
+                    print("Downloading", targetFile.name, progress,
+                          end='\r', flush=True)
+                    fp.write(data)
             print("File downloaded", targetFile)
             if sha1sum is not None and sha1sum != LeafUtils.sha1sum(targetFile):
                 raise ValueError(
@@ -955,6 +965,8 @@ class LeafApp(LeafRepository):
         '''
         Extract & post install given package
         '''
+        print("Installing", leafArtifact.getIdentifier())
+
         if installedPackages is None:
             installedPackages = self.listInstalledPackages()
 
