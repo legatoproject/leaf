@@ -1185,27 +1185,31 @@ USAGE
             description=LeafCli._PROG_LICENSE,
             formatter_class=RawDescriptionHelpFormatter)
 
-        self.parser.add_argument('-V', '--version',
-                                 action='version',
-                                 version=LeafCli._PROG_VERSION)
-        self.parser.add_argument("-v", "--verbose",
+        def withVerbose(p):
+            p.add_argument("-v", "--verbose",
                                  dest="verbose",
                                  action="store_true",
                                  help="increase output verbosity")
+            return p
+
+        self.parser.add_argument('-V', '--version',
+                                 action='version',
+                                 version=LeafCli._PROG_VERSION)
         self.parser.add_argument("--config",
                                  metavar='CONFIG_FILE',
                                  dest="customConfig",
                                  type=Path,
                                  help="use custom configuration file")
+        withVerbose(self.parser)
 
         subparsers = self.parser.add_subparsers(dest='verb',
                                                 description='supported commands',
                                                 help='actions to execute')
 
         def newParser(action, verb_help):
-            return subparsers.add_parser(action,
-                                         help=verb_help,
-                                         aliases=LeafCli._ACTION_ALIASES.get(action, []))
+            return withVerbose(subparsers.add_parser(action,
+                                                     help=verb_help,
+                                                     aliases=LeafCli._ACTION_ALIASES.get(action, [])))
 
         # CONFIG
         subparser = newParser(LeafCli._ACTION_CONFIG, "manage configuration")
