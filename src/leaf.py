@@ -358,8 +358,8 @@ class LeafUtils():
         '''
         Download an artifact 
         '''
+        parsedUrl = urlparse(url)
         if filename is None:
-            parsedUrl = urlparse(url)
             filename = Path(parsedUrl.path).name
         targetFile = folder / filename
         if targetFile.exists():
@@ -375,21 +375,29 @@ class LeafUtils():
                 LeafUtils.printMessage(
                     "File already in cache:", targetFile.name, kind='info')
         if not targetFile.exists():
-            req = requests.get(url, stream=True)
-            total_size = int(req.headers.get('content-length', 0))
-            LeafUtils.printMessage(
-                "Downloading", url, "size:", total_size, kind='info')
-            current_size = 0
-            with open(str(targetFile), 'wb') as fp:
-                for data in req.iter_content(1024 * 1024):
-                    current_size += len(data)
-                    progress = "{0} bytes".format(current_size)
-                    if total_size > 0 and current_size <= total_size:
-                        progress = "[{0}%]".format(
-                            int(current_size * 100 / total_size))
-                    LeafUtils.printMessage("Downloading", targetFile.name, progress,
-                                           end='\r', flush=True)
-                    fp.write(data)
+            LeafUtils.printMessage("Downloading", url, kind='info')
+            if parsedUrl.scheme.startswith("http"):
+                req = requests.get(url, stream=True)
+                total_size = int(req.headers.get('content-length', 0))
+                LeafUtils.printMessage(
+                    "Size:", total_size, "bytes", kind='info')
+                current_size = 0
+                with open(str(targetFile), 'wb') as fp:
+                    for data in req.iter_content(1024 * 1024):
+                        current_size += len(data)
+                        progress = "{0} bytes".format(current_size)
+                        if total_size > 0 and current_size <= total_size:
+                            progress = "[{0}%]".format(
+                                int(current_size * 100 / total_size))
+                        LeafUtils.printMessage("Downloading",
+                                               targetFile.name,
+                                               progress,
+                                               end='\r',
+                                               flush=True)
+                        fp.write(data)
+            else:
+                LeafUtils.printMessage("Downloading", url, kind='info')
+                urllib.request.urlretrieve(url, str(targetFile))
             LeafUtils.printMessage("File downloaded", targetFile)
             if sha1sum is not None and sha1sum != LeafUtils.sha1sum(targetFile):
                 raise ValueError(
@@ -642,8 +650,7 @@ class StepExecutor():
     def runSteps(self, stepsJsonArray, ip):
         for step in stepsJsonArray:
             if JsonConstants.STEP_LABEL in step:
-                LeafUtils.printMessage(
-                    "[step]", step[JsonConstants.STEP_LABEL])
+                LeafUtils.printMessage(step[JsonConstants.STEP_LABEL])
             stepType = step[JsonConstants.STEP_TYPE]
             if stepType == JsonConstants.STEP_EXEC:
                 self.doExec(step)
