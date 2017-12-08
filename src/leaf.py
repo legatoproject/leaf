@@ -22,6 +22,7 @@ import io
 import json
 import os
 from pathlib import Path
+import platform
 import random
 import re
 import requests
@@ -121,7 +122,8 @@ class LeafUtils():
     '''
     Useful simple methods
     '''
-
+    _ARCHS = {'x86_64': '64', 'i386': '32'}
+    _CURRENTOS = platform.system().lower() + _ARCHS.get(platform.machine(), "")
     _VERBOSE = False
     _VERBOZITY = {
         'info': False
@@ -138,7 +140,7 @@ class LeafUtils():
             print(*args, **kwargs)
 
     @staticmethod
-    def printContent(firstLine, content, indent=4, separator=':', ralign=False):
+    def printContent(firstLine=None, content=None, indent=4, separator=':', ralign=False):
         '''
         Display formatted content 
         '''
@@ -494,6 +496,13 @@ class Manifest():
 
     def getSupportedModules(self):
         return self.getNodeInfo().get(JsonConstants.INFO_SUPPORTEDMODULES)
+
+    def getSupportedOS(self):
+        return self.getNodeInfo().get(JsonConstants.INFO_SUPPORTEDOS)
+
+    def isSupported(self):
+        supportedOs = self.getSupportedOS()
+        return supportedOs is None or len(supportedOs) == 0 or LeafUtils._CURRENTOS in supportedOs
 
 
 class LeafArtifact(Manifest):
@@ -993,16 +1002,24 @@ class LeafApp(LeafRepository):
             LeafUtils.printMessage("All packages are already installed")
             return True
 
+        # Check supported Os
+        apIncompatible = [ap for ap in apToInstall if not ap.isSupported()]
+        if len(apIncompatible) > 0:
+            LeafUtils.printContent(content={
+                "Some packages are not compatible with your system":
+                [ap.getIdentifier() for ap in apIncompatible]}, indent=0)
+            if not forceInstall:
+                raise ValueError("Unsupported system")
+
         # Check dependencies
         missingAptDepends = LeafUtils.getMissingAptDepends(apToInstall)
         if len(missingAptDepends) > 0:
             LeafUtils.printMessage(
                 "You may have to install missing dependencies by running:")
             LeafUtils.printMessage(
-                "  $ sudo apt-get install", ' '.join(missingAptDepends))
+                "  $ sudo apt-get update && sudo apt-get install", ' '.join(missingAptDepends))
             if not forceInstall and not downloadOnly:
-                raise ValueError("Missing dependencies: " +
-                                 ' '.join(missingAptDepends))
+                raise ValueError("Missing dependencies")
 
         if not skipLicenses:
             lm = LicenseManager()
@@ -1010,8 +1027,8 @@ class LeafApp(LeafRepository):
                 if not lm.acceptLicense(lic):
                     raise ValueError("License must be accepted: " + lic)
 
-        LeafUtils.printContent(None, {"Packages to install":
-                                      [m.getIdentifier() for m in apToInstall]},
+        LeafUtils.printContent(content={"Packages to install":
+                                        [m.getIdentifier() for m in apToInstall]},
                                indent=0)
 
         toInstall = OrderedDict()
@@ -1112,8 +1129,8 @@ class LeafApp(LeafRepository):
             LeafUtils.printMessage(
                 "No package to remove (to keep dependencies)")
         else:
-            LeafUtils.printContent(None, {"Packages to remove":
-                                          [m.getIdentifier() for m in ipToRemove]},
+            LeafUtils.printContent(content={"Packages to remove":
+                                            [m.getIdentifier() for m in ipToRemove]},
                                    indent=0)
             for ip in ipToRemove:
                 LeafUtils.printMessage("Removing", ip.getIdentifier())
@@ -1413,7 +1430,7 @@ USAGE
                         self.displayPackage(pack)
             elif action == LeafCli._ACTION_SEARCH:
                 for pack in self.filterPackageList(app.listAvailablePackages().values(), args.keywords, args.modules):
-                    if args.allPackages or pack.isMaster():
+                    if args.allPackages or (pack.isMaster() and pack.isSupported()):
                         self.displayPackage(pack)
             elif action == LeafCli._ACTION_INSTALL:
                 app.install(args.packages,
@@ -1482,11 +1499,12 @@ USAGE
         content["Description"] = pack.getDescription()
         if isinstance(pack, AvailablePackage):
             content["Size"] = (pack.getSize(), 'bytes')
-            content["Source:"] = pack.getUrl()
+            content["Source"] = pack.getUrl()
         elif isinstance(pack, InstalledPackage):
             content["Folder"] = pack.folder
             content["Installation date"] = pack.getDetail(
                 JsonConstants.INSTALLED_DETAILS_DATE)
+        content["Systems"] = pack.getSupportedOS()
         content["Depends"] = pack.getLeafDepends()
         content["Modules"] = pack.getSupportedModules()
         content["Licenses"] = pack.getLicenses()
