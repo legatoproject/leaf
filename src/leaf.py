@@ -22,10 +22,12 @@ import io
 import json
 import os
 from pathlib import Path
+import random
 import re
 import requests
 import semver
 import shutil
+import string
 import subprocess
 import sys
 from tarfile import TarFile
@@ -1015,8 +1017,21 @@ class LeafApp(LeafRepository):
         toInstall = OrderedDict()
         # Download package if needed
         for ap in apToInstall:
+            prefixLen = 7
+            prefix = ap.getSha1sum()
+            if prefix is not None and len(prefix) >= prefixLen:
+                prefix = prefix[:prefixLen]
+            else:
+                prefix = ''.join(random.choice(string.ascii_uppercase + string.digits)
+                                 for _ in range(prefixLen))
+            artifactName = "%s-%s" % (
+                prefix,
+                Path(urlparse(ap.getUrl()).path).name)
             toInstall[ap] = LeafArtifact(LeafUtils.download(
-                ap.getUrl(), LeafConstants.FILES_CACHE_FOLDER, sha1sum=ap.getSha1sum()))
+                ap.getUrl(),
+                LeafConstants.FILES_CACHE_FOLDER,
+                filename=artifactName,
+                sha1sum=ap.getSha1sum()))
 
         if not downloadOnly:
             # Extract package
