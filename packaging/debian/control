@@ -1,0 +1,14 @@
+Source: leaf
+Section: devel
+Priority: optional
+Maintainer: Developer Studio Team <developerstudio@sierrawireless.com>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.4
+Homepage: http://legato.io
+
+Package: leaf
+Architecture: all
+Depends: ${misc:Depends}, python3, python3-apt
+Description: Legato Package Manager Tool
+ Used to manage deliverables related to Legato Application Framework
+
