@@ -20,10 +20,10 @@ import unittest
 from unittest.case import TestCase
 
 from leaf import LeafConstants, LeafApp, LeafRepository, PackageIdentifier,\
-    JsonConstants, LeafUtils
+    JsonConstants, LeafUtils, VerboseLogger, QuietLogger
 
 
-_VERBOSE = True
+_VERBOSE = False
 _ENABLE_HTTP_TESTS = True
 _HTTP_FIRST_PORT = 42000
 
@@ -47,6 +47,8 @@ class LeafAppTest():
         "composite-container_1.0.0": '.tar.xz',
         "composite-package_1.0.0": '.tar.xz'}
 
+    LOGGER = VerboseLogger() if _VERBOSE else QuietLogger()
+
     @classmethod
     def setUpClass(cls):
         LeafAppTest.ROOT_FOLDER = Path(mkdtemp(prefix="leaf_tests_"))
@@ -69,7 +71,7 @@ class LeafAppTest():
         artifactsFolder = outputFolder / "files"
         artifactsFolder.mkdir(parents=True)
 
-        app = LeafRepository()
+        app = LeafRepository(LeafAppTest.LOGGER)
         artifacts = []
         for pack, ext in LeafAppTest.PACKAGES_COMPOSITE.items():
             a = artifactsFolder / (pack + ext)
@@ -100,7 +102,8 @@ class LeafAppTest():
         shutil.rmtree(str(LeafAppTest.CACHE_FOLDER), ignore_errors=True)
         LeafAppTest.INSTALL_FOLDER.mkdir(parents=True)
 
-        self.app = LeafApp(LeafAppTest.INSTALL_FOLDER / "config.json")
+        self.app = LeafApp(
+            LeafAppTest.LOGGER, LeafAppTest.INSTALL_FOLDER / "config.json")
         self.app.writeConfiguration(
             {JsonConstants.CONFIG_ROOT: str(LeafAppTest.INSTALL_FOLDER)})
         self.assertEqual(0, len(self.app.listAvailablePackages()))
@@ -137,13 +140,13 @@ class LeafAppTest():
 
     def testInstallPackage(self):
         packageId = "package_1.0.0"
-        self.app.install([packageId], verbose=_VERBOSE)
+        self.app.install([packageId])
         self.checkContent(self.app.listInstalledPackages(), [packageId])
         self.checkExtracted(packageId)
 
     def testInstallWithLicense(self):
         packageId = "package-license_1.0.0"
-        self.app.install([packageId], verbose=_VERBOSE, skipLicenses=True)
+        self.app.install([packageId], skipLicenses=True)
         self.checkContent(self.app.listInstalledPackages(), [packageId])
 
     def testPostinstallError(self):
@@ -161,18 +164,18 @@ class LeafAppTest():
     def testInstallWithoutVersion(self):
         # TODO not yet implemented
         packageId = "package_2.0.0"
-        self.app.install(["package"], verbose=_VERBOSE)
+        self.app.install(["package"])
         self.checkContent(self.app.listInstalledPackages(), [packageId])
         self.checkExtracted(packageId)
 
     def testInstallJsonLeaf(self):
         packageId = "package-json_1.0.0"
-        self.app.install([packageId], verbose=_VERBOSE)
+        self.app.install([packageId])
         self.checkContent(self.app.listInstalledPackages(), [packageId])
 
     def testInstallWithSteps(self):
         packageId = "package-install_1.0.0"
-        self.app.install([packageId], verbose=_VERBOSE)
+        self.app.install([packageId])
         self.checkContent(self.app.listInstalledPackages(), [packageId])
 
         folder = self.checkExtracted(packageId, data2HardLink=False)
@@ -191,34 +194,34 @@ class LeafAppTest():
 
     def testInstallValidDeb(self):
         packageId = "package-deb_1.0.1"
-        self.app.install([packageId], verbose=_VERBOSE)
+        self.app.install([packageId])
         self.checkContent(self.app.listInstalledPackages(), [packageId])
 
     def testCannotInstallInvalidDeb(self):
         packageId = "package-deb_1.0.0"
         with self.assertRaises(Exception):
-            self.app.install([packageId], verbose=_VERBOSE)
+            self.app.install([packageId])
             self.checkContent(self.app.listInstalledPackages(), [])
         # TODO check APT message
 
     def testForceInstallInvalidDeb(self):
         packageId = "package-deb_1.0.0"
-        self.app.install([packageId], forceInstall=True, verbose=_VERBOSE)
+        self.app.install([packageId], forceInstall=True)
         self.checkContent(self.app.listInstalledPackages(), [packageId])
 
     def testUninstall(self):
         packageId = "package-uninstall_1.0.0"
-        self.app.install([packageId], verbose=_VERBOSE)
+        self.app.install([packageId])
         self.checkContent(self.app.listInstalledPackages(), [packageId])
         self.checkExtracted(packageId)
-        self.app.uninstall([packageId], verbose=_VERBOSE)
+        self.app.uninstall([packageId])
         self.assertTrue(
             (LeafAppTest.INSTALL_FOLDER / "uninstall.log").is_file())
         self.checkContent(self.app.listInstalledPackages(), [])
 
     def testInstallContainer(self):
         packageId = "container_1.0.0"
-        self.app.install([packageId], verbose=_VERBOSE)
+        self.app.install([packageId])
         self.checkContent(self.app.listInstalledPackages(),
                           [packageId, "package_1.0.0"])
         self.checkExtracted(packageId)
@@ -226,29 +229,29 @@ class LeafAppTest():
 
     def testInstallComposite(self):
         packageId = "composite-container_1.0.0"
-        self.app.install([packageId], verbose=_VERBOSE)
+        self.app.install([packageId])
         self.checkContent(self.app.listInstalledPackages(), [packageId,
                                                              "package_1.0.0", "composite-package_1.0.0"])
         self.checkExtracted(packageId)
         self.checkExtracted("composite-package_1.0.0")
 
     def testCannotUninstallDependencies(self):
-        self.app.install(["container_1.0.0"], verbose=_VERBOSE)
+        self.app.install(["container_1.0.0"])
         self.checkContent(self.app.listInstalledPackages(), [
                           "container_1.0.0", "package_1.0.0"])
-        self.app.install(["container_1.2.0"], verbose=_VERBOSE)
+        self.app.install(["container_1.2.0"])
         self.checkContent(self.app.listInstalledPackages(), ["container_1.2.0", "container_1.0.0", "package_1.0.0", "package-install_1.0.0", "package-uninstall_1.0.0",
                                                              "package-env_1.0.0", "package-deb_1.0.1"])
 
-        self.app.uninstall(["container_1.0.0"], verbose=_VERBOSE)
+        self.app.uninstall(["container_1.0.0"])
         self.checkContent(self.app.listInstalledPackages(), ["container_1.2.0", "package_1.0.0", "package-install_1.0.0", "package-uninstall_1.0.0", "package-env_1.0.0",
                                                              "package-deb_1.0.1"])
 
-        self.app.uninstall(["container_1.2.0"], verbose=_VERBOSE)
+        self.app.uninstall(["container_1.2.0"])
         self.checkContent(self.app.listInstalledPackages(), [])
 
     def testEnv(self):
-        self.app.install(["container_1.2.0"], verbose=_VERBOSE)
+        self.app.install(["container_1.2.0"])
         self.checkContent(self.app.listInstalledPackages(), ["container_1.2.0", "package_1.0.0", "package-install_1.0.0", "package-uninstall_1.0.0", "package-env_1.0.0",
                                                              "package-deb_1.0.1"])
 
