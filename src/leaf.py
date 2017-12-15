@@ -25,7 +25,6 @@ import platform
 import random
 import re
 import requests
-import semver
 import shutil
 import string
 import subprocess
@@ -398,12 +397,13 @@ class LeafUtils():
         '''
         out = []
         for motif in motifList:
-            pi = PackageIdentifier.fromString(motif)
-            if pi is None:
+            if PackageIdentifier.isValidIdentifier(motif):
+                pi = PackageIdentifier.fromString(motif)
+            else:
                 for pi in sorted(filter(lambda pi: pi.name == motif, contentDict.keys())):
                     # loop to get the last item
                     pass
-            if pi is not None and pi not in out:
+            if pi is not None:
                 out.append(pi)
             else:
                 raise ValueError(
@@ -440,12 +440,12 @@ class LeafUtils():
         for pi in piList:
             pack = content.get(pi)
             if pack is None:
-                raise ValueError(
-                    "Cannot findPackageIdentifiers package: " + pi)
+                raise ValueError("Cannot find package: " + pi)
             if pack not in outList:
                 outList.append(pack)
-                LeafUtils.getDependencies(
-                    pack.getLeafDepends(), content, outList)
+                LeafUtils.getDependencies(pack.getLeafDepends(),
+                                          content,
+                                          outList)
 
     @staticmethod
     def computePackagesToInstall(piList, apContent):
@@ -564,23 +564,27 @@ class LeafUtils():
 @total_ordering
 class PackageIdentifier ():
 
-    _REGEX = re.compile('^([a-zA-Z-]+)$')
+    _NAME_REGEX = re.compile('^[a-zA-Z0-9][-a-zA-Z0-9]*$')
+    _VERSION_REGEX = re.compile('^[a-zA-Z0-9][-._a-zA-Z0-9]*$')
+    _VERSION_SEPARATOR = re.compile("[-_.]")
     _SEPARATOR = '_'
+
+    @staticmethod
+    def isValidIdentifier(pis):
+        split = pis.partition(PackageIdentifier._SEPARATOR)
+        return (PackageIdentifier._NAME_REGEX.match(split[0]) is not None and
+                PackageIdentifier._VERSION_REGEX.match(split[2]) is not None)
 
     @staticmethod
     def fromString(pis):
         split = pis.partition(PackageIdentifier._SEPARATOR)
-        if PackageIdentifier._REGEX.match(split[0]) and semver._REGEX.match(split[2]):
-            return PackageIdentifier(split[0], split[2])
-
-    @staticmethod
-    def isValidName(name):
-        match = PackageIdentifier._REGEX.match(name)
-        return match is not None
+        return PackageIdentifier(split[0], split[2])
 
     def __init__(self, name, version):
-        if not PackageIdentifier.isValidName(name):
+        if PackageIdentifier._NAME_REGEX.match(name) is None:
             raise ValueError("Invalid package name: " + name)
+        if PackageIdentifier._VERSION_REGEX.match(version) is None:
+            raise ValueError("Invalid package version: " + version)
         self.name = name
         self.version = version
 
@@ -603,8 +607,20 @@ class PackageIdentifier ():
         if not self._is_valid_operand(other):
             return NotImplemented
         if self.name == other.name:
-            return semver.compare(self.version, other.version) < 0
+            va = self.getVersion()
+            vb = other.getVersion()
+            if va == vb:
+                return self.version < other.version
+            return va < vb
         return self.name < other.name
+
+    def getVersion(self):
+        def tryint(x):
+            try:
+                return int(x)
+            except:
+                return x
+        return tuple(tryint(x) for x in PackageIdentifier._VERSION_SEPARATOR.split(self.version))
 
 
 class Manifest():
