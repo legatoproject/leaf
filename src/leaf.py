@@ -1669,17 +1669,21 @@ USAGE
 
         def my_filter(p):
             out = True
-            if modules is not None and len(modules) > 0 and p.getSupportedModules() is not None:
+            if modules is not None and len(modules) > 0:
                 out = False
-                for m in modules:
-                    if m.lower() in map(str.lower, p.getSupportedModules()):
-                        out = True
-                        break
+                if p.getSupportedModules() is not None:
+                    for m in modules:
+                        if m.lower() in map(str.lower, p.getSupportedModules()):
+                            out = True
+                            break
             if out and keywords is not None and len(keywords) > 0:
                 out = False
                 for k in keywords:
                     k = k.lower()
-                    if k in str(p.getIdentifier()).lower() or (p.getDescription() is not None and k in p.getDescription().lower()):
+                    if k in str(p.getIdentifier()).lower():
+                        out = True
+                        break
+                    if p.getDescription() is not None and k in p.getDescription().lower():
                         out = True
                         break
             return out
