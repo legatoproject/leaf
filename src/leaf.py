@@ -1202,7 +1202,7 @@ class LeafApp(LeafRepository):
         apIncompatible = [ap for ap in apToInstall if not ap.isSupported()]
         if len(apIncompatible) > 0:
             self.logger.printError("Some packages are not compatible with your system: ",
-                                   ", ".join([ap.getIdentifier() for ap in apIncompatible]))
+                                   ", ".join([str(ap.getIdentifier()) for ap in apIncompatible]))
             if not forceInstall:
                 raise ValueError("Unsupported system")
 
