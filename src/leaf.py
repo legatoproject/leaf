@@ -428,9 +428,18 @@ class LeafUtils():
         out = set()
         cache = apt.Cache()
         for ap in availablePackages:
-            out.update(LeafUtils.jsonGet(
-                ap.getNodeInfo(), [JsonConstants.INFO_DEPENDS, JsonConstants.INFO_DEPENDS_DEB], []))
-        return [deb for deb in out if deb not in cache or not cache[deb].installed]
+            for deb in LeafUtils.jsonGet(ap.getNodeInfo(),
+                                         [JsonConstants.INFO_DEPENDS,
+                                             JsonConstants.INFO_DEPENDS_DEB],
+                                         []):
+                if cache.is_virtual_package(deb):
+                    if len([p for p in cache.get_providing_packages(deb) if cache[p].installed]) == 0:
+                        out.add(deb)
+                elif deb not in cache:
+                    out.add(deb)
+                elif not cache[deb].installed:
+                    out.add(deb)
+        return out
 
     @staticmethod
     def getDependencies(piList, content, outList):
@@ -440,7 +449,7 @@ class LeafUtils():
         for pi in piList:
             pack = content.get(pi)
             if pack is None:
-                raise ValueError("Cannot find package: " + pi)
+                raise ValueError("Cannot find package: " + str(pi))
             if pack not in outList:
                 outList.append(pack)
                 LeafUtils.getDependencies(pack.getLeafDepends(),
@@ -1132,7 +1141,7 @@ class LeafApp(LeafRepository):
             try:
                 with urllib.request.urlopen(remoteurl) as url:
                     data = json.loads(url.read().decode())
-                    self.logger.printError("Fetched", remoteurl)
+                    self.logger.printMessage("Fetched", remoteurl)
                     content[remoteurl] = data
                     composites = data.get(JsonConstants.REMOTE_COMPOSITE)
                     if composites is not None:
