@@ -238,7 +238,7 @@ class JsonLogger(QuietLogger):
     '''
 
     def printJson(self, content):
-        print(json.dumps(content, sort_keys=True, indent=None))
+        print(json.dumps(content, sort_keys=True, indent=None), flush=True)
 
     def isVerbose(self):
         return False
