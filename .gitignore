@@ -1,3 +1,4 @@
+# Packaging
 /packaging/debian/debhelper-build-stamp
 /packaging/debian/files
 /packaging/debian/leaf.debhelper.log
@@ -5,8 +6,12 @@
 /packaging/debian/leaf/
 /packaging/leaf/
 /output/
+/leaf_*.*
+
+# Eclipse
 /.settings/
 
+# Python
 __pycache__
+/nosetests.xml
 *.pyc
-/leaf_*.*

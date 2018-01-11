@@ -3,29 +3,24 @@ Created on 23 nov. 2017
 
 @author: seb
 '''
-
 '''
 Constants to tweak the tests
 '''
 
-import http
 import os
 from pathlib import Path
-import random
 import shutil
-import socketserver
+import sys
 from tempfile import mkdtemp
-import threading
 import unittest
 from unittest.case import TestCase
 
+sys.path.insert(0, os.path.abspath('..'))
 from leaf import LeafConstants, LeafApp, LeafRepository, PackageIdentifier,\
     JsonConstants, LeafUtils, VerboseLogger, QuietLogger
 
 
 _VERBOSE = False
-_ENABLE_HTTP_TESTS = True
-_HTTP_FIRST_PORT = 42000
 
 
 class LeafAppTest():
@@ -60,7 +55,7 @@ class LeafAppTest():
         shutil.rmtree(str(LeafAppTest.ROOT_FOLDER), True)
 
         LeafAppTest.doGenerateRepo(
-            Path("resources/"), LeafAppTest.REPO_FOLDER)
+            Path("tests/resources/"), LeafAppTest.REPO_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -267,42 +262,6 @@ class LeafAppTest():
         self.assertEquals("FOO", env["LEAF_ENV"])
 
 
-@unittest.skipUnless(_ENABLE_HTTP_TESTS, "HTTP tests are disable")
-class HttpLeafTest(LeafAppTest, unittest.TestCase):
-
-    def __init__(self, methodName):
-        TestCase.__init__(self, methodName)
-
-    @classmethod
-    def setUpClass(cls):
-        TestCase.setUpClass()
-        LeafAppTest.setUpClass()
-
-        os.chdir(str(LeafAppTest.REPO_FOLDER))
-        HttpLeafTest.httpPort = _HTTP_FIRST_PORT + random.randint(0, 999)
-        handler = http.server.SimpleHTTPRequestHandler
-        HttpLeafTest.httpd = socketserver.TCPServer(
-            ("", HttpLeafTest.httpPort), handler)
-
-        print("Start http server on port: %d" % HttpLeafTest.httpPort)
-        HttpLeafTest.thread = threading.Thread(
-            target=HttpLeafTest.httpd.serve_forever)
-        HttpLeafTest.thread.setDaemon(True)
-        HttpLeafTest.thread.start()
-
-    @classmethod
-    def tearDownClass(cls):
-        TestCase.tearDownClass()
-        LeafAppTest.tearDownClass()
-
-        print("Shutdown http server")
-        HttpLeafTest.httpd.shutdown()
-        HttpLeafTest.thread.join()
-
-    def getRemoteUrl(self):
-        return "http://localhost:%d/index.json" % HttpLeafTest.httpPort
-
-
 class FileLeafTest(LeafAppTest, unittest.TestCase):
 
     def __init__(self, methodName):
@@ -313,5 +272,4 @@ class FileLeafTest(LeafAppTest, unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'FileLeafTest.testInstallPackage']
     unittest.main()

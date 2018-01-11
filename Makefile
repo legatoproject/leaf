@@ -4,9 +4,16 @@
 OUTPUT:=$(PWD)/output
 
 #.SILENT:
-.PHONY: all debArchive zipArchive clean
+.PHONY: init all debArchive zipArchive clean test
 
-all: debArchive zipArchive
+all: init test debArchive zipArchive
+
+init:
+	mkdir -p $(OUTPUT)
+
+test: 
+	python3 -m nose --with-xunit
+	cp nosetests.xml $(OUTPUT)/
 
 clean:
 	rm -Rf	output \
@@ -19,9 +26,9 @@ clean:
 			leaf_*.*
 
 debArchive:
-	mkdir -p $(OUTPUT)
 	rm -Rf packaging/leaf
-	cp -a src packaging/leaf
+	mkdir packaging/leaf
+	cp -a leaf.py packaging/leaf/
 	(cd packaging; debuild -b)
 	mv leaf_*.* $(OUTPUT)
 	(cd $(OUTPUT); zip leafDeb.zip *.deb *.changes)
