@@ -10,10 +10,10 @@ Leaf Package Manager
 
 '''
 __version__ = 0.1
-from _collections import OrderedDict
 import apt
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import argparse
+from collections import OrderedDict
 import datetime
 from functools import total_ordering
 import hashlib
@@ -39,10 +39,11 @@ class LeafConstants():
     '''
     Constants needed by Leaf
     '''
-    MIN_PYTHON_VERSION = (3, 5)
-    DEFAULT_LEAF_ROOT = Path.home() / 'legato' / 'packages'
-    DEFAULT_CONFIG_FILE = Path.home() / '.leaf-config.json'
-    CACHE_FOLDER = Path.home() / '.cache' / 'leaf'
+    MIN_PYTHON_VERSION = (3, 4)
+    USER_HOME = Path(os.path.expanduser("~"))
+    DEFAULT_LEAF_ROOT = USER_HOME / 'legato' / 'packages'
+    DEFAULT_CONFIG_FILE = USER_HOME / '.leaf-config.json'
+    CACHE_FOLDER = USER_HOME / '.cache' / 'leaf'
     FILES_CACHE_FOLDER = CACHE_FOLDER / "files"
     REMOTES_CACHE_FILE = CACHE_FOLDER / 'remotes.json'
     LICENSES_CACHE_FILE = CACHE_FOLDER / 'licenses.json'
@@ -881,12 +882,11 @@ class StepExecutor():
         stdout = subprocess.DEVNULL
         if self.logger.isVerbose() or LeafUtils.jsonGet(step, [JsonConstants.STEP_EXEC_VERBOSE], default=False):
             stdout = None
-        subprocess.run(command,
-                       cwd=str(self.targetFolder),
-                       env=env,
-                       check=True,
-                       stdout=stdout,
-                       stderr=subprocess.STDOUT)
+        subprocess.check_call(command,
+                              cwd=str(self.targetFolder),
+                              env=env,
+                              stdout=stdout,
+                              stderr=subprocess.STDOUT)
 
     def doCopy(self, step):
         src = self.resolve(
@@ -1013,7 +1013,7 @@ class LeafApp(LeafRepository):
         super().__init__(logger)
         self.configurationFile = configurationFile
         # Create folders if needed
-        LeafConstants.FILES_CACHE_FOLDER.mkdir(parents=True, exist_ok=True)
+        os.makedirs(str(LeafConstants.FILES_CACHE_FOLDER), exist_ok=True)
 
     def readConfiguration(self):
         '''
@@ -1047,7 +1047,7 @@ class LeafApp(LeafRepository):
             root = config.get(JsonConstants.CONFIG_ROOT)
             if root is not None:
                 out = Path(root)
-        out.mkdir(parents=True, exist_ok=True)
+        os.makedirs(str(out), exist_ok=True)
         return out
 
     def updateConfiguration(self, rootFolder=None, env=None):
@@ -1292,7 +1292,7 @@ class LeafApp(LeafRepository):
             raise ValueError("Folder already exists: " + targetFolder)
 
         # Create folder
-        targetFolder.mkdir(parents=True, exist_ok=False)
+        os.makedirs(str(targetFolder))
         try:
             if leafArtifact.isJsonOnly():
                 self.logger.printDetail("Copy manifest in", targetFolder)

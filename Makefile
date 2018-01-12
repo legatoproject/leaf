@@ -12,6 +12,7 @@ init:
 	mkdir -p $(OUTPUT)
 
 test: 
+	echo > nosetests.xml
 	python3 -m nose --with-xunit
 	cp nosetests.xml $(OUTPUT)/
 
