@@ -319,6 +319,25 @@ class LeafUtils():
                  '.gz': 'gz'}
 
     @staticmethod
+    def tuplesLt(a, b):
+        if a == b:
+            return False
+        i = 0
+        while True:
+            if i >= len(a):
+                return True
+            if i >= len(b):
+                return False
+            ai = a[i]
+            bi = b[i]
+            if not type(ai) == type(bi):
+                ai = str(ai)
+                bi = str(bi)
+            if not ai == bi:
+                return ai < bi
+            i += 1
+
+    @staticmethod
     def getArtifactName(ap):
         prefixLen = 7
         prefix = ap.getSha1sum()
@@ -621,7 +640,7 @@ class PackageIdentifier ():
             vb = other.getVersion()
             if va == vb:
                 return self.version < other.version
-            return va < vb
+            return LeafUtils.tuplesLt(va, vb)
         return self.name < other.name
 
     def getVersion(self):
@@ -1722,7 +1741,7 @@ if __name__ == "__main__":
     # Check python version
     currentPythonVersion = sys.version_info
     if (currentPythonVersion[0], currentPythonVersion[1]) < LeafConstants.MIN_PYTHON_VERSION:
-        print('Unsuported Python version, please use at least Python %d.%d.' % LeafConstants.MIN_PYTHON_VERSION,
+        print('Unsupported Python version, please use at least Python %d.%d.' % LeafConstants.MIN_PYTHON_VERSION,
               file=sys.stderr)
         sys.exit(1)
     sys.exit(LeafCli().execute())
