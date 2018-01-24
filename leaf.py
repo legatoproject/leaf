@@ -1289,7 +1289,7 @@ class LeafApp(LeafRepository):
 
         targetFolder = self.getInstallFolder() / str(leafArtifact.getIdentifier())
         if targetFolder.is_dir():
-            raise ValueError("Folder already exists: " + targetFolder)
+            raise ValueError("Folder already exists: " + str(targetFolder))
 
         # Create folder
         os.makedirs(str(targetFolder))
