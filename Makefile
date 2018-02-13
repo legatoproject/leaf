@@ -2,38 +2,27 @@
 
 # Setup directories
 OUTPUT:=$(PWD)/output
+DIST:=$(PWD)/dist
 
 #.SILENT:
-.PHONY: init all debArchive zipArchive clean test
+.PHONY: clean test deb archive all
 
-all: init test debArchive zipArchive
-
-init:
-	mkdir -p $(OUTPUT)
-
-test: 
-	echo > nosetests.xml
-	python3 -m nose --with-xunit
-	cp nosetests.xml $(OUTPUT)/
+all: clean test deb archive
 
 clean:
-	rm -Rf	output \
-			packaging/leaf \
-			packaging/debian/debhelper-build-stamp \
-			packaging/debian/files \
-			packaging/debian/leaf.debhelper.log \
-			packaging/debian/leaf.substvars \
-			packaging/debian/leaf/ \
-			leaf_*.*
+	rm -rf nosetests.xml $(OUTPUT) $(DIST)
 
-debArchive:
-	rm -Rf packaging/leaf
-	mkdir packaging/leaf
-	cp -a leaf.py packaging/leaf/
-	(cd packaging; debuild -b)
-	mv leaf_*.* $(OUTPUT)
-	(cd $(OUTPUT); zip leafDeb.zip *.deb *.changes)
+test:
+	echo > nosetests.xml
+	python3 -m nose --with-xunit
 
-zipArchive:
-	mkdir -p $(OUTPUT)
-	(cd src; zip -r $(OUTPUT)/leaf.zip *)
+deb:
+	rm -rf $(DIST)
+	$(PWD)/mkdeb.sh
+
+archive: 
+	mkdir $(OUTPUT)
+	cp nosetests.xml $(OUTPUT)/
+	cp $(DIST)/*.deb $(OUTPUT)/
+	cp $(DIST)/*.changes $(OUTPUT)/
+	cp $(DIST)/*.tar.gz $(OUTPUT)/

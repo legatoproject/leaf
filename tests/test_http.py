@@ -3,9 +3,6 @@ Created on 23 nov. 2017
 
 @author: seb
 '''
-'''
-Constants to tweak the tests
-'''
 
 from http.server import SimpleHTTPRequestHandler
 import os
@@ -15,7 +12,7 @@ import threading
 import unittest
 from unittest.case import TestCase
 
-from test_file import LeafAppTest
+from tests.test_file import LeafAppTest
 
 
 _HTTP_FIRST_PORT = 42000

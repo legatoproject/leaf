@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# encoding: utf-8
 '''
 Leaf Package Manager
 
@@ -9,7 +7,6 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 
 '''
-__version__ = 0.1
 import apt
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import argparse
@@ -33,6 +30,8 @@ from tarfile import TarFile
 import time
 from urllib.parse import urlparse, urlunparse
 import urllib.request
+
+from leaf import __version__
 
 
 class LeafConstants():
@@ -204,7 +203,7 @@ class VerboseLogger (QuietLogger):
 
     def prettyprintContent(self, content, indent=4, separator=':', ralign=False):
         '''
-        Display formatted content 
+        Display formatted content
         '''
         if content is not None:
             maxlen = 0
@@ -412,7 +411,7 @@ class LeafUtils():
     @staticmethod
     def findPackageIdentifiers(motifList, contentDict):
         '''
-        Search a package given a full packageidentifier 
+        Search a package given a full packageidentifier
         or only a name (latest version will be returned then.
         '''
         out = []
@@ -546,7 +545,7 @@ class LeafUtils():
     @staticmethod
     def download(url, folder, logger, filename=None, sha1sum=None):
         '''
-        Download an artifact 
+        Download an artifact
         '''
         parsedUrl = urlparse(url)
         if filename is None:
@@ -987,7 +986,7 @@ class LeafRepository():
 
     def index(self, outputFile, artifacts, name=None, description=None, composites=[]):
         '''
-        Create an index.json referencing all given artifacts 
+        Create an index.json referencing all given artifacts
         '''
         infoNode = OrderedDict()
         if name is not None:
@@ -1415,8 +1414,6 @@ class LeafApp(LeafRepository):
 
 
 class LeafCli():
-    _PROG_NAME = os.path.basename(sys.argv[0])
-    _PROG_VERSION = "v%s" % __version__
     _PROG_LICENSE = '''
   Copyright 2017 Sierra Wireless. All rights reserved.
 
@@ -1456,7 +1453,7 @@ USAGE
                                  help="output json format")
         self.parser.add_argument('-V', '--version',
                                  action='version',
-                                 version=LeafCli._PROG_VERSION)
+                                 version="v%s" % __version__)
         self.parser.add_argument("--config",
                                  metavar='CONFIG_FILE',
                                  dest="customConfig",
@@ -1735,13 +1732,3 @@ USAGE
         if sort:
             out = sorted(out, key=Manifest.getIdentifier)
         return out
-
-
-if __name__ == "__main__":
-    # Check python version
-    currentPythonVersion = sys.version_info
-    if (currentPythonVersion[0], currentPythonVersion[1]) < LeafConstants.MIN_PYTHON_VERSION:
-        print('Unsupported Python version, please use at least Python %d.%d.' % LeafConstants.MIN_PYTHON_VERSION,
-              file=sys.stderr)
-        sys.exit(1)
-    sys.exit(LeafCli().execute())

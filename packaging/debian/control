@@ -2,13 +2,13 @@ Source: leaf
 Section: devel
 Priority: optional
 Maintainer: Developer Studio Team <developerstudio@sierrawireless.com>
-Build-Depends: debhelper (>= 8.0.0)
+Build-Depends: debhelper (>= 8.0.0), dh-python, python3-all, python3-setuptools
+X-Python3-Version: >= 3.4
 Standards-Version: 3.9.4
 Homepage: http://legato.io
 
 Package: leaf
 Architecture: all
-Depends: ${misc:Depends}, python3(>= 3.4) , python3-apt, python3-requests
+Depends: ${misc:Depends}, ${python3:Depends}, python3-apt, python3-requests
 Description: Legato Package Manager Tool
  Used to manage deliverables related to Legato Application Framework
-

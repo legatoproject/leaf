@@ -15,9 +15,11 @@ from tempfile import mkdtemp
 import unittest
 from unittest.case import TestCase
 
-sys.path.insert(0, os.path.abspath('..'))
-from leaf import LeafConstants, LeafApp, LeafRepository, PackageIdentifier,\
+from leaf.core import LeafConstants, LeafApp, LeafRepository, PackageIdentifier,\
     JsonConstants, LeafUtils, VerboseLogger, QuietLogger
+
+
+sys.path.insert(0, os.path.abspath('..'))
 
 
 _VERBOSE = False
