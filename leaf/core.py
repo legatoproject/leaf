@@ -85,6 +85,7 @@ class JsonConstants():
     UNINSTALL = 'uninstall'
     STEP_TYPE = 'type'
     STEP_LABEL = 'label'
+    STEP_IGNORE_FAIL = 'ignoreFail'
     STEP_EXEC = 'exec'
     STEP_EXEC_ENV = 'env'
     STEP_EXEC_COMMAND = 'command'
@@ -898,13 +899,23 @@ class StepExecutor():
                 env[k] = v
         env["LEAF_VERSION"] = str(__version__)
         stdout = subprocess.DEVNULL
-        if self.logger.isVerbose() or LeafUtils.jsonGet(step, [JsonConstants.STEP_EXEC_VERBOSE], default=False):
+        if self.logger.isVerbose() or LeafUtils.jsonGet(step,
+                                                        [JsonConstants.STEP_EXEC_VERBOSE],
+                                                        default=False):
             stdout = None
-        subprocess.check_call(command,
-                              cwd=str(self.targetFolder),
-                              env=env,
-                              stdout=stdout,
-                              stderr=subprocess.STDOUT)
+        rc = subprocess.call(command,
+                             cwd=str(self.targetFolder),
+                             env=env,
+                             stdout=stdout,
+                             stderr=subprocess.STDOUT)
+        if rc != 0:
+            if LeafUtils.jsonGet(step,
+                                 [JsonConstants.STEP_IGNORE_FAIL],
+                                 False):
+                self.logger.printDetail(
+                    "Return code is ", rc, ", but step ignores failure")
+            else:
+                raise ValueError("Step exited with return code " + str(rc))
 
     def doCopy(self, step):
         src = self.resolve(
@@ -937,11 +948,18 @@ class StepExecutor():
                                        step[JsonConstants.STEP_DOWNLOAD_RELATIVEURL])
         else:
             raise ValueError("No url to download")
-        LeafUtils.download(url,
-                           self.targetFolder,
-                           self.logger,
-                           step.get(JsonConstants.STEP_DOWNLOAD_FILENAME),
-                           step.get(JsonConstants.STEP_DOWNLOAD_SHA1SUM))
+        try:
+            LeafUtils.download(url,
+                               self.targetFolder,
+                               self.logger,
+                               step.get(JsonConstants.STEP_DOWNLOAD_FILENAME),
+                               step.get(JsonConstants.STEP_DOWNLOAD_SHA1SUM))
+        except Exception as e:
+            if LeafUtils.jsonGet(step, [JsonConstants.STEP_IGNORE_FAIL], False):
+                self.logger.printDetail(
+                    "Download failed, but step ignores failure")
+            else:
+                raise e
 
     def resolve(self, value, failOnUnknownVariable=True, prefixWithFolder=False):
         out = str(value)

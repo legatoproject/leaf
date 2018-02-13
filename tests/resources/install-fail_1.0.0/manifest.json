@@ -1,0 +1,14 @@
+{
+  "info": {
+    "name": "install-fail",
+    "version": "1.0.0"
+  },
+  "install": [
+    {
+      "type": "exec",
+      "command": [
+        "false"
+      ]
+    }
+  ]
+}

@@ -28,6 +28,8 @@ _VERBOSE = False
 class LeafAppTest():
 
     PACKAGES = {
+        "install-fail_1.0.0": '.json',
+        "install-fail_1.0.1": '.json',
         "package-json_1.0.0": '.json',
         "container_1.0.0": '.tar.xz',
         "container_1.2.0": '.tar.xz',
@@ -262,6 +264,15 @@ class LeafAppTest():
                                "foo"))
         self.assertEquals(value, env["LEAF_PATH"])
         self.assertEquals("FOO", env["LEAF_ENV"])
+
+    def testSilentFail(self):
+        packageId = "install-fail_1.0.0"
+        with self.assertRaises(Exception):
+            self.app.install([packageId])
+            self.checkContent(self.app.listInstalledPackages(), [])
+        packageId = "install-fail_1.0.1"
+        self.app.install([packageId])
+        self.checkContent(self.app.listInstalledPackages(), [packageId])
 
 
 class FileLeafTest(LeafAppTest, unittest.TestCase):
