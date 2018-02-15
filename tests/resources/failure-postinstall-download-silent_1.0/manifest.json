@@ -1,0 +1,13 @@
+{
+  "info": {
+    "name": "failure-postinstall-download-silent",
+    "version": "1.0"
+  },
+  "install": [
+    {
+      "type": "download",
+      "url": "http://10.254.254.1/i/really/hope/this/resource/does/not/exist.txt",
+      "ignoreFail": true
+    }
+  ]
+}

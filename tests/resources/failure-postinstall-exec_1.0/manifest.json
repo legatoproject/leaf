@@ -1,0 +1,14 @@
+{
+  "info": {
+    "name": "failure-postinstall-exec",
+    "version": "1.0"
+  },
+  "install": [
+    {
+      "type": "exec",
+      "command": [
+        "false"
+      ]
+    }
+  ]
+}

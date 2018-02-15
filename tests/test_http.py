@@ -8,12 +8,16 @@ from http.server import SimpleHTTPRequestHandler
 import os
 import random
 import socketserver
+import sys
 import threading
 import unittest
 from unittest.case import TestCase
 
 from tests.test_file import LeafAppTest
 
+
+# Needed for http server
+sys.path.insert(0, os.path.abspath('..'))
 
 _HTTP_FIRST_PORT = 42000
 

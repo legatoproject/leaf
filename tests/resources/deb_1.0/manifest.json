@@ -1,0 +1,11 @@
+{
+  "info": {
+    "name": "deb",
+    "version": "1.0",
+    "depends": {
+      "deb": [
+        "python3"
+      ]
+    }
+  }
+}

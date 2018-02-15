@@ -16,6 +16,7 @@ from functools import total_ordering
 import hashlib
 import io
 import json
+from leaf import __version__
 import os
 from pathlib import Path
 import platform
@@ -30,8 +31,6 @@ from tarfile import TarFile
 import time
 from urllib.parse import urlparse, urlunparse
 import urllib.request
-
-from leaf import __version__
 
 
 class LeafConstants():
@@ -418,6 +417,7 @@ class LeafUtils():
         '''
         out = []
         for motif in motifList:
+            pi = None
             if PackageIdentifier.isValidIdentifier(motif):
                 pi = PackageIdentifier.fromString(motif)
             else:

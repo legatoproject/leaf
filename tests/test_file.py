@@ -7,20 +7,16 @@ Created on 23 nov. 2017
 Constants to tweak the tests
 '''
 
-import os
+from leaf.core import LeafConstants, LeafApp, PackageIdentifier,\
+    JsonConstants, LeafUtils, VerboseLogger, QuietLogger
 from pathlib import Path
 import shutil
-import sys
 from tempfile import mkdtemp
 import time
 import unittest
 from unittest.case import TestCase
 
-from leaf.core import LeafConstants, LeafApp, LeafRepository, PackageIdentifier,\
-    JsonConstants, LeafUtils, VerboseLogger, QuietLogger
-
-
-sys.path.insert(0, os.path.abspath('..'))
+from tests.releng import RepositoryUtils
 
 
 _VERBOSE = False
@@ -28,26 +24,9 @@ _VERBOSE = False
 
 class LeafAppTest():
 
-    PACKAGES = {
-        "install-fail_1.0.0": '.json',
-        "install-fail_1.0.1": '.json',
-        "download-404_1.0.0": ".json",
-        "package-json_1.0.0": '.json',
-        "container_1.0.0": '.tar.xz',
-        "container_1.2.0": '.tar.xz',
-        "package_0.9.9": '.tar.gz',
-        "package_1.0.0": '.tar.bz2',
-        "package_2.0.0": '.tar.xz',
-        "package-deb_1.0.0": '.tar.xz',
-        "package-deb_1.0.1": '.tar.xz',
-        "package-env_1.0.0": '.tar.xz',
-        "package-install_1.0.0": '.tar.xz',
-        "package-license_1.0.0": '.tar.xz',
-        "package-uninstall_1.0.0": '.tar.xz'}
-    PACKAGES_COMPOSITE = {
-        "composite-container_1.0.0": '.tar.xz',
-        "composite-package_1.0.0": '.tar.xz'}
-
+    REPO_FOLDER = None
+    INSTALL_FOLDER = None
+    CACHE_FOLDER = None
     LOGGER = VerboseLogger() if _VERBOSE else QuietLogger()
 
     @classmethod
@@ -60,36 +39,12 @@ class LeafAppTest():
 
         shutil.rmtree(str(LeafAppTest.ROOT_FOLDER), True)
 
-        LeafAppTest.doGenerateRepo(
-            Path("tests/resources/"), LeafAppTest.REPO_FOLDER)
+        RepositoryUtils.generateRepo(
+            Path("tests/resources/"), LeafAppTest.REPO_FOLDER, LeafAppTest.LOGGER)
 
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(str(LeafAppTest.ROOT_FOLDER), True)
-
-    @staticmethod
-    def doGenerateRepo(sourceFolder, outputFolder):
-        artifactsFolder = outputFolder / "files"
-        artifactsFolder.mkdir(parents=True)
-
-        app = LeafRepository(LeafAppTest.LOGGER)
-        artifacts = []
-        for pack, ext in LeafAppTest.PACKAGES_COMPOSITE.items():
-            a = artifactsFolder / (pack + ext)
-            artifacts.append(a)
-            app.pack(sourceFolder / pack / LeafConstants.MANIFEST, a)
-        pass
-        app.index(outputFolder / "composite.json",
-                  artifacts, name="Composite Leaf repository")
-
-        artifacts = []
-        for pack, ext in LeafAppTest.PACKAGES.items():
-            a = artifactsFolder / (pack + ext)
-            artifacts.append(a)
-            app.pack(sourceFolder / pack / LeafConstants.MANIFEST, a)
-        pass
-        app.index(outputFolder / "index.json", artifacts,
-                  composites=["composite.json"], name="Master Leaf repository")
 
     def __init__(self, url):
         self.url = str(url)
@@ -113,175 +68,147 @@ class LeafAppTest():
         self.app.remoteAdd(self.getRemoteUrl())
         self.assertEqual(1, len(self.app.remoteList()))
         self.app.fetchRemotes()
-        self.assertEqual(
-            len(LeafAppTest.PACKAGES) + len(LeafAppTest.PACKAGES_COMPOSITE),
-            len(self.app.listAvailablePackages()))
-        pass
 
     def tearDown(self):
         shutil.rmtree(str(LeafAppTest.INSTALL_FOLDER), True)
-        pass
 
     def checkContent(self, content, pisList):
         self.assertEqual(len(content), len(pisList))
         for pis in pisList:
             self.assertTrue(PackageIdentifier.fromString(pis) in content)
 
-    def checkExtracted(self, pid, data2HardLink=True):
-        folder = LeafAppTest.INSTALL_FOLDER / pid
+    def testCompression(self):
+        packs = ["compress-bz2_1.0", "compress-gz_1.0",
+                 "compress-tar_1.0", "compress-xz_1.0"]
+        self.app.install(packs)
+        self.checkContent(self.app.listInstalledPackages(), packs)
+
+    def testComposite(self):
+        packs = ["composite_1.0"]
+        self.app.install(packs)
+        self.checkContent(self.app.listInstalledPackages(), packs)
+
+    def testContainer(self):
+        self.app.install(["container-A_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), [
+                          "container-A_1.0", "container-B_1.0", "container-C_1.0", "container-E_1.0"])
+
+        self.app.install(["container-A_2.0"])
+        self.checkContent(self.app.listInstalledPackages(), [
+                          "container-A_1.0", "container-B_1.0", "container-C_1.0", "container-E_1.0",
+                          "container-A_2.0", "container-D_1.0"])
+
+        self.app.uninstall(["container-A_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), [
+                          "container-A_2.0", "container-C_1.0", "container-D_1.0"])
+
+        with self.assertRaises(Exception):
+            self.app.install(["failure-depends-leaf_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), [
+                          "container-A_2.0", "container-C_1.0", "container-D_1.0"])
+
+    def testDebDepends(self):
+        self.app.install(["deb_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), ["deb_1.0"])
+
+        with self.assertRaises(Exception):
+            self.app.install(["failure-depends-deb_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), ["deb_1.0"])
+
+        self.app.install(["failure-depends-deb_1.0"], forceInstall=True)
+        self.checkContent(self.app.listInstalledPackages(), [
+                          "deb_1.0", "failure-depends-deb_1.0"])
+
+    def testSteps(self):
+        self.app.install(["install_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), ["install_1.0"])
+
+        folder = LeafAppTest.INSTALL_FOLDER / "install_1.0"
+
         self.assertTrue(folder.is_dir())
         self.assertTrue((folder / "data1").is_file())
         self.assertTrue((folder / "folder").is_dir())
-        self.assertTrue((folder / "folder" / "data2").is_file())
-        self.assertEqual(data2HardLink, (folder / "folder" /
-                                         "data2-hardlink").is_file())
-        self.assertTrue(
-            (folder / "folder" / "data1-symlink").is_symlink())
-        return folder
+        self.assertFalse((folder / "folder" / "data2").is_file())
+        self.assertTrue((folder / "folder" / "data1-symlink").is_symlink())
 
-    def testInstallPackage(self):
-        packageId = "package_1.0.0"
-        self.app.install([packageId])
-        self.checkContent(self.app.listInstalledPackages(), [packageId])
-        self.checkExtracted(packageId)
-
-    def testInstallWithLicense(self):
-        packageId = "package-license_1.0.0"
-        self.app.install([packageId], skipLicenses=True)
-        self.checkContent(self.app.listInstalledPackages(), [packageId])
-
-    def testPostinstallError(self):
-        packageId = "package_0.9.9"
-        with self.assertRaises(Exception):
-            self.app.install([packageId], keepFolderOnError=True)
-        found = False
-        for folder in LeafAppTest.INSTALL_FOLDER.iterdir():
-            if folder.name.startswith(packageId):
-                self.assertTrue(LeafUtils.isFolderIgnored(folder))
-                found = True
-                break
-        self.assertTrue(found)
-
-    def testInstallWithoutVersion(self):
-        # TODO not yet implemented
-        packageId = "package_2.0.0"
-        self.app.install(["package"])
-        self.checkContent(self.app.listInstalledPackages(), [packageId])
-        self.checkExtracted(packageId)
-
-    def testInstallJsonLeaf(self):
-        packageId = "package-json_1.0.0"
-        self.app.install([packageId])
-        self.checkContent(self.app.listInstalledPackages(), [packageId])
-
-    def testInstallWithSteps(self):
-        packageId = "package-install_1.0.0"
-        self.app.install([packageId])
-        self.checkContent(self.app.listInstalledPackages(), [packageId])
-
-        folder = self.checkExtracted(packageId, data2HardLink=False)
+        self.assertFalse(
+            (LeafAppTest.INSTALL_FOLDER / "uninstall.log").is_file())
         self.assertTrue((folder / "postinstall.log").is_file())
+        self.assertTrue((folder / "targetFileFromEnv").is_file())
+        self.assertTrue((folder / "downloadedFile").is_file())
         self.assertTrue((folder / "folder2").is_dir())
         self.assertTrue((folder / "folder2" / "data2-symlink").is_symlink())
         self.assertTrue((folder / "data2-copy").is_file())
-        self.assertTrue((folder / "downloadedFile").is_file())
-        self.assertTrue((folder / "package-env_1.0.0.tar.xz").is_file())
-        self.assertTrue((folder / "targetFileFromEnv").is_file())
         with open(str(folder / "targetFileFromEnv"), 'r') as fp:
             content = fp.readlines()
             self.assertEquals(1, len(content))
             # FIXME \n at the end?
             self.assertEquals(str(folder) + "\n", content[0])
 
-    def testInstallValidDeb(self):
-        packageId = "package-deb_1.0.1"
-        self.app.install([packageId])
-        self.checkContent(self.app.listInstalledPackages(), [packageId])
-
-    def testCannotInstallInvalidDeb(self):
-        packageId = "package-deb_1.0.0"
-        with self.assertRaises(Exception):
-            self.app.install([packageId])
-            self.checkContent(self.app.listInstalledPackages(), [])
-        # TODO check APT message
-
-    def testForceInstallInvalidDeb(self):
-        packageId = "package-deb_1.0.0"
-        self.app.install([packageId], forceInstall=True)
-        self.checkContent(self.app.listInstalledPackages(), [packageId])
-
-    def testUninstall(self):
-        packageId = "package-uninstall_1.0.0"
-        self.app.install([packageId])
-        self.checkContent(self.app.listInstalledPackages(), [packageId])
-        self.checkExtracted(packageId)
-        self.app.uninstall([packageId])
+        self.app.uninstall(["install_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), [])
         self.assertTrue(
             (LeafAppTest.INSTALL_FOLDER / "uninstall.log").is_file())
-        self.checkContent(self.app.listInstalledPackages(), [])
 
-    def testInstallContainer(self):
-        packageId = "container_1.0.0"
-        self.app.install([packageId])
-        self.checkContent(self.app.listInstalledPackages(),
-                          [packageId, "package_1.0.0"])
-        self.checkExtracted(packageId)
-        self.checkExtracted("package_1.0.0")
+    def testPostinstallError(self):
+        with self.assertRaises(Exception):
+            self.app.install(["failure-postinstall-exec_1.0"],
+                             keepFolderOnError=True)
+        found = False
+        for folder in LeafAppTest.INSTALL_FOLDER.iterdir():
+            if folder.name.startswith("failure-postinstall-exec_1.0"):
+                self.assertTrue(LeafUtils.isFolderIgnored(folder))
+                found = True
+                break
+        self.assertTrue(found)
 
-    def testInstallComposite(self):
-        packageId = "composite-container_1.0.0"
-        self.app.install([packageId])
-        self.checkContent(self.app.listInstalledPackages(), [packageId,
-                                                             "package_1.0.0", "composite-package_1.0.0"])
-        self.checkExtracted(packageId)
-        self.checkExtracted("composite-package_1.0.0")
+    def testInstallLatest(self):
+        self.app.install(["version"])
+        self.checkContent(self.app.listInstalledPackages(), ["version_2.0"])
 
-    def testCannotUninstallDependencies(self):
-        self.app.install(["container_1.0.0"])
+    def testCannotUninstallToKeepDependencies(self):
+        self.app.install(["container-A_2.0"])
         self.checkContent(self.app.listInstalledPackages(), [
-                          "container_1.0.0", "package_1.0.0"])
-        self.app.install(["container_1.2.0"])
-        self.checkContent(self.app.listInstalledPackages(), ["container_1.2.0", "container_1.0.0", "package_1.0.0", "package-install_1.0.0", "package-uninstall_1.0.0",
-                                                             "package-env_1.0.0", "package-deb_1.0.1"])
+                          "container-A_2.0", "container-C_1.0", "container-D_1.0"])
 
-        self.app.uninstall(["container_1.0.0"])
-        self.checkContent(self.app.listInstalledPackages(), ["container_1.2.0", "package_1.0.0", "package-install_1.0.0", "package-uninstall_1.0.0", "package-env_1.0.0",
-                                                             "package-deb_1.0.1"])
-
-        self.app.uninstall(["container_1.2.0"])
-        self.checkContent(self.app.listInstalledPackages(), [])
+        self.app.uninstall(["container-C_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), [
+                          "container-A_2.0", "container-C_1.0", "container-D_1.0"])
 
     def testEnv(self):
-        self.app.install(["container_1.2.0"])
-        self.checkContent(self.app.listInstalledPackages(), ["container_1.2.0", "package_1.0.0", "package-install_1.0.0", "package-uninstall_1.0.0", "package-env_1.0.0",
-                                                             "package-deb_1.0.1"])
+        self.app.install(["env-A_1.0"])
+        self.checkContent(self.app.listInstalledPackages(),
+                          ["env-A_1.0", "env-B_1.0"])
 
-        env = self.app.getEnv(["container_1.2.0"])
-        self.assertEquals(3, len(env))
-        value = "%s:%s" % (str(LeafAppTest.INSTALL_FOLDER /
-                               "package_1.0.0" /
-                               "foo"),
-                           str(LeafAppTest.INSTALL_FOLDER /
-                               "package-install_1.0.0" /
-                               "foo"))
-        self.assertEquals(value, env["LEAF_PATH"])
-        self.assertEquals("FOO", env["LEAF_ENV"])
+        env = self.app.getEnv(["env-A_1.0"])
+        self.assertEquals(4, len(env))
+        value = "$PATH:%s:%s" % (str(LeafAppTest.INSTALL_FOLDER /
+                                     "env-A_1.0"),
+                                 str(LeafAppTest.INSTALL_FOLDER /
+                                     "env-B_1.0"))
+        self.assertEquals(value, env["LEAF_PATH_A"])
+        self.assertEquals("FOO", env["LEAF_ENV_A"])
+        self.assertEquals("BAR", env["LEAF_ENV_B"])
 
     def testSilentFail(self):
-        packageId = "install-fail_1.0.0"
         with self.assertRaises(Exception):
-            self.app.install([packageId])
-            self.checkContent(self.app.listInstalledPackages(), [])
-        packageId = "install-fail_1.0.1"
-        self.app.install([packageId])
-        self.checkContent(self.app.listInstalledPackages(), [packageId])
+            self.app.install(["failure-postinstall-download_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), [])
+
+        with self.assertRaises(Exception):
+            self.app.install(["failure-postinstall-exec_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), [])
+
+        self.app.install(["failure-postinstall-download-silent_1.0",
+                          "failure-postinstall-exec-silent_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), ["failure-postinstall-download-silent_1.0",
+                                                             "failure-postinstall-exec-silent_1.0"])
 
     def testDownloadTimeout(self):
-        packageId = "download-404_1.0.0"
         start = time.time()
         with self.assertRaises(Exception):
-            self.app.install([packageId])
-            self.checkContent(self.app.listInstalledPackages(), [])
+            self.app.install(["failure-postinstall-download_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), [])
         duration = time.time() - start
         self.assertTrue(duration > LeafConstants.DOWNLOAD_TIMEOUT)
         self.assertTrue(duration < (LeafConstants.DOWNLOAD_TIMEOUT + 2))

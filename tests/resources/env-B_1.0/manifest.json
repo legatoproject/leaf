@@ -1,0 +1,10 @@
+{
+  "info": {
+    "name": "env-B",
+    "version": "1.0"
+  },
+  "env": {
+    "LEAF_ENV_B": "BAR",
+    "LEAF_PATH_B": "$PATH:@{DIR}"
+  }
+}

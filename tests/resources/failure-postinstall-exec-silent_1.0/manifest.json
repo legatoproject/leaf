@@ -1,0 +1,15 @@
+{
+  "info": {
+    "name": "failure-postinstall-exec-silent",
+    "version": "1.0"
+  },
+  "install": [
+    {
+      "type": "exec",
+      "command": [
+        "false"
+      ],
+      "ignoreFail": true
+    }
+  ]
+}

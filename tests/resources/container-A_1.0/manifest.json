@@ -1,0 +1,13 @@
+{
+  "info": {
+    "name": "container-A",
+    "version": "1.0",
+    "master": true,
+    "depends": {
+      "leaf": [
+        "container-B_1.0",
+        "container-C_1.0"
+      ]
+    }
+  }
+}
