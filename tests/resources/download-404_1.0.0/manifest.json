@@ -1,0 +1,12 @@
+{
+  "info": {
+    "name": "download-404",
+    "version": "1.0.0"
+  },
+  "install": [
+    {
+      "type": "download",
+      "url": "http://10.254.254.1/i/really/hope/this/resource/does/not/exist.txt"
+    }
+  ]
+}

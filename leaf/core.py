@@ -49,6 +49,7 @@ class LeafConstants():
     EXTENSION_JSON = '.json'
     MANIFEST = 'manifest' + EXTENSION_JSON
     VAR_PREFIX = '@'
+    DOWNLOAD_TIMEOUT = 5
 
 
 class JsonConstants():
@@ -566,7 +567,8 @@ class LeafUtils():
                     "File already in cache:", targetFile.name)
         if not targetFile.exists():
             if parsedUrl.scheme.startswith("http"):
-                req = requests.get(url, stream=True)
+                req = requests.get(
+                    url, stream=True, timeout=LeafConstants.DOWNLOAD_TIMEOUT)
                 size = int(req.headers.get('content-length', -1))
                 logger.progressStart('download', total=size)
                 currentSize = 0
@@ -1175,7 +1177,7 @@ class LeafApp(LeafRepository):
         '''
         if remoteurl not in content:
             try:
-                with urllib.request.urlopen(remoteurl) as url:
+                with urllib.request.urlopen(remoteurl, timeout=LeafConstants.DOWNLOAD_TIMEOUT) as url:
                     data = json.loads(url.read().decode())
                     self.logger.printMessage("Fetched", remoteurl)
                     content[remoteurl] = data

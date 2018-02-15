@@ -12,6 +12,7 @@ from pathlib import Path
 import shutil
 import sys
 from tempfile import mkdtemp
+import time
 import unittest
 from unittest.case import TestCase
 
@@ -30,6 +31,7 @@ class LeafAppTest():
     PACKAGES = {
         "install-fail_1.0.0": '.json',
         "install-fail_1.0.1": '.json',
+        "download-404_1.0.0": ".json",
         "package-json_1.0.0": '.json',
         "container_1.0.0": '.tar.xz',
         "container_1.2.0": '.tar.xz',
@@ -273,6 +275,16 @@ class LeafAppTest():
         packageId = "install-fail_1.0.1"
         self.app.install([packageId])
         self.checkContent(self.app.listInstalledPackages(), [packageId])
+
+    def testDownloadTimeout(self):
+        packageId = "download-404_1.0.0"
+        start = time.time()
+        with self.assertRaises(Exception):
+            self.app.install([packageId])
+            self.checkContent(self.app.listInstalledPackages(), [])
+        duration = time.time() - start
+        self.assertTrue(duration > LeafConstants.DOWNLOAD_TIMEOUT)
+        self.assertTrue(duration < (LeafConstants.DOWNLOAD_TIMEOUT + 2))
 
 
 class FileLeafTest(LeafAppTest, unittest.TestCase):
