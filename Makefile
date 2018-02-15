@@ -26,3 +26,4 @@ archive:
 	cp $(DIST)/*.deb $(OUTPUT)/
 	cp $(DIST)/*.changes $(OUTPUT)/
 	cp $(DIST)/*.tar.gz $(OUTPUT)/
+	cp $(OUTPUT)/*.deb $(OUTPUT)/leaf_latest.deb

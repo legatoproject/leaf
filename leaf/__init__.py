@@ -1,5 +1,5 @@
 __title__ = 'leaf'
-__version__ = '0.1.1'
+__version__ = '0.0.0-dev'
 __short_version__ = '.'.join(__version__.split('.')[:2])
 __author__ = 'Sierra Wireless'
 __license__ = 'Mozilla Public License Version 2.0'

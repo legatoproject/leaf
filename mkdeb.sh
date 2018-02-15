@@ -6,6 +6,7 @@ set -e
 ROOT=$(dirname "$0")
 DIST_DIR="dist"
 cd "$ROOT"
+VERSION=$(git describe --tags)
 
 # Build source distribution
 python3 setup.py sdist
@@ -22,4 +23,6 @@ cp -r packaging/debian/ "$WORKING_DIR"
 
 # Create debian package
 cd "$WORKING_DIR"
+sed -i -e "s/0.0.0-dev/$VERSION/" leaf/__init__.py
+dch --create --package leaf --newversion $VERSION -u low -D release --force-distribution -M "Leaf Package Manager"
 debuild -b

@@ -1,10 +1,4 @@
 # Packaging
-/packaging/debian/debhelper-build-stamp
-/packaging/debian/files
-/packaging/debian/leaf.debhelper.log
-/packaging/debian/leaf.substvars
-/packaging/debian/leaf/
-/packaging/leaf/
 /output/
 /leaf_*.*
 
