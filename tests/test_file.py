@@ -102,10 +102,30 @@ class LeafAppTest():
         self.checkContent(self.app.listInstalledPackages(), [
                           "container-A_2.0", "container-C_1.0", "container-D_1.0"])
 
+        self.app.uninstall(["container-A_2.0"])
+        self.checkContent(self.app.listInstalledPackages(), [])
+
+    def testBadContainer(self):
         with self.assertRaises(Exception):
             self.app.install(["failure-depends-leaf_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), [])
+
+    def testContainerNotMaster(self):
+        self.app.install(["container-A_1.1"])
         self.checkContent(self.app.listInstalledPackages(), [
-                          "container-A_2.0", "container-C_1.0", "container-D_1.0"])
+                          "container-A_1.1", "container-B_1.0", "container-C_1.0", "container-E_1.0"])
+
+        self.app.install(["container-A_2.1"])
+        self.checkContent(self.app.listInstalledPackages(), [
+                          "container-A_1.1", "container-B_1.0", "container-C_1.0", "container-E_1.0",
+                          "container-A_2.1", "container-D_1.0"])
+
+        self.app.uninstall(["container-A_1.1"])
+        self.checkContent(self.app.listInstalledPackages(), [
+                          "container-A_2.1", "container-C_1.0", "container-D_1.0"])
+
+        self.app.uninstall(["container-A_2.1"])
+        self.checkContent(self.app.listInstalledPackages(), [])
 
     def testDebDepends(self):
         self.app.install(["deb_1.0"])

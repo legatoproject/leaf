@@ -494,7 +494,7 @@ class LeafUtils():
         LeafUtils.getDependencies(piList, ipContent, out)
         out = LeafUtils.sortPackagesByDependencies(out, masterFirst=True)
         for ip in ipContent.values():
-            if ip.isMaster() and ip not in out:
+            if ip not in out:
                 keep = []
                 LeafUtils.getDependencies(
                     [ip.getIdentifier()], ipContent, keep)
