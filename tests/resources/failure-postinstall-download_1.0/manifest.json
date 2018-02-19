@@ -6,7 +6,7 @@
   "install": [
     {
       "type": "download",
-      "url": "http://10.254.254.1/i/really/hope/this/resource/does/not/exist.txt"
+      "url": "http://www.google.com:81/i/really/hope/this/resource/does/not/exist.txt"
     }
   ]
 }

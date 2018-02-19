@@ -210,8 +210,10 @@ class LeafAppTest():
             self.app.install(["failure-postinstall-download_1.0"])
         self.checkContent(self.app.listInstalledPackages(), [])
         duration = time.time() - start
-        self.assertTrue(duration > LeafConstants.DOWNLOAD_TIMEOUT)
-        self.assertTrue(duration < (LeafConstants.DOWNLOAD_TIMEOUT + 2))
+        self.assertTrue(duration > LeafConstants.DOWNLOAD_TIMEOUT,
+                        msg="Duration: " + str(duration))
+        self.assertTrue(duration < (LeafConstants.DOWNLOAD_TIMEOUT + 2),
+                        msg="Duration: " + str(duration))
 
 
 class FileLeafTest(LeafAppTest, unittest.TestCase):

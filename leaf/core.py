@@ -45,8 +45,7 @@ class LeafConstants():
     FILES_CACHE_FOLDER = CACHE_FOLDER / "files"
     REMOTES_CACHE_FILE = CACHE_FOLDER / 'remotes.json'
     LICENSES_CACHE_FILE = CACHE_FOLDER / 'licenses.json'
-    EXTENSION_JSON = '.json'
-    MANIFEST = 'manifest' + EXTENSION_JSON
+    MANIFEST = 'manifest.json'
     VAR_PREFIX = '@'
     DOWNLOAD_TIMEOUT = 5
 
@@ -103,9 +102,6 @@ class JsonConstants():
     STEP_DOWNLOAD_RELATIVEURL = 'relativeUrl'
     STEP_DOWNLOAD_FILENAME = 'filename'
     STEP_DOWNLOAD_SHA1SUM = REMOTE_PACKAGE_SHA1SUM
-    INSTALLED_DETAILS = 'details'
-    INSTALLED_DETAILS_SOURCE = 'source'
-    INSTALLED_DETAILS_DATE = 'installDate'
     ENV = 'env'
 
     # Extra
@@ -181,8 +177,6 @@ class VerboseLogger (QuietLogger):
             content["Source"] = pack.getUrl()
         elif isinstance(pack, InstalledPackage):
             content["Folder"] = pack.folder
-            content["Installation date"] = pack.getDetail(
-                JsonConstants.INSTALLED_DETAILS_DATE)
         content["Systems"] = pack.getSupportedOS()
         content["Depends"] = pack.getLeafDepends()
         content["Modules"] = pack.getSupportedModules()
@@ -313,7 +307,8 @@ class LeafUtils():
     _ARCHS = {'x86_64': '64', 'i386': '32'}
     _CURRENTOS = platform.system().lower() + _ARCHS.get(platform.machine(), "")
     _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
-    _LEAF_EXT = {'.xz': 'xz',
+    _LEAF_EXT = {'.tar': '',
+                 '.xz': 'xz',
                  '.bz2': 'bz2',
                  '.tgz': 'gz',
                  '.gz': 'gz'}
@@ -400,7 +395,10 @@ class LeafUtils():
         '''
         Guess the compression from the file extension
         '''
-        return prefix + LeafUtils._LEAF_EXT.get(path.suffix, 'xz')
+        suffix = LeafUtils._LEAF_EXT.get(path.suffix, 'xz')
+        if len(suffix) > 0:
+            return prefix + ":" + suffix
+        return prefix
 
     @staticmethod
     def now():
@@ -659,6 +657,11 @@ class Manifest():
     Represent a Manifest model object
     '''
 
+    @staticmethod
+    def parse(manifestFile):
+        with open(str(manifestFile), 'r') as fp:
+            return Manifest(json.load(fp))
+
     def __init__(self, json):
         self.json = json
 
@@ -711,16 +714,9 @@ class LeafArtifact(Manifest):
 
     def __init__(self, path):
         self.path = path
-        if self.isJsonOnly():
-            with open(str(self.path), 'r') as fp:
-                Manifest.__init__(self, json.load(fp))
-        else:
-            with TarFile.open(str(self.path), 'r') as tarfile:
-                Manifest.__init__(self, json.load(io.TextIOWrapper(
-                    tarfile.extractfile(LeafConstants.MANIFEST))))
-
-    def isJsonOnly(self):
-        return self.path.suffix == LeafConstants.EXTENSION_JSON
+        with TarFile.open(str(self.path), 'r') as tarfile:
+            Manifest.__init__(self, json.load(io.TextIOWrapper(
+                tarfile.extractfile(LeafConstants.MANIFEST))))
 
 
 class AvailablePackage(Manifest):
@@ -763,17 +759,6 @@ class InstalledPackage(Manifest):
 
     def __str__(self):
         return "{pi} [{path}]".format(pi=self.getIdentifier(), path=str(self.folder))
-
-    def setDetail(self, key, value):
-        details = LeafUtils.jsonGet(
-            self.json, [JsonConstants.INSTALLED_DETAILS], {})
-        details[key] = value
-        self.json[JsonConstants.INSTALLED_DETAILS] = details
-        with open(str(self.folder / LeafConstants.MANIFEST), 'w') as output:
-            json.dump(self.json, output, indent=4, separators=(',', ': '))
-
-    def getDetail(self, key):
-        return LeafUtils.jsonGet(self.json, [JsonConstants.INSTALLED_DETAILS, key])
 
 
 class LicenseManager ():
@@ -942,16 +927,8 @@ class StepExecutor():
             os.remove(resolvedFile)
 
     def doDownload(self, step, ip):
-        url = None
-        if JsonConstants.STEP_DOWNLOAD_URL in step:
-            url = step[JsonConstants.STEP_DOWNLOAD_URL]
-        elif JsonConstants.STEP_DOWNLOAD_RELATIVEURL in step:
-            url = LeafUtils.resolveUrl(ip.getDetail(JsonConstants.INSTALLED_DETAILS_SOURCE),
-                                       step[JsonConstants.STEP_DOWNLOAD_RELATIVEURL])
-        else:
-            raise ValueError("No url to download")
         try:
-            LeafUtils.download(url,
+            LeafUtils.download(step[JsonConstants.STEP_DOWNLOAD_URL],
                                self.targetFolder,
                                self.logger,
                                step.get(JsonConstants.STEP_DOWNLOAD_FILENAME),
@@ -991,18 +968,13 @@ class LeafRepository():
         with open(str(manifestFile), 'r') as fp:
             manifest = Manifest(json.load(fp))
             self.logger.printMessage("Found:", manifest.getIdentifier())
-            if outputFile.suffix == LeafConstants.EXTENSION_JSON:
-                shutil.copy(str(manifestFile), str(outputFile))
-                self.logger.printMessage(
-                    "Manifest copied:", manifestFile, "-->", outputFile)
-            else:
-                self.logger.printMessage(
-                    "Create tar:", manifestFile, "-->", outputFile)
-                with TarFile.open(str(outputFile),
-                                  LeafUtils.guessCompression(outputFile, prefix="w:")) as tf:
-                    for file in manifestFile.parent.glob('*'):
-                        tf.add(str(file),
-                               str(file.relative_to(manifestFile.parent)))
+            self.logger.printMessage(
+                "Create tar:", manifestFile, "-->", outputFile)
+            with TarFile.open(str(outputFile),
+                              LeafUtils.guessCompression(outputFile, prefix="w")) as tf:
+                for file in manifestFile.parent.glob('*'):
+                    tf.add(str(file),
+                           str(file.relative_to(manifestFile.parent)))
 
     def index(self, outputFile, artifacts, name=None, description=None, composites=[]):
         '''
@@ -1332,29 +1304,18 @@ class LeafApp(LeafRepository):
         # Create folder
         os.makedirs(str(targetFolder))
         try:
-            if leafArtifact.isJsonOnly():
-                self.logger.printDetail("Copy manifest in", targetFolder)
-                shutil.copy(str(leafArtifact.path), str(
-                    targetFolder / LeafConstants.MANIFEST))
-            else:
-                self.logger.printDetail(
-                    "Extract", leafArtifact.path, "in", targetFolder)
-                with TarFile.open(str(leafArtifact.path)) as tf:
-                    tf.extractall(str(targetFolder))
+            self.logger.printDetail(
+                "Extract", leafArtifact.path, "in", targetFolder)
+            with TarFile.open(str(leafArtifact.path)) as tf:
+                tf.extractall(str(targetFolder))
 
             # Execute post install steps
             newPackage = InstalledPackage(
                 targetFolder / LeafConstants.MANIFEST)
-            if urlSource is not None:
-                newPackage.setDetail(
-                    JsonConstants.INSTALLED_DETAILS_SOURCE, urlSource)
-            stepExec = StepExecutor(self.logger,
-                                    newPackage,
-                                    installedPackages,
-                                    extraEnv=self.getUserEnvVariables())
-            stepExec.postInstall()
-            newPackage.setDetail(
-                JsonConstants.INSTALLED_DETAILS_DATE, LeafUtils.now())
+            StepExecutor(self.logger,
+                         newPackage,
+                         installedPackages,
+                         extraEnv=self.getUserEnvVariables()).postInstall()
             installedPackages[newPackage.getIdentifier()] = newPackage
             return newPackage
         except Exception as e:
