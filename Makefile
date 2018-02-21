@@ -2,7 +2,8 @@
 
 # Setup directories
 OUTPUT:=$(PWD)/output
-DIST:=$(PWD)/dist
+SRC:=$(PWD)/src
+DIST:=$(SRC)/dist
 
 #.SILENT:
 .PHONY: clean test deb archive all
@@ -10,20 +11,20 @@ DIST:=$(PWD)/dist
 all: clean test deb archive
 
 clean:
-	rm -rf nosetests.xml $(OUTPUT) $(DIST)
+	rm -rf $(SRC)/nosetests.xml $(OUTPUT) $(DIST)
 
 test:
-	echo > nosetests.xml
-	python3 -m nose --with-xunit
+	echo > $(SRC)/nosetests.xml
+	(cd $(SRC) && python3 -m nose --with-xunit)
 
 deb:
 	rm -rf $(DIST)
-	$(PWD)/mkdeb.sh
+	$(PWD)/packaging/mkdeb.sh
 
 archive: 
 	mkdir $(OUTPUT)
-	cp nosetests.xml $(OUTPUT)/
-	cp $(DIST)/*.deb $(OUTPUT)/
-	cp $(DIST)/*.changes $(OUTPUT)/
-	cp $(DIST)/*.tar.gz $(OUTPUT)/
-	cp $(OUTPUT)/*.deb $(OUTPUT)/leaf_latest.deb
+	cp $(SRC)/nosetests.xml $(OUTPUT)/
+	cp $(DIST)/*.deb        $(OUTPUT)/
+	cp $(DIST)/*.changes    $(OUTPUT)/
+	cp $(DIST)/*.tar.gz     $(OUTPUT)/
+	cp $(OUTPUT)/*.deb      $(OUTPUT)/leaf_latest.deb

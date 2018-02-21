@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-from setuptools import setup
 from leaf import __version__
+from setuptools import setup
+
 
 setup(name='leaf',
       version=__version__,

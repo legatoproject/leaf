@@ -1,5 +1,9 @@
-from leaf.core import LeafConstants, LeafRepository, Manifest
+
 import subprocess
+
+from leaf.constants import LeafConstants
+from leaf.core import LeafRepository
+from leaf.model import Manifest
 
 
 class RepositoryUtils():

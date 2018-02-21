@@ -1,16 +1,15 @@
 # Packaging
 /output/
-/leaf_*.*
 
 # Eclipse
 /.settings/
 
 # Python
 __pycache__
-/nosetests.xml
 *.pyc
+/src/nosetests.xml
 
 # setuptools
-/dist/
-/build/
-/leaf.egg-info/
+/src/dist/
+/src/build/
+/src/leaf.egg-info/

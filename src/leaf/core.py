@@ -5,108 +5,28 @@ Leaf Package Manager
 @copyright: 2018 Sierra Wireless. All rights reserved.
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
-
 '''
+
 import apt
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
-import argparse
 from collections import OrderedDict
 import datetime
-from functools import total_ordering
-import hashlib
 import io
 import json
-from leaf import __version__
 import os
 from pathlib import Path
-import platform
-import random
-import re
-import requests
 import shutil
-import string
 import subprocess
 import sys
 from tarfile import TarFile
-import time
-from urllib.parse import urlparse, urlunparse
 import urllib.request
 
-
-class LeafConstants():
-    '''
-    Constants needed by Leaf
-    '''
-    MIN_PYTHON_VERSION = (3, 4)
-    USER_HOME = Path(os.path.expanduser("~"))
-    DEFAULT_LEAF_ROOT = USER_HOME / 'legato' / 'packages'
-    DEFAULT_CONFIG_FILE = USER_HOME / '.leaf-config.json'
-    CACHE_FOLDER = USER_HOME / '.cache' / 'leaf'
-    FILES_CACHE_FOLDER = CACHE_FOLDER / "files"
-    REMOTES_CACHE_FILE = CACHE_FOLDER / 'remotes.json'
-    LICENSES_CACHE_FILE = CACHE_FOLDER / 'licenses.json'
-    MANIFEST = 'manifest.json'
-    VAR_PREFIX = '@'
-    DOWNLOAD_TIMEOUT = 5
-
-
-class JsonConstants():
-    '''
-    Constants for Json grammar
-    '''
-    # Configuration
-    CONFIG_REMOTES = 'remotes'
-    CONFIG_ENV = 'env'
-    CONFIG_ROOT = 'rootfolder'
-    CONFIG_VARIABLES = 'variables'
-
-    # Index
-    REMOTE_NAME = 'name'
-    REMOTE_DATE = 'date'
-    REMOTE_DESCRIPTION = 'description'
-    REMOTE_COMPOSITE = 'composite'
-    REMOTE_PACKAGES = 'packages'
-    REMOTE_PACKAGE_SIZE = 'size'
-    REMOTE_PACKAGE_FILE = 'file'
-    REMOTE_PACKAGE_SHA1SUM = 'sha1sum'
-
-    # Manifest
-    INFO = 'info'
-    INFO_NAME = 'name'
-    INFO_VERSION = 'version'
-    INFO_DEPENDS = 'depends'
-    INFO_DEPENDS_LEAF = 'leaf'
-    INFO_DEPENDS_DEB = 'deb'
-    INFO_MASTER = 'master'
-    INFO_DESCRIPTION = 'description'
-    INFO_LICENSES = 'licenses'
-    INSTALL = 'install'
-    UNINSTALL = 'uninstall'
-    STEP_TYPE = 'type'
-    STEP_LABEL = 'label'
-    STEP_IGNORE_FAIL = 'ignoreFail'
-    STEP_EXEC = 'exec'
-    STEP_EXEC_ENV = 'env'
-    STEP_EXEC_COMMAND = 'command'
-    STEP_EXEC_VERBOSE = 'verbose'
-    STEP_LINK = 'link'
-    STEP_LINK_NAME = 'name'
-    STEP_LINK_TARGET = 'target'
-    STEP_COPY = 'copy'
-    STEP_COPY_SOURCE = 'source'
-    STEP_COPY_DESTINATION = 'destination'
-    STEP_DELETE = 'delete'
-    STEP_DELETE_FILES = 'files'
-    STEP_DOWNLOAD = 'download'
-    STEP_DOWNLOAD_URL = 'url'
-    STEP_DOWNLOAD_RELATIVEURL = 'relativeUrl'
-    STEP_DOWNLOAD_FILENAME = 'filename'
-    STEP_DOWNLOAD_SHA1SUM = REMOTE_PACKAGE_SHA1SUM
-    ENV = 'env'
-
-    # Extra
-    INFO_SUPPORTEDMODULES = 'supportedModules'
-    INFO_SUPPORTEDOS = 'supportedOs'
+from leaf import __version__
+from leaf.constants import JsonConstants, LeafConstants, LeafFiles
+from leaf.model import Manifest, InstalledPackage, AvailablePackage, LeafArtifact,\
+    PackageIdentifier
+from leaf.ui import askYesNo
+from leaf.utils import resolveUrl, getCachedArtifactName, isFolderIgnored,\
+    markFolderAsIgnored, openOutputTarFile, computeSha1sum, downloadFile
 
 
 class QuietLogger ():
@@ -304,109 +224,6 @@ class LeafUtils():
     '''
     Useful simple methods
     '''
-    _ARCHS = {'x86_64': '64', 'i386': '32'}
-    _CURRENTOS = platform.system().lower() + _ARCHS.get(platform.machine(), "")
-    _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
-    _LEAF_EXT = {'.tar': '',
-                 '.xz': 'xz',
-                 '.bz2': 'bz2',
-                 '.tgz': 'gz',
-                 '.gz': 'gz'}
-
-    @staticmethod
-    def tuplesLt(a, b):
-        if a == b:
-            return False
-        i = 0
-        while True:
-            if i >= len(a):
-                return True
-            if i >= len(b):
-                return False
-            ai = a[i]
-            bi = b[i]
-            if not type(ai) == type(bi):
-                ai = str(ai)
-                bi = str(bi)
-            if not ai == bi:
-                return ai < bi
-            i += 1
-
-    @staticmethod
-    def getArtifactName(ap):
-        prefixLen = 7
-        prefix = ap.getSha1sum()
-        if prefix is not None and len(prefix) >= prefixLen:
-            prefix = prefix[:prefixLen]
-        else:
-            prefix = ''.join(random.choice(string.ascii_uppercase + string.digits)
-                             for _ in range(prefixLen))
-        return "%s-%s" % (prefix,
-                          Path(urlparse(ap.getUrl()).path).name)
-
-    @staticmethod
-    def askYesNo(logger, message, default=None):
-        label = " (yes/no)"
-        if default == True:
-            label = " (YES/no)"
-        elif default == False:
-            label = " (yes/NO)"
-        while True:
-            logger.printMessage(message + label + " ")
-            answer = input().strip()
-            if answer == "":
-                if default == True:
-                    answer = 'y'
-                elif default == False:
-                    answer = 'n'
-            if answer.lower() == 'y' or answer.lower() == 'yes':
-                return True
-            if answer.lower() == 'n' or answer.lower() == 'no':
-                return False
-
-    @staticmethod
-    def jsonGet(json, path, default=None):
-        '''
-        Utility to browse json and reduce None testing
-        '''
-        if path is None or len(path) == 0:
-            return json
-        k = path[0]
-        if not isinstance(json, dict) or k not in json:
-            return default
-        return LeafUtils.jsonGet(json.get(k), path[1:], default)
-
-    @staticmethod
-    def isFolderIgnored(folder):
-        return LeafUtils._IGNORED_PATTERN.match(folder.name) is not None
-
-    @staticmethod
-    def markFolderAsIgnored(folder):
-        oldname = folder.name
-        newname = oldname + "_ignored" + str(int(time.time()))
-        if LeafUtils._IGNORED_PATTERN.match(newname) is None:
-            raise ValueError('Invalid ignored folder name: ' + newname)
-        out = folder.parent / newname
-        folder.rename(out)
-        return out
-
-    @staticmethod
-    def guessCompression(path, prefix=""):
-        '''
-        Guess the compression from the file extension
-        '''
-        suffix = LeafUtils._LEAF_EXT.get(path.suffix, 'xz')
-        if len(suffix) > 0:
-            return prefix + ":" + suffix
-        return prefix
-
-    @staticmethod
-    def now():
-        '''
-        Return the current date as string
-        '''
-        return str(datetime.datetime.utcnow())
-
     @staticmethod
     def findPackageIdentifiers(motifList, contentDict):
         '''
@@ -430,27 +247,14 @@ class LeafUtils():
         return out
 
     @staticmethod
-    def resolveUrl(remoteUrl, subPath):
-        '''
-        Resolves a relative URL
-        '''
-        url = urlparse(remoteUrl)
-        newPath = Path(url.path).parent / subPath
-        url = url._replace(path=str(newPath))
-        return urlunparse(url)
-
-    @staticmethod
-    def getMissingAptDepends(availablePackages):
+    def getMissingAptDepends(apList):
         '''
         List all apt missing packages needed by given leaf available packages
         '''
         out = set()
         cache = apt.Cache()
-        for ap in availablePackages:
-            for deb in LeafUtils.jsonGet(ap.getNodeInfo(),
-                                         [JsonConstants.INFO_DEPENDS,
-                                             JsonConstants.INFO_DEPENDS_DEB],
-                                         []):
+        for ap in apList:
+            for deb in ap.jsonpath(JsonConstants.INFO, JsonConstants.INFO_DEPENDS, JsonConstants.INFO_DEPENDS_DEB, default=[]):
                 if cache.is_virtual_package(deb):
                     if len([p for p in cache.get_providing_packages(deb) if cache[p].installed]) == 0:
                         out.add(deb)
@@ -528,245 +332,14 @@ class LeafUtils():
             outList.reverse()
         return outList
 
-    @staticmethod
-    def sha1sum(file):
-        '''
-        Return the sha1 of the given file
-        '''
-        BLOCKSIZE = 4096
-        hasher = hashlib.sha1()
-        with open(str(file), 'rb') as fp:
-            buf = fp.read(BLOCKSIZE)
-            while len(buf) > 0:
-                hasher.update(buf)
-                buf = fp.read(BLOCKSIZE)
-        return hasher.hexdigest()
-
-    @staticmethod
-    def download(url, folder, logger, filename=None, sha1sum=None):
-        '''
-        Download an artifact
-        '''
-        parsedUrl = urlparse(url)
-        if filename is None:
-            filename = Path(parsedUrl.path).name
-        targetFile = folder / filename
-        if targetFile.exists():
-            if sha1sum is None:
-                logger.printDetail("File exists but cannot be verified,",
-                                   targetFile.name, " will be re-downloaded")
-                os.remove(str(targetFile))
-            elif sha1sum != LeafUtils.sha1sum(targetFile):
-                logger.printDetail("File exists but SHA1 differs,",
-                                   targetFile.name, " will be re-downloaded")
-                os.remove(str(targetFile))
-            else:
-                logger.printDetail(
-                    "File already in cache:", targetFile.name)
-        if not targetFile.exists():
-            if parsedUrl.scheme.startswith("http"):
-                req = requests.get(
-                    url, stream=True, timeout=LeafConstants.DOWNLOAD_TIMEOUT)
-                size = int(req.headers.get('content-length', -1))
-                logger.progressStart('download', total=size)
-                currentSize = 0
-                with open(str(targetFile), 'wb') as fp:
-                    for data in req.iter_content(1024 * 1024):
-                        currentSize += len(data)
-                        logger.progressWorked('download',
-                                              "Downloading " + targetFile.name,
-                                              worked=currentSize,
-                                              total=size,
-                                              sameLine=True)
-                        fp.write(data)
-            else:
-                logger.progressStart('download')
-                urllib.request.urlretrieve(url, str(targetFile))
-            logger.progressDone(
-                'download', "File downloaded: " + str(targetFile))
-            if sha1sum is not None and sha1sum != LeafUtils.sha1sum(targetFile):
-                raise ValueError(
-                    "Invalid SHA1 sum for " + targetFile.name + ", expecting " + sha1sum)
-        return targetFile
-
-
-@total_ordering
-class PackageIdentifier ():
-
-    _NAME_REGEX = re.compile('^[a-zA-Z0-9][-a-zA-Z0-9]*$')
-    _VERSION_REGEX = re.compile('^[a-zA-Z0-9][-._a-zA-Z0-9]*$')
-    _VERSION_SEPARATOR = re.compile("[-_.]")
-    _SEPARATOR = '_'
-
-    @staticmethod
-    def isValidIdentifier(pis):
-        split = pis.partition(PackageIdentifier._SEPARATOR)
-        return (PackageIdentifier._NAME_REGEX.match(split[0]) is not None and
-                PackageIdentifier._VERSION_REGEX.match(split[2]) is not None)
-
-    @staticmethod
-    def fromString(pis):
-        split = pis.partition(PackageIdentifier._SEPARATOR)
-        return PackageIdentifier(split[0], split[2])
-
-    def __init__(self, name, version):
-        if PackageIdentifier._NAME_REGEX.match(name) is None:
-            raise ValueError("Invalid package name: " + name)
-        if PackageIdentifier._VERSION_REGEX.match(version) is None:
-            raise ValueError("Invalid package version: " + version)
-        self.name = name
-        self.version = version
-
-    def __str__(self):
-        return self.name + PackageIdentifier._SEPARATOR + self.version
-
-    def _is_valid_operand(self, other):
-        return (hasattr(other, "name") and
-                hasattr(other, "version"))
-
-    def __hash__(self):
-        return hash((self.name, self.version))
-
-    def __eq__(self, other):
-        if not self._is_valid_operand(other):
-            return NotImplemented
-        return self.name == other.name and self.version == other.version
-
-    def __lt__(self, other):
-        if not self._is_valid_operand(other):
-            return NotImplemented
-        if self.name == other.name:
-            va = self.getVersion()
-            vb = other.getVersion()
-            if va == vb:
-                return self.version < other.version
-            return LeafUtils.tuplesLt(va, vb)
-        return self.name < other.name
-
-    def getVersion(self):
-        def tryint(x):
-            try:
-                return int(x)
-            except:
-                return x
-        return tuple(tryint(x) for x in PackageIdentifier._VERSION_SEPARATOR.split(self.version))
-
-
-class Manifest():
-    '''
-    Represent a Manifest model object
-    '''
-
-    @staticmethod
-    def parse(manifestFile):
-        with open(str(manifestFile), 'r') as fp:
-            return Manifest(json.load(fp))
-
-    def __init__(self, json):
-        self.json = json
-
-    def __str__(self):
-        return str(self.getIdentifier())
-
-    def getNodeInfo(self):
-        return self.json[JsonConstants.INFO]
-
-    def getName(self):
-        return self.getNodeInfo()[JsonConstants.INFO_NAME]
-
-    def getVersion(self):
-        return self.getNodeInfo()[JsonConstants.INFO_VERSION]
-
-    def getIdentifier(self):
-        return PackageIdentifier(self.getName(), self.getVersion())
-
-    def getDescription(self):
-        return self.getNodeInfo().get(JsonConstants.INFO_DESCRIPTION)
-
-    def isMaster(self):
-        info = self.getNodeInfo()
-        return JsonConstants.INFO_MASTER in info and info[JsonConstants.INFO_MASTER]
-
-    def getLicenses(self):
-        return LeafUtils.jsonGet(self.getNodeInfo(), [JsonConstants.INFO_LICENSES], [])
-
-    def getLeafDepends(self):
-        return [PackageIdentifier.fromString(pis)
-                for pis in LeafUtils.jsonGet(self.getNodeInfo(),
-                                             [JsonConstants.INFO_DEPENDS,
-                                              JsonConstants.INFO_DEPENDS_LEAF], [])]
-
-    def getSupportedModules(self):
-        return self.getNodeInfo().get(JsonConstants.INFO_SUPPORTEDMODULES)
-
-    def getSupportedOS(self):
-        return self.getNodeInfo().get(JsonConstants.INFO_SUPPORTEDOS)
-
-    def isSupported(self):
-        supportedOs = self.getSupportedOS()
-        return supportedOs is None or len(supportedOs) == 0 or LeafUtils._CURRENTOS in supportedOs
-
-
-class LeafArtifact(Manifest):
-    '''
-    Represent a tar/xz or a single manifest.json file
-    '''
-
-    def __init__(self, path):
-        self.path = path
-        with TarFile.open(str(self.path), 'r') as tarfile:
-            Manifest.__init__(self, json.load(io.TextIOWrapper(
-                tarfile.extractfile(LeafConstants.MANIFEST))))
-
-
-class AvailablePackage(Manifest):
-    '''
-    Represent a package available in a remote repository
-    '''
-
-    def __init__(self, jsonPayload, remoteUrl):
-        super().__init__(jsonPayload)
-        self.remoteUrl = remoteUrl
-
-    def __str__(self, *args, **kwargs):
-        return "{pi} [{path}] ({size} bytes)".format(
-            pi=str(self.getIdentifier()),
-            path=self.getSubPath(),
-            size=self.getSize())
-
-    def getSize(self):
-        return self.json.get(JsonConstants.REMOTE_PACKAGE_SIZE)
-
-    def getSha1sum(self):
-        return self.json.get(JsonConstants.REMOTE_PACKAGE_SHA1SUM)
-
-    def getSubPath(self):
-        return self.json.get(JsonConstants.REMOTE_PACKAGE_FILE)
-
-    def getUrl(self):
-        return LeafUtils.resolveUrl(self.remoteUrl, self.getSubPath())
-
-
-class InstalledPackage(Manifest):
-    '''
-    Represent an installed package
-    '''
-
-    def __init__(self, manifestFile):
-        with open(str(manifestFile), 'r') as fp:
-            super().__init__(json.load(fp))
-        self.folder = manifestFile.parent
-
-    def __str__(self):
-        return "{pi} [{path}]".format(pi=self.getIdentifier(), path=str(self.folder))
-
 
 class LicenseManager ():
     '''
     Handle license acceptation
     '''
 
-    def __init__(self, logger):
+    def __init__(self, logger, cacheFile=LeafFiles.LICENSES_CACHE_FILE):
+        self.cacheFile = cacheFile
         self.logger = logger
 
     def readLicenses(self):
@@ -774,8 +347,8 @@ class LicenseManager ():
         Read license cache
         '''
         out = {}
-        if LeafConstants.LICENSES_CACHE_FILE.exists():
-            with open(str(LeafConstants.LICENSES_CACHE_FILE), 'r') as fp:
+        if self.cacheFile.exists():
+            with open(str(self.cacheFile), 'r') as fp:
                 out = json.load(fp)
         return out
 
@@ -783,7 +356,7 @@ class LicenseManager ():
         '''
         Write the given licenses
         '''
-        with open(str(LeafConstants.LICENSES_CACHE_FILE), 'w') as fp:
+        with open(str(self.cacheFile), 'w') as fp:
             json.dump(licenses, fp, indent=2, separators=(',', ': '))
 
     def checkLicenses(self, packageList):
@@ -793,25 +366,27 @@ class LicenseManager ():
         out = []
         licenses = self.readLicenses()
         for pack in packageList:
-            for lic in pack.getLicenses():
-                if lic not in out and lic not in licenses:
-                    out.append(lic)
+            licenses = pack.getLicenses()
+            if licenses is not None:
+                for lic in licenses:
+                    if lic not in out and lic not in licenses:
+                        out.append(lic)
         return out
 
     def acceptLicense(self, lic):
         self.logger.printMessage("You need to accept the license:", lic)
-        if LeafUtils.askYesNo(self.logger,
-                              "Do you want to display the license text?",
-                              default=False):
+        if askYesNo(self.logger,
+                    "Do you want to display the license text?",
+                    default=False):
             with urllib.request.urlopen(lic) as req:
                 text = io.TextIOWrapper(req).read()
                 self.logger.printMessage(text)
-        out = LeafUtils.askYesNo(self.logger,
-                                 "Do you accept the license?",
-                                 default=True)
+        out = askYesNo(self.logger,
+                       "Do you accept the license?",
+                       default=True)
         if out:
             licenses = self.readLicenses()
-            licenses[lic] = LeafUtils.now()
+            licenses[lic] = str(datetime.datetime.utcnow())
             self.writeLicenses(licenses)
         return out
 
@@ -838,14 +413,12 @@ class StepExecutor():
             self.variables[key] = str(pack.folder)
 
     def postInstall(self, ):
-        steps = LeafUtils.jsonGet(self.package.json, [
-                                  JsonConstants.INSTALL], [])
+        steps = self.package.jsonpath(JsonConstants.INSTALL, default=[])
         if len(steps) > 0:
             self.runSteps(steps, self.package, label="Post-install")
 
     def preUninstall(self):
-        steps = LeafUtils.jsonGet(self.package.json, [
-                                  JsonConstants.UNINSTALL], [])
+        steps = self.package.jsonpath(JsonConstants.UNINSTALL, default=[])
         if len(steps) > 0:
             self.runSteps(steps, self.package, label="Pre-uninstall")
 
@@ -877,7 +450,7 @@ class StepExecutor():
                    for arg in step[JsonConstants.STEP_EXEC_COMMAND]]
         self.logger.printDetail("Exec:", ' '.join(command))
         env = dict(os.environ)
-        for k, v in LeafUtils.jsonGet(step, [JsonConstants.STEP_EXEC_ENV], {}).items():
+        for k, v in step.get(JsonConstants.STEP_EXEC_ENV, {}).items():
             v = self.resolve(v)
             env[k] = v
         if self.extraEnv is not None:
@@ -886,9 +459,8 @@ class StepExecutor():
                 env[k] = v
         env["LEAF_VERSION"] = str(__version__)
         stdout = subprocess.DEVNULL
-        if self.logger.isVerbose() or LeafUtils.jsonGet(step,
-                                                        [JsonConstants.STEP_EXEC_VERBOSE],
-                                                        default=False):
+        if self.logger.isVerbose() or step.get(JsonConstants.STEP_EXEC_VERBOSE,
+                                               False):
             stdout = None
         rc = subprocess.call(command,
                              cwd=str(self.targetFolder),
@@ -896,9 +468,7 @@ class StepExecutor():
                              stdout=stdout,
                              stderr=subprocess.STDOUT)
         if rc != 0:
-            if LeafUtils.jsonGet(step,
-                                 [JsonConstants.STEP_IGNORE_FAIL],
-                                 False):
+            if step.get(JsonConstants.STEP_IGNORE_FAIL, False):
                 self.logger.printDetail(
                     "Return code is ", rc, ", but step ignores failure")
             else:
@@ -928,13 +498,13 @@ class StepExecutor():
 
     def doDownload(self, step, ip):
         try:
-            LeafUtils.download(step[JsonConstants.STEP_DOWNLOAD_URL],
-                               self.targetFolder,
-                               self.logger,
-                               step.get(JsonConstants.STEP_DOWNLOAD_FILENAME),
-                               step.get(JsonConstants.STEP_DOWNLOAD_SHA1SUM))
+            downloadFile(step[JsonConstants.STEP_DOWNLOAD_URL],
+                         self.targetFolder,
+                         self.logger,
+                         step.get(JsonConstants.STEP_DOWNLOAD_FILENAME),
+                         step.get(JsonConstants.STEP_DOWNLOAD_SHA1SUM))
         except Exception as e:
-            if LeafUtils.jsonGet(step, [JsonConstants.STEP_IGNORE_FAIL], False):
+            if step.get(JsonConstants.STEP_IGNORE_FAIL, False):
                 self.logger.printDetail(
                     "Download failed, but step ignores failure")
             else:
@@ -970,8 +540,7 @@ class LeafRepository():
             self.logger.printMessage("Found:", manifest.getIdentifier())
             self.logger.printMessage(
                 "Create tar:", manifestFile, "-->", outputFile)
-            with TarFile.open(str(outputFile),
-                              LeafUtils.guessCompression(outputFile, prefix="w")) as tf:
+            with openOutputTarFile(outputFile) as tf:
                 for file in manifestFile.parent.glob('*'):
                     tf.add(str(file),
                            str(file.relative_to(manifestFile.parent)))
@@ -985,7 +554,7 @@ class LeafRepository():
             infoNode[JsonConstants.REMOTE_NAME] = name
         if description is not None:
             infoNode[JsonConstants.REMOTE_DESCRIPTION] = description
-        infoNode[JsonConstants.REMOTE_DATE] = LeafUtils.now()
+        infoNode[JsonConstants.REMOTE_DATE] = str(datetime.datetime.utcnow())
 
         rootNode = OrderedDict()
         rootNode[JsonConstants.INFO] = infoNode
@@ -1001,7 +570,7 @@ class LeafRepository():
             fileNode[JsonConstants.REMOTE_PACKAGE_FILE] = str(
                 Path(a).relative_to(outputFile.parent))
             fileNode[JsonConstants.REMOTE_PACKAGE_SHA1SUM] = str(
-                LeafUtils.sha1sum(a))
+                computeSha1sum(a))
             fileNode[JsonConstants.REMOTE_PACKAGE_SIZE] = a.stat().st_size
             fileNode[JsonConstants.INFO] = la.getNodeInfo()
             packagesNode.append(fileNode)
@@ -1016,14 +585,15 @@ class LeafApp(LeafRepository):
     Main API for using Leaf
     '''
 
-    def __init__(self, logger, configurationFile):
+    def __init__(self, logger, configurationFile, remoteCacheFile=LeafFiles.REMOTES_CACHE_FILE):
         '''
         Constructor
         '''
         super().__init__(logger)
         self.configurationFile = configurationFile
+        self.cacheFile = remoteCacheFile
         # Create folders if needed
-        os.makedirs(str(LeafConstants.FILES_CACHE_FOLDER), exist_ok=True)
+        os.makedirs(str(LeafFiles.FILES_CACHE_FOLDER), exist_ok=True)
 
     def readConfiguration(self):
         '''
@@ -1034,7 +604,7 @@ class LeafApp(LeafRepository):
                 return json.load(fp)
         # Default configuration here
         out = dict()
-        out[JsonConstants.CONFIG_ROOT] = str(LeafConstants.DEFAULT_LEAF_ROOT)
+        out[JsonConstants.CONFIG_ROOT] = str(LeafFiles.DEFAULT_LEAF_ROOT)
         self.writeConfiguration(out)
         return out
 
@@ -1046,12 +616,12 @@ class LeafApp(LeafRepository):
             json.dump(config, fp, indent=2, separators=(',', ': '))
 
     def readRemotesCache(self):
-        if LeafConstants.REMOTES_CACHE_FILE.exists():
-            with open(str(LeafConstants.REMOTES_CACHE_FILE), 'r') as fp:
+        if self.cacheFile.exists():
+            with open(str(self.cacheFile), 'r') as fp:
                 return json.load(fp)
 
     def getInstallFolder(self):
-        out = LeafConstants.DEFAULT_LEAF_ROOT
+        out = LeafFiles.DEFAULT_LEAF_ROOT
         config = self.readConfiguration()
         if config is not None:
             root = config.get(JsonConstants.CONFIG_ROOT)
@@ -1080,7 +650,7 @@ class LeafApp(LeafRepository):
         Returns the user custom env variables
         '''
         config = self.readConfiguration()
-        return LeafUtils.jsonGet(config, [JsonConstants.CONFIG_ENV], {})
+        return config.get(JsonConstants.CONFIG_ENV, {})
 
     def remoteAdd(self, url):
         '''
@@ -1094,8 +664,8 @@ class LeafApp(LeafRepository):
         if url not in remotes:
             remotes.append(url)
             self.writeConfiguration(config)
-            if LeafConstants.REMOTES_CACHE_FILE.exists():
-                os.remove(str(LeafConstants.REMOTES_CACHE_FILE))
+            if self.cacheFile.exists():
+                os.remove(str(self.cacheFile))
                 self.logger.printMessage(
                     "Remotes have changed, you need to fetch content")
 
@@ -1109,8 +679,8 @@ class LeafApp(LeafRepository):
             if url in remotes:
                 remotes.remove(url)
                 self.writeConfiguration(config)
-                if LeafConstants.REMOTES_CACHE_FILE.exists():
-                    os.remove(str(LeafConstants.REMOTES_CACHE_FILE))
+                if self.cacheFile.exists():
+                    os.remove(str(self.cacheFile))
                     self.logger.printMessage(
                         "Remotes have changed, you need to fetch content")
 
@@ -1156,7 +726,7 @@ class LeafApp(LeafRepository):
                     composites = data.get(JsonConstants.REMOTE_COMPOSITE)
                     if composites is not None:
                         for composite in composites:
-                            self.fetchUrl(LeafUtils.resolveUrl(
+                            self.fetchUrl(resolveUrl(
                                 remoteurl, composite), content)
             except Exception as e:
                 self.logger.printError("Error fetching", remoteurl, ":", e)
@@ -1175,7 +745,7 @@ class LeafApp(LeafRepository):
             self.logger.progressWorked('fetch',
                                        worked=worked,
                                        total=len(remotes))
-        with open(str(LeafConstants.REMOTES_CACHE_FILE), 'w') as output:
+        with open(str(self.cacheFile), 'w') as output:
             json.dump(content, output)
         self.logger.progressDone('fetch',
                                  message="Fetched %d remote repositories" % (len(remotes)))
@@ -1186,7 +756,7 @@ class LeafApp(LeafRepository):
         '''
         out = {}
         for folder in self.getInstallFolder().iterdir():
-            if folder.is_dir() and not LeafUtils.isFolderIgnored(folder):
+            if folder.is_dir() and not isFolderIgnored(folder):
                 manifest = folder / LeafConstants.MANIFEST
                 if manifest.is_file():
                     ip = InstalledPackage(manifest)
@@ -1257,11 +827,11 @@ class LeafApp(LeafRepository):
         toInstall = OrderedDict()
         # Download package if needed
         for ap in apToInstall:
-            toInstall[ap] = LeafArtifact(LeafUtils.download(
-                ap.getUrl(),
-                LeafConstants.FILES_CACHE_FOLDER,
-                self.logger,
-                filename=LeafUtils.getArtifactName(ap),
+            toInstall[ap] = LeafArtifact(downloadFile(ap.getUrl(),
+                                                      LeafFiles.FILES_CACHE_FOLDER,
+                                                      self.logger,
+                                                      filename=getCachedArtifactName(
+                ap.getFilename(), ap.getSha1sum()),
                 sha1sum=ap.getSha1sum()))
             worked += 1
             self.logger.progressWorked('install', worked=worked, total=total)
@@ -1321,8 +891,7 @@ class LeafApp(LeafRepository):
         except Exception as e:
             self.logger.printError("Error during installation:", e)
             if keepFolderOnError:
-                targetFolderIgnored = LeafUtils.markFolderAsIgnored(
-                    targetFolder)
+                targetFolderIgnored = markFolderAsIgnored(targetFolder)
                 self.logger.printDetail("Mark folder as ignored:",
                                         targetFolderIgnored)
             else:
@@ -1391,325 +960,4 @@ class LeafApp(LeafRepository):
                 for key, value in env.items():
                     value = stepExec.resolve(value, True, False)
                     out[key] = value
-        return out
-
-
-class LeafCli():
-    _PROG_LICENSE = '''
-  Copyright 2017 Sierra Wireless. All rights reserved.
-
-  Licensed under the Mozilla Public License Version 2.0
-  https://www.mozilla.org/en-US/MPL/2.0/
-
-  Leaf is part of the Legato Project, http://legato.io/
-
-USAGE
-'''
-    _ACTION_CONFIG = 'config'
-    _ACTION_REMOTE = 'remote'
-    _ACTION_LIST = 'list'
-    _ACTION_FETCH = 'fetch'
-    _ACTION_SEARCH = 'search'
-    _ACTION_INSTALL = 'install'
-    _ACTION_REMOVE = 'remove'
-    _ACTION_ENV = 'env'
-    _ACTION_PACK = 'pack'
-    _ACTION_INDEX = 'index'
-    _ACTION_CLEAN = 'clean'
-    _ACTION_ALIASES = {
-        _ACTION_LIST: ['ls'],
-        _ACTION_REMOVE: ['rm'],
-        _ACTION_INSTALL: ['i']
-    }
-
-    def __init__(self):
-        # Setup argument parser
-        self.parser = ArgumentParser(
-            description=LeafCli._PROG_LICENSE,
-            formatter_class=RawDescriptionHelpFormatter)
-
-        self.parser.add_argument("--json",
-                                 dest="json",
-                                 action="store_true",
-                                 help="output json format")
-        self.parser.add_argument('-V', '--version',
-                                 action='version',
-                                 version="v%s" % __version__)
-        self.parser.add_argument("--config",
-                                 metavar='CONFIG_FILE',
-                                 dest="customConfig",
-                                 type=Path,
-                                 help="use custom configuration file")
-
-        subparsers = self.parser.add_subparsers(dest='command',
-                                                description='supported commands',
-                                                metavar="COMMAND",
-                                                help='actions to execute')
-        subparsers.required = True
-
-        def newParser(action, command_help):
-            out = subparsers.add_parser(action,
-                                        help=command_help,
-                                        aliases=LeafCli._ACTION_ALIASES.get(action, []))
-            out.add_argument("-v", "--verbose",
-                             dest="verbose",
-                             action='count',
-                             help="increase output verbosity")
-            return out
-
-        # CONFIG
-        subparser = newParser(LeafCli._ACTION_CONFIG, "manage configuration")
-        subparser.add_argument('--root',
-                               dest='root_folder',
-                               metavar='DIR',
-                               help="set the root folder, default: " + str(LeafConstants.DEFAULT_LEAF_ROOT))
-        subparser.add_argument('--env',
-                               dest='config_env',
-                               action='append',
-                               metavar='KEY=VALUE',
-                               help="set custom env variables for exec steps")
-
-        # CLEAN
-        subparser = newParser(LeafCli._ACTION_CLEAN, "clean cache folder")
-
-        # REMOTE
-        subparser = newParser(LeafCli._ACTION_REMOTE,
-                              "manage remote repositories")
-        subparser.add_argument('--add',
-                               dest='remote_add',
-                               action='append',
-                               metavar='URL',
-                               help='add given remote url')
-        subparser.add_argument('--rm',
-                               dest='remote_rm',
-                               action='append',
-                               metavar='URL',
-                               help='remove given remote url')
-
-        # FETCH
-        subparser = newParser(LeafCli._ACTION_FETCH,
-                              "fetch remote repositories packages list")
-
-        # LIST
-        subparser = newParser(LeafCli._ACTION_LIST, "list installed packages")
-        subparser.add_argument("-a", "--all",
-                               dest="allPackages",
-                               action="store_true",
-                               help="display all packages, not only master packages")
-        subparser.add_argument("-m", "--module",
-                               dest="modules",
-                               action="append",
-                               metavar="MODULE",
-                               help="filter packages supporting given module")
-        subparser.add_argument('keywords', nargs=argparse.ZERO_OR_MORE)
-
-        # SEARCH
-        subparser = newParser(LeafCli._ACTION_SEARCH,
-                              "search for available packages")
-        subparser.add_argument("-a", "--all",
-                               dest="allPackages",
-                               action="store_true",
-                               help="display all packages, not only master packages")
-        subparser.add_argument("-m", "--module",
-                               dest="modules",
-                               action="append",
-                               metavar="MODULE",
-                               help="filter packages supporting given module")
-        subparser.add_argument('keywords', nargs=argparse.ZERO_OR_MORE)
-
-        # INSTALL
-        subparser = newParser(LeafCli._ACTION_INSTALL,
-                              "install packages")
-        subparser.add_argument("--skip-licenses",
-                               dest="skipLicenses",
-                               action="store_true",
-                               help="skip license display and accept, assume yes")
-        subparser.add_argument('-f', "--force",
-                               dest="force",
-                               action="store_true",
-                               help="force installation in case of warnings")
-        subparser.add_argument('-d', "--download-only",
-                               dest="downloadOnly",
-                               action="store_true",
-                               help="only download artifacts in cache, do not install them")
-        subparser.add_argument('-k', "--keep",
-                               dest="keepOnError",
-                               action="store_true",
-                               help="keep package folder in case of installation error")
-        subparser.add_argument('packages', nargs=argparse.REMAINDER)
-
-        # REMOVE
-        subparser = newParser(LeafCli._ACTION_REMOVE,
-                              "remove packages")
-        subparser.add_argument('packages', nargs=argparse.REMAINDER)
-
-        # ENV
-        subparser = newParser(LeafCli._ACTION_ENV,
-                              "display environment variables exported by packages")
-        subparser.add_argument('packages', nargs=argparse.REMAINDER)
-
-        # PACK
-        subparser = newParser(LeafCli._ACTION_PACK,
-                              "create a package")
-        subparser.add_argument('-o',
-                               metavar='FILE',
-                               required=True,
-                               type=Path,
-                               dest='pack_output',
-                               help='output file')
-        subparser.add_argument('manifest',
-                               type=Path,
-                               help='the manifest file to package')
-
-        # INDEX
-        subparser = newParser(LeafCli._ACTION_INDEX,
-                              "build a repository index.json")
-        subparser.add_argument('-o',
-                               metavar='FILE',
-                               required=True,
-                               type=Path,
-                               dest='index_output',
-                               help='output file')
-        subparser.add_argument('--name',
-                               metavar='NAME',
-                               dest='index_name',
-                               help='name of the repository')
-        subparser.add_argument('--description',
-                               metavar='STRING',
-                               dest='index_description',
-                               help='description of the repository')
-        subparser.add_argument('--composite',
-                               dest='index_composites',
-                               metavar='FILE',
-                               action='append',
-                               help='reference composite index file')
-        subparser.add_argument('artifacts',
-                               type=Path,
-                               nargs=argparse.REMAINDER,
-                               help='leaf artifacts')
-
-    def execute(self, argv=None):
-        '''
-        Entry point
-        '''
-
-        if argv is None:
-            argv = sys.argv
-        else:
-            sys.argv.extend(argv)
-
-        try:
-            # Process arguments
-            args = self.parser.parse_args()
-            logger = VerboseLogger() if args.verbose else QuietLogger()
-            if args.json:
-                logger = JsonLogger()
-
-            configFile = LeafConstants.DEFAULT_CONFIG_FILE
-            if args.customConfig is not None:
-                configFile = args.customConfig
-
-            app = LeafApp(logger, configFile)
-
-            action = args.command
-            for k, v in LeafCli._ACTION_ALIASES.items():
-                if action in v:
-                    action = k
-                    break
-            if action == LeafCli._ACTION_CONFIG:
-                if args.root_folder is not None:
-                    app.updateConfiguration(rootFolder=args.root_folder)
-                if args.config_env is not None:
-                    app.updateConfiguration(env=args.config_env)
-                logger.printMessage("Configuration file:",
-                                    app.configurationFile)
-                logger.printMessage(json.dumps(app.readConfiguration(),
-                                               sort_keys=True,
-                                               indent=2,
-                                               separators=(',', ': ')))
-            elif action == LeafCli._ACTION_CLEAN:
-                logger.printMessage(
-                    "Clean cache folder: ", LeafConstants.CACHE_FOLDER)
-                shutil.rmtree(str(LeafConstants.FILES_CACHE_FOLDER), True)
-                if LeafConstants.REMOTES_CACHE_FILE.exists():
-                    os.remove(str(LeafConstants.REMOTES_CACHE_FILE))
-                shutil.rmtree(str(LeafConstants.FILES_CACHE_FOLDER), True)
-            elif action == LeafCli._ACTION_REMOTE:
-                if args.remote_add is not None:
-                    for url in args.remote_add:
-                        app.remoteAdd(url)
-                if args.remote_rm is not None:
-                    for url in args.remote_rm:
-                        app.remoteRemove(url)
-                for url, info in app.remoteList().items():
-                    logger.displayRemote(url, info)
-            elif action == LeafCli._ACTION_FETCH:
-                app.fetchRemotes()
-            elif action == LeafCli._ACTION_LIST:
-                for pack in self.filterPackageList(app.listInstalledPackages().values(), keywords=args.keywords, modules=args.modules):
-                    if args.allPackages or pack.isMaster():
-                        logger.displayPackage(pack)
-            elif action == LeafCli._ACTION_SEARCH:
-                for pack in self.filterPackageList(app.listAvailablePackages().values(), args.keywords, args.modules):
-                    if args.allPackages or (pack.isMaster() and pack.isSupported()):
-                        logger.displayPackage(pack)
-            elif action == LeafCli._ACTION_INSTALL:
-                app.install(args.packages,
-                            downloadOnly=args.downloadOnly,
-                            forceInstall=args.force,
-                            keepFolderOnError=args.keepOnError,
-                            skipLicenses=args.skipLicenses)
-            elif action == LeafCli._ACTION_REMOVE:
-                app.uninstall(args.packages)
-            elif action == LeafCli._ACTION_ENV:
-                for k, v in app.getEnv(args.packages).items():
-                    logger.printMessage('export %s="%s"' % (k, v))
-            elif action == LeafCli._ACTION_PACK:
-                app.pack(args.manifest, args.pack_output)
-            elif action == LeafCli._ACTION_INDEX:
-                app.index(args.index_output,
-                          args.artifacts,
-                          args.index_name,
-                          args.index_description,
-                          args.index_composites)
-
-            return 0
-        except KeyboardInterrupt:
-            ### handle keyboard interrupt ###
-            return 1
-        except Exception as e:
-            if args.verbose:
-                raise e
-            logger.printError(e, exception=e)
-            return 2
-
-    def filterPackageList(self, content, keywords=None, modules=None, sort=True):
-        '''
-        Filter a list of packages given optional criteria
-        '''
-        out = list(content)
-
-        def my_filter(p):
-            out = True
-            if modules is not None and len(modules) > 0:
-                out = False
-                if p.getSupportedModules() is not None:
-                    for m in modules:
-                        if m.lower() in map(str.lower, p.getSupportedModules()):
-                            out = True
-                            break
-            if out and keywords is not None and len(keywords) > 0:
-                out = False
-                for k in keywords:
-                    k = k.lower()
-                    if k in str(p.getIdentifier()).lower():
-                        out = True
-                        break
-                    if p.getDescription() is not None and k in p.getDescription().lower():
-                        out = True
-                        break
-            return out
-        out = filter(my_filter, out)
-        if sort:
-            out = sorted(out, key=Manifest.getIdentifier)
         return out

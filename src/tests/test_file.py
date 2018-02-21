@@ -7,8 +7,6 @@ Created on 23 nov. 2017
 Constants to tweak the tests
 '''
 
-from leaf.core import LeafConstants, LeafApp, PackageIdentifier,\
-    JsonConstants, LeafUtils, VerboseLogger, QuietLogger
 from pathlib import Path
 import shutil
 from tempfile import mkdtemp
@@ -16,10 +14,15 @@ import time
 import unittest
 from unittest.case import TestCase
 
+from leaf.constants import JsonConstants, LeafConstants, LeafFiles
+from leaf.core import LeafApp, VerboseLogger, QuietLogger
+from leaf.model import PackageIdentifier
+from leaf.utils import isFolderIgnored
 from tests.releng import RepositoryUtils
 
 
-_VERBOSE = False
+_VERBOSE = True
+_DEBUG_TESTS = True
 
 
 class LeafAppTest():
@@ -31,11 +34,14 @@ class LeafAppTest():
 
     @classmethod
     def setUpClass(cls):
-        LeafAppTest.ROOT_FOLDER = Path(mkdtemp(prefix="leaf_tests_"))
-        #LeafAppTest.ROOT_FOLDER = Path("/tmp/leaf")
+        if _DEBUG_TESTS:
+            LeafAppTest.ROOT_FOLDER = Path("/tmp/leaf")
+        else:
+            LeafAppTest.ROOT_FOLDER = Path(mkdtemp(prefix="leaf_tests_"))
+
         LeafAppTest.REPO_FOLDER = LeafAppTest.ROOT_FOLDER / "repo"
         LeafAppTest.INSTALL_FOLDER = LeafAppTest.ROOT_FOLDER / "app"
-        LeafAppTest.CACHE_FOLDER = LeafConstants.CACHE_FOLDER
+        LeafAppTest.CACHE_FOLDER = LeafFiles.CACHE_FOLDER
 
         shutil.rmtree(str(LeafAppTest.ROOT_FOLDER), True)
 
@@ -44,7 +50,8 @@ class LeafAppTest():
 
     @classmethod
     def tearDownClass(cls):
-        shutil.rmtree(str(LeafAppTest.ROOT_FOLDER), True)
+        if not _DEBUG_TESTS:
+            shutil.rmtree(str(LeafAppTest.ROOT_FOLDER), True)
 
     def __init__(self, url):
         self.url = str(url)
@@ -161,9 +168,9 @@ class LeafAppTest():
         self.assertTrue((folder / "data2-copy").is_file())
         with open(str(folder / "targetFileFromEnv"), 'r') as fp:
             content = fp.readlines()
-            self.assertEquals(1, len(content))
+            self.assertEqual(1, len(content))
             # FIXME \n at the end?
-            self.assertEquals(str(folder) + "\n", content[0])
+            self.assertEqual(str(folder) + "\n", content[0])
 
         self.app.uninstall(["install_1.0"])
         self.checkContent(self.app.listInstalledPackages(), [])
@@ -177,7 +184,7 @@ class LeafAppTest():
         found = False
         for folder in LeafAppTest.INSTALL_FOLDER.iterdir():
             if folder.name.startswith("failure-postinstall-exec_1.0"):
-                self.assertTrue(LeafUtils.isFolderIgnored(folder))
+                self.assertTrue(isFolderIgnored(folder))
                 found = True
                 break
         self.assertTrue(found)
@@ -201,14 +208,14 @@ class LeafAppTest():
                           ["env-A_1.0", "env-B_1.0"])
 
         env = self.app.getEnv(["env-A_1.0"])
-        self.assertEquals(4, len(env))
+        self.assertEqual(4, len(env))
         value = "$PATH:%s:%s" % (str(LeafAppTest.INSTALL_FOLDER /
                                      "env-A_1.0"),
                                  str(LeafAppTest.INSTALL_FOLDER /
                                      "env-B_1.0"))
-        self.assertEquals(value, env["LEAF_PATH_A"])
-        self.assertEquals("FOO", env["LEAF_ENV_A"])
-        self.assertEquals("BAR", env["LEAF_ENV_B"])
+        self.assertEqual(value, env["LEAF_PATH_A"])
+        self.assertEqual("FOO", env["LEAF_ENV_A"])
+        self.assertEqual("BAR", env["LEAF_ENV_B"])
 
     def testSilentFail(self):
         with self.assertRaises(Exception):
