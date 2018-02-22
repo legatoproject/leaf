@@ -35,7 +35,7 @@ class LeafFiles():
     Files & Folders used by Leaf
     '''
     USER_HOME = Path(os.path.expanduser("~"))
-    DEFAULT_LEAF_ROOT = USER_HOME / 'legato' / 'packages'
+    DEFAULT_LEAF_ROOT = USER_HOME / 'leaf'
     DEFAULT_CONFIG_FILE = USER_HOME / '.leaf-config.json'
     CACHE_FOLDER = USER_HOME / '.cache' / 'leaf'
     FILES_CACHE_FOLDER = CACHE_FOLDER / "files"
