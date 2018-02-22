@@ -15,14 +15,18 @@ test -f "$DIST_FILE"
 
 # Extract source
 tar -C "$DIST_DIR" -xvzf "$DIST_FILE"
+rm "$DIST_FILE"
 WORKING_DIR=${DIST_FILE%.tar.gz}
 test -d "$WORKING_DIR"
+
+# Init version 
+sed -i -e "s/0.0.0/$VERSION/" "$WORKING_DIR/leaf/__init__.py"
+tar -C "$WORKING_DIR" -cvzf "$DIST_DIR/leaf_$VERSION.tar.gz" .
 
 # Copy debian skel
 cp -r "$ROOT/packaging/debian/" "$WORKING_DIR"
 
-# Create debian package
+# Create deb
 cd "$WORKING_DIR"
-sed -i -e "s/0.0.0/$VERSION/" "leaf/__init__.py"
 dch --create --package leaf --newversion $VERSION -u low -D release --force-distribution -M "Leaf Package Manager"
 debuild -b
