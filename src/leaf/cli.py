@@ -10,15 +10,14 @@ Leaf Package Manager
 from argparse import RawDescriptionHelpFormatter, ArgumentParser
 import argparse
 import json
-import os
-from pathlib import Path
-import shutil
-import sys
-
 from leaf import __version__, __help_description__
 from leaf.constants import LeafConstants, LeafFiles
 from leaf.core import LeafApp, JsonLogger, QuietLogger, VerboseLogger
 from leaf.model import Manifest
+import os
+from pathlib import Path
+import shutil
+import sys
 
 
 def run():
@@ -37,7 +36,7 @@ class PackageManagerCli():
     _ACTION_CONFIG = 'config'
     _ACTION_REMOTE = 'remote'
     _ACTION_LIST = 'list'
-    _ACTION_FETCH = 'fetch'
+    _ACTION_REFRESH = 'refresh'
     _ACTION_SEARCH = 'search'
     _ACTION_INSTALL = 'install'
     _ACTION_REMOVE = 'remove'
@@ -117,8 +116,8 @@ class PackageManagerCli():
                                help='remove given remote url')
 
         # FETCH
-        subparser = newParser(PackageManagerCli._ACTION_FETCH,
-                              "fetch remote repositories packages list")
+        subparser = newParser(PackageManagerCli._ACTION_REFRESH,
+                              "refresh remote repositories packages list")
 
         # LIST
         subparser = newParser(
@@ -275,7 +274,7 @@ class PackageManagerCli():
                         app.remoteRemove(url)
                 for url, info in app.remoteList().items():
                     logger.displayRemote(url, info)
-            elif action == PackageManagerCli._ACTION_FETCH:
+            elif action == PackageManagerCli._ACTION_REFRESH:
                 app.fetchRemotes()
             elif action == PackageManagerCli._ACTION_LIST:
                 for pack in self.filterPackageList(app.listInstalledPackages().values(), keywords=args.keywords, modules=args.modules):
