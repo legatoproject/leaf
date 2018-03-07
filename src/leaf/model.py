@@ -10,12 +10,11 @@ Leaf Package Manager
 from functools import total_ordering
 import io
 import json
+from leaf.constants import JsonConstants, LeafConstants
+from leaf.utils import resolveUrl
 from pathlib import Path
 import re
 from tarfile import TarFile
-
-from leaf.constants import JsonConstants, LeafConstants
-from leaf.utils import resolveUrl
 
 
 @total_ordering
@@ -36,6 +35,10 @@ class PackageIdentifier ():
     def fromString(pis):
         split = pis.partition(PackageIdentifier._SEPARATOR)
         return PackageIdentifier(split[0], split[2])
+
+    @staticmethod
+    def fromStringList(pisList):
+        return [PackageIdentifier.fromString(pis) for pis in pisList]
 
     def __init__(self, name, version):
         if PackageIdentifier._NAME_REGEX.match(name) is None:
@@ -95,21 +98,13 @@ class PackageIdentifier ():
         return tuple(tryint(x) for x in PackageIdentifier._VERSION_SEPARATOR.split(self.version))
 
 
-class Manifest():
+class JsonObject():
     '''
-    Represent a Manifest model object
+    Represent a json object
     '''
-
-    @staticmethod
-    def parse(manifestFile):
-        with open(str(manifestFile), 'r') as fp:
-            return Manifest(json.load(fp))
 
     def __init__(self, json):
         self.json = json
-
-    def __str__(self):
-        return str(self.getIdentifier())
 
     def jsonpath(self, *path, default=None):
         '''
@@ -122,6 +117,23 @@ class Manifest():
             else:
                 return default
         return currentNode
+
+
+class Manifest(JsonObject):
+    '''
+    Represent a Manifest model object
+    '''
+
+    @staticmethod
+    def parse(manifestFile):
+        with open(str(manifestFile), 'r') as fp:
+            return Manifest(json.load(fp))
+
+    def __init__(self, json):
+        JsonObject.__init__(self, json)
+
+    def __str__(self):
+        return str(self.getIdentifier())
 
     def getNodeInfo(self):
         return self.jsonpath(JsonConstants.INFO)
@@ -141,12 +153,11 @@ class Manifest():
     def isMaster(self):
         return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_MASTER, default=False)
 
-    def getLicenses(self):
-        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_LICENSES, default=[])
-
     def getLeafDepends(self):
-        return [PackageIdentifier.fromString(pis)
-                for pis in self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_DEPENDS, JsonConstants.INFO_DEPENDS_LEAF, default=[])]
+        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_DEPENDS, JsonConstants.INFO_DEPENDS_LEAF, default=[])
+
+    def getAptDepends(self):
+        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_DEPENDS, JsonConstants.INFO_DEPENDS_DEB, default=[])
 
     def getSupportedModules(self):
         return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_SUPPORTEDMODULES)
@@ -214,3 +225,16 @@ class InstalledPackage(Manifest):
 
     def __str__(self):
         return "{pi} [{path}]".format(pi=self.getIdentifier(), path=str(self.folder))
+
+
+class RemoteRepository(JsonObject):
+    '''
+    Represent a remote repository
+    '''
+
+    def __init__(self, url, json=None):
+        JsonObject.__init__(self, json)
+        self.url = url
+
+    def isFetched(self):
+        return self.json is not None

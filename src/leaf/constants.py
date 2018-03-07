@@ -40,7 +40,6 @@ class LeafFiles():
     CACHE_FOLDER = USER_HOME / '.cache' / 'leaf'
     FILES_CACHE_FOLDER = CACHE_FOLDER / "files"
     REMOTES_CACHE_FILE = CACHE_FOLDER / 'remotes.json'
-    LICENSES_CACHE_FILE = CACHE_FOLDER / 'licenses.json'
 
 
 class JsonConstants(object):
@@ -72,7 +71,6 @@ class JsonConstants(object):
     INFO_DEPENDS_DEB = 'deb'
     INFO_MASTER = 'master'
     INFO_DESCRIPTION = 'description'
-    INFO_LICENSES = 'licenses'
     INSTALL = 'install'
     UNINSTALL = 'uninstall'
     STEP_TYPE = 'type'

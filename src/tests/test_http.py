@@ -11,9 +11,9 @@ import socketserver
 import sys
 import threading
 import unittest
-from unittest.case import TestCase
 
-from tests.test_file import LeafAppTest
+from tests.test_file import CliTest
+from tests.utils import TestWithRepository
 
 
 # Needed for http server
@@ -22,21 +22,20 @@ sys.path.insert(0, os.path.abspath('..'))
 _HTTP_FIRST_PORT = 42000
 
 
-class HttpLeafTest(LeafAppTest, unittest.TestCase):
+class HttpLeafTest(CliTest):
 
     def __init__(self, methodName):
-        TestCase.__init__(self, methodName)
+        CliTest.__init__(self, methodName)
 
     @classmethod
     def setUpClass(cls):
-        TestCase.setUpClass()
-        LeafAppTest.setUpClass()
+        CliTest.setUpClass()
 
-        os.chdir(str(LeafAppTest.REPO_FOLDER))
+        os.chdir(str(TestWithRepository.REPO_FOLDER))
         HttpLeafTest.httpPort = _HTTP_FIRST_PORT + random.randint(0, 999)
         handler = SimpleHTTPRequestHandler
-        HttpLeafTest.httpd = socketserver.TCPServer(
-            ("", HttpLeafTest.httpPort), handler)
+        HttpLeafTest.httpd = socketserver.TCPServer(("", HttpLeafTest.httpPort),
+                                                    handler)
 
         print("Start http server on port: %d" % HttpLeafTest.httpPort)
         HttpLeafTest.thread = threading.Thread(
@@ -46,8 +45,7 @@ class HttpLeafTest(LeafAppTest, unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        TestCase.tearDownClass()
-        LeafAppTest.tearDownClass()
+        CliTest.tearDownClass()
 
         print("Shutdown http server")
         HttpLeafTest.httpd.shutdown()

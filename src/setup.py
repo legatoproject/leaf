@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 
-from leaf import __version__
 from setuptools import setup
+
+from leaf import __version__
 
 
 setup(name='leaf',
       version=__version__,
-      packages=['leaf'],
+      packages=[
+          'leaf'
+      ],
       entry_points={
           'console_scripts': [
-              'leaf = leaf.cli:run'
+              'leaf = leaf.cli_packagemanager:run'
           ]
       },
       test_suite='nose.collector',

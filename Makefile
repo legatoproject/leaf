@@ -21,6 +21,9 @@ deb:
 	rm -rf $(DIST)
 	$(PWD)/packaging/mkdeb.sh
 
+install:
+	sudo dpkg -i $(DIST)/leaf_*deb
+
 archive: 
 	mkdir $(OUTPUT)
 	cp $(SRC)/nosetests.xml $(OUTPUT)/

@@ -7,217 +7,23 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-import apt
+from builtins import filter
 from collections import OrderedDict
 import datetime
-import io
 import json
+from leaf import __version__
+from leaf.constants import JsonConstants, LeafConstants, LeafFiles
+from leaf.model import Manifest, InstalledPackage, AvailablePackage, LeafArtifact,\
+    PackageIdentifier, RemoteRepository
+from leaf.utils import resolveUrl, getCachedArtifactName, isFolderIgnored,\
+    markFolderAsIgnored, openOutputTarFile, computeSha1sum, downloadFile,\
+    AptHelper
 import os
 from pathlib import Path
 import shutil
 import subprocess
-import sys
 from tarfile import TarFile
 import urllib.request
-
-from leaf import __version__
-from leaf.constants import JsonConstants, LeafConstants, LeafFiles
-from leaf.model import Manifest, InstalledPackage, AvailablePackage, LeafArtifact,\
-    PackageIdentifier
-from leaf.ui import askYesNo
-from leaf.utils import resolveUrl, getCachedArtifactName, isFolderIgnored,\
-    markFolderAsIgnored, openOutputTarFile, computeSha1sum, downloadFile
-
-
-class QuietLogger ():
-    '''
-    Print only important informations
-    '''
-
-    def isVerbose(self):
-        return False
-
-    def progressStart(self, task, message=None, total=-1):
-        if message is not None:
-            print(message)
-
-    def progressWorked(self, task, message=None, worked=0, total=100, sameLine=False):
-        if message is not None:
-            if total > 0 and worked <= total:
-                message += " [%d%%]" % (worked * 100 / total)
-            else:
-                message += " [%d/%d]" % (worked, total)
-            if sameLine:
-                print(message, end='\r')
-            else:
-                print(message)
-
-    def progressDone(self, task, message=None):
-        if message is not None:
-            print(message)
-
-    def printMessage(self, *message):
-        print(*message)
-
-    def printDetail(self, *message):
-        pass
-
-    def printError(self, *message, exception=None):
-        print(*message, file=sys.stderr)
-
-    def displayPackage(self, pack):
-        print(pack.getIdentifier())
-
-    def displayRemote(self, url, info):
-        print(url)
-
-
-class VerboseLogger (QuietLogger):
-    '''
-    Prints a lot of information
-    '''
-
-    def isVerbose(self):
-        return True
-
-    def printDetail(self, *message):
-        print(*message)
-
-    def printError(self, *message, exception=None):
-        QuietLogger.printError(self, *message)
-        if exception is not None:
-            print(exception, file=sys.stderr)
-
-    def displayPackage(self, pack):
-        QuietLogger.displayPackage(self, pack)
-        content = OrderedDict()
-        content["Description"] = pack.getDescription()
-        if isinstance(pack, AvailablePackage):
-            content["Size"] = (pack.getSize(), 'bytes')
-            content["Source"] = pack.getUrl()
-        elif isinstance(pack, InstalledPackage):
-            content["Folder"] = pack.folder
-        content["Systems"] = pack.getSupportedOS()
-        content["Depends"] = pack.getLeafDepends()
-        content["Modules"] = pack.getSupportedModules()
-        content["Licenses"] = pack.getLicenses()
-        self.prettyprintContent(content)
-
-    def displayRemote(self, url, info):
-        QuietLogger.displayRemote(self, url, info)
-        content = OrderedDict()
-        if info is None:
-            content["Status"] = "not fetched yet"
-        else:
-            content["Name"] = info.get(JsonConstants.REMOTE_NAME)
-            content["Description"] = info.get(
-                JsonConstants.REMOTE_DESCRIPTION)
-            content["Last update"] = info.get(
-                JsonConstants.REMOTE_DATE)
-        self.prettyprintContent(content)
-
-    def prettyprintContent(self, content, indent=4, separator=':', ralign=False):
-        '''
-        Display formatted content
-        '''
-        if content is not None:
-            maxlen = 0
-            indentString = ' ' * indent
-            if ralign:
-                maxlen = len(
-                    max(filter(lambda k: content.get(k) is not None, content), key=len))
-            for k, v in content.items():
-                if isinstance(v, dict) or isinstance(v, list):
-                    if len(v) > 0:
-                        print(indentString + k.rjust(maxlen),
-                              separator,
-                              str(v[0]))
-                        for o in v[1:]:
-                            print(indentString + (' ' * len(k)).rjust(maxlen),
-                                  ' ' * len(separator),
-                                  str(o))
-                elif isinstance(v, tuple):
-                    if len(v) > 0 and v[0] is not None:
-                        print(indentString + k.rjust(maxlen),
-                              separator,
-                              ' '.join(map(str, v)))
-                elif v is not None:
-                    print(indentString + k.rjust(maxlen),
-                          separator,
-                          str(v))
-
-
-class JsonLogger(QuietLogger):
-    '''
-    Print information in a machine readable format (json)
-    '''
-
-    def printJson(self, content):
-        print(json.dumps(content, sort_keys=True, indent=None), flush=True)
-
-    def isVerbose(self):
-        return False
-
-    def progressStart(self, task, message=None, total=-1):
-        self.printJson({
-            'event': "progressStart",
-            'task': task,
-            'message': message,
-            'total': total
-        })
-
-    def progressWorked(self, task, message=None, worked=0, total=100, sameLine=False):
-        self.printJson({
-            'event': "progressWorked",
-            'task': task,
-            'message': message,
-            'worked': worked,
-            'total': total
-        })
-
-    def progressDone(self, task, message=None):
-        self.printJson({
-            'event': "progressDone",
-            'task': task,
-            'message': message
-        })
-
-    def printMessage(self, *message):
-        self.printJson({
-            'event': "message",
-            'message': " ".join(map(str, message)),
-        })
-
-    def printDetail(self, *message):
-        self.printJson({
-            'event': "detail",
-            'message': " ".join(map(str, message)),
-        })
-
-    def printError(self, *message, exception=None):
-        self.printJson({
-            'event': "error",
-            'message': " ".join(map(str, message)),
-        })
-
-    def displayPackage(self, pack):
-        content = {
-            'event': "displayPackage",
-            'manifest': pack.json,
-        }
-        if isinstance(pack, InstalledPackage):
-            content['folder'] = str(pack.folder)
-        elif isinstance(pack, AvailablePackage):
-            content['url'] = pack.getUrl()
-        self.printJson(content)
-        pass
-
-    def displayRemote(self, url, info):
-        self.printJson({
-            'event': "displayRemote",
-            'url': url,
-            'data': info,
-        })
 
 
 class LeafUtils():
@@ -225,7 +31,7 @@ class LeafUtils():
     Useful simple methods
     '''
     @staticmethod
-    def findPackageIdentifiers(motifList, contentDict):
+    def resolvePackageIdentifiers(motifList, contentDict):
         '''
         Search a package given a full packageidentifier
         or only a name (latest version will be returned then.
@@ -233,7 +39,9 @@ class LeafUtils():
         out = []
         for motif in motifList:
             pi = None
-            if PackageIdentifier.isValidIdentifier(motif):
+            if isinstance(motif, PackageIdentifier):
+                pi = motif
+            elif PackageIdentifier.isValidIdentifier(motif):
                 pi = PackageIdentifier.fromString(motif)
             else:
                 for pi in sorted(filter(lambda pi: pi.name == motif, contentDict.keys())):
@@ -246,149 +54,88 @@ class LeafUtils():
                     "Cannot find package matching: " + motif)
         return out
 
-    @staticmethod
-    def getMissingAptDepends(apList):
-        '''
-        List all apt missing packages needed by given leaf available packages
-        '''
-        out = set()
-        cache = apt.Cache()
-        for ap in apList:
-            for deb in ap.jsonpath(JsonConstants.INFO, JsonConstants.INFO_DEPENDS, JsonConstants.INFO_DEPENDS_DEB, default=[]):
-                if cache.is_virtual_package(deb):
-                    if len([p for p in cache.get_providing_packages(deb) if cache[p].installed]) == 0:
-                        out.add(deb)
-                elif deb not in cache:
-                    out.add(deb)
-                elif not cache[deb].installed:
-                    out.add(deb)
+
+class DependencyManager():
+
+    def __init__(self):
+        self.content = OrderedDict()
+
+    def addContent(self, mfMap, clear=False):
+        if clear:
+            self.content.clear()
+        for pi, mf in mfMap.items():
+            if pi not in self.content:
+                self.content[pi] = mf
+
+    def resolve(self, pi):
+        out = self.content.get(pi)
+        if out is None:
+            raise ValueError("Cannot find package: " + str(pi))
         return out
 
-    @staticmethod
-    def getDependencies(piList, content, outList):
+    def getDependencyTree(self, piList, acc=None):
         '''
-        Recursively search dependencies
+        Return the list of PackageIdentifiers of the given list plus all needed dependencies
+        @return: PackageIdentifiers list
         '''
+        out = [] if acc is None else acc
         for pi in piList:
-            pack = content.get(pi)
-            if pack is None:
-                raise ValueError("Cannot find package: " + str(pi))
-            if pack not in outList:
-                outList.append(pack)
-                LeafUtils.getDependencies(pack.getLeafDepends(),
-                                          content,
-                                          outList)
-
-    @staticmethod
-    def computePackagesToInstall(piList, apContent):
-        '''
-        Build the ordered list of packages to install
-        '''
-        out = []
-        LeafUtils.getDependencies(piList, apContent, out)
-        out = LeafUtils.sortPackagesByDependencies(out)
+            if pi not in out:
+                mf = self.resolve(pi)
+                out.append(pi)
+                self.getDependencyTree(
+                    PackageIdentifier.fromStringList(mf.getLeafDepends()),
+                    acc=out)
         return out
 
-    @staticmethod
-    def computePackagesToUninstall(piList, ipContent):
+    def filterAndSort(self, piList, reverse=False, ignoredPiList=None):
         '''
-        Build the list of package to uninstall and keep dependencies needed by master packages
+        Sort and filter the given PackageIdentifiers
+        @return: PackageIdentifiers list
         '''
         out = []
-        LeafUtils.getDependencies(piList, ipContent, out)
-        out = LeafUtils.sortPackagesByDependencies(out, masterFirst=True)
-        for ip in ipContent.values():
-            if ip not in out:
-                keep = []
-                LeafUtils.getDependencies(
-                    [ip.getIdentifier()], ipContent, keep)
-                out = [p for p in out if p not in keep]
-        return out
 
-    @staticmethod
-    def sortPackagesByDependencies(packList, masterFirst=False):
-        '''
-        Sort package to respect dependencies for install/uninstall
-        '''
-        inList = list(packList)
-        outList = []
-
-        def checker(pack):
-            for pi in pack.getLeafDepends():
-                if pi not in map(Manifest.getIdentifier, outList):
-                    return False
+        def checker(mf):
+            for pi in PackageIdentifier.fromStringList(mf.getLeafDepends()):
+                if pi in out:
+                    continue
+                if ignoredPiList is not None and pi in ignoredPiList:
+                    continue
+                return False
             return True
-        while True:
-            packagesWithSatisfiedDependencies = list(filter(checker, inList))
-            for pack in packagesWithSatisfiedDependencies:
-                inList.remove(pack)
-                outList.append(pack)
-            if len(inList) == 0:
-                break
-            elif len(packagesWithSatisfiedDependencies) == 0:
-                raise ValueError('Dependency error: ' +
-                                 ', '.join(str(m.getIdentifier()) for m in inList))
-        if masterFirst:
-            outList.reverse()
-        return outList
 
-
-class LicenseManager ():
-    '''
-    Handle license acceptation
-    '''
-
-    def __init__(self, logger, cacheFile=LeafFiles.LICENSES_CACHE_FILE):
-        self.cacheFile = cacheFile
-        self.logger = logger
-
-    def readLicenses(self):
-        '''
-        Read license cache
-        '''
-        out = {}
-        if self.cacheFile.exists():
-            with open(str(self.cacheFile), 'r') as fp:
-                out = json.load(fp)
+        piList = list(piList)
+        # Ordering
+        while len(piList) > 0:
+            for pi in piList:
+                mf = self.content[pi]
+                if mf is None:
+                    raise ValueError('Cannot sort dependency list')
+                if checker(mf):
+                    out.append(pi)
+            piList = [pi for pi in piList if pi not in out]
+        # filter
+        if ignoredPiList is not None:
+            out = [pi for pi in out if pi not in ignoredPiList]
+        # reverse
+        if reverse:
+            out.reverse()
         return out
 
-    def writeLicenses(self, licenses):
+    def filterMissingDependencies(self, piList):
         '''
-        Write the given licenses
+        Returns the list of PackageIdentifiers not in internal content
+        @return: PackageIdentifier list
         '''
-        with open(str(self.cacheFile), 'w') as fp:
-            json.dump(licenses, fp, indent=2, separators=(',', ': '))
+        return [pi for pi in piList if pi not in self.content]
 
-    def checkLicenses(self, packageList):
+    def maintainDependencies(self, piList):
         '''
-        Checks that all given packages have their licenses accepted
+        @return: PackageIdentifiers list
         '''
-        out = []
-        licenses = self.readLicenses()
-        for pack in packageList:
-            licenses = pack.getLicenses()
-            if licenses is not None:
-                for lic in licenses:
-                    if lic not in out and lic not in licenses:
-                        out.append(lic)
-        return out
-
-    def acceptLicense(self, lic):
-        self.logger.printMessage("You need to accept the license:", lic)
-        if askYesNo(self.logger,
-                    "Do you want to display the license text?",
-                    default=False):
-            with urllib.request.urlopen(lic) as req:
-                text = io.TextIOWrapper(req).read()
-                self.logger.printMessage(text)
-        out = askYesNo(self.logger,
-                       "Do you accept the license?",
-                       default=True)
-        if out:
-            licenses = self.readLicenses()
-            licenses[lic] = str(datetime.datetime.utcnow())
-            self.writeLicenses(licenses)
-        return out
+        otherPiList = [pi for pi in self.content.keys() if pi not in piList]
+        keepList = self.getDependencyTree(otherPiList)
+        return [pi for pi in piList if pi not in keepList]
 
 
 class StepExecutor():
@@ -423,11 +170,11 @@ class StepExecutor():
             self.runSteps(steps, self.package, label="Pre-uninstall")
 
     def runSteps(self, steps, ip, label=""):
-        self.logger.progressStart('steps', total=len(steps))
+        self.logger.progressStart('Execute steps', total=len(steps))
         worked = 0
         for step in steps:
             if JsonConstants.STEP_LABEL in step:
-                self.logger.printMessage(step[JsonConstants.STEP_LABEL])
+                self.logger.printDefault(step[JsonConstants.STEP_LABEL])
             stepType = step[JsonConstants.STEP_TYPE]
             if stepType == JsonConstants.STEP_EXEC:
                 self.doExec(step)
@@ -440,15 +187,15 @@ class StepExecutor():
             elif stepType == JsonConstants.STEP_DOWNLOAD:
                 self.doDownload(step, ip)
             worked += 1
-            self.logger.progressWorked('steps',
+            self.logger.progressWorked('Execute steps',
                                        worked=worked,
                                        total=len(steps))
-        self.logger.progressDone('steps')
+        self.logger.progressDone('Execute steps')
 
     def doExec(self, step):
         command = [self.resolve(arg)
                    for arg in step[JsonConstants.STEP_EXEC_COMMAND]]
-        self.logger.printDetail("Exec:", ' '.join(command))
+        self.logger.printVerbose("Exec:", ' '.join(command))
         env = dict(os.environ)
         for k, v in step.get(JsonConstants.STEP_EXEC_ENV, {}).items():
             v = self.resolve(v)
@@ -469,8 +216,9 @@ class StepExecutor():
                              stderr=subprocess.STDOUT)
         if rc != 0:
             if step.get(JsonConstants.STEP_IGNORE_FAIL, False):
-                self.logger.printDetail(
-                    "Return code is ", rc, ", but step ignores failure")
+                self.logger.printVerbose("Return code is",
+                                         rc,
+                                         "but step ignores failure")
             else:
                 raise ValueError("Step exited with return code " + str(rc))
 
@@ -479,7 +227,7 @@ class StepExecutor():
             step[JsonConstants.STEP_COPY_SOURCE], prefixWithFolder=True)
         dst = self.resolve(
             step[JsonConstants.STEP_COPY_DESTINATION], prefixWithFolder=True)
-        self.logger.printDetail("Copy:", src, "->", dst)
+        self.logger.printVerbose("Copy:", src, "->", dst)
         shutil.copy2(src, dst)
 
     def doLink(self, step):
@@ -487,13 +235,13 @@ class StepExecutor():
             step[JsonConstants.STEP_LINK_NAME], prefixWithFolder=True)
         source = self.resolve(
             step[JsonConstants.STEP_LINK_TARGET], prefixWithFolder=True)
-        self.logger.printDetail("Link:", source, " -> ", target)
+        self.logger.printVerbose("Link:", source, " -> ", target)
         os.symlink(source, target)
 
     def doDelete(self, step):
         for file in step[JsonConstants.STEP_DELETE_FILES]:
             resolvedFile = self.resolve(file, prefixWithFolder=True)
-            self.logger.printDetail("Delete:", resolvedFile)
+            self.logger.printVerbose("Delete:", resolvedFile)
             os.remove(resolvedFile)
 
     def doDownload(self, step, ip):
@@ -505,7 +253,7 @@ class StepExecutor():
                          step.get(JsonConstants.STEP_DOWNLOAD_SHA1SUM))
         except Exception as e:
             if step.get(JsonConstants.STEP_IGNORE_FAIL, False):
-                self.logger.printDetail(
+                self.logger.printVerbose(
                     "Download failed, but step ignores failure")
             else:
                 raise e
@@ -537,8 +285,8 @@ class LeafRepository():
         '''
         with open(str(manifestFile), 'r') as fp:
             manifest = Manifest(json.load(fp))
-            self.logger.printMessage("Found:", manifest.getIdentifier())
-            self.logger.printMessage(
+            self.logger.printDefault("Found:", manifest.getIdentifier())
+            self.logger.printDefault(
                 "Create tar:", manifestFile, "-->", outputFile)
             with openOutputTarFile(outputFile) as tf:
                 for file in manifestFile.parent.glob('*'):
@@ -565,7 +313,7 @@ class LeafRepository():
         rootNode[JsonConstants.REMOTE_PACKAGES] = packagesNode
         for a in artifacts:
             la = LeafArtifact(a)
-            self.logger.printMessage("Found:", la.getIdentifier())
+            self.logger.printDefault("Found:", la.getIdentifier())
             fileNode = OrderedDict()
             fileNode[JsonConstants.REMOTE_PACKAGE_FILE] = str(
                 Path(a).relative_to(outputFile.parent))
@@ -577,7 +325,7 @@ class LeafRepository():
 
         with open(str(outputFile), 'w') as out:
             json.dump(rootNode, out, indent=2)
-            self.logger.printMessage("Index created:", outputFile)
+            self.logger.printDefault("Index created:", outputFile)
 
 
 class LeafApp(LeafRepository):
@@ -666,7 +414,7 @@ class LeafApp(LeafRepository):
             self.writeConfiguration(config)
             if self.cacheFile.exists():
                 os.remove(str(self.cacheFile))
-                self.logger.printMessage(
+                self.logger.printDefault(
                     "Remotes have changed, you need to fetch content")
 
     def remoteRemove(self, url):
@@ -681,21 +429,28 @@ class LeafApp(LeafRepository):
                 self.writeConfiguration(config)
                 if self.cacheFile.exists():
                     os.remove(str(self.cacheFile))
-                    self.logger.printMessage(
+                    self.logger.printDefault(
                         "Remotes have changed, you need to fetch content")
 
-    def remoteList(self):
+    def getRemoteUrls(self):
         '''
         List all remotes from configuration
         '''
         config = self.readConfiguration()
-        out = OrderedDict()
+        return config.get(JsonConstants.CONFIG_REMOTES, [])
+
+    def getRemoteRepositories(self):
+        '''
+        List all remotes from configuration
+        '''
         cache = self.readRemotesCache()
-        for remote in config.get(JsonConstants.CONFIG_REMOTES, []):
-            if cache is not None and remote in cache:
-                out[remote] = cache[remote].get(JsonConstants.INFO)
+        out = []
+        for remoteUrl in self.getRemoteUrls():
+            if cache is not None and remoteUrl in cache:
+                out.append(RemoteRepository(remoteUrl,
+                                            cache[remoteUrl].get(JsonConstants.INFO)))
             else:
-                out[remote] = None
+                out.append(RemoteRepository(remoteUrl))
         return out
 
     def listAvailablePackages(self):
@@ -721,7 +476,7 @@ class LeafApp(LeafRepository):
             try:
                 with urllib.request.urlopen(remoteurl, timeout=LeafConstants.DOWNLOAD_TIMEOUT) as url:
                     data = json.loads(url.read().decode())
-                    self.logger.printMessage("Fetched", remoteurl)
+                    self.logger.printDefault("Fetched", remoteurl)
                     content[remoteurl] = data
                     composites = data.get(JsonConstants.REMOTE_COMPOSITE)
                     if composites is not None:
@@ -736,23 +491,24 @@ class LeafApp(LeafRepository):
         Fetch remotes
         '''
         content = OrderedDict()
-        remotes = self.remoteList()
-        self.logger.progressStart('fetch', total=len(remotes))
+        urls = self.getRemoteUrls()
+        self.logger.progressStart('Fetch remote(s)', total=len(urls))
         worked = 0
-        for remote in self.remoteList():
-            self.fetchUrl(remote, content)
+        for url in urls:
+            self.fetchUrl(url, content)
             worked += 1
-            self.logger.progressWorked('fetch',
+            self.logger.progressWorked('Fetch remote(s)',
                                        worked=worked,
-                                       total=len(remotes))
+                                       total=len(urls))
         with open(str(self.cacheFile), 'w') as output:
             json.dump(content, output)
-        self.logger.progressDone('fetch',
-                                 message="Fetched %d remote repositories" % (len(remotes)))
+        self.logger.progressDone('Fetch remote(s)')
+        return self.getRemoteRepositories()
 
     def listInstalledPackages(self):
         '''
         Return all installed packages
+        @return: PackageIdentifier/InstalledPackage dict
         '''
         out = {}
         for folder in self.getInstallFolder().iterdir():
@@ -763,197 +519,255 @@ class LeafApp(LeafRepository):
                     out[ip.getIdentifier()] = ip
         return out
 
-    def install(self, motifList,
-                forceInstall=False,
-                downloadOnly=False,
-                keepFolderOnError=False,
-                skipLicenses=False):
+    def listDependencies(self, motifList, reverse=False, filterInstalled=False, aptDepends=False):
         '''
-        To download & install packages with dependencies
+        List all dependencies for given packages
+        @return: PackageIdentifier list 
+                    or String list in case of apt dependencies
         '''
         installedPackages = self.listInstalledPackages()
         availablePackages = self.listAvailablePackages()
-        packageIdentifiers = LeafUtils.findPackageIdentifiers(
-            motifList, availablePackages)
+        piList = LeafUtils.resolvePackageIdentifiers(motifList,
+                                                     availablePackages)
+        dm = DependencyManager()
+        dm.addContent(installedPackages)
+        dm.addContent(availablePackages)
 
-        # List of packages to install
-        apToInstall = LeafUtils.computePackagesToInstall(
-            packageIdentifiers, availablePackages)
+        out = dm.getDependencyTree(piList)
+        out = dm.filterAndSort(out,
+                               reverse,
+                               installedPackages.keys() if filterInstalled else None)
 
-        # Check if already installed
-        apToInstall[:] = [
-            ap for ap in apToInstall if not ap.getIdentifier() in installedPackages]
-        if len(apToInstall) == 0:
-            self.logger.printMessage("All packages are already installed")
-            return True
+        if aptDepends:
+            debList = []
+            for pi in out:
+                for deb in dm.resolve(pi).getAptDepends():
+                    if deb not in debList:
+                        debList.append(deb)
+            if filterInstalled:
+                ah = AptHelper()
+                debList = [p for p in debList if not ah.isInstalled(p)]
+            out = debList
+
+        return out
+
+    def downloadPackages(self, motifList):
+        '''
+        Download given available package and returns the files in cache folder
+        @return AvailablePackage/LeafArtifact dict
+        '''
+        availablePackages = self.listAvailablePackages()
+        piList = LeafUtils.resolvePackageIdentifiers(motifList,
+                                                     availablePackages)
+        apList = []
+        for pi in piList:
+            ap = availablePackages.get(pi)
+            if ap is None:
+                raise ValueError("Cannot find available package: " + str(pi))
+            if ap not in apList:
+                apList.append(ap)
+
+        out = OrderedDict()
+        if len(apList) == 0:
+            self.logger.printDefault("Nothing to do")
+        else:
+            self.logger.progressStart('Download package(s)',
+                                      message="Downloading %d package(s)" % (
+                                          len(apList)),
+                                      total=len(apList))
+            # Download package if needed
+            for ap in apList:
+                filename = getCachedArtifactName(
+                    ap.getFilename(), ap.getSha1sum())
+                cachedFile = downloadFile(ap.getUrl(),
+                                          LeafFiles.FILES_CACHE_FOLDER,
+                                          self.logger,
+                                          filename=filename,
+                                          sha1sum=ap.getSha1sum())
+                la = LeafArtifact(cachedFile)
+                out[ap] = la
+                self.logger.progressWorked('Download package(s)',
+                                           worked=len(out),
+                                           total=len(apList))
+            self.logger.progressDone('Download package(s)')
+        return out
+
+    def extractPackages(self, files,
+                        bypassSupportedOsCheck=False,
+                        bypassLeafDependsCheck=False,
+                        bypassAptDependsCheck=False,
+                        keepFolderOnError=False):
+        '''
+        Extract & post install given packages
+        @return: InstalledPackage list
+        '''
+        installedPackages = self.listInstalledPackages()
+
+        # Build the list of artifact to install
+        laList = []
+        for f in files:
+            la = f if isinstance(f, LeafArtifact) else LeafArtifact(f)
+            if la.getIdentifier() in installedPackages:
+                self.logger.printVerbose(la.getIdentifier(),
+                                         "is already installed")
+            elif la not in laList:
+                laList.append(la)
+
+        # Check dependencies
+        if not bypassLeafDependsCheck:
+            dm = DependencyManager()
+            dm.addContent(installedPackages)
+            for la in laList:
+                missingDeps = dm.filterMissingDependencies(
+                    PackageIdentifier.fromStringList(la.getLeafDepends()))
+                if len(missingDeps) > 0:
+                    raise ValueError("Missing dependencies for " +
+                                     str(la.getIdentifier()))
+                dm.addContent({la.getIdentifier(): la})
 
         # Check supported Os
-        apIncompatible = [ap for ap in apToInstall if not ap.isSupported()]
-        if len(apIncompatible) > 0:
-            self.logger.printError("Some packages are not compatible with your system: ",
-                                   ", ".join([str(ap.getIdentifier()) for ap in apIncompatible]))
-            if not forceInstall:
+        if not bypassSupportedOsCheck:
+            incompatibleLaList = [la for la in laList if not la.isSupported()]
+            if len(incompatibleLaList) > 0:
+                self.logger.printError("Some packages are not compatible with your system: ",
+                                       ", ".join([str(ap.getIdentifier()) for ap in incompatibleLaList]))
                 raise ValueError("Unsupported system")
 
         # Check dependencies
-        missingAptDepends = LeafUtils.getMissingAptDepends(apToInstall)
-        if len(missingAptDepends) > 0:
-            self.logger.printError(
-                "You may have to install missing dependencies by running:")
-            self.logger.printError("  $",
-                                   "sudo apt-get update",
-                                   "&&",
-                                   "sudo apt-get install",
-                                   ' '.join(missingAptDepends))
-            if not forceInstall and not downloadOnly:
+        if not bypassAptDependsCheck:
+            ah = AptHelper()
+            missingAptDepends = []
+            for la in laList:
+                for deb in la.getAptDepends():
+                    if deb not in missingAptDepends and not ah.isInstalled(deb):
+                        missingAptDepends.append(deb)
+            if len(missingAptDepends) > 0:
+                self.logger.printError(
+                    "You may have to install missing dependencies by running:")
+                self.logger.printError("  $",
+                                       "sudo apt-get update",
+                                       "&&",
+                                       "sudo apt-get install",
+                                       ' '.join(missingAptDepends))
                 raise ValueError("Missing dependencies")
 
-        if not skipLicenses:
-            lm = LicenseManager(self.logger)
-            for lic in lm.checkLicenses(apToInstall):
-                if not lm.acceptLicense(lic):
-                    raise ValueError("License must be accepted: " + lic)
+        # Extract packages
+        outIpList = []
+        self.logger.progressStart('Extract package(s)', total=len(laList))
+        for la in laList:
+            targetFolder = self.getInstallFolder() / str(la.getIdentifier())
+            if targetFolder.is_dir():
+                raise ValueError("Folder already exists: " + str(targetFolder))
 
-        total = len(apToInstall)
-        if not downloadOnly:
-            total *= 2
-        worked = 0
-        self.logger.progressStart('install',
-                                  message="Packages to install: " +
-                                  '\n\t'.join([str(m.getIdentifier())
-                                               for m in apToInstall]),
-                                  total=total)
+            # Create folder
+            os.makedirs(str(targetFolder))
+            try:
+                self.logger.printVerbose("Extract",
+                                         la.path,
+                                         "in",
+                                         targetFolder)
+                with TarFile.open(str(la.path)) as tf:
+                    tf.extractall(str(targetFolder))
 
-        toInstall = OrderedDict()
-        # Download package if needed
-        for ap in apToInstall:
-            toInstall[ap] = LeafArtifact(downloadFile(ap.getUrl(),
-                                                      LeafFiles.FILES_CACHE_FOLDER,
-                                                      self.logger,
-                                                      filename=getCachedArtifactName(
-                ap.getFilename(), ap.getSha1sum()),
-                sha1sum=ap.getSha1sum()))
-            worked += 1
-            self.logger.progressWorked('install', worked=worked, total=total)
+                # Execute post install steps
+                newPackage = InstalledPackage(
+                    targetFolder / LeafConstants.MANIFEST)
+                StepExecutor(self.logger,
+                             newPackage,
+                             installedPackages,
+                             extraEnv=self.getUserEnvVariables()).postInstall()
+                installedPackages[newPackage.getIdentifier()] = newPackage
+                outIpList.append(newPackage)
+                self.logger.progressWorked('Extract package(s)',
+                                           message="Package %s extracted" % (
+                                               la.getIdentifier()),
+                                           worked=len(outIpList),
+                                           total=len(laList))
+            except Exception as e:
+                self.logger.printError("Error during installation:", e)
+                if keepFolderOnError:
+                    targetFolderIgnored = markFolderAsIgnored(targetFolder)
+                    self.logger.printVerbose("Mark folder as ignored:",
+                                             targetFolderIgnored)
+                else:
+                    self.logger.printVerbose("Remove folder:", targetFolder)
+                    shutil.rmtree(str(targetFolder), True)
+                raise e
+        self.logger.progressDone('Extract package(s)')
+        return outIpList
 
-        if downloadOnly:
-            self.logger.progressDone(
-                'install',
-                message="%d %s been downloaded" % (
-                    len(toInstall),
-                    "packages have" if len(toInstall) > 1 else "package has"))
+    def installPackages(self, motifList, **kwargs):
+        '''
+        Compute dependency tree, download and extract needed packages
+        @return: InstalledPackage list
+        '''
+        out = []
+        piList = self.listDependencies(motifList, filterInstalled=True)
+        if len(piList) == 0:
+            self.logger.printDefault("Nothing to do")
         else:
-            # Extract package
-            for ap, la in toInstall.items():
-                self.logger.printMessage("Installing", ap.getIdentifier())
-                self.extractPackage(la,
-                                    installedPackages,
-                                    ap.getUrl(),
-                                    keepFolderOnError=keepFolderOnError)
-                worked += 1
-                self.logger.progressWorked(
-                    'install', worked=worked, total=total)
-            self.logger.progressDone(
-                'install',
-                message="%d %s been installed" % (
-                    len(toInstall),
-                    "packages have" if len(toInstall) > 1 else "package has"))
+            self.logger.progressStart('Install package(s)', total=2)
+            packageMap = self.downloadPackages(piList)
+            self.logger.progressWorked('Install package(s)', worked=1, total=2)
+            out = self.extractPackages(packageMap.values(), **kwargs)
+            self.logger.progressWorked('Install package(s)', worked=2, total=2)
+            self.logger.progressDone('Install package(s)')
+        return out
 
-    def extractPackage(self, leafArtifact, installedPackages=None, urlSource=None, keepFolderOnError=False):
-        '''
-        Extract & post install given package
-        '''
-
-        if installedPackages is None:
-            installedPackages = self.listInstalledPackages()
-
-        targetFolder = self.getInstallFolder() / str(leafArtifact.getIdentifier())
-        if targetFolder.is_dir():
-            raise ValueError("Folder already exists: " + str(targetFolder))
-
-        # Create folder
-        os.makedirs(str(targetFolder))
-        try:
-            self.logger.printDetail(
-                "Extract", leafArtifact.path, "in", targetFolder)
-            with TarFile.open(str(leafArtifact.path)) as tf:
-                tf.extractall(str(targetFolder))
-
-            # Execute post install steps
-            newPackage = InstalledPackage(
-                targetFolder / LeafConstants.MANIFEST)
-            StepExecutor(self.logger,
-                         newPackage,
-                         installedPackages,
-                         extraEnv=self.getUserEnvVariables()).postInstall()
-            installedPackages[newPackage.getIdentifier()] = newPackage
-            return newPackage
-        except Exception as e:
-            self.logger.printError("Error during installation:", e)
-            if keepFolderOnError:
-                targetFolderIgnored = markFolderAsIgnored(targetFolder)
-                self.logger.printDetail("Mark folder as ignored:",
-                                        targetFolderIgnored)
-            else:
-                self.logger.printDetail("Remove folder:", targetFolder)
-                shutil.rmtree(str(targetFolder), True)
-            raise e
-
-    def uninstall(self, motifList):
+    def uninstallPackages(self, motifList,
+                          keepUnusedDepends=False):
         '''
         Remove given package
         '''
         installedPackages = self.listInstalledPackages()
-        packageIdentifiers = LeafUtils.findPackageIdentifiers(
-            motifList, installedPackages)
+        piList = LeafUtils.resolvePackageIdentifiers(motifList,
+                                                     installedPackages)
+
+        if not keepUnusedDepends:
+            dm = DependencyManager()
+            dm.addContent(installedPackages)
+            piList = dm.getDependencyTree(piList)
 
         # List of packages to install
-        ipToRemove = LeafUtils.computePackagesToUninstall(
-            packageIdentifiers, installedPackages)
-        if len(ipToRemove) == 0:
-            self.logger.printMessage(
+        piList = dm.maintainDependencies(piList)
+
+        if len(piList) == 0:
+            self.logger.printDefault(
                 "No package to remove (to keep dependencies)")
         else:
-            total = len(ipToRemove)
+            total = len(piList)
             worked = 0
-            self.logger.progressStart('uninstall',
-                                      message="Packages to remove: " + '\n\t'.join(
-                                          [str(m.getIdentifier()) for m in ipToRemove]),
+            self.logger.progressStart('Uninstall package(s)',
+                                      message="Package(s) to remove: " +
+                                      ' '.join([str(pi) for pi in piList]),
                                       total=total)
-            for ip in ipToRemove:
-                self.logger.printMessage("Removing", ip.getIdentifier())
+            for pi in piList:
+                ip = installedPackages.get(pi)
+                self.logger.printDefault("Removing", ip.getIdentifier())
                 stepExec = StepExecutor(self.logger,
                                         ip,
                                         installedPackages,
                                         extraEnv=self.getUserEnvVariables())
                 stepExec.preUninstall()
-                self.logger.printDetail("Remove folder:", ip.folder)
+                self.logger.printVerbose("Remove folder:", ip.folder)
                 shutil.rmtree(str(ip.folder))
                 worked += 1
-                self.logger.progressWorked('uninstall',
+                self.logger.progressWorked('Uninstall package(s)',
                                            worked=worked,
                                            total=total)
-                del [installedPackages[ip.getIdentifier()]]
-            self.logger.progressDone(
-                'uninstall',
-                message="%d %s been removed" % (
-                    len(ipToRemove),
-                    "packages have" if len(ipToRemove) > 1 else "package has"))
+                del [installedPackages[pi]]
+            self.logger.progressDone('Uninstall package(s)',
+                                     message="%d package(s) removed" % (len(piList)))
 
     def getEnv(self, motifList):
         '''
         Get the env vars declared by given packages and their dependencies
         '''
+        piList = self.listDependencies(motifList)
         installedPackages = self.listInstalledPackages()
-        packageIdentifiers = LeafUtils.findPackageIdentifiers(
-            motifList, installedPackages)
-
         out = OrderedDict()
-        ipList = []
-        LeafUtils.getDependencies(
-            packageIdentifiers, installedPackages, ipList)
-        LeafUtils.sortPackagesByDependencies(ipList)
-        for ip in ipList:
+        for pi in piList:
+            ip = installedPackages[pi]
             env = ip.json.get(JsonConstants.ENV)
             if env is not None:
                 stepExec = StepExecutor(self.logger, ip, installedPackages)

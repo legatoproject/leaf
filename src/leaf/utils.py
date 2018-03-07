@@ -7,7 +7,9 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
+import apt
 import hashlib
+from leaf.constants import LeafConstants
 import os
 from pathlib import Path
 import random
@@ -18,8 +20,6 @@ from tarfile import TarFile
 import time
 import urllib
 from urllib.parse import urlparse, urlunparse
-
-from leaf.constants import LeafConstants
 
 
 _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
@@ -103,39 +103,62 @@ def downloadFile(url, folder, logger, filename=None, sha1sum=None):
     targetFile = folder / filename
     if targetFile.exists():
         if sha1sum is None:
-            logger.printDetail("File exists but cannot be verified,",
-                               targetFile.name, " will be re-downloaded")
+            logger.printVerbose("File exists but cannot be verified,",
+                                targetFile.name,
+                                " will be re-downloaded")
             os.remove(str(targetFile))
         elif sha1sum != computeSha1sum(targetFile):
-            logger.printDetail("File exists but SHA1 differs,",
-                               targetFile.name, " will be re-downloaded")
+            logger.printVerbose("File exists but SHA1 differs,",
+                                targetFile.name,
+                                " will be re-downloaded")
             os.remove(str(targetFile))
         else:
-            logger.printDetail(
-                "File already in cache:", targetFile.name)
+            logger.printVerbose("File already in cache:",
+                                targetFile.name)
     if not targetFile.exists():
         if parsedUrl.scheme.startswith("http"):
             req = requests.get(url,
                                stream=True,
                                timeout=LeafConstants.DOWNLOAD_TIMEOUT)
             size = int(req.headers.get('content-length', -1))
-            logger.progressStart('download', total=size)
+            logger.progressStart('Download file', total=size)
             currentSize = 0
             with open(str(targetFile), 'wb') as fp:
                 for data in req.iter_content(1024 * 1024):
                     currentSize += len(data)
-                    logger.progressWorked('download',
+                    logger.progressWorked('Download file',
                                           "Downloading " + targetFile.name,
                                           worked=currentSize,
                                           total=size,
                                           sameLine=True)
                     fp.write(data)
         else:
-            logger.progressStart('download')
+            logger.progressStart('Download file')
             urllib.request.urlretrieve(url, str(targetFile))
-        logger.progressDone('download',
+        logger.progressDone('Download file',
                             "File downloaded: " + str(targetFile))
         if sha1sum is not None and sha1sum != computeSha1sum(targetFile):
-            raise ValueError(
-                "Invalid SHA1 sum for " + targetFile.name + ", expecting " + sha1sum)
+            raise ValueError("Invalid SHA1 sum for " +
+                             targetFile.name +
+                             ", expecting " +
+                             sha1sum)
     return targetFile
+
+
+class AptHelper():
+    '''
+    Util class to check if apt packages are available/installed
+    '''
+
+    def __init__(self):
+        self.cache = apt.Cache()
+
+    def isInstallable(self, pack):
+        return self.cache.is_virtual_package(pack) or pack in self.cache
+
+    def isInstalled(self, pack):
+        if self.cache.is_virtual_package(pack):
+            return len([p for p in self.cache.get_providing_packages(pack) if self.cache[p].installed]) > 0
+        if pack in self.cache:
+            return self.cache[pack].installed is not None
+        return False
