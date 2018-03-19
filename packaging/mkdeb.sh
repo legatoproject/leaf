@@ -24,7 +24,7 @@ sed -i -e "s/0.0.0/$VERSION/" "$WORKING_DIR/leaf/__init__.py"
 tar -C "$WORKING_DIR" -cvzf "$DIST_DIR/leaf_$VERSION.tar.gz" .
 
 # Copy debian skel
-cp -r "$ROOT/packaging/debian/" "$WORKING_DIR"
+rsync -Pra "$ROOT/packaging/extrafiles/" "$WORKING_DIR/"
 
 # Create deb
 cd "$WORKING_DIR"
