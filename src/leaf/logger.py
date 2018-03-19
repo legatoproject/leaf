@@ -38,19 +38,19 @@ class ILogger(ABC):
         return False
 
     @abstractmethod
-    def printQuiet(self, *args, **kwargs):
+    def printQuiet(self, *message, **kwargs):
         pass
 
     @abstractmethod
-    def printDefault(self, *args, **kwargs):
+    def printDefault(self, *message, **kwargs):
         pass
 
     @abstractmethod
-    def printVerbose(self, *args, **kwargs):
+    def printVerbose(self, *message, **kwargs):
         pass
 
     @abstractmethod
-    def printError(self, *args, exception=None):
+    def printError(self, *message):
         pass
 
     @abstractmethod
@@ -84,22 +84,20 @@ class TextLogger (ILogger):
     def isVerbose(self):
         return self.level == TextLogger.LEVEL_VERBOSE
 
-    def printQuiet(self, *args, **kwargs):
+    def printQuiet(self, *message, **kwargs):
         if self.level >= TextLogger.LEVEL_QUIET:
-            print(*args, **kwargs)
+            print(*message, **kwargs)
 
-    def printDefault(self, *args, **kwargs):
+    def printDefault(self, *message, **kwargs):
         if self.level >= TextLogger.LEVEL_DEFAULT:
-            print(*args, **kwargs)
+            print(*message, **kwargs)
 
-    def printVerbose(self, *args, **kwargs):
+    def printVerbose(self, *message, **kwargs):
         if self.level >= TextLogger.LEVEL_VERBOSE:
-            print(*args, **kwargs)
+            print(*message, **kwargs)
 
-    def printError(self, *message, exception=None):
+    def printError(self, *message):
         print(*message, file=sys.stderr)
-        if exception is not None:
-            print(exception, file=sys.stderr)
 
     def progressStart(self, task, message=None, total=-1):
         if message is not None:
@@ -238,7 +236,7 @@ class JsonLogger(ILogger):
             'message': " ".join(map(str, message)),
         })
 
-    def printError(self, *message, exception=None):
+    def printError(self, *message):
         self.printJson({
             'event': "error",
             'message': " ".join(map(str, message)),

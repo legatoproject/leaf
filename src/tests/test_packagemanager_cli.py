@@ -112,8 +112,7 @@ class TestPackageManagerCli_Default(TestWithRepository, LeafCliWrapper):
         self.initLeafConfig()
         self.leafExec("dependencies", "--apt",
                       "deb_1.0", "failure-depends-deb_1.0")
-        with self.assertRaises(ValueError):
-            self.leafExec("install", "failure-depends-deb_1.0")
+        self.leafExec("install", "failure-depends-deb_1.0", expectedRc=2)
         self.leafExec("install", "--skip-apt", "failure-depends-deb_1.0")
         self.checkContent('failure-depends-deb_1.0')
 

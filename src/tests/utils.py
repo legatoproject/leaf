@@ -101,7 +101,7 @@ class LeafCliWrapper():
         self.leafExec("config", "--root", self.getInstallFolder())
         self.leafExec("remote", "--add", self.getRemoteUrl())
 
-    def leafExec(self, verb, *args, checkRc=True):
+    def leafExec(self, verb, *args, expectedRc=0):
         command = []
         command += self.preCommandArgs
         if isinstance(verb, (list, tuple)):
@@ -119,8 +119,8 @@ class LeafCliWrapper():
         print(LeafCliWrapper.SEPARATOR +
               LeafCliWrapper.SEPARATOR +
               LeafCliWrapper.SEPARATOR)
-        if checkRc:
-            self.assertEqual(0, out, " ".join(command))
+        if expectedRc is not None:
+            self.assertEqual(expectedRc, out, " ".join(command))
         return out
 
 

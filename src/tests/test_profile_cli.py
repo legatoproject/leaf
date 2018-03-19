@@ -38,8 +38,7 @@ class TestProfileCli_Default(TestWithRepository, LeafCliWrapper):
         self.leafExec(["profile", subCommand], *fullargs, **kwargs)
 
     def testInit(self):
-        with self.assertRaises(Exception):
-            self.leafProfileExec("list")
+        self.leafProfileExec("list", expectedRc=2)
         self.leafProfileExec("init")
         self.leafProfileExec("list")
         self.leafProfileExec("env")
@@ -96,8 +95,7 @@ class TestProfileCli_Default(TestWithRepository, LeafCliWrapper):
                                  "container-D",
                                  "container-E",
                                  "deb")
-        with self.assertRaises(Exception):
-            self.leafProfileExec("create", "foo")
+        self.leafProfileExec("create", "foo", expectedRc=2)
         self.leafProfileExec("list")
         self.leafProfileExec("switch", "foo")
         self.leafProfileExec("env", "foo")
@@ -112,8 +110,7 @@ class TestProfileCli_Default(TestWithRepository, LeafCliWrapper):
 
     def testReservedName(self):
         self.leafProfileExec("init")
-        with self.assertRaises(Exception):
-            self.leafProfileExec("create", "current")
+        self.leafProfileExec("create", "current", expectedRc=2)
 
     def testAutoFindWorkspace(self):
         profileConfigFile = self.getWorkspaceFolder() / LeafFiles.PROFILES_FILENAME
@@ -127,18 +124,16 @@ class TestProfileCli_Default(TestWithRepository, LeafCliWrapper):
                       "--workspace",
                       self.getWorkspaceFolder())
 
-        with self.assertRaises(Exception):
-            self.leafExec(("profile", "list"),
-                          "--workspace",
-                          "/tmp")
+        self.leafExec(("profile", "list"),
+                      "--workspace",
+                      "/tmp", expectedRc=2)
 
         subFolder = self.getWorkspaceFolder() / "foo" / "bar"
         subFolder.mkdir(parents=True)
 
-        with self.assertRaises(Exception):
-            self.leafExec(("profile", "list"),
-                          "--workspace",
-                          subFolder)
+        self.leafExec(("profile", "list"),
+                      "--workspace",
+                      subFolder, expectedRc=2)
 
         oldPwd = os.getcwd()
         try:

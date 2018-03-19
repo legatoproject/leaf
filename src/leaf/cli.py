@@ -8,19 +8,19 @@ Leaf Package Manager
 '''
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
-from leaf.constants import LeafFiles
-from pathlib import Path
-import sys
-
 from leaf import __help_description__, __version__
 from leaf.cli_packagemanager import ConfigCommand, CleanCommand, RemoteCommand,\
     FetchCommand, ListCommand, SearchCommand, DependsCommand, DownloadCommand,\
     ExtractCommand, InstallCommand, RemoveCommand, EnvCommand
 from leaf.cli_profile import ProfileCommand
 from leaf.cli_releng import PackCommand, IndexCommand
+from leaf.constants import LeafFiles
 from leaf.core import LeafApp
 from leaf.logger import createLogger
 from leaf.utils import checkPythonVersion
+from pathlib import Path
+import sys
+import traceback
 
 
 class LeafCli():
@@ -81,10 +81,16 @@ class LeafCli():
             configFile = args.customConfig
 
         app = LeafApp(logger, configFile)
-        for cmd in self.commands:
-            if cmd.isHandled(args.command):
-                return cmd.execute(app, logger, args)
-        raise ValueError("Cannot find command for " + args.command)
+        try:
+            for cmd in self.commands:
+                if cmd.isHandled(args.command):
+                    return cmd.execute(app, logger, args)
+            raise ValueError("Cannot find command for " + args.command)
+        except Exception as e:
+            logger.printError(e)
+            if logger.isVerbose():
+                traceback.print_exc()
+            return 2
 
 
 def main():
