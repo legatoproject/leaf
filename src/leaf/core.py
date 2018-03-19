@@ -14,45 +14,16 @@ import json
 from leaf import __version__
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles
 from leaf.model import Manifest, InstalledPackage, AvailablePackage, LeafArtifact,\
-    PackageIdentifier, RemoteRepository
+    PackageIdentifier, RemoteRepository, Profile
 from leaf.utils import resolveUrl, getCachedArtifactName, isFolderIgnored,\
     markFolderAsIgnored, openOutputTarFile, computeSha1sum, downloadFile,\
-    AptHelper
+    AptHelper, jsonLoadFile
 import os
 from pathlib import Path
 import shutil
 import subprocess
 from tarfile import TarFile
 import urllib.request
-
-
-class LeafUtils():
-    '''
-    Useful simple methods
-    '''
-    @staticmethod
-    def resolvePackageIdentifiers(motifList, contentDict):
-        '''
-        Search a package given a full packageidentifier
-        or only a name (latest version will be returned then.
-        '''
-        out = []
-        for motif in motifList:
-            pi = None
-            if isinstance(motif, PackageIdentifier):
-                pi = motif
-            elif PackageIdentifier.isValidIdentifier(motif):
-                pi = PackageIdentifier.fromString(motif)
-            else:
-                for pi in sorted(filter(lambda pi: pi.name == motif, contentDict.keys())):
-                    # loop to get the last item
-                    pass
-            if pi is not None:
-                out.append(pi)
-            else:
-                raise ValueError(
-                    "Cannot find package matching: " + motif)
-        return out
 
 
 class DependencyManager():
@@ -283,15 +254,14 @@ class LeafRepository():
         if the output file ands with .json, a *manifest only* package will be generated.
         Output file can ends with tar.[gz,xz,bz2] of json
         '''
-        with open(str(manifestFile), 'r') as fp:
-            manifest = Manifest(json.load(fp))
-            self.logger.printDefault("Found:", manifest.getIdentifier())
-            self.logger.printDefault(
-                "Create tar:", manifestFile, "-->", outputFile)
-            with openOutputTarFile(outputFile) as tf:
-                for file in manifestFile.parent.glob('*'):
-                    tf.add(str(file),
-                           str(file.relative_to(manifestFile.parent)))
+        manifest = Manifest(jsonLoadFile(manifestFile))
+        self.logger.printDefault("Found:", manifest.getIdentifier())
+        self.logger.printDefault(
+            "Create tar:", manifestFile, "-->", outputFile)
+        with openOutputTarFile(outputFile) as tf:
+            for file in manifestFile.parent.glob('*'):
+                tf.add(str(file),
+                       str(file.relative_to(manifestFile.parent)))
 
     def index(self, outputFile, artifacts, name=None, description=None, composites=[]):
         '''
@@ -348,8 +318,7 @@ class LeafApp(LeafRepository):
         Read the configuration if it exists, else return the the default configuration
         '''
         if self.configurationFile.exists():
-            with open(str(self.configurationFile), 'r') as fp:
-                return json.load(fp)
+            return jsonLoadFile(self.configurationFile)
         # Default configuration here
         out = dict()
         out[JsonConstants.CONFIG_ROOT] = str(LeafFiles.DEFAULT_LEAF_ROOT)
@@ -365,8 +334,7 @@ class LeafApp(LeafRepository):
 
     def readRemotesCache(self):
         if self.cacheFile.exists():
-            with open(str(self.cacheFile), 'r') as fp:
-                return json.load(fp)
+            return jsonLoadFile(self.cacheFile)
 
     def getInstallFolder(self):
         out = LeafFiles.DEFAULT_LEAF_ROOT
@@ -453,6 +421,41 @@ class LeafApp(LeafRepository):
                 out.append(RemoteRepository(remoteUrl))
         return out
 
+    def resolveLatest(self, motifList, ipMap=None, apMap=None):
+        '''
+        Search a package given a full packageidentifier
+        or only a name (latest version will be returned then.
+        '''
+        out = []
+        knownPiList = []
+        if ipMap is True:
+            ipMap = self.listInstalledPackages()
+        if ipMap is not None:
+            for pi in ipMap.keys():
+                if pi not in knownPiList:
+                    knownPiList.append(pi)
+        if apMap is True:
+            apMap = self.listAvailablePackages()
+        if apMap is not None:
+            for pi in apMap.keys():
+                if pi not in knownPiList:
+                    knownPiList.append(pi)
+        knownPiList = sorted(knownPiList)
+        for motif in motifList:
+            pi = None
+            if isinstance(motif, PackageIdentifier):
+                pi = motif
+            elif PackageIdentifier.isValidIdentifier(motif):
+                pi = PackageIdentifier.fromString(motif)
+            else:
+                for pi in filter(lambda pi: pi.name == motif, knownPiList):
+                    # loop to get the last item
+                    pass
+            if pi is None:
+                raise ValueError("Cannot find package matching %s" % motif)
+            out.append(pi)
+        return out
+
     def listAvailablePackages(self):
         '''
         List all available package
@@ -527,8 +530,10 @@ class LeafApp(LeafRepository):
         '''
         installedPackages = self.listInstalledPackages()
         availablePackages = self.listAvailablePackages()
-        piList = LeafUtils.resolvePackageIdentifiers(motifList,
-                                                     availablePackages)
+        piList = self.resolveLatest(motifList,
+                                    ipMap=installedPackages,
+                                    apMap=availablePackages)
+
         dm = DependencyManager()
         dm.addContent(installedPackages)
         dm.addContent(availablePackages)
@@ -557,8 +562,7 @@ class LeafApp(LeafRepository):
         @return AvailablePackage/LeafArtifact dict
         '''
         availablePackages = self.listAvailablePackages()
-        piList = LeafUtils.resolvePackageIdentifiers(motifList,
-                                                     availablePackages)
+        piList = self.resolveLatest(motifList, apMap=availablePackages)
         apList = []
         for pi in piList:
             ap = availablePackages.get(pi)
@@ -720,8 +724,7 @@ class LeafApp(LeafRepository):
         Remove given package
         '''
         installedPackages = self.listInstalledPackages()
-        piList = LeafUtils.resolvePackageIdentifiers(motifList,
-                                                     installedPackages)
+        piList = self.resolveLatest(motifList, ipMap=installedPackages)
 
         if not keepUnusedDepends:
             dm = DependencyManager()
@@ -765,13 +768,138 @@ class LeafApp(LeafRepository):
         '''
         piList = self.listDependencies(motifList)
         installedPackages = self.listInstalledPackages()
-        out = OrderedDict()
+        out = []
         for pi in piList:
             ip = installedPackages[pi]
-            env = ip.json.get(JsonConstants.ENV)
+            env = ip.jsonpath(JsonConstants.ENV)
             if env is not None:
                 stepExec = StepExecutor(self.logger, ip, installedPackages)
                 for key, value in env.items():
                     value = stepExec.resolve(value, True, False)
-                    out[key] = value
+                    out.append((key, value))
+        return out
+
+
+class Workspace():
+    '''
+    Represent a workspace, where leaf profiles apply
+    '''
+
+    def __init__(self, rootFolder, app):
+        self.rootFolder = rootFolder
+        self.configFile = rootFolder / LeafFiles.PROFILES_FILENAME
+        self.dataFolder = rootFolder / LeafFiles.PROFILES_FOLDERNAME
+        self.currentLink = self.dataFolder / LeafFiles.CURRENT_PROFILE
+        self.app = app
+
+    def getProfileMap(self):
+        out = OrderedDict()
+        for name, payload in jsonLoadFile(self.configFile).items():
+            out[name] = Profile(name,
+                                self.dataFolder / name,
+                                payload)
+        try:
+            out[self.getCurrentProfileName()].isCurrentProfile = True
+        except:
+            pass
+        return out
+
+    def getProfile(self, name=None):
+        if name is None:
+            name = self.getCurrentProfileName()
+        pfMap = self.getProfileMap()
+        if name not in pfMap:
+            raise ValueError("Cannot find profile %s" % name)
+        return pfMap.get(name)
+
+    def writeProfiles(self, pfMap):
+        self.dataFolder.mkdir(exist_ok=True)
+        tmpFile = self.dataFolder / ("tmp-" + LeafFiles.PROFILES_FILENAME)
+        with open(str(tmpFile), 'w') as fp:
+            payload = OrderedDict()
+            for name, pf in pfMap.items():
+                payload[name] = pf.json
+            json.dump(payload, fp, indent=2, separators=(',', ': '))
+        tmpFile.rename(self.configFile)
+
+    def getCurrentProfileName(self):
+        if self.dataFolder.is_dir():
+            if self.currentLink.is_symlink():
+                return self.currentLink.resolve().name
+            else:
+                raise ValueError(
+                    "No current profile set, you have to switch to a profile first")
+        else:
+            raise ValueError("The workspace is not initialized")
+
+    def deleteProfile(self, name):
+        pfMap = self.getProfileMap()
+        if name not in pfMap:
+            raise ValueError("Cannot find profile %s" % name)
+        out = pfMap[name]
+        del pfMap[name]
+        self.writeProfiles(pfMap)
+        return out
+
+    def createProfile(self, name, motifList=None, envMap=None, initConfigFile=False):
+        if name == LeafFiles.CURRENT_PROFILE:
+            raise ValueError("%s is not a valid profile name" % name)
+        pfMap = {} if initConfigFile else self.getProfileMap()
+        if name in pfMap:
+            raise ValueError("Profile %s already exists" % name)
+        pf = Profile.emptyProfile(name, self.dataFolder / name)
+        if motifList is not None:
+            pf.addPackages(self.app.resolveLatest(motifList,
+                                                  ipMap=self.app.listInstalledPackages(),
+                                                  apMap=self.app.listAvailablePackages()))
+        pf.addEnv(envMap)
+        pfMap[name] = pf
+        self.writeProfiles(pfMap)
+        return pf
+
+    def updateProfile(self, name=None, motifList=None, envMap=None):
+        pf = self.getProfile(name)
+        if motifList is not None:
+            pf.addPackages(self.app.resolveLatest(motifList,
+                                                  ipMap=self.app.listInstalledPackages(),
+                                                  apMap=self.app.listAvailablePackages()))
+        pf.addEnv(envMap)
+        pfMap = self.getProfileMap()
+        pfMap[pf.name] = pf
+        self.writeProfiles(pfMap)
+        return pf
+
+    def switchProfile(self, name):
+        if name is None:
+            raise ValueError("Cannot swith profile")
+        pf = self.getProfile(name)
+        if not pf.folder.is_dir():
+            raise ValueError("Profile %s is not provisionned" % name)
+        if self.currentLink.is_symlink():
+            self.currentLink.unlink()
+        self.currentLink.symlink_to(pf.name)
+        return pf
+
+    def provisionProfile(self, name=None):
+        pf = self.getProfile(name)
+        if pf.folder.is_dir():
+            shutil.rmtree(str(pf.folder))
+        pf.folder.mkdir()
+        if len(pf.getPackages()) > 0:
+            self.app.installPackages(pf.getPackages())
+            installedPackages = self.app.listInstalledPackages()
+            for pi in self.app.listDependencies(pf.getPackages()):
+                piFolder = pf.folder / pi.name
+                if piFolder.exists():
+                    piFolder = pf.folder / str(pi)
+                ip = installedPackages.get(pi)
+                if ip is None:
+                    raise ValueError("Cannot find package %s" % pi)
+                piFolder.symlink_to(ip.folder)
+        return pf
+
+    def getProfileEnv(self, name=None):
+        pf = self.getProfile(name)
+        out = self.app.getEnv(pf.getPackages())
+        out.extend(pf.getEnv().items())
         return out

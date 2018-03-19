@@ -12,7 +12,7 @@ from collections import OrderedDict
 import json
 from leaf.constants import JsonConstants
 from leaf.model import AvailablePackage, InstalledPackage, Manifest,\
-    RemoteRepository, LeafArtifact
+    RemoteRepository, LeafArtifact, Profile
 import sys
 
 
@@ -118,7 +118,14 @@ class TextLogger (ILogger):
             self.printDefault(message)
 
     def displayItem(self, item):
-        if isinstance(item, LeafArtifact):
+        if isinstance(item, Profile):
+            print(item.name, "[current]" if item.isCurrentProfile else "")
+            if self.isVerbose():
+                content = OrderedDict()
+                content["Packages"] = item.getPackages()
+                content["Env"] = item.getEnv()
+                self.prettyprintContent(content)
+        elif isinstance(item, LeafArtifact):
             if self.level == TextLogger.LEVEL_QUIET:
                 print(item.path)
             else:
@@ -159,30 +166,26 @@ class TextLogger (ILogger):
         Display formatted content
         '''
         if content is not None:
-            maxlen = 0
             indentString = ' ' * indent
-            if ralign:
-                maxlen = len(
-                    max(filter(lambda k: content.get(k) is not None, content), key=len))
-            for k, v in content.items():
-                if isinstance(v, dict) or isinstance(v, list):
-                    if len(v) > 0:
-                        print(indentString + k.rjust(maxlen),
-                              separator,
-                              str(v[0]))
-                        for o in v[1:]:
-                            print(indentString + (' ' * len(k)).rjust(maxlen),
-                                  ' ' * len(separator),
-                                  str(o))
-                elif isinstance(v, tuple):
-                    if len(v) > 0 and v[0] is not None:
-                        print(indentString + k.rjust(maxlen),
-                              separator,
-                              ' '.join(map(str, v)))
-                elif v is not None:
-                    print(indentString + k.rjust(maxlen),
-                          separator,
-                          str(v))
+            for key, value in content.items():
+                if isinstance(value, (list, tuple)):
+                    if len(value) > 0:
+                        text = ', '.join(map(str, value))
+                        print(indentString,
+                              key + separator,
+                              text)
+                elif isinstance(value, dict):
+                    if len(value) > 0:
+                        text = ', '.join(["%s=%s" % (k, v)
+                                          for (k, v) in value.items()])
+                        print(indentString,
+                              key + separator,
+                              text)
+                elif value is not None:
+                    text = str(value)
+                    print(indentString,
+                          key + separator,
+                          text)
 
 
 class JsonLogger(ILogger):
@@ -259,7 +262,13 @@ class JsonLogger(ILogger):
         itemType = None
         json = {}
         extraMap = {}
-        if isinstance(item, Manifest):
+        if isinstance(item, Profile):
+            itemType = "profile"
+            json = item.json
+            extraMap['name'] = item.name
+            extraMap['folder'] = item.folder
+            extraMap['isCurrentProfile'] = item.isCurrentProfile
+        elif isinstance(item, Manifest):
             itemType = "package"
             json = item.json
             if isinstance(item, AvailablePackage):

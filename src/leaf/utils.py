@@ -7,15 +7,19 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
+from abc import abstractmethod, ABC
 import apt
+from collections import OrderedDict
 import hashlib
-from leaf.constants import LeafConstants
+import json
+from leaf.constants import LeafConstants, LeafFiles
 import os
 from pathlib import Path
 import random
 import re
 import requests
 import string
+import sys
 from tarfile import TarFile
 import time
 import urllib
@@ -23,6 +27,16 @@ from urllib.parse import urlparse, urlunparse
 
 
 _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
+
+
+def checkPythonVersion():
+    # Check python version
+    currentPythonVersion = sys.version_info
+    if (currentPythonVersion[0], currentPythonVersion[1]) < LeafConstants.MIN_PYTHON_VERSION:
+        print(
+            'Unsupported Python version, please use at least Python %d.%d.' % LeafConstants.MIN_PYTHON_VERSION,
+            file=sys.stderr)
+        sys.exit(1)
 
 
 def resolveUrl(remoteUrl, subPath):
@@ -145,6 +159,38 @@ def downloadFile(url, folder, logger, filename=None, sha1sum=None):
     return targetFile
 
 
+def envListToMap(envList):
+    out = OrderedDict()
+    if envList is not None:
+        for line in envList:
+            k, v = line.split('=', 1)
+            out[k.strip()] = v.strip()
+    return out
+
+
+def jsonLoadFile(file):
+    with open(str(file), 'r') as fp:
+        return jsonLoad(fp)
+
+
+def jsonLoad(fp):
+    return json.load(fp, object_pairs_hook=OrderedDict)
+
+
+def isWorkspaceRoot(folder):
+    return (folder / LeafFiles.PROFILES_FILENAME).exists()
+
+
+def findWorkspaceRoot():
+    currentFolder = Path(os.getcwd())
+    if isWorkspaceRoot(currentFolder):
+        return currentFolder
+    for parent in currentFolder.parents:
+        if isWorkspaceRoot(parent):
+            return parent
+    raise ValueError("Cannot find workspace root from %s" % os.getcwd())
+
+
 class AptHelper():
     '''
     Util class to check if apt packages are available/installed
@@ -162,3 +208,46 @@ class AptHelper():
         if pack in self.cache:
             return self.cache[pack].installed is not None
         return False
+
+
+class LeafCommand(ABC):
+    '''
+    Abstract class to define parser for leaf commands
+    '''
+
+    def __init__(self, commandName, commandHelp, commandAlias=None):
+        self.commandName = commandName
+        self.commandHelp = commandHelp
+        self.commandAlias = commandAlias
+
+    def isHandled(self, cmd):
+        return cmd == self.commandName or cmd == self.commandAlias
+
+    def create(self, subparsers):
+        parser = subparsers.add_parser(self.commandName,
+                                       help=self.commandHelp,
+                                       aliases=[] if self.commandAlias is None else [self.commandAlias])
+        self.initArgs(parser)
+
+    def initArgs(self, subparser):
+        subparser.add_argument("-v", "--verbose",
+                               dest="verbose",
+                               action='store_true',
+                               help="increase output verbosity")
+        subparser.add_argument("-q", "--quiet",
+                               dest="quiet",
+                               action='store_true',
+                               help="decrease output verbosity")
+        self.internalInitArgs(subparser)
+
+    def execute(self, app, logger, args):
+        out = self.internalExecute(app, logger, args)
+        return 0 if out is None else out
+
+    @abstractmethod
+    def internalInitArgs(self, subparser):
+        pass
+
+    @abstractmethod
+    def internalExecute(self, app, logger, args):
+        pass

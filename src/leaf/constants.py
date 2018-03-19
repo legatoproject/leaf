@@ -28,12 +28,16 @@ class LeafConstants():
                         '.gz':   'gz'}
     ARCHS = {'x86_64': '64', 'i386': '32'}
     CURRENT_OS = platform.system().lower() + ARCHS.get(platform.machine(), "")
+    DEFAULT_PROFILE = "default"
 
 
 class LeafFiles():
     '''
     Files & Folders used by Leaf
     '''
+    PROFILES_FILENAME = "leaf-profiles.json"
+    PROFILES_FOLDERNAME = "leaf-data"
+    CURRENT_PROFILE = "current"
     USER_HOME = Path(os.path.expanduser("~"))
     DEFAULT_LEAF_ROOT = USER_HOME / 'leaf'
     DEFAULT_CONFIG_FILE = USER_HOME / '.leaf-config.json'
@@ -98,3 +102,7 @@ class JsonConstants(object):
     # Extra
     INFO_SUPPORTEDMODULES = 'supportedModules'
     INFO_SUPPORTEDOS = 'supportedOs'
+
+    # Profiles
+    PROFILE_PACKAGES = "packages"
+    PROFILE_ENV = "env"

@@ -12,7 +12,7 @@ setup(name='leaf',
       ],
       entry_points={
           'console_scripts': [
-              'leaf = leaf.cli_packagemanager:run'
+              'leaf = leaf:main'
           ]
       },
       test_suite='nose.collector',

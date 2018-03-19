@@ -33,3 +33,6 @@ archive:
 	(cd $(OUTPUT); zip leafDeb.zip *.deb *.changes)
 	cp $(OUTPUT)/*.deb      $(OUTPUT)/leaf_latest.deb
 	cp $(OUTPUT)/*.tar.gz   $(OUTPUT)/leaf_latest.tar.gz
+
+gpg:
+	gpg --batch --gen-key $(PWD)/packaging/gpg-script

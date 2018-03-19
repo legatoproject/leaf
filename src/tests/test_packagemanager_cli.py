@@ -1,59 +1,31 @@
 '''
-Created on 23 nov. 2017
-
 @author: seb
 '''
 
-from leaf.cli_packagemanager import PackageManagerCli
 import os
 import unittest
 
-from tests.utils import TestWithRepository
+from tests.utils import TestWithRepository, LeafCliWrapper
 
 
-SEPARATOR = "--------------------"
+LEAF_UT_LEVELS = os.environ.get("LEAF_UT_LEVELS", "QUIET,VERBOSE,JSON")
 
 
-class CliTestDefault(TestWithRepository):
+class TestPackageManagerCli_Default(TestWithRepository, LeafCliWrapper):
 
     def __init__(self, methodName):
         TestWithRepository.__init__(self, methodName)
-        self.preCommandArg = None
-        self.postCommandArg = None
+        LeafCliWrapper.__init__(self)
 
     def setUp(self):
         TestWithRepository.setUp(self)
-        self.configFile = TestWithRepository.ROOT_FOLDER / "cli-config.json"
 
     def initLeafConfig(self, setRoot=True, addRemote=True, refresh=True):
-        self.configFile = TestWithRepository.ROOT_FOLDER / "cli-config.json"
-        if self.configFile.exists():
-            os.remove(str(self.configFile))
-        if setRoot:
-            self.leafExec("config", "--root", self.getInstallFolder())
-            if addRemote:
-                self.leafExec("remote", "--add", self.getRemoteUrl())
-                if refresh:
-                    self.leafExec("refresh")
-
-    def leafExec(self, verb, *args, checkRc=True):
-        command = ["--config", str(self.configFile)]
-        if self.preCommandArg is not None:
-            command.append(self.preCommandArg)
-        command.append(verb)
-        if self.postCommandArg is not None:
-            command.append(self.postCommandArg)
-        for a in args:
-            command.append(str(a))
-        print(SEPARATOR,
-              "[" + type(self).__name__ + "]",
-              "Execute:",
-              " ".join(command))
-        out = PackageManagerCli().execute(command)
-        print(SEPARATOR + SEPARATOR + SEPARATOR)
-        if checkRc:
-            self.assertEqual(0, out, " ".join(command))
-        return out
+        LeafCliWrapper.initLeafConfig(self, TestWithRepository.CONFIG_FILE,
+                                      setRoot=setRoot,
+                                      addRemote=addRemote)
+        if setRoot and addRemote and refresh:
+            self.leafExec("refresh")
 
     def checkContent(self, *pisList):
         for pis in pisList:
@@ -146,25 +118,25 @@ class CliTestDefault(TestWithRepository):
         self.checkContent('failure-depends-deb_1.0')
 
 
-class CliTestVerbose(CliTestDefault):
+@unittest.skipUnless("VERBOSE" in LEAF_UT_LEVELS, "Test disabled")
+class TestPackageManagerCli_Verbose(TestPackageManagerCli_Default):
     def __init__(self, methodName):
-        CliTestDefault.__init__(self, methodName)
-        self.preCommandArg = None
-        self.postCommandArg = "--verbose"
+        TestPackageManagerCli_Default.__init__(self, methodName)
+        self.postCommandArgs.append("--verbose")
 
 
-class CliTestQuiet(CliTestDefault):
+@unittest.skipUnless("QUIET" in LEAF_UT_LEVELS, "Test disabled")
+class TestPackageManagerCli_Quiet(TestPackageManagerCli_Default):
     def __init__(self, methodName):
-        CliTestDefault.__init__(self, methodName)
-        self.preCommandArg = None
-        self.postCommandArg = "--quiet"
+        TestPackageManagerCli_Default.__init__(self, methodName)
+        self.postCommandArgs.append("--quiet")
 
 
-class CliTestJson(CliTestDefault):
+@unittest.skipUnless("JSON" in LEAF_UT_LEVELS, "Test disabled")
+class TestPackageManagerCli_Json(TestPackageManagerCli_Default):
     def __init__(self, methodName):
-        CliTestDefault.__init__(self, methodName)
-        self.preCommandArg = "--json"
-        self.postCommandArg = None
+        TestPackageManagerCli_Default.__init__(self, methodName)
+        self.preCommandArgs.append("--json")
 
 
 if __name__ == "__main__":

@@ -1,10 +1,8 @@
 '''
-Created on 23 nov. 2017
-
 @author: seb
 '''
 
-from leaf.constants import JsonConstants, LeafConstants
+from leaf.constants import LeafConstants
 from leaf.core import LeafApp
 from leaf.logger import createLogger
 from leaf.model import PackageIdentifier
@@ -15,24 +13,22 @@ import unittest
 from tests.utils import TestWithRepository
 
 
-_VERBOSE = True
+VERBOSE = True
 
 
-class CliTest(TestWithRepository):
+class TestPackageManager_File(TestWithRepository):
 
     def __init__(self, methodName):
         TestWithRepository.__init__(self, methodName)
-        self.logger = createLogger(_VERBOSE, False, False)
+        self.logger = createLogger(VERBOSE, False, False)
 
     def setUp(self):
-        super().setUp()
+        TestWithRepository.setUp(self)
 
-        CliTest.INSTALL_FOLDER.mkdir(parents=True)
         self.app = LeafApp(self.logger,
-                           CliTest.INSTALL_FOLDER / "config.json")
-        self.app.writeConfiguration({
-            JsonConstants.CONFIG_ROOT: str(self.getInstallFolder())
-        })
+                           TestWithRepository.CONFIG_FILE,
+                           TestWithRepository.CACHE_FILE)
+        self.app.updateConfiguration(self.getInstallFolder())
         self.assertEqual(0, len(self.app.listAvailablePackages()))
         self.assertEqual(0, len(self.app.listInstalledPackages()))
         self.assertEqual(0, len(self.app.getRemoteUrls()))
@@ -171,13 +167,13 @@ class CliTest(TestWithRepository):
 
         env = self.app.getEnv(["env-A_1.0"])
         self.assertEqual(4, len(env))
-        value = "$PATH:%s:%s" % (str(self.getInstallFolder() /
-                                     "env-A_1.0"),
-                                 str(self.getInstallFolder() /
-                                     "env-B_1.0"))
-        self.assertEqual(value, env["LEAF_PATH_A"])
-        self.assertEqual("FOO", env["LEAF_ENV_A"])
-        self.assertEqual("BAR", env["LEAF_ENV_B"])
+        self.assertEqual([
+            ('LEAF_ENV_B', 'BAR'),
+            ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
+            ('LEAF_ENV_A', 'FOO'),
+            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
+             (self.getInstallFolder(), self.getInstallFolder()))],
+            env)
 
     def testSilentFail(self):
         with self.assertRaises(Exception):
@@ -217,6 +213,17 @@ class CliTest(TestWithRepository):
         self.assertEqual(["python42"],
                          self.app.listDependencies(["deb_1.0", "failure-depends-deb_1.0"],
                                                    aptDepends=True, filterInstalled=True))
+
+    def testResolveLastVersion(self):
+        self.app.installPackages(["container-A_2.0"])
+        self.assertEqual([PackageIdentifier.fromString("container-A_2.0")],
+                         self.app.resolveLatest(["container-A"],
+                                                ipMap=True))
+        self.assertEqual([PackageIdentifier.fromString("container-A_2.1")],
+                         self.app.resolveLatest(["container-A"],
+                                                apMap=True))
+        with self.assertRaises(Exception):
+            self.app.resolveLatest(["container-A"])
 
 
 if __name__ == "__main__":

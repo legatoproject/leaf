@@ -1,19 +1,16 @@
 '''
-Created on 26 févr. 2018
-
 @author: seb
 '''
 
 from leaf.constants import LeafConstants
+from leaf.core import DependencyManager
+from leaf.model import Manifest, PackageIdentifier
 from pathlib import Path
 import unittest
 from unittest.case import TestCase
 
-from leaf.core import DependencyManager
-from leaf.model import Manifest, PackageIdentifier
 
-
-class DependencyTest(unittest.TestCase):
+class TestDepends(unittest.TestCase):
 
     MANIFEST_MAP = {}
 
@@ -28,10 +25,10 @@ class DependencyTest(unittest.TestCase):
                 try:
                     mf = Manifest.parse(manifestFile)
                     mf.getLeafDepends()
-                    DependencyTest.MANIFEST_MAP[mf.getIdentifier()] = mf
+                    TestDepends.MANIFEST_MAP[mf.getIdentifier()] = mf
                 except:
                     pass
-        print("Found", len(DependencyTest.MANIFEST_MAP), LeafConstants.MANIFEST)
+        print("Found", len(TestDepends.MANIFEST_MAP), LeafConstants.MANIFEST)
 
     def checkContains(self, piList, pisList, order=False):
         for pis in pisList:
@@ -50,7 +47,7 @@ class DependencyTest(unittest.TestCase):
 
     def testAdditivity(self):
         dm = DependencyManager()
-        dm.addContent(DependencyTest.MANIFEST_MAP)
+        dm.addContent(TestDepends.MANIFEST_MAP)
 
         deps = dm.getDependencyTree([PackageIdentifier.fromString("container-A_1.0"),
                                      PackageIdentifier.fromString("container-A_2.0")])
@@ -64,7 +61,7 @@ class DependencyTest(unittest.TestCase):
 
     def testSort(self):
         dm = DependencyManager()
-        dm.addContent(DependencyTest.MANIFEST_MAP)
+        dm.addContent(TestDepends.MANIFEST_MAP)
 
         deps = dm.getDependencyTree(
             [PackageIdentifier.fromString("container-A_1.0")])
@@ -78,7 +75,7 @@ class DependencyTest(unittest.TestCase):
 
     def testSortReverse(self):
         dm = DependencyManager()
-        dm.addContent(DependencyTest.MANIFEST_MAP)
+        dm.addContent(TestDepends.MANIFEST_MAP)
 
         deps = dm.getDependencyTree(
             [PackageIdentifier.fromString("container-A_1.0")])
@@ -93,7 +90,7 @@ class DependencyTest(unittest.TestCase):
 
     def testSortFiltered(self):
         dm = DependencyManager()
-        dm.addContent(DependencyTest.MANIFEST_MAP)
+        dm.addContent(TestDepends.MANIFEST_MAP)
 
         deps = dm.getDependencyTree(
             [PackageIdentifier.fromString("container-A_1.0")])
@@ -107,7 +104,7 @@ class DependencyTest(unittest.TestCase):
 
     def testMaintainDependencies(self):
         dm = DependencyManager()
-        dm.addContent(DependencyTest.MANIFEST_MAP)
+        dm.addContent(TestDepends.MANIFEST_MAP)
 
         deps = dm.getDependencyTree(
             [PackageIdentifier.fromString("container-A_1.0")])
@@ -121,7 +118,7 @@ class DependencyTest(unittest.TestCase):
                     "container-D_1.0",
                     "container-E_1.0"]:
             pi = PackageIdentifier.fromString(pis)
-            dm.addContent({pi: DependencyTest.MANIFEST_MAP.get(pi)})
+            dm.addContent({pi: TestDepends.MANIFEST_MAP.get(pi)})
         deps = dm.maintainDependencies(deps)
         self.checkContains(deps,
                            ["container-A_1.0"],
@@ -129,5 +126,5 @@ class DependencyTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'DependencyTest.testName']
+    #import sys;sys.argv = ['', 'TestDepends.testName']
     unittest.main()

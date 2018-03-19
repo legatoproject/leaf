@@ -7,11 +7,11 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
+from collections import OrderedDict
 from functools import total_ordering
 import io
-import json
 from leaf.constants import JsonConstants, LeafConstants
-from leaf.utils import resolveUrl
+from leaf.utils import resolveUrl, jsonLoad, jsonLoadFile
 from pathlib import Path
 import re
 from tarfile import TarFile
@@ -126,8 +126,7 @@ class Manifest(JsonObject):
 
     @staticmethod
     def parse(manifestFile):
-        with open(str(manifestFile), 'r') as fp:
-            return Manifest(json.load(fp))
+        return Manifest(jsonLoadFile(manifestFile))
 
     def __init__(self, json):
         JsonObject.__init__(self, json)
@@ -178,8 +177,8 @@ class LeafArtifact(Manifest):
     def __init__(self, path):
         self.path = path
         with TarFile.open(str(self.path), 'r') as tarfile:
-            Manifest.__init__(self, json.load(io.TextIOWrapper(
-                tarfile.extractfile(LeafConstants.MANIFEST))))
+            Manifest.__init__(self,
+                              jsonLoad(io.TextIOWrapper(tarfile.extractfile(LeafConstants.MANIFEST))))
 
 
 class AvailablePackage(Manifest):
@@ -219,8 +218,7 @@ class InstalledPackage(Manifest):
     '''
 
     def __init__(self, manifestFile):
-        with open(str(manifestFile), 'r') as fp:
-            super().__init__(json.load(fp))
+        super().__init__(jsonLoadFile(manifestFile))
         self.folder = manifestFile.parent
 
     def __str__(self):
@@ -238,3 +236,41 @@ class RemoteRepository(JsonObject):
 
     def isFetched(self):
         return self.json is not None
+
+
+class Profile(JsonObject):
+    '''
+    Represent a profile inside a workspace
+    '''
+    @staticmethod
+    def emptyProfile(name, folder):
+        json = OrderedDict()
+        json[JsonConstants.PROFILE_PACKAGES] = []
+        json[JsonConstants.PROFILE_ENV] = OrderedDict()
+        return Profile(name, folder, json)
+
+    def __init__(self, name, folder, json):
+        JsonObject.__init__(self, json)
+        self.name = name
+        self.folder = folder
+        self.isCurrentProfile = False
+
+    def getPackages(self):
+        return self.jsonpath(JsonConstants.PROFILE_PACKAGES, default=[])
+
+    def getEnv(self):
+        return self.jsonpath(JsonConstants.PROFILE_ENV, default={})
+
+    def addPackages(self, piList, clear=False):
+        if clear or JsonConstants.PROFILE_PACKAGES not in self.json:
+            self.json[JsonConstants.PROFILE_PACKAGES] = []
+        if piList is not None:
+            for pis in map(str, piList):
+                if pis not in self.json[JsonConstants.PROFILE_PACKAGES]:
+                    self.json[JsonConstants.PROFILE_PACKAGES].append(pis)
+
+    def addEnv(self, envMap, clear=False):
+        if clear or JsonConstants.PROFILE_ENV not in self.json:
+            self.json[JsonConstants.PROFILE_ENV] = OrderedDict()
+        if envMap is not None:
+            self.json[JsonConstants.PROFILE_ENV].update(envMap)
