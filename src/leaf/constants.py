@@ -7,6 +7,7 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
+from datetime import timedelta
 import os
 from pathlib import Path
 import platform
@@ -29,6 +30,7 @@ class LeafConstants():
     ARCHS = {'x86_64': '64', 'i386': '32'}
     CURRENT_OS = platform.system().lower() + ARCHS.get(platform.machine(), "")
     DEFAULT_PROFILE = "default"
+    CACHE_DELTA = timedelta(days=1)
 
 
 class LeafFiles():

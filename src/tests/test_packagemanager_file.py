@@ -2,11 +2,13 @@
 @author: seb
 '''
 
+from datetime import datetime, timedelta
 from leaf.constants import LeafConstants
 from leaf.core import LeafApp
 from leaf.logger import createLogger
 from leaf.model import PackageIdentifier
 from leaf.utils import isFolderIgnored
+import os
 import time
 import unittest
 
@@ -35,8 +37,7 @@ class TestPackageManager_File(TestWithRepository):
         self.assertEqual(0, len(self.app.getRemoteRepositories()))
         self.app.remoteAdd(self.getRemoteUrl())
         self.assertEqual(1, len(self.app.getRemoteUrls()))
-        self.assertEqual(1, len(self.app.getRemoteRepositories()))
-        self.app.fetchRemotes()
+        self.assertEqual(2, len(self.app.getRemoteRepositories()))
 
     def checkContent(self, content, pisList):
         self.assertEqual(len(content), len(pisList))
@@ -224,6 +225,37 @@ class TestPackageManager_File(TestWithRepository):
                                                 apMap=True))
         with self.assertRaises(Exception):
             self.app.resolveLatest(["container-A"])
+
+    def testOutdatedCacheFile(self):
+        self.app.getRemoteRepositories(smartRefresh=True)
+        previousInode = self.app.cacheFile.stat().st_ino
+
+        self.app.getRemoteRepositories(smartRefresh=True)
+        self.assertEqual(previousInode, self.app.cacheFile.stat().st_ino)
+        os.remove(str(self.app.cacheFile))
+
+        self.app.getRemoteRepositories(smartRefresh=True)
+        self.assertNotEqual(previousInode,
+                            self.app.cacheFile.stat().st_ino)
+        previousInode = self.app.cacheFile.stat().st_ino
+
+        self.app.getRemoteRepositories(smartRefresh=True)
+        self.assertEqual(previousInode, self.app.cacheFile.stat().st_ino)
+
+        today = datetime.now()
+        almostyesterday = today - timedelta(hours=23)
+        os.utime(str(self.app.cacheFile), (int(almostyesterday.timestamp()),
+                                           int(almostyesterday.timestamp())))
+        self.app.getRemoteRepositories(smartRefresh=True)
+        self.assertEqual(previousInode,
+                         self.app.cacheFile.stat().st_ino)
+
+        yesterday = today - timedelta(hours=24)
+        os.utime(str(self.app.cacheFile), (int(yesterday.timestamp()),
+                                           int(yesterday.timestamp())))
+        self.app.getRemoteRepositories(smartRefresh=True)
+        self.assertNotEqual(previousInode,
+                            self.app.cacheFile.stat().st_ino)
 
 
 if __name__ == "__main__":

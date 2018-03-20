@@ -147,14 +147,16 @@ class TextLogger (ILogger):
             print(item.url)
             if self.isVerbose():
                 content = OrderedDict()
+                content["Root repository"] = item.isRootRepository
                 if not item.isFetched():
                     content["Status"] = "not fetched yet"
                 else:
-                    content["Name"] = item.jsonpath(JsonConstants.REMOTE_NAME)
-                    content["Description"] = item.jsonpath(
-                        JsonConstants.REMOTE_DESCRIPTION)
-                    content["Last update"] = item.jsonpath(
-                        JsonConstants.REMOTE_DATE)
+                    content["Name"] = item.jsonpath(JsonConstants.INFO,
+                                                    JsonConstants.REMOTE_NAME)
+                    content["Description"] = item.jsonpath(JsonConstants.INFO,
+                                                           JsonConstants.REMOTE_DESCRIPTION)
+                    content["Last update"] = item.jsonpath(JsonConstants.INFO,
+                                                           JsonConstants.REMOTE_DATE)
                 self.prettyprintContent(content)
         elif item is not None:
             print(str(item))
@@ -278,7 +280,8 @@ class JsonLogger(ILogger):
         elif isinstance(item, RemoteRepository):
             itemType = "remote"
             json = item.json
-            extraMap = {'url': item.url}
+            extraMap = {'url': item.url,
+                        'isRootRepository': item.isRootRepository}
         else:
             itemType = "string"
             json = str(item)

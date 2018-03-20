@@ -102,21 +102,6 @@ class TestProfile(TestWithRepository):
         self.assertEqual(OrderedDict([("FOO", "BAR"), ("FOO2", "BAR2")]),
                          pf.getEnv())
 
-    def testCannotSwitchProfileNotFetched(self):
-        self.ws.createProfile(LeafConstants.DEFAULT_PROFILE,
-                              initConfigFile=True)
-        self.ws.switchProfile(LeafConstants.DEFAULT_PROFILE)
-
-        self.ws.createProfile("foo")
-        self.ws.switchProfile("foo")
-
-        self.ws.updateProfile("foo",
-                              ["container-A_1.0"])
-        with self.assertRaises(Exception):
-            self.ws.switchProfile("foo")
-        self.app.fetchRemotes()
-        self.ws.switchProfile("foo")
-
     def testSwitchProfile(self):
         self.ws.createProfile(LeafConstants.DEFAULT_PROFILE,
                               initConfigFile=True)

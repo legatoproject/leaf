@@ -230,12 +230,16 @@ class RemoteRepository(JsonObject):
     Represent a remote repository
     '''
 
-    def __init__(self, url, json=None):
+    def __init__(self, url, isRootRepository, json=None):
         JsonObject.__init__(self, json)
+        self.isRootRepository = isRootRepository
         self.url = url
 
     def isFetched(self):
         return self.json is not None
+
+    def getPackages(self):
+        return self.jsonpath(JsonConstants.REMOTE_PACKAGES, default=[])
 
 
 class Profile(JsonObject):

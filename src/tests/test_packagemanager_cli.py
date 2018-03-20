@@ -20,12 +20,10 @@ class TestPackageManagerCli_Default(TestWithRepository, LeafCliWrapper):
     def setUp(self):
         TestWithRepository.setUp(self)
 
-    def initLeafConfig(self, setRoot=True, addRemote=True, refresh=True):
-        LeafCliWrapper.initLeafConfig(self, TestWithRepository.CONFIG_FILE,
-                                      setRoot=setRoot,
-                                      addRemote=addRemote)
-        if setRoot and addRemote and refresh:
-            self.leafExec("refresh")
+    def initLeafConfig(self, **kwargs):
+        LeafCliWrapper.initLeafConfig(self,
+                                      TestWithRepository.CONFIG_FILE,
+                                      **kwargs)
 
     def checkContent(self, *pisList):
         for pis in pisList:
@@ -39,13 +37,13 @@ class TestPackageManagerCli_Default(TestWithRepository, LeafCliWrapper):
                          folderItemCount)
 
     def testConfig(self):
-        self.initLeafConfig(False)
+        self.initLeafConfig(setRoot=False)
         self.leafExec("config")
         self.initLeafConfig()
         self.leafExec("config")
 
     def testRemote(self):
-        self.initLeafConfig(False)
+        self.initLeafConfig(setRoot=False)
         self.leafExec("remote", "--add", self.getRemoteUrl())
         self.leafExec("remote")
         self.leafExec("remote", "--rm", self.getRemoteUrl())

@@ -9,7 +9,7 @@ Leaf Package Manager
 
 from builtins import filter
 from collections import OrderedDict
-import datetime
+from datetime import datetime
 import json
 from leaf import __version__
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles
@@ -22,6 +22,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 from tarfile import TarFile
 import urllib.request
 
@@ -272,7 +273,7 @@ class LeafRepository():
             infoNode[JsonConstants.REMOTE_NAME] = name
         if description is not None:
             infoNode[JsonConstants.REMOTE_DESCRIPTION] = description
-        infoNode[JsonConstants.REMOTE_DATE] = str(datetime.datetime.utcnow())
+        infoNode[JsonConstants.REMOTE_DATE] = str(datetime.utcnow())
 
         rootNode = OrderedDict()
         rootNode[JsonConstants.INFO] = infoNode
@@ -332,10 +333,6 @@ class LeafApp(LeafRepository):
         with open(str(self.configurationFile), 'w') as fp:
             json.dump(config, fp, indent=2, separators=(',', ': '))
 
-    def readRemotesCache(self):
-        if self.cacheFile.exists():
-            return jsonLoadFile(self.cacheFile)
-
     def getInstallFolder(self):
         out = LeafFiles.DEFAULT_LEAF_ROOT
         config = self.readConfiguration()
@@ -382,8 +379,6 @@ class LeafApp(LeafRepository):
             self.writeConfiguration(config)
             if self.cacheFile.exists():
                 os.remove(str(self.cacheFile))
-                self.logger.printDefault(
-                    "Remotes have changed, you need to fetch content")
 
     def remoteRemove(self, url):
         '''
@@ -397,28 +392,31 @@ class LeafApp(LeafRepository):
                 self.writeConfiguration(config)
                 if self.cacheFile.exists():
                     os.remove(str(self.cacheFile))
-                    self.logger.printDefault(
-                        "Remotes have changed, you need to fetch content")
 
     def getRemoteUrls(self):
         '''
         List all remotes from configuration
         '''
-        config = self.readConfiguration()
-        return config.get(JsonConstants.CONFIG_REMOTES, [])
+        return self.readConfiguration().get(JsonConstants.CONFIG_REMOTES, [])
 
-    def getRemoteRepositories(self):
+    def getRemoteRepositories(self, smartRefresh=True):
         '''
         List all remotes from configuration
         '''
-        cache = self.readRemotesCache()
+        if self.cacheFile.exists():
+            if datetime.fromtimestamp(self.cacheFile.stat().st_mtime) < datetime.now() - LeafConstants.CACHE_DELTA:
+                self.logger.printDefault("Cache file is outdated")
+                if smartRefresh:
+                    os.remove(str(self.cacheFile))
+
+        if not self.cacheFile.exists():
+            self.fetchRemotes()
+
+        cache = jsonLoadFile(self.cacheFile)
         out = []
-        for remoteUrl in self.getRemoteUrls():
-            if cache is not None and remoteUrl in cache:
-                out.append(RemoteRepository(remoteUrl,
-                                            cache[remoteUrl].get(JsonConstants.INFO)))
-            else:
-                out.append(RemoteRepository(remoteUrl))
+        masterUrls = self.getRemoteUrls()
+        for url, data in cache.items():
+            out.append(RemoteRepository(url, url in masterUrls, data))
         return out
 
     def resolveLatest(self, motifList, ipMap=None, apMap=None):
@@ -456,22 +454,19 @@ class LeafApp(LeafRepository):
             out.append(pi)
         return out
 
-    def listAvailablePackages(self):
+    def listAvailablePackages(self, smartRefresh=True):
         '''
         List all available package
         '''
-        out = {}
-        cache = self.readRemotesCache()
-        if cache is not None:
-            for url, content in cache.items():
-                packages = content.get(JsonConstants.REMOTE_PACKAGES)
-                if packages is not None:
-                    for package in packages:
-                        ap = AvailablePackage(package, url)
-                        out[ap.getIdentifier()] = ap
+        out = OrderedDict()
+        for rr in self.getRemoteRepositories(smartRefresh=smartRefresh):
+            for jsonPayload in rr.jsonpath(JsonConstants.REMOTE_PACKAGES, default=[]):
+                ap = AvailablePackage(jsonPayload, rr.url)
+                if ap.getIdentifier() not in out:
+                    out[ap.getIdentifier()] = ap
         return out
 
-    def fetchUrl(self, remoteurl, content):
+    def recursiveFetchUrl(self, remoteurl, content):
         '''
         Fetch an URL content and keep it in the given dict
         '''
@@ -484,8 +479,9 @@ class LeafApp(LeafRepository):
                     composites = data.get(JsonConstants.REMOTE_COMPOSITE)
                     if composites is not None:
                         for composite in composites:
-                            self.fetchUrl(resolveUrl(
-                                remoteurl, composite), content)
+                            self.recursiveFetchUrl(resolveUrl(remoteurl,
+                                                              composite),
+                                                   content)
             except Exception as e:
                 self.logger.printError("Error fetching", remoteurl, ":", e)
 
@@ -498,7 +494,7 @@ class LeafApp(LeafRepository):
         self.logger.progressStart('Fetch remote(s)', total=len(urls))
         worked = 0
         for url in urls:
-            self.fetchUrl(url, content)
+            self.recursiveFetchUrl(url, content)
             worked += 1
             self.logger.progressWorked('Fetch remote(s)',
                                        worked=worked,
@@ -506,7 +502,6 @@ class LeafApp(LeafRepository):
         with open(str(self.cacheFile), 'w') as output:
             json.dump(content, output)
         self.logger.progressDone('Fetch remote(s)')
-        return self.getRemoteRepositories()
 
     def listInstalledPackages(self):
         '''

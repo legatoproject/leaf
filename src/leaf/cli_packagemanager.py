@@ -92,8 +92,10 @@ class RemoteCommand(LeafCommand):
         if args.remote_rm is not None:
             for url in args.remote_rm:
                 app.remoteRemove(url)
-        for rr in app.getRemoteRepositories():
-            logger.displayItem(rr)
+        if args.remote_add is None and args.remote_rm is None:
+            for rr in app.getRemoteRepositories():
+                if rr.isRootRepository or logger.isVerbose():
+                    logger.displayItem(rr)
 
 
 class FetchCommand(LeafCommand):
@@ -108,7 +110,8 @@ class FetchCommand(LeafCommand):
         pass
 
     def internalExecute(self, app, logger, args):
-        for rr in app.fetchRemotes():
+        app.fetchRemotes()
+        for rr in app.getRemoteRepositories():
             logger.displayItem(rr)
 
 
