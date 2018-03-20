@@ -873,15 +873,15 @@ class Workspace():
         if name is None:
             raise ValueError("Cannot swith profile")
         pf = self.getProfile(name)
-        if not pf.folder.is_dir():
-            raise ValueError("Profile %s is not provisionned" % name)
+        self.provisionProfile(pf)
+
         if self.currentLink.is_symlink():
             self.currentLink.unlink()
+
         self.currentLink.symlink_to(pf.name)
         return pf
 
-    def provisionProfile(self, name=None):
-        pf = self.getProfile(name)
+    def provisionProfile(self, pf):
         if pf.folder.is_dir():
             shutil.rmtree(str(pf.folder))
         pf.folder.mkdir()
@@ -896,7 +896,6 @@ class Workspace():
                 if ip is None:
                     raise ValueError("Cannot find package %s" % pi)
                 piFolder.symlink_to(ip.folder)
-        return pf
 
     def getProfileEnv(self, name=None):
         pf = self.getProfile(name)

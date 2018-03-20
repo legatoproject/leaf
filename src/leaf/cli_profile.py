@@ -46,7 +46,6 @@ class ProfileCommand(LeafCommand):
                             CreateSubCommand(),
                             UpdateSubCommand(),
                             DeleteSubCommand(),
-                            SetupSubCommand(),
                             SwitchSubCommand(),
                             EnvSubCommand()]
         for subcommand in self.subcommands:
@@ -133,7 +132,6 @@ class InitSubCommand(AbstractSubCommand):
                          args.packages,
                          envListToMap(args.envvars),
                          initConfigFile=True)
-        ws.provisionProfile(LeafConstants.DEFAULT_PROFILE)
         ws.switchProfile(LeafConstants.DEFAULT_PROFILE)
         logger.printDefault("Workspace initialized", ws.rootFolder)
         pass
@@ -199,28 +197,6 @@ class DeleteSubCommand(AbstractSubCommand):
             logger.printDefault("Profile deleted", pf.name)
 
 
-class SetupSubCommand(AbstractSubCommand):
-    def __init__(self):
-        AbstractSubCommand.__init__(self,
-                                    "setup",
-                                    "provision a profile")
-
-    def internalInitArgs(self, subparser):
-        AbstractSubCommand.initCommonArgs(subparser,
-                                          profileNargs='*',
-                                          withPackages=False,
-                                          withEnvvars=False)
-
-    def internalExecute2(self, ws, app, logger, args):
-        if len(args.profiles) == 0:
-            pf = ws.provisionProfile(app)
-            logger.printDefault("Profile configured", pf.name)
-        else:
-            for p in args.profiles:
-                pf = ws.provisionProfile(p)
-                logger.printDefault("Profile configured", pf.name)
-
-
 class ListSubCommand(AbstractSubCommand):
     def __init__(self):
         AbstractSubCommand.__init__(self,
@@ -262,15 +238,15 @@ class SwitchSubCommand(AbstractSubCommand):
     def __init__(self):
         AbstractSubCommand.__init__(self,
                                     "switch",
-                                    "switch current profile")
+                                    "switch current profile and install packages if needed")
 
     def internalInitArgs(self, subparser):
         AbstractSubCommand.initCommonArgs(subparser,
-                                          profileNargs=1,
+                                          profileNargs='?',
                                           withPackages=False,
                                           withEnvvars=False)
 
     def internalExecute2(self, ws, app, logger, args):
-        pf = ws.switchProfile(args.profiles[0])
+        pf = ws.switchProfile(args.profiles)
         logger.printQuiet("Switched to profile", pf.name)
         logger.printVerbose(pf.folder)

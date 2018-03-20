@@ -75,7 +75,7 @@ class TestProfileCli_Default(TestWithRepository, LeafCliWrapper):
                              "-p", "deb_1.0",
                              "-e", "FOO=BAR",
                              "-e", "FOO2=BAR2")
-        self.leafProfileExec("setup", "foo")
+        self.leafProfileExec("switch", "foo")
         self.checkProfileContent("foo",
                                  "container-A",
                                  "container-B",
@@ -86,7 +86,8 @@ class TestProfileCli_Default(TestWithRepository, LeafCliWrapper):
         self.leafProfileExec("update", "foo",
                              "-p", "container-A_2.0",
                              "-e", "FOO3=BAR3")
-        self.leafProfileExec("setup", "foo")
+        self.leafProfileExec("switch", "foo")
+        self.leafProfileExec("env", "foo")
         self.checkProfileContent("foo",
                                  "container-A",
                                  "container-A_1.0",
@@ -96,9 +97,6 @@ class TestProfileCli_Default(TestWithRepository, LeafCliWrapper):
                                  "container-E",
                                  "deb")
         self.leafProfileExec("create", "foo", expectedRc=2)
-        self.leafProfileExec("list")
-        self.leafProfileExec("switch", "foo")
-        self.leafProfileExec("env", "foo")
 
     def testDelete(self):
         self.leafProfileExec("init")
