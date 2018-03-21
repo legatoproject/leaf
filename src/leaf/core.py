@@ -422,6 +422,7 @@ class LeafApp(LeafRepository):
         '''
         Search a package given a full packageidentifier
         or only a name (latest version will be returned then.
+        @return: PackageIdentifier list
         '''
         out = []
         knownPiList = []

@@ -265,13 +265,20 @@ class Profile(JsonObject):
     def getEnv(self):
         return self.jsonpath(JsonConstants.PROFILE_ENV, default={})
 
+    def addPackage(self, newpi):
+        profilePiList = [PackageIdentifier.fromString(pis)
+                         for pis in self.jsonpath(JsonConstants.PROFILE_PACKAGES,
+                                                  default=[])]
+        profilePiList = [pi for pi in profilePiList if pi.name != newpi.name]
+        profilePiList.append(newpi)
+        self.json[JsonConstants.PROFILE_PACKAGES] = [
+            str(pi) for pi in profilePiList]
+
     def addPackages(self, piList, clear=False):
         if clear or JsonConstants.PROFILE_PACKAGES not in self.json:
             self.json[JsonConstants.PROFILE_PACKAGES] = []
-        if piList is not None:
-            for pis in map(str, piList):
-                if pis not in self.json[JsonConstants.PROFILE_PACKAGES]:
-                    self.json[JsonConstants.PROFILE_PACKAGES].append(pis)
+        for pi in piList:
+            self.addPackage(pi)
 
     def addEnv(self, envMap, clear=False):
         if clear or JsonConstants.PROFILE_ENV not in self.json:

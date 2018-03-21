@@ -84,17 +84,14 @@ class TestProfileCli_Default(TestWithRepository, LeafCliWrapper):
                                  "deb")
         self.leafProfileExec("list")
         self.leafProfileExec("update", "foo",
-                             "-p", "container-A_2.0",
+                             "-p", "container-A",
                              "-e", "FOO3=BAR3")
         self.leafProfileExec("switch")
         self.leafProfileExec("env", "foo")
         self.checkProfileContent("foo",
                                  "container-A",
-                                 "container-A_1.0",
-                                 "container-B",
                                  "container-C",
                                  "container-D",
-                                 "container-E",
                                  "deb")
         self.leafProfileExec("create", "foo", expectedRc=2)
 

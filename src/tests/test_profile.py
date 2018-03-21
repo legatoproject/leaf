@@ -67,40 +67,40 @@ class TestProfile(TestWithRepository):
             self.ws.deleteProfile("foo")
         self.assertEqual(1, len(self.ws.getProfileMap()))
 
-    def testUpdateDefaultProfile(self):
-        pf = self.ws.createProfile(LeafConstants.DEFAULT_PROFILE,
+    def testUpdateDefaultProfile(self, name=LeafConstants.DEFAULT_PROFILE):
+        pf = self.ws.createProfile(name,
                                    initConfigFile=True)
         self.assertEqual([], pf.getPackages())
         self.assertEqual(OrderedDict(), pf.getEnv())
 
-        self.ws.updateProfile(LeafConstants.DEFAULT_PROFILE,
-                              ["container-A_1.0", "container-A_2.0"],
+        self.ws.updateProfile(name,
+                              ["container-A_1.0"],
                               OrderedDict([("FOO", "BAR"), ("FOO2", "BAR2")]))
-        pf = self.ws.getProfile(LeafConstants.DEFAULT_PROFILE)
-        self.assertEqual(["container-A_1.0", "container-A_2.0"],
+        pf = self.ws.getProfile(name)
+        self.assertEqual(["container-A_1.0"],
                          pf.getPackages())
         self.assertEqual(OrderedDict([("FOO", "BAR"), ("FOO2", "BAR2")]),
                          pf.getEnv())
 
+        self.ws.updateProfile(name,
+                              ["container-A"])
+        pf = self.ws.getProfile(name)
+        self.assertEqual(["container-A_2.1"],
+                         pf.getPackages())
+
+        self.ws.updateProfile(name,
+                              ["env-A_1.0"])
+        pf = self.ws.getProfile(name)
+        self.assertEqual(["container-A_2.1", "env-A_1.0"],
+                         pf.getPackages())
+
         with self.assertRaises(Exception):
-            self.ws.updateProfile("foo",
+            self.ws.updateProfile("fooooooooo",
                                   ["container-A_1.0", "container-A_2.0"],
                                   {"FOO": "BAR", "FOO2": "BAR2"})
 
     def testUpdateNamedProfile(self):
-        pf = self.ws.createProfile("foo",
-                                   initConfigFile=True)
-        self.assertEqual([], pf.getPackages())
-        self.assertEqual(OrderedDict(), pf.getEnv())
-
-        self.ws.updateProfile("foo",
-                              ["container-A_1.0", "container-A_2.0"],
-                              OrderedDict([("FOO", "BAR"), ("FOO2", "BAR2")]))
-        pf = self.ws.getProfile("foo")
-        self.assertEqual(["container-A_1.0", "container-A_2.0"],
-                         pf.getPackages())
-        self.assertEqual(OrderedDict([("FOO", "BAR"), ("FOO2", "BAR2")]),
-                         pf.getEnv())
+        self.testUpdateDefaultProfile("foo")
 
     def testSwitchProfile(self):
         self.ws.createProfile(LeafConstants.DEFAULT_PROFILE,
@@ -160,10 +160,8 @@ class TestProfile(TestWithRepository):
         self.ws.switchProfile("foo")
         self.checkProfileContent("foo",
                                  "container-A",
-                                 "container-A_1.0",
                                  "container-B",
                                  "container-C",
-                                 "container-D",
                                  "container-E")
 
 
