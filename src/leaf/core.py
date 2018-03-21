@@ -22,7 +22,6 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
-import sys
 from tarfile import TarFile
 import urllib.request
 
@@ -865,8 +864,6 @@ class Workspace():
         return pf
 
     def switchProfile(self, name):
-        if name is None:
-            raise ValueError("Cannot swith profile")
         pf = self.getProfile(name)
         self.provisionProfile(pf)
 

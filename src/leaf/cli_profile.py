@@ -129,12 +129,14 @@ class InitSubCommand(AbstractSubCommand):
             raise ValueError("Folder %s already exist" % str(ws.dataFolder))
         ws.dataFolder.mkdir()
         ws.createProfile(LeafConstants.DEFAULT_PROFILE,
-                         args.packages,
-                         envListToMap(args.envvars),
                          initConfigFile=True)
         ws.switchProfile(LeafConstants.DEFAULT_PROFILE)
         logger.printDefault("Workspace initialized", ws.rootFolder)
-        pass
+        if args.packages is not None or args.envvars is not None:
+            ws.updateProfile(LeafConstants.DEFAULT_PROFILE,
+                             args.packages,
+                             envListToMap(args.envvars))
+            ws.switchProfile(LeafConstants.DEFAULT_PROFILE)
 
 
 class CreateSubCommand(AbstractSubCommand):

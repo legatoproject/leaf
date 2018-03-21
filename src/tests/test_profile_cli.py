@@ -86,7 +86,7 @@ class TestProfileCli_Default(TestWithRepository, LeafCliWrapper):
         self.leafProfileExec("update", "foo",
                              "-p", "container-A_2.0",
                              "-e", "FOO3=BAR3")
-        self.leafProfileExec("switch", "foo")
+        self.leafProfileExec("switch")
         self.leafProfileExec("env", "foo")
         self.checkProfileContent("foo",
                                  "container-A",
