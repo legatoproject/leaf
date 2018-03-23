@@ -2,8 +2,9 @@
 @author: seb
 '''
 
-from leaf.constants import LeafFiles
+from leaf.constants import LeafFiles, LeafConstants
 import os
+import shutil
 import unittest
 
 from tests.utils import LeafProfileCliWrapper
@@ -132,6 +133,30 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
         self.leafPackageManagerExec("refresh")
         self.leafProfileExec("init", "-p", "container-A")
         self.leafProfileExec("list")
+        self.checkProfileContent("default",
+                                 "container-A",
+                                 "container-C",
+                                 "container-D")
+
+    def testBootstrapWorkspace(self):
+        self.leafPackageManagerExec("refresh")
+        self.leafProfileExec("init", "-p", "container-A")
+        self.leafProfileExec("list")
+        self.leafProfileExec("env")
+        self.checkProfileContent("default",
+                                 "container-A",
+                                 "container-C",
+                                 "container-D")
+        dataFolder = self.getWorkspaceFolder() / LeafFiles.PROFILES_FOLDERNAME
+        self.assertTrue(dataFolder.exists())
+        shutil.rmtree(str(dataFolder))
+        self.assertFalse(dataFolder.exists())
+
+        self.leafProfileExec("list")
+        self.leafProfileExec("env", expectedRc=2)
+        self.leafProfileExec("switch", "default")
+        self.leafProfileExec("list")
+        self.leafProfileExec("env")
         self.checkProfileContent("default",
                                  "container-A",
                                  "container-C",

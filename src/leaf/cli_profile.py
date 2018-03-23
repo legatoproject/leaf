@@ -186,10 +186,7 @@ class ListSubCommand(AbstractSubCommand):
     def internalExecute2(self, ws, app, logger, args):
         pfMap = ws.getProfileMap()
         logger.printVerbose("List of profiles in", ws.rootFolder)
-        current = ws.getCurrentProfileName()
-        for name, pf in pfMap.items():
-            if name == current:
-                name += " [current]"
+        for pf in pfMap.values():
             logger.displayItem(pf)
 
 

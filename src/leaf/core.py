@@ -807,6 +807,23 @@ class Workspace():
             raise ValueError("Cannot find profile %s" % name)
         return pfMap.get(name)
 
+    def checkProfile(self, pf):
+        # Check packages are installed
+        missingPiList = self.app.listDependencies(pf.getPackages(),
+                                                  filterInstalled=True)
+        if len(missingPiList) > 0:
+            raise ValueError("Some packages are not installed, please run 'leaf switch %s'" %
+                             (pf.name))
+        # Check packages are linked
+        installedPackages = self.app.listInstalledPackages()
+        for pis in pf.getPackages():
+            pi = PackageIdentifier.fromString(pis)
+            if pi not in installedPackages:
+                piLink = pf.folder / pi.name
+                if not piLink.is_symlink():
+                    raise ValueError("Some packages are not linked, please run 'leaf switch %s'" %
+                                     (pf.name))
+
     def writeProfiles(self, pfMap):
         self.dataFolder.mkdir(exist_ok=True)
         tmpFile = self.dataFolder / ("tmp-" + LeafFiles.PROFILES_FILENAME)
@@ -818,14 +835,11 @@ class Workspace():
         tmpFile.rename(self.configFile)
 
     def getCurrentProfileName(self):
-        if self.dataFolder.is_dir():
-            if self.currentLink.is_symlink():
-                return self.currentLink.resolve().name
-            else:
-                raise ValueError(
-                    "No current profile set, you have to switch to a profile first")
+        if self.currentLink.is_symlink():
+            return self.currentLink.resolve().name
         else:
-            raise ValueError("The workspace is not initialized")
+            raise ValueError(
+                "No current profile, you need to switch to a profile first")
 
     def deleteProfile(self, name):
         pfMap = self.getProfileMap()
@@ -875,7 +889,9 @@ class Workspace():
         return pf
 
     def provisionProfile(self, pf):
-        if pf.folder.is_dir():
+        if not self.dataFolder.is_dir():
+            self.dataFolder.mkdir()
+        elif pf.folder.is_dir():
             shutil.rmtree(str(pf.folder))
         pf.folder.mkdir()
         if len(pf.getPackages()) > 0:
@@ -892,6 +908,7 @@ class Workspace():
 
     def getProfileEnv(self, name=None):
         pf = self.getProfile(name)
+        self.checkProfile(pf)
         out = self.app.getEnv(pf.getPackages())
         out.extend(pf.getEnv().items())
         return out
