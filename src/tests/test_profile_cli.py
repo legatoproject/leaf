@@ -6,21 +6,16 @@ from leaf.constants import LeafFiles
 import os
 import unittest
 
-from tests.utils import TestWithRepository, LeafCliWrapper
+from tests.utils import LeafProfileCliWrapper
 
 
 LEAF_UT_LEVELS = os.environ.get("LEAF_UT_LEVELS", "QUIET,VERBOSE,JSON")
 
 
-class TestProfileCli_Default(TestWithRepository, LeafCliWrapper):
+class TestProfileCli_Default(LeafProfileCliWrapper):
 
     def __init__(self, methodName):
-        TestWithRepository.__init__(self, methodName)
-        LeafCliWrapper.__init__(self)
-
-    def setUp(self):
-        TestWithRepository.setUp(self)
-        self.initLeafConfig(TestWithRepository.CONFIG_FILE)
+        LeafProfileCliWrapper.__init__(self, methodName)
 
     def checkProfileContent(self, profileName, *content):
         pfFolder = self.getWorkspaceFolder() / LeafFiles.PROFILES_FOLDERNAME / profileName
@@ -32,13 +27,14 @@ class TestProfileCli_Default(TestWithRepository, LeafCliWrapper):
             self.assertTrue(item.name in content, "Unexpected link %s" % item)
         self.assertEqual(symlinkCount, len(content))
 
-    def leafProfileExec(self, subCommand, *args, **kwargs):
-        fullargs = ["--workspace", self.getWorkspaceFolder()]
-        fullargs += args
-        self.leafExec(["profile", subCommand], *fullargs, **kwargs)
-
     def testInit(self):
+        self.leafProfileExec("init")
+        self.leafProfileExec("list")
+        self.leafProfileExec("env")
+
+    def testWorkspaceNotInit(self):
         self.leafProfileExec("list", expectedRc=2)
+        self.leafProfileExec("env", expectedRc=2)
         self.leafProfileExec("init")
         self.leafProfileExec("list")
         self.leafProfileExec("env")
@@ -52,7 +48,7 @@ class TestProfileCli_Default(TestWithRepository, LeafCliWrapper):
         self.checkProfileContent("default")
 
     def testInitWithPackages(self):
-        self.leafExec("refresh")
+        self.leafPackageManagerExec("refresh")
         self.leafProfileExec("init",
                              "-e", "FOO=BAR",
                              "-e", "FOO2=BAR2",
@@ -68,7 +64,7 @@ class TestProfileCli_Default(TestWithRepository, LeafCliWrapper):
                                  "deb")
 
     def testCreate(self):
-        self.leafExec("refresh")
+        self.leafPackageManagerExec("refresh")
         self.leafProfileExec("init")
         self.leafProfileExec("create", "foo",
                              "-p", "container-A_1.0",
@@ -110,35 +106,30 @@ class TestProfileCli_Default(TestWithRepository, LeafCliWrapper):
     def testAutoFindWorkspace(self):
         profileConfigFile = self.getWorkspaceFolder() / LeafFiles.PROFILES_FILENAME
         self.assertFalse(profileConfigFile.exists())
-        self.leafExec(("profile", "init"),
-                      "--workspace",
-                      self.getWorkspaceFolder())
+
+        self.leafProfileExec("init")
         self.assertTrue(profileConfigFile.exists())
 
-        self.leafExec(("profile", "list"),
-                      "--workspace",
-                      self.getWorkspaceFolder())
-
-        self.leafExec(("profile", "list"),
-                      "--workspace",
-                      "/tmp", expectedRc=2)
+        self.leafProfileExec("list")
+        self.leafProfileExec("list",
+                             altWorkspace=self.getAltWorkspaceFolder(),
+                             expectedRc=2)
 
         subFolder = self.getWorkspaceFolder() / "foo" / "bar"
         subFolder.mkdir(parents=True)
-
-        self.leafExec(("profile", "list"),
-                      "--workspace",
-                      subFolder, expectedRc=2)
+        self.leafProfileExec("list",
+                             altWorkspace=subFolder,
+                             expectedRc=2)
 
         oldPwd = os.getcwd()
         try:
             os.chdir(str(subFolder))
-            self.leafExec(("profile", "list"))
+            self.leafProfileExec("list")
         finally:
             os.chdir(oldPwd)
 
     def testWithoutVersion(self):
-        self.leafExec("refresh")
+        self.leafPackageManagerExec("refresh")
         self.leafProfileExec("init", "-p", "container-A")
         self.leafProfileExec("list")
         self.checkProfileContent("default",
@@ -151,21 +142,21 @@ class TestProfileCli_Default(TestWithRepository, LeafCliWrapper):
 class TestProfileCli_Verbose(TestProfileCli_Default):
     def __init__(self, methodName):
         TestProfileCli_Default.__init__(self, methodName)
-        self.postCommandArgs.append("--verbose")
+        self.postVerbArgs.append("--verbose")
 
 
 @unittest.skipUnless("QUIET" in LEAF_UT_LEVELS, "Test disabled")
 class TestProfileCli_Quiet(TestProfileCli_Default):
     def __init__(self, methodName):
         TestProfileCli_Default.__init__(self, methodName)
-        self.postCommandArgs.append("--quiet")
+        self.postVerbArgs.append("--quiet")
 
 
 @unittest.skipUnless("JSON" in LEAF_UT_LEVELS, "Test disabled")
 class TestProfileCli_Json(TestProfileCli_Default):
     def __init__(self, methodName):
         TestProfileCli_Default.__init__(self, methodName)
-        self.preCommandArgs.append("--json")
+        self.jsonEnvValue = "1"
 
 
 if __name__ == "__main__":

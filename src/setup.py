@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
-from setuptools import setup
-
 from leaf import __version__
+from setuptools import setup
 
 
 setup(name='leaf',
@@ -12,7 +11,8 @@ setup(name='leaf',
       ],
       entry_points={
           'console_scripts': [
-              'leaf = leaf:main'
+              'leafpm = leaf.cli_packagemanager:main',
+              'leaf = leaf.cli_profile:main'
           ]
       },
       test_suite='nose.collector',

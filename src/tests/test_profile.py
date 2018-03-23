@@ -8,23 +8,23 @@ from leaf.core import Workspace, LeafApp
 from leaf.logger import createLogger
 import unittest
 
-from tests.utils import TestWithRepository
+from tests.utils import AbstractTestWithRepo
 
 
 VERBOSE = True
 
 
-class TestProfile(TestWithRepository):
+class TestProfile(AbstractTestWithRepo):
 
     def __init__(self, methodName):
-        TestWithRepository.__init__(self, methodName)
-        self.logger = createLogger(VERBOSE, False, False)
+        AbstractTestWithRepo.__init__(self, methodName)
+        self.logger = createLogger(VERBOSE, False)
 
     def setUp(self):
-        TestWithRepository.setUp(self)
+        AbstractTestWithRepo.setUp(self)
         self.app = LeafApp(self.logger,
-                           TestWithRepository.CONFIG_FILE,
-                           TestWithRepository.CACHE_FILE)
+                           self.getConfigurationFile(),
+                           self.getRemoteCacheFile())
         self.app.remoteAdd(self.getRemoteUrl())
         self.app.updateConfiguration(self.getInstallFolder())
         self.ws = Workspace(self.getWorkspaceFolder(), self.app)

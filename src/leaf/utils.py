@@ -7,7 +7,6 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-from abc import abstractmethod, ABC
 import apt
 from collections import OrderedDict
 import hashlib
@@ -208,46 +207,3 @@ class AptHelper():
         if pack in self.cache:
             return self.cache[pack].installed is not None
         return False
-
-
-class LeafCommand(ABC):
-    '''
-    Abstract class to define parser for leaf commands
-    '''
-
-    def __init__(self, commandName, commandHelp, commandAlias=None):
-        self.commandName = commandName
-        self.commandHelp = commandHelp
-        self.commandAlias = commandAlias
-
-    def isHandled(self, cmd):
-        return cmd == self.commandName or cmd == self.commandAlias
-
-    def create(self, subparsers):
-        parser = subparsers.add_parser(self.commandName,
-                                       help=self.commandHelp,
-                                       aliases=[] if self.commandAlias is None else [self.commandAlias])
-        self.initArgs(parser)
-
-    def initArgs(self, subparser):
-        subparser.add_argument("-v", "--verbose",
-                               dest="verbose",
-                               action='store_true',
-                               help="increase output verbosity")
-        subparser.add_argument("-q", "--quiet",
-                               dest="quiet",
-                               action='store_true',
-                               help="decrease output verbosity")
-        self.internalInitArgs(subparser)
-
-    def execute(self, app, logger, args):
-        out = self.internalExecute(app, logger, args)
-        return 0 if out is None else out
-
-    @abstractmethod
-    def internalInitArgs(self, subparser):
-        pass
-
-    @abstractmethod
-    def internalExecute(self, app, logger, args):
-        pass

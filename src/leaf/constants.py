@@ -31,6 +31,7 @@ class LeafConstants():
     CURRENT_OS = platform.system().lower() + ARCHS.get(platform.machine(), "")
     DEFAULT_PROFILE = "default"
     CACHE_DELTA = timedelta(days=1)
+    JSON_OUTPUT = "LEAF_JSON_OUTPUT"
 
 
 class LeafFiles():

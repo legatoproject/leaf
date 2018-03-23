@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
 set -u
-LEAF_ENV=`leaf profile -q env`
+LEAF_ENV=`leaf env -q`
 eval "$LEAF_ENV"
 $SHELL "$@"

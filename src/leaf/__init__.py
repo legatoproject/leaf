@@ -23,5 +23,3 @@ __help_description__ = __copyright__ + '''
   Leaf is part of the Legato Project, http://legato.io/
 
 '''
-
-from leaf.cli import main

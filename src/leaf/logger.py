@@ -10,17 +10,18 @@ Leaf Package Manager
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 import json
-from leaf.constants import JsonConstants
+from leaf.constants import JsonConstants, LeafConstants
 from leaf.model import AvailablePackage, InstalledPackage, Manifest,\
     RemoteRepository, LeafArtifact, Profile
+import os
 import sys
 
 
-def createLogger(verbose, quiet, json):
+def createLogger(verbose, quiet):
     '''
     Returns the correct ILogger
     '''
-    if json:
+    if len(os.environ.get(LeafConstants.JSON_OUTPUT, "")) > 0:
         return JsonLogger()
     if verbose:
         return TextLogger(TextLogger.LEVEL_VERBOSE)

@@ -8,54 +8,33 @@ Leaf Package Manager
 '''
 
 from abc import abstractmethod
-from leaf.constants import LeafFiles, LeafConstants
+from leaf.cli import LeafCli, LeafCommand
+from leaf.constants import LeafConstants
 from leaf.core import Workspace
-from leaf.utils import LeafCommand, envListToMap, findWorkspaceRoot
+from leaf.utils import envListToMap, findWorkspaceRoot
 import os
 from pathlib import Path
 import shutil
 
 
-class ProfileCommand(LeafCommand):
+def main():
+    return ProfileCli().run()
 
+
+class ProfileCli (LeafCli):
     def __init__(self):
-        LeafCommand.__init__(self,
-                             "profile",
-                             "manage profiles",
-                             "p")
-
-    def internalInitArgs(self, subparser):
-        subparser.add_argument('--directory', '-d',
-                               dest='root_folder',
-                               metavar='DIR',
-                               help="set the root folder, default: " + str(LeafFiles.DEFAULT_LEAF_ROOT))
-        subparser.add_argument('--env',
-                               dest='config_env',
-                               action='append',
-                               metavar='KEY=VALUE',
-                               help="set custom env variables for exec steps")
-
-        subcommandSubparsers = subparser.add_subparsers(dest='subcommand',
-                                                        description='supported subcommands',
-                                                        metavar="SUBCOMMAND",
-                                                        help='profile subcommand')
-
-        self.defaultSubcommand = ListSubCommand()
-        self.subcommands = [self.defaultSubcommand,
-                            InitSubCommand(),
-                            CreateSubCommand(),
-                            UpdateSubCommand(),
-                            DeleteSubCommand(),
-                            SwitchSubCommand(),
-                            EnvSubCommand()]
-        for subcommand in self.subcommands:
-            subcommand.create(subcommandSubparsers)
-
-    def internalExecute(self, app, logger, args):
-        for subcommand in self.subcommands:
-            if subcommand.isHandled(args.subcommand):
-                return subcommand.execute(app, logger, args)
-        return self.defaultSubcommand.execute(app, logger, args)
+        LeafCli.__init__(self,
+                         ListSubCommand(),
+                         InitSubCommand(),
+                         CreateSubCommand(),
+                         UpdateSubCommand(),
+                         DeleteSubCommand(),
+                         SwitchSubCommand(),
+                         EnvSubCommand())
+        self.parser.add_argument("-w", "--workspace",
+                                 dest="workspace",
+                                 type=Path,
+                                 help="use given workspace")
 
 
 class AbstractSubCommand(LeafCommand):
@@ -66,10 +45,6 @@ class AbstractSubCommand(LeafCommand):
         self.autoFindWorkspace = autoFindWorkspace
 
     def initArgs(self, subparser):
-        subparser.add_argument("-w", "--workspace",
-                               dest="workspace",
-                               type=Path,
-                               help="use given workspace")
         LeafCommand.initArgs(self, subparser)
 
     @abstractmethod
@@ -78,7 +53,7 @@ class AbstractSubCommand(LeafCommand):
 
     def internalExecute(self, app, logger, args):
         wspath = None
-        if "workspace" in args and args.workspace is not None:
+        if args.workspace is not None:
             wspath = args.workspace
         elif self.autoFindWorkspace:
             wspath = findWorkspaceRoot()

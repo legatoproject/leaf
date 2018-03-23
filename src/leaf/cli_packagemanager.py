@@ -9,11 +9,36 @@ Leaf Package Manager
 
 import argparse
 import json
+from leaf.cli import LeafCli, LeafCommand
+from leaf.cli_releng import PackCommand, IndexCommand
 from leaf.constants import LeafFiles
 from leaf.ui import filterPackageList
-from leaf.utils import LeafCommand
 import os
 import shutil
+
+
+def main():
+    return PackageManagerCli().run()
+
+
+class PackageManagerCli (LeafCli):
+    def __init__(self):
+        LeafCli.__init__(self,
+                         ConfigCommand(),
+                         CleanCommand(),
+                         RemoteCommand(),
+                         FetchCommand(),
+                         ListCommand(),
+                         SearchCommand(),
+                         DependsCommand(),
+                         DownloadCommand(),
+                         ExtractCommand(),
+                         InstallCommand(),
+                         RemoveCommand(),
+                         EnvCommand(),
+                         # Releng
+                         PackCommand(),
+                         IndexCommand())
 
 
 class ConfigCommand(LeafCommand):

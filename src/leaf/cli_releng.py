@@ -8,8 +8,8 @@ Leaf Package Manager
 '''
 
 import argparse
+from leaf.cli import LeafCommand
 from pathlib import Path
-from leaf.utils import LeafCommand
 
 
 class PackCommand(LeafCommand):

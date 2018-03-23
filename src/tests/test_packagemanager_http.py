@@ -11,7 +11,7 @@ import sys
 import unittest
 
 from tests.test_packagemanager_file import TestPackageManager_File
-from tests.utils import TestWithRepository
+from tests.utils import AbstractTestWithRepo
 
 
 # Needed for http server
@@ -39,7 +39,7 @@ class TestPackageManager_Http(TestPackageManager_File):
         TestPackageManager_Http.httpPort = _HTTP_FIRST_PORT + \
             random.randint(0, 999)
         TestPackageManager_Http.process = Process(target=startHttpServer,
-                                                  args=(TestPackageManager_Http.httpPort, TestWithRepository.REPO_FOLDER))
+                                                  args=(TestPackageManager_Http.httpPort, AbstractTestWithRepo.REPO_FOLDER))
         print("Starting http server ...")
         TestPackageManager_Http.process.start()
 

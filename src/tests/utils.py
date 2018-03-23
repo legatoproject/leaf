@@ -2,7 +2,8 @@
 '''
 Constants to tweak the tests
 '''
-from leaf.cli import LeafCli
+from leaf.cli_packagemanager import PackageManagerCli
+from leaf.cli_profile import ProfileCli
 from leaf.constants import LeafConstants, LeafFiles
 from leaf.core import LeafRepository
 from leaf.logger import TextLogger
@@ -17,7 +18,7 @@ from unittest.case import TestCase
 
 
 DEBUG_TESTS = os.environ.get("LEAF_UT_KEEP")
-
+SEPARATOR = "--------------------"
 ALT_FILENAMES = {
     "compress-tar_1.0": 'compress-tar_1.0.tar',
     "compress-xz_1.0":  'compress-xz_1.0.tar.xz',
@@ -26,16 +27,11 @@ ALT_FILENAMES = {
 }
 
 
-class TestWithRepository(unittest.TestCase):
+class AbstractTestWithRepo(unittest.TestCase):
 
     ROOT_FOLDER = None
     REPO_FOLDER = None
     VOLATILE_FOLDER = None
-    INSTALL_FOLDER = None
-    WS_FOLDER = None
-    CONFIG_FILE = None
-    CACHE_FILE = None
-    CACHE_FOLDER = LeafFiles.CACHE_FOLDER
 
     def __init__(self, methodName):
         TestCase.__init__(self, methodName)
@@ -43,85 +39,126 @@ class TestWithRepository(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if DEBUG_TESTS is not None:
-            TestWithRepository.ROOT_FOLDER = Path("/tmp/leaf")
+            AbstractTestWithRepo.ROOT_FOLDER = Path("/tmp/leaf")
         else:
-            TestWithRepository.ROOT_FOLDER = Path(
+            AbstractTestWithRepo.ROOT_FOLDER = Path(
                 mkdtemp(prefix="leaf_tests_"))
 
-        TestWithRepository.REPO_FOLDER = TestWithRepository.ROOT_FOLDER / "repository"
-        TestWithRepository.VOLATILE_FOLDER = TestWithRepository.ROOT_FOLDER / "volatile"
-        TestWithRepository.INSTALL_FOLDER = TestWithRepository.VOLATILE_FOLDER / "packages"
-        TestWithRepository.WS_FOLDER = TestWithRepository.VOLATILE_FOLDER / "workspace"
-        TestWithRepository.CONFIG_FILE = TestWithRepository.VOLATILE_FOLDER / "leaf-config.json"
-        TestWithRepository.CACHE_FILE = TestWithRepository.VOLATILE_FOLDER / "remote-cache.json"
+        AbstractTestWithRepo.REPO_FOLDER = AbstractTestWithRepo.ROOT_FOLDER / "repository"
+        AbstractTestWithRepo.VOLATILE_FOLDER = AbstractTestWithRepo.ROOT_FOLDER / "volatile"
 
-        shutil.rmtree(str(TestWithRepository.ROOT_FOLDER), ignore_errors=True)
+        shutil.rmtree(str(AbstractTestWithRepo.ROOT_FOLDER),
+                      ignore_errors=True)
 
         resourcesFolder = Path("tests/resources/")
         assert resourcesFolder.exists(), "Cannot find resources folder!"
         generateRepo(resourcesFolder,
-                     TestWithRepository.REPO_FOLDER,
+                     AbstractTestWithRepo.REPO_FOLDER,
                      TextLogger(TextLogger.LEVEL_QUIET))
 
     @classmethod
     def tearDownClass(cls):
         if not DEBUG_TESTS is not None:
-            shutil.rmtree(str(TestWithRepository.ROOT_FOLDER), True)
+            shutil.rmtree(str(AbstractTestWithRepo.ROOT_FOLDER), True)
 
     def setUp(self):
-        shutil.rmtree(str(TestWithRepository.VOLATILE_FOLDER),
+        shutil.rmtree(str(AbstractTestWithRepo.VOLATILE_FOLDER),
                       ignore_errors=True)
-        TestWithRepository.VOLATILE_FOLDER.mkdir()
-        TestWithRepository.WS_FOLDER.mkdir()
-        TestWithRepository.INSTALL_FOLDER.mkdir()
+        AbstractTestWithRepo.VOLATILE_FOLDER.mkdir()
 
     def tearDown(self):
         pass
 
     def getRemoteUrl(self):
-        return (TestWithRepository.REPO_FOLDER / "index.json").as_uri()
+        return (AbstractTestWithRepo.REPO_FOLDER / "index.json").as_uri()
+
+    def getVolatileItem(self, name, mkdir=True):
+        out = AbstractTestWithRepo.VOLATILE_FOLDER / name
+        if mkdir and not out.is_dir():
+            out.mkdir()
+        return out
+
+    def getConfigurationFile(self):
+        return self.getVolatileItem("config.json", mkdir=False)
 
     def getInstallFolder(self):
-        return TestWithRepository.INSTALL_FOLDER
+        return self.getVolatileItem("packages")
+
+    def getRemoteCacheFile(self):
+        return self.getVolatileItem("cache.json", mkdir=False)
 
     def getWorkspaceFolder(self):
-        return TestWithRepository.WS_FOLDER
+        return self.getVolatileItem("workspace")
+
+    def getAltWorkspaceFolder(self):
+        return self.getVolatileItem("alt-workspace")
 
 
-class LeafCliWrapper():
+class LeafPackageManagerCliWrapper(AbstractTestWithRepo):
 
-    SEPARATOR = "--------------------"
+    def __init__(self, methodName):
+        AbstractTestWithRepo.__init__(self, methodName)
+        self.preVerbArgs = []
+        self.postVerbArgs = []
+        self.jsonEnvValue = ""
 
-    def __init__(self):
-        self.preCommandArgs = []
-        self.postCommandArgs = []
+    def setUp(self):
+        AbstractTestWithRepo.setUp(self)
+        self.leafPackageManagerExec("config",
+                                    "--root", self.getInstallFolder())
+        self.leafPackageManagerExec("remote",
+                                    "--add", self.getRemoteUrl())
 
-    def initLeafConfig(self, configurationFile, setRoot=True, addRemote=True):
-        self.preCommandArgs += ["--config", configurationFile]
-        self.leafExec("config", "--root", self.getInstallFolder())
-        self.leafExec("remote", "--add", self.getRemoteUrl())
+    def leafPackageManagerExec(self, verb, *args, expectedRc=0):
+        self.eazyExecute(PackageManagerCli,
+                         self.preVerbArgs + ["--config",
+                                             self.getConfigurationFile()],
+                         verb,
+                         self.postVerbArgs,
+                         args,
+                         expectedRc)
 
-    def leafExec(self, verb, *args, expectedRc=0):
+    def eazyExecute(self, cliClazz, preArgs, verb, postArgs, args, expectedRc):
         command = []
-        command += self.preCommandArgs
-        if isinstance(verb, (list, tuple)):
-            command += verb
-        else:
+        if preArgs is not None:
+            command += preArgs
+        if verb is not None:
             command.append(verb)
-        command += self.postCommandArgs
-        command += args
+        if postArgs is not None:
+            command += postArgs
+        if args is not None:
+            command += args
         command = [str(i) for i in command]
-        print(LeafCliWrapper.SEPARATOR,
-              "[" + type(self).__name__ + "]",
-              "Execute:",
-              " ".join(command))
-        out = LeafCli().execute(command)
-        print(LeafCliWrapper.SEPARATOR +
-              LeafCliWrapper.SEPARATOR +
-              LeafCliWrapper.SEPARATOR)
+        print(SEPARATOR,
+              '[%s] %s> %s' % (type(self).__name__,
+                               cliClazz.__name__,
+                               " ".join(command)))
+        os.environ[LeafConstants.JSON_OUTPUT] = self.jsonEnvValue
+        out = cliClazz().run(command)
+        print(SEPARATOR + SEPARATOR + SEPARATOR)
         if expectedRc is not None:
             self.assertEqual(expectedRc, out, " ".join(command))
         return out
+
+
+class LeafProfileCliWrapper(LeafPackageManagerCliWrapper):
+
+    def __init__(self, methodName):
+        LeafPackageManagerCliWrapper.__init__(self, methodName)
+
+    def setUp(self):
+        LeafPackageManagerCliWrapper.setUp(self)
+
+    def leafProfileExec(self, verb, *args, altWorkspace=None, expectedRc=0):
+        if altWorkspace is None:
+            altWorkspace = self.getWorkspaceFolder()
+        self.eazyExecute(ProfileCli,
+                         self.preVerbArgs + ["--config", self.getConfigurationFile(),
+                                             "--workspace", altWorkspace],
+                         verb,
+                         self.postVerbArgs,
+                         args,
+                         expectedRc)
 
 
 def generateRepo(sourceFolder, outputFolder, logger):

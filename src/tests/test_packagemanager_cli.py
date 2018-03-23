@@ -5,25 +5,16 @@
 import os
 import unittest
 
-from tests.utils import TestWithRepository, LeafCliWrapper
+from tests.utils import LeafPackageManagerCliWrapper
 
 
 LEAF_UT_LEVELS = os.environ.get("LEAF_UT_LEVELS", "QUIET,VERBOSE,JSON")
 
 
-class TestPackageManagerCli_Default(TestWithRepository, LeafCliWrapper):
+class TestPackageManagerCli_Default(LeafPackageManagerCliWrapper):
 
     def __init__(self, methodName):
-        TestWithRepository.__init__(self, methodName)
-        LeafCliWrapper.__init__(self)
-
-    def setUp(self):
-        TestWithRepository.setUp(self)
-
-    def initLeafConfig(self, **kwargs):
-        LeafCliWrapper.initLeafConfig(self,
-                                      TestWithRepository.CONFIG_FILE,
-                                      **kwargs)
+        LeafPackageManagerCliWrapper.__init__(self, methodName)
 
     def checkContent(self, *pisList):
         for pis in pisList:
@@ -37,81 +28,68 @@ class TestPackageManagerCli_Default(TestWithRepository, LeafCliWrapper):
                          folderItemCount)
 
     def testConfig(self):
-        self.initLeafConfig(setRoot=False)
-        self.leafExec("config")
-        self.initLeafConfig()
-        self.leafExec("config")
+        self.leafPackageManagerExec("config")
 
     def testRemote(self):
-        self.initLeafConfig(setRoot=False)
-        self.leafExec("remote", "--add", self.getRemoteUrl())
-        self.leafExec("remote")
-        self.leafExec("remote", "--rm", self.getRemoteUrl())
-        self.leafExec("remote")
+        self.leafPackageManagerExec("remote", "--add", self.getRemoteUrl())
+        self.leafPackageManagerExec("remote")
+        self.leafPackageManagerExec("remote", "--rm", self.getRemoteUrl())
+        self.leafPackageManagerExec("remote")
 
     def testSearch(self):
-        self.initLeafConfig()
-        self.leafExec("search")
-        self.leafExec("search", "--all")
+        self.leafPackageManagerExec("search")
+        self.leafPackageManagerExec("search", "--all")
 
     def testDepends(self):
-        self.initLeafConfig()
-        self.leafExec("install", "container-A_1.0")
-        self.leafExec("dependencies", "container-A_2.0")
-        self.leafExec("dependencies", "-i", "container-A_2.0")
+        self.leafPackageManagerExec("install", "container-A_1.0")
+        self.leafPackageManagerExec("dependencies", "container-A_2.0")
+        self.leafPackageManagerExec("dependencies", "-i", "container-A_2.0")
 
     def testDownload(self):
-        self.initLeafConfig()
-        self.leafExec("download", "container-A_2.1")
+        self.leafPackageManagerExec("download", "container-A_2.1")
 
     def testInstall(self):
-        self.initLeafConfig()
-        self.leafExec("install", "container-A")
-        self.leafExec("list")
-        self.leafExec("list", "--all")
+        self.leafPackageManagerExec("install", "container-A")
+        self.leafPackageManagerExec("list")
+        self.leafPackageManagerExec("list", "--all")
         self.checkContent('container-A_2.1',
                           'container-C_1.0',
                           'container-D_1.0')
 
     def testEnv(self):
-        self.initLeafConfig()
-        self.leafExec("install", "env-A_1.0")
-        self.leafExec("env", "env-A_1.0")
+        self.leafPackageManagerExec("install", "env-A_1.0")
+        self.leafPackageManagerExec("env", "env-A_1.0")
 
     def testInstallWithSteps(self):
-        self.initLeafConfig()
-        self.leafExec("install", "install_1.0")
+        self.leafPackageManagerExec("install", "install_1.0")
         self.checkContent('install_1.0')
 
     def testInstallUninstallKeep(self):
-        self.initLeafConfig()
-        self.leafExec("install", "container-A_1.0")
+        self.leafPackageManagerExec("install", "container-A_1.0")
         self.checkContent('container-A_1.0',
                           'container-B_1.0',
                           'container-C_1.0',
                           'container-E_1.0')
-        self.leafExec("install", "container-A_2.0")
+        self.leafPackageManagerExec("install", "container-A_2.0")
         self.checkContent('container-A_1.0',
                           'container-A_2.0',
                           'container-B_1.0',
                           'container-C_1.0',
                           'container-D_1.0',
                           'container-C_1.0')
-        self.leafExec("remove", "container-A_1.0")
+        self.leafPackageManagerExec("remove", "container-A_1.0")
         self.checkContent('container-A_2.0',
                           'container-C_1.0',
                           'container-D_1.0')
 
     def testClean(self):
-        self.initLeafConfig()
-        self.leafExec("clean")
+        self.leafPackageManagerExec("clean")
 
     def testMissingApt(self):
-        self.initLeafConfig()
-        self.leafExec("dependencies", "--apt",
-                      "deb_1.0", "failure-depends-deb_1.0")
-        self.leafExec("install", "failure-depends-deb_1.0", expectedRc=2)
-        self.leafExec("install", "--skip-apt", "failure-depends-deb_1.0")
+        self.leafPackageManagerExec("dependencies", "--apt",
+                        "deb_1.0", "failure-depends-deb_1.0")
+        self.leafPackageManagerExec("install", "failure-depends-deb_1.0", expectedRc=2)
+        self.leafPackageManagerExec("install", "--skip-apt", "failure-depends-deb_1.0")
         self.checkContent('failure-depends-deb_1.0')
 
 
@@ -119,21 +97,21 @@ class TestPackageManagerCli_Default(TestWithRepository, LeafCliWrapper):
 class TestPackageManagerCli_Verbose(TestPackageManagerCli_Default):
     def __init__(self, methodName):
         TestPackageManagerCli_Default.__init__(self, methodName)
-        self.postCommandArgs.append("--verbose")
+        self.postVerbArgs.append("--verbose")
 
 
 @unittest.skipUnless("QUIET" in LEAF_UT_LEVELS, "Test disabled")
 class TestPackageManagerCli_Quiet(TestPackageManagerCli_Default):
     def __init__(self, methodName):
         TestPackageManagerCli_Default.__init__(self, methodName)
-        self.postCommandArgs.append("--quiet")
+        self.postVerbArgs.append("--quiet")
 
 
 @unittest.skipUnless("JSON" in LEAF_UT_LEVELS, "Test disabled")
 class TestPackageManagerCli_Json(TestPackageManagerCli_Default):
     def __init__(self, methodName):
         TestPackageManagerCli_Default.__init__(self, methodName)
-        self.preCommandArgs.append("--json")
+        self.jsonEnvValue = "1"
 
 
 if __name__ == "__main__":
