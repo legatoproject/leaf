@@ -909,6 +909,8 @@ class Workspace():
     def getProfileEnv(self, name=None):
         pf = self.getProfile(name)
         self.checkProfile(pf)
-        out = self.app.getEnv(pf.getPackages())
+        out = []
+        out.append(("LEAF_PROFILE", pf.name))
+        out.extend(self.app.getEnv(pf.getPackages()))
         out.extend(pf.getEnv().items())
         return out

@@ -132,8 +132,9 @@ class TestProfile(AbstractTestWithRepo):
         self.app.fetchRemotes()
         self.ws.switchProfile("myenv")
         env = self.ws.getProfileEnv("myenv")
-        self.assertEqual(6, len(env))
+        self.assertEqual(7, len(env))
         self.assertEqual([
+            ('LEAF_PROFILE', 'myenv'),
             ('LEAF_ENV_B', 'BAR'),
             ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
             ('LEAF_ENV_A', 'FOO'),
