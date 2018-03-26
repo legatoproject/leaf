@@ -164,9 +164,12 @@ class Manifest(JsonObject):
     def getSupportedOS(self):
         return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_SUPPORTEDOS)
 
-    def isSupported(self):
+    def isSupportedOs(self):
         supportedOs = self.getSupportedOS()
         return supportedOs is None or len(supportedOs) == 0 or LeafConstants.CURRENT_OS in supportedOs
+
+    def getSupportedLeafVersion(self):
+        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_LEAF_MINVER)
 
 
 class LeafArtifact(Manifest):

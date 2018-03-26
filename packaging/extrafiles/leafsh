@@ -2,5 +2,6 @@
 set -e
 set -u
 LEAF_ENV=`leaf env -q`
-eval "$LEAF_ENV"
+eval $LEAF_ENV
+echo "Spawning a shell for profile $LEAF_PROFILE"
 $SHELL "$@"

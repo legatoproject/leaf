@@ -73,6 +73,7 @@ class JsonConstants(object):
     INFO = 'info'
     INFO_NAME = 'name'
     INFO_VERSION = 'version'
+    INFO_LEAF_MINVER = 'leafMinVersion'
     INFO_DEPENDS = 'depends'
     INFO_DEPENDS_LEAF = 'leaf'
     INFO_DEPENDS_DEB = 'deb'

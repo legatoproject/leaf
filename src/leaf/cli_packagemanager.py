@@ -31,7 +31,6 @@ class PackageManagerCli (LeafCli):
                          ListCommand(),
                          SearchCommand(),
                          DependsCommand(),
-                         DownloadCommand(),
                          ExtractCommand(),
                          InstallCommand(),
                          RemoveCommand(),
@@ -197,7 +196,7 @@ class SearchCommand(LeafCommand):
                                            keywords=args.keywords,
                                            modules=args.modules)
         for pack in filteredApList:
-            if args.allPackages or (pack.isMaster() and pack.isSupported()):
+            if args.allPackages or (pack.isMaster() and pack.isSupportedOs()):
                 logger.displayItem(pack)
 
 
@@ -234,23 +233,6 @@ class DependsCommand(LeafCommand):
             logger.displayItem(i)
 
 
-class DownloadCommand(LeafCommand):
-
-    def __init__(self):
-        LeafCommand.__init__(self,
-                             "download",
-                             "Download the packages into the cache folder",)
-
-    def internalInitArgs(self, subparser):
-        subparser.add_argument('packages',
-                               nargs=argparse.REMAINDER)
-
-    def internalExecute(self, app, logger, args):
-        items = app.downloadPackages(args.packages).values()
-        for i in items:
-            logger.displayItem(i)
-
-
 class ExtractCommand(LeafCommand):
 
     def __init__(self):
@@ -269,11 +251,11 @@ class ExtractCommand(LeafCommand):
                                nargs=argparse.REMAINDER)
 
     def internalExecute(self, app, logger, args):
-        items = app.extractPackages(args.packages,
-                                    bypassSupportedOsCheck=args.skipOsCompat,
-                                    bypassLeafDependsCheck=args.skipLeafDepends,
-                                    bypassAptDependsCheck=args.skipAptDepends,
-                                    keepFolderOnError=args.keepOnError)
+        items = app.installFromFiles(args.packages,
+                                     bypassSupportedOs=args.skipOsCompat,
+                                     bypassLeafDepends=args.skipLeafDepends,
+                                     bypassAptDepends=args.skipAptDepends,
+                                     keepFolderOnError=args.keepOnError)
         logger.printQuiet("Package extracted: " +
                           ' '.join([str(p.getIdentifier()) for p in items]))
 
@@ -311,10 +293,10 @@ class InstallCommand(LeafCommand):
                                nargs=argparse.REMAINDER)
 
     def internalExecute(self, app, logger, args):
-        items = app.installPackages(args.packages,
-                                    bypassSupportedOsCheck=args.skipOsCompat,
-                                    bypassAptDependsCheck=args.skipAptDepends,
-                                    keepFolderOnError=args.keepOnError)
+        items = app.installFromRemotes(args.packages,
+                                       bypassSupportedOs=args.skipOsCompat,
+                                       bypassAptDepends=args.skipAptDepends,
+                                       keepFolderOnError=args.keepOnError)
         logger.printQuiet("Package installed: " +
                           ' '.join([str(p.getIdentifier()) for p in items]))
 
@@ -345,5 +327,5 @@ class EnvCommand(LeafCommand):
         subparser.add_argument('packages', nargs=argparse.REMAINDER)
 
     def internalExecute(self, app, logger, args):
-        for k, v in app.getEnv(args.packages):
-            logger.printQuiet('export %s="%s"' % (k, v))
+        for t in app.getEnv(args.packages):
+            logger.displayItem(t)

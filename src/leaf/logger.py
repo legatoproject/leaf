@@ -159,6 +159,8 @@ class TextLogger (ILogger):
                     content["Last update"] = item.jsonpath(JsonConstants.INFO,
                                                            JsonConstants.REMOTE_DATE)
                 self.prettyprintContent(content)
+        elif isinstance(item, tuple) and len(item) == 2:
+            print('export %s="%s"; ' % item)
         elif item is not None:
             print(str(item))
 
@@ -261,7 +263,7 @@ class JsonLogger(ILogger):
 
     def displayItem(self, item):
         itemType = None
-        json = {}
+        json = None
         extraMap = {}
         if isinstance(item, Profile):
             itemType = "profile"
@@ -283,8 +285,12 @@ class JsonLogger(ILogger):
             json = item.json
             extraMap = {'url': item.url,
                         'isRootRepository': item.isRootRepository}
+        elif isinstance(item, tuple) and len(item) == 2:
+            itemType = "env"
+            extraMap = {'key': item[0],
+                        'value': item[1]}
         else:
             itemType = "string"
-            json = str(item)
+            extraMap = {'value': str(item)}
 
         self.displayJsonItem(itemType, json, extraMap)

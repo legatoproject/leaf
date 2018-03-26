@@ -204,8 +204,8 @@ class EnvSubCommand(AbstractSubCommand):
 
     def internalExecute2(self, ws, app, logger, args):
         env = ws.getProfileEnv(args.profiles)
-        for k, v in env:
-            logger.printQuiet('export %s="%s"' % (k, v))
+        for t in env:
+            logger.displayItem(t)
 
 
 class SwitchSubCommand(AbstractSubCommand):

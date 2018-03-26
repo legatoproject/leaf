@@ -45,9 +45,6 @@ class TestPackageManagerCli_Default(LeafPackageManagerCliWrapper):
         self.leafPackageManagerExec("dependencies", "container-A_2.0")
         self.leafPackageManagerExec("dependencies", "-i", "container-A_2.0")
 
-    def testDownload(self):
-        self.leafPackageManagerExec("download", "container-A_2.1")
-
     def testInstall(self):
         self.leafPackageManagerExec("install", "container-A")
         self.leafPackageManagerExec("list")
@@ -87,9 +84,11 @@ class TestPackageManagerCli_Default(LeafPackageManagerCliWrapper):
 
     def testMissingApt(self):
         self.leafPackageManagerExec("dependencies", "--apt",
-                        "deb_1.0", "failure-depends-deb_1.0")
-        self.leafPackageManagerExec("install", "failure-depends-deb_1.0", expectedRc=2)
-        self.leafPackageManagerExec("install", "--skip-apt", "failure-depends-deb_1.0")
+                                    "deb_1.0", "failure-depends-deb_1.0")
+        self.leafPackageManagerExec(
+            "install", "failure-depends-deb_1.0", expectedRc=2)
+        self.leafPackageManagerExec(
+            "install", "--skip-apt", "failure-depends-deb_1.0")
         self.checkContent('failure-depends-deb_1.0')
 
 

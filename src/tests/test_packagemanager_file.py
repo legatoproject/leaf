@@ -47,20 +47,20 @@ class TestPackageManager_File(AbstractTestWithRepo):
     def testCompression(self):
         packs = ["compress-bz2_1.0", "compress-gz_1.0",
                  "compress-tar_1.0", "compress-xz_1.0"]
-        self.app.installPackages(packs)
+        self.app.installFromRemotes(packs)
         self.checkContent(self.app.listInstalledPackages(), packs)
 
     def testComposite(self):
         packs = ["composite_1.0"]
-        self.app.installPackages(packs)
+        self.app.installFromRemotes(packs)
         self.checkContent(self.app.listInstalledPackages(), packs)
 
     def testContainer(self):
-        self.app.installPackages(["container-A_1.0"])
+        self.app.installFromRemotes(["container-A_1.0"])
         self.checkContent(self.app.listInstalledPackages(), [
                           "container-A_1.0", "container-B_1.0", "container-C_1.0", "container-E_1.0"])
 
-        self.app.installPackages(["container-A_2.0"])
+        self.app.installFromRemotes(["container-A_2.0"])
         self.checkContent(self.app.listInstalledPackages(), [
                           "container-A_1.0", "container-B_1.0", "container-C_1.0", "container-E_1.0",
                           "container-A_2.0", "container-D_1.0"])
@@ -74,15 +74,15 @@ class TestPackageManager_File(AbstractTestWithRepo):
 
     def testBadContainer(self):
         with self.assertRaises(Exception):
-            self.app.installPackages(["failure-depends-leaf_1.0"])
+            self.app.installFromRemotes(["failure-depends-leaf_1.0"])
         self.checkContent(self.app.listInstalledPackages(), [])
 
     def testContainerNotMaster(self):
-        self.app.installPackages(["container-A_1.1"])
+        self.app.installFromRemotes(["container-A_1.1"])
         self.checkContent(self.app.listInstalledPackages(), [
                           "container-A_1.1", "container-B_1.0", "container-C_1.0", "container-E_1.0"])
 
-        self.app.installPackages(["container-A_2.1"])
+        self.app.installFromRemotes(["container-A_2.1"])
         self.checkContent(self.app.listInstalledPackages(), [
                           "container-A_1.1", "container-B_1.0", "container-C_1.0", "container-E_1.0",
                           "container-A_2.1", "container-D_1.0"])
@@ -95,20 +95,20 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.checkContent(self.app.listInstalledPackages(), [])
 
     def testDebDepends(self):
-        self.app.installPackages(["deb_1.0"])
+        self.app.installFromRemotes(["deb_1.0"])
         self.checkContent(self.app.listInstalledPackages(), ["deb_1.0"])
 
         with self.assertRaises(Exception):
-            self.app.installPackages(["failure-depends-deb_1.0"])
+            self.app.installFromRemotes(["failure-depends-deb_1.0"])
         self.checkContent(self.app.listInstalledPackages(), ["deb_1.0"])
 
-        self.app.installPackages(["failure-depends-deb_1.0"],
-                                 bypassAptDependsCheck=True)
+        self.app.installFromRemotes(["failure-depends-deb_1.0"],
+                                    bypassAptDepends=True)
         self.checkContent(self.app.listInstalledPackages(), [
                           "deb_1.0", "failure-depends-deb_1.0"])
 
     def testSteps(self):
-        self.app.installPackages(["install_1.0"])
+        self.app.installFromRemotes(["install_1.0"])
         self.checkContent(self.app.listInstalledPackages(), ["install_1.0"])
 
         folder = self.getInstallFolder() / "install_1.0"
@@ -138,8 +138,8 @@ class TestPackageManager_File(AbstractTestWithRepo):
 
     def testPostinstallError(self):
         with self.assertRaises(Exception):
-            self.app.installPackages(["failure-postinstall-exec_1.0"],
-                                     keepFolderOnError=True)
+            self.app.installFromRemotes(["failure-postinstall-exec_1.0"],
+                                        keepFolderOnError=True)
         found = False
         for folder in self.getInstallFolder().iterdir():
             if folder.name.startswith("failure-postinstall-exec_1.0"):
@@ -149,11 +149,11 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.assertTrue(found)
 
     def testInstallLatest(self):
-        self.app.installPackages(["version"])
+        self.app.installFromRemotes(["version"])
         self.checkContent(self.app.listInstalledPackages(), ["version_2.0"])
 
     def testCannotUninstallToKeepDependencies(self):
-        self.app.installPackages(["container-A_2.0"])
+        self.app.installFromRemotes(["container-A_2.0"])
         self.checkContent(self.app.listInstalledPackages(), [
                           "container-A_2.0", "container-C_1.0", "container-D_1.0"])
 
@@ -162,7 +162,7 @@ class TestPackageManager_File(AbstractTestWithRepo):
                           "container-A_2.0", "container-C_1.0", "container-D_1.0"])
 
     def testEnv(self):
-        self.app.installPackages(["env-A_1.0"])
+        self.app.installFromRemotes(["env-A_1.0"])
         self.checkContent(self.app.listInstalledPackages(),
                           ["env-A_1.0", "env-B_1.0"])
 
@@ -178,22 +178,22 @@ class TestPackageManager_File(AbstractTestWithRepo):
 
     def testSilentFail(self):
         with self.assertRaises(Exception):
-            self.app.installPackages(["failure-postinstall-download_1.0"])
+            self.app.installFromRemotes(["failure-postinstall-download_1.0"])
         self.checkContent(self.app.listInstalledPackages(), [])
 
         with self.assertRaises(Exception):
-            self.app.installPackages(["failure-postinstall-exec_1.0"])
+            self.app.installFromRemotes(["failure-postinstall-exec_1.0"])
         self.checkContent(self.app.listInstalledPackages(), [])
 
-        self.app.installPackages(["failure-postinstall-download-silent_1.0",
-                                  "failure-postinstall-exec-silent_1.0"])
+        self.app.installFromRemotes(["failure-postinstall-download-silent_1.0",
+                                     "failure-postinstall-exec-silent_1.0"])
         self.checkContent(self.app.listInstalledPackages(), ["failure-postinstall-download-silent_1.0",
                                                              "failure-postinstall-exec-silent_1.0"])
 
     def testDownloadTimeout(self):
         start = time.time()
         with self.assertRaises(Exception):
-            self.app.installPackages(["failure-postinstall-download_1.0"])
+            self.app.installFromRemotes(["failure-postinstall-download_1.0"])
         self.checkContent(self.app.listInstalledPackages(), [])
         duration = time.time() - start
         self.assertTrue(duration > LeafConstants.DOWNLOAD_TIMEOUT,
@@ -216,7 +216,7 @@ class TestPackageManager_File(AbstractTestWithRepo):
                                                    aptDepends=True, filterInstalled=True))
 
     def testResolveLastVersion(self):
-        self.app.installPackages(["container-A_2.0"])
+        self.app.installFromRemotes(["container-A_2.0"])
         self.assertEqual([PackageIdentifier.fromString("container-A_2.0")],
                          self.app.resolveLatest(["container-A"],
                                                 ipMap=True))
