@@ -4,10 +4,10 @@
 
 from collections import OrderedDict
 from leaf.constants import LeafConstants, LeafFiles
-from leaf.core import Workspace, LeafApp
-from leaf.logger import createLogger
 import unittest
 
+from leaf.core import Workspace, LeafApp
+from leaf.logger import createLogger
 from tests.utils import AbstractTestWithRepo
 
 
@@ -49,23 +49,23 @@ class TestProfile(AbstractTestWithRepo):
     def testAddDeleteProfile(self):
         self.ws.createProfile(LeafConstants.DEFAULT_PROFILE,
                               initConfigFile=True)
-        self.assertEqual(1, len(self.ws.getProfileMap()))
+        self.assertEqual(1, len(self.ws.getAllProfiles()))
 
         with self.assertRaises(Exception):
             self.ws.createProfile(LeafConstants.DEFAULT_PROFILE)
 
         self.ws.createProfile("foo")
-        self.assertEqual(2, len(self.ws.getProfileMap()))
+        self.assertEqual(2, len(self.ws.getAllProfiles()))
 
         with self.assertRaises(Exception):
             self.ws.createProfile("foo")
 
         self.ws.deleteProfile("foo")
-        self.assertEqual(1, len(self.ws.getProfileMap()))
+        self.assertEqual(1, len(self.ws.getAllProfiles()))
 
         with self.assertRaises(Exception):
             self.ws.deleteProfile("foo")
-        self.assertEqual(1, len(self.ws.getProfileMap()))
+        self.assertEqual(1, len(self.ws.getAllProfiles()))
 
     def testUpdateDefaultProfile(self, name=LeafConstants.DEFAULT_PROFILE):
         pf = self.ws.createProfile(name,
@@ -76,7 +76,7 @@ class TestProfile(AbstractTestWithRepo):
         self.ws.updateProfile(name,
                               ["container-A_1.0"],
                               OrderedDict([("FOO", "BAR"), ("FOO2", "BAR2")]))
-        pf = self.ws.getProfile(name)
+        pf = self.ws.retrieveProfile(name)
         self.assertEqual(["container-A_1.0"],
                          pf.getPackages())
         self.assertEqual(OrderedDict([("FOO", "BAR"), ("FOO2", "BAR2")]),
@@ -84,13 +84,13 @@ class TestProfile(AbstractTestWithRepo):
 
         self.ws.updateProfile(name,
                               ["container-A"])
-        pf = self.ws.getProfile(name)
+        pf = self.ws.retrieveProfile(name)
         self.assertEqual(["container-A_2.1"],
                          pf.getPackages())
 
         self.ws.updateProfile(name,
                               ["env-A_1.0"])
-        pf = self.ws.getProfile(name)
+        pf = self.ws.retrieveProfile(name)
         self.assertEqual(["container-A_2.1", "env-A_1.0"],
                          pf.getPackages())
 

@@ -12,18 +12,20 @@ from collections import OrderedDict
 from datetime import datetime
 import json
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles
-from leaf.model import Manifest, InstalledPackage, AvailablePackage, LeafArtifact,\
-    PackageIdentifier, RemoteRepository, Profile
-from leaf.utils import resolveUrl, getCachedArtifactName, isFolderIgnored,\
-    markFolderAsIgnored, openOutputTarFile, computeSha1sum, downloadFile,\
-    AptHelper, jsonLoadFile
 import os
 from pathlib import Path
 import shutil
 from tarfile import TarFile
 import urllib.request
 
-from leaf.coreutils import DependencyManager, StepExecutor, checkLeafVersion
+from leaf import __version__
+from leaf.coreutils import DependencyManager, StepExecutor
+from leaf.model import Manifest, InstalledPackage, AvailablePackage, LeafArtifact,\
+    PackageIdentifier, RemoteRepository, Profile,\
+    WorkspaceConfiguration
+from leaf.utils import resolveUrl, getCachedArtifactName, isFolderIgnored,\
+    markFolderAsIgnored, openOutputTarFile, computeSha1sum, downloadFile,\
+    AptHelper, jsonLoadFile, checkSupportedLeaf, jsonWriteFile
 
 
 class LeafRepository():
@@ -79,9 +81,8 @@ class LeafRepository():
             fileNode[JsonConstants.INFO] = la.getNodeInfo()
             packagesNode.append(fileNode)
 
-        with open(str(outputFile), 'w') as out:
-            json.dump(rootNode, out, indent=2)
-            self.logger.printDefault("Index created:", outputFile)
+        jsonWriteFile(outputFile, rootNode, pp=True)
+        self.logger.printDefault("Index created:", outputFile)
 
 
 class LeafApp(LeafRepository):
@@ -115,8 +116,7 @@ class LeafApp(LeafRepository):
         '''
         Write the given configuration
         '''
-        with open(str(self.configurationFile), 'w') as fp:
-            json.dump(config, fp, indent=2, separators=(',', ': '))
+        jsonWriteFile(self.configurationFile, config, pp=True)
 
     def getInstallFolder(self):
         out = LeafFiles.DEFAULT_LEAF_ROOT
@@ -285,8 +285,7 @@ class LeafApp(LeafRepository):
             self.logger.progressWorked('Fetch remote(s)',
                                        worked=worked,
                                        total=len(urls))
-        with open(str(self.cacheFile), 'w') as output:
-            json.dump(content, output)
+        jsonWriteFile(self.cacheFile, content)
         self.logger.progressDone('Fetch remote(s)')
 
     def listInstalledPackages(self):
@@ -348,7 +347,7 @@ class LeafApp(LeafRepository):
             incompatibleList = [mf
                                 for mf
                                 in mfList
-                                if not checkLeafVersion(mf.getSupportedLeafVersion())]
+                                if not mf.isSupportedByCurrentLeafVersion()]
             if len(incompatibleList) > 0:
                 self.logger.printError("These packages need a newer version: ",
                                        " ".join([str(mf.getIdentifier()) for mf in incompatibleList]))
@@ -619,22 +618,49 @@ class Workspace():
         self.currentLink = self.dataFolder / LeafFiles.CURRENT_PROFILE
         self.app = app
 
-    def getProfileMap(self):
+    def readConfiguration(self, initIfNeeded=False):
+        '''
+        Return the configuration and if current leaf version is supported
+        '''
+
+        if not self.configFile.exists() and initIfNeeded:
+            self.writeConfiguration(WorkspaceConfiguration(OrderedDict()))
+        wsc = WorkspaceConfiguration(jsonLoadFile(self.configFile))
+        checkSupportedLeaf(wsc.jsonpath(JsonConstants.INFO_LEAF_MINVER),
+                           exceptionMessage="Leaf has to be updated to work with this workspace")
+        return wsc
+
+    def writeConfiguration(self, wsc):
+        '''
+        Write the configuration and set the min leaf version to current version
+        '''
+        self.dataFolder.mkdir(exist_ok=True)
+        wsc.jsoninit(key=JsonConstants.WS_LEAFMINVERSION,
+                     value=__version__,
+                     force=True)
+        tmpFile = self.dataFolder / ("tmp-" + LeafFiles.PROFILES_FILENAME)
+        jsonWriteFile(tmpFile, wsc.json, pp=True)
+        tmpFile.rename(self.configFile)
+
+    def getAllProfiles(self, wsc=None):
+        if wsc is None:
+            wsc = self.readConfiguration()
         out = OrderedDict()
-        for name, payload in jsonLoadFile(self.configFile).items():
+        for name, pfJson in wsc.getWsProfiles().items():
             out[name] = Profile(name,
                                 self.dataFolder / name,
-                                payload)
+                                pfJson)
         try:
             out[self.getCurrentProfileName()].isCurrentProfile = True
         except:
             pass
         return out
 
-    def getProfile(self, name=None):
+    def retrieveProfile(self, name=None, pfMap=None):
         if name is None:
             name = self.getCurrentProfileName()
-        pfMap = self.getProfileMap()
+        if pfMap is None:
+            pfMap = self.getAllProfiles()
         if name not in pfMap:
             raise ValueError("Cannot find profile %s" % name)
         return pfMap.get(name)
@@ -656,16 +682,6 @@ class Workspace():
                     raise ValueError("Some packages are not linked, please run 'leaf switch %s'" %
                                      (pf.name))
 
-    def writeProfiles(self, pfMap):
-        self.dataFolder.mkdir(exist_ok=True)
-        tmpFile = self.dataFolder / ("tmp-" + LeafFiles.PROFILES_FILENAME)
-        with open(str(tmpFile), 'w') as fp:
-            payload = OrderedDict()
-            for name, pf in pfMap.items():
-                payload[name] = pf.json
-            json.dump(payload, fp, indent=2, separators=(',', ': '))
-        tmpFile.rename(self.configFile)
-
     def getCurrentProfileName(self):
         if self.currentLink.is_symlink():
             return self.currentLink.resolve().name
@@ -674,58 +690,76 @@ class Workspace():
                 "No current profile, you need to switch to a profile first")
 
     def deleteProfile(self, name):
-        pfMap = self.getProfileMap()
-        if name not in pfMap:
-            raise ValueError("Cannot find profile %s" % name)
-        out = pfMap[name]
-        del pfMap[name]
-        self.writeProfiles(pfMap)
-        return out
+        pf = self.retrieveProfile(name)
+        wsc = self.readConfiguration()
+        del wsc.getWsProfiles()[pf.name]
+        if pf.folder.exists():
+            shutil.rmtree(str(pf.folder))
+        self.writeConfiguration(wsc)
+        return pf
 
     def createProfile(self, name, motifList=None, envMap=None, initConfigFile=False):
+        # Read configuration
+        wsc = self.readConfiguration(initIfNeeded=initConfigFile)
+
+        # Check profile can be created
         if name == LeafFiles.CURRENT_PROFILE:
             raise ValueError("%s is not a valid profile name" % name)
-        pfMap = {} if initConfigFile else self.getProfileMap()
-        if name in pfMap:
+        if name in wsc.getWsProfiles():
             raise ValueError("Profile %s already exists" % name)
+
+        # Create & update profile
         pf = Profile.emptyProfile(name, self.dataFolder / name)
         if motifList is not None:
             pf.addPackages(self.app.resolveLatest(motifList,
                                                   ipMap=self.app.listInstalledPackages(),
                                                   apMap=self.app.listAvailablePackages()))
-        pf.addEnv(envMap)
-        pfMap[name] = pf
-        self.writeProfiles(pfMap)
+        if envMap is not None:
+            pf.getEnv().update(envMap)
+
+        # Update & save configuration
+        wsc.getWsProfiles()[name] = pf.json
+        self.writeConfiguration(wsc)
         return pf
 
     def updateProfile(self, name=None, motifList=None, envMap=None):
-        pf = self.getProfile(name)
+        # Retrieve profile
+        wsc = self.readConfiguration()
+        pf = self.retrieveProfile(name)
+
+        # Update profile
         if motifList is not None:
             pf.addPackages(self.app.resolveLatest(motifList,
                                                   ipMap=self.app.listInstalledPackages(),
                                                   apMap=self.app.listAvailablePackages()))
-        pf.addEnv(envMap)
-        pfMap = self.getProfileMap()
-        pfMap[pf.name] = pf
-        self.writeProfiles(pfMap)
+        if envMap is not None:
+            pf.getEnv().update(envMap)
+
+        # Update & save configuration
+        wsc.getWsProfiles()[pf.name] = pf.json
+        self.writeConfiguration(wsc)
         return pf
 
     def switchProfile(self, name):
-        pf = self.getProfile(name)
+        # Retrieve profile
+        pf = self.retrieveProfile(name)
+        # Provision profile
         self.provisionProfile(pf)
-
+        # Update symlink
         if self.currentLink.is_symlink():
             self.currentLink.unlink()
-
         self.currentLink.symlink_to(pf.name)
         return pf
 
     def provisionProfile(self, pf):
+        # Ensure FS clean
         if not self.dataFolder.is_dir():
             self.dataFolder.mkdir()
         elif pf.folder.is_dir():
             shutil.rmtree(str(pf.folder))
         pf.folder.mkdir()
+
+        # Do nothing for empty profiles
         if len(pf.getPackages()) > 0:
             self.app.installFromRemotes(pf.getPackages())
             installedPackages = self.app.listInstalledPackages()
@@ -739,7 +773,7 @@ class Workspace():
                 piFolder.symlink_to(ip.folder)
 
     def getProfileEnv(self, name=None):
-        pf = self.getProfile(name)
+        pf = self.retrieveProfile(name)
         self.checkProfile(pf)
         out = []
         out.append(("LEAF_PROFILE", pf.name))

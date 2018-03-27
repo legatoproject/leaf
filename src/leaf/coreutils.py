@@ -16,22 +16,6 @@ import shutil
 import subprocess
 
 
-def checkLeafVersion(targetVersion, currentVersion=__version__):
-    if targetVersion is not None:
-        if currentVersion == '0.0.0':
-            # Handle dev version
-            return True
-        try:
-            currentVersion = PackageIdentifier.fromString("leaf_%s" %
-                                                          currentVersion)
-            targetVersion = PackageIdentifier.fromString("leaf_%s" %
-                                                         targetVersion)
-            return currentVersion >= targetVersion
-        except Exception:
-            pass
-    return True
-
-
 class DependencyManager():
 
     def __init__(self):

@@ -11,6 +11,7 @@ import apt
 from collections import OrderedDict
 import hashlib
 import json
+from leaf import __version__
 from leaf.constants import LeafConstants, LeafFiles
 import os
 from pathlib import Path
@@ -26,6 +27,49 @@ from urllib.parse import urlparse, urlunparse
 
 
 _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
+_VERSION_SEPARATOR = re.compile("[-_.~]")
+
+
+def checkSupportedLeaf(minVersion, currentVersion=__version__, exceptionMessage=None):
+    # Handle dev version
+    if minVersion is not None and not currentVersion == '0.0.0':
+        if versionComparator_lt(currentVersion, minVersion):
+            if exceptionMessage is not None:
+                raise ValueError(exceptionMessage)
+            return False
+    return True
+
+
+def stringToTuple(version):
+    def tryint(x):
+        try:
+            return int(x)
+        except:
+            return x
+    return tuple(tryint(x) for x in _VERSION_SEPARATOR.split(version))
+
+
+def versionComparator_lt(versionA, versionB):
+    if versionA == versionB:
+        return False
+    if not isinstance(versionA, tuple):
+        versionA = stringToTuple(str(versionA))
+    if not isinstance(versionB, tuple):
+        versionB = stringToTuple(str(versionB))
+    i = 0
+    while True:
+        if i >= len(versionA):
+            return True
+        if i >= len(versionB):
+            return False
+        a = versionA[i]
+        b = versionB[i]
+        if not type(a) == type(b):
+            a = str(a)
+            b = str(b)
+        if not a == b:
+            return a < b
+        i += 1
 
 
 def checkPythonVersion():
@@ -165,6 +209,15 @@ def envListToMap(envList):
             k, v = line.split('=', 1)
             out[k.strip()] = v.strip()
     return out
+
+
+def jsonWriteFile(file, data, pp=False):
+    kw = {}
+    if pp:
+        kw.update({'indent': 4,
+                   'separators': (',', ': ')})
+    with open(str(file), 'w') as fp:
+        json.dump(data, fp, **kw)
 
 
 def jsonLoadFile(file):

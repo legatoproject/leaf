@@ -4,7 +4,7 @@ Constants to tweak the tests
 '''
 from leaf.cli_packagemanager import PackageManagerCli
 from leaf.cli_profile import ProfileCli
-from leaf.constants import LeafConstants, LeafFiles
+from leaf.constants import LeafConstants
 from leaf.core import LeafRepository
 from leaf.logger import TextLogger
 from leaf.model import Manifest

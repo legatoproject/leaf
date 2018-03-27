@@ -8,13 +8,12 @@ Leaf Package Manager
 '''
 
 from abc import abstractmethod
-from leaf.cli import LeafCli, LeafCommand
 from leaf.constants import LeafConstants
-from leaf.core import Workspace
-from leaf.utils import envListToMap, findWorkspaceRoot
 import os
 from pathlib import Path
-import shutil
+from leaf.cli import LeafCli, LeafCommand
+from leaf.core import Workspace
+from leaf.utils import envListToMap, findWorkspaceRoot
 
 
 def main():
@@ -102,7 +101,6 @@ class InitSubCommand(AbstractSubCommand):
             raise ValueError("File %s already exist" % str(ws.configFile))
         if ws.dataFolder.exists():
             raise ValueError("Folder %s already exist" % str(ws.dataFolder))
-        ws.dataFolder.mkdir()
         ws.createProfile(LeafConstants.DEFAULT_PROFILE,
                          initConfigFile=True)
         ws.switchProfile(LeafConstants.DEFAULT_PROFILE)
@@ -169,8 +167,6 @@ class DeleteSubCommand(AbstractSubCommand):
     def internalExecute2(self, ws, app, logger, args):
         for p in args.profiles:
             pf = ws.deleteProfile(p)
-            if pf.folder.exists():
-                shutil.rmtree(str(pf.folder))
             logger.printDefault("Profile deleted", pf.name)
 
 
@@ -184,7 +180,7 @@ class ListSubCommand(AbstractSubCommand):
         pass
 
     def internalExecute2(self, ws, app, logger, args):
-        pfMap = ws.getProfileMap()
+        pfMap = ws.getAllProfiles()
         logger.printVerbose("List of profiles in", ws.rootFolder)
         for pf in pfMap.values():
             logger.displayItem(pf)
@@ -204,8 +200,8 @@ class EnvSubCommand(AbstractSubCommand):
 
     def internalExecute2(self, ws, app, logger, args):
         env = ws.getProfileEnv(args.profiles)
-        for t in env:
-            logger.displayItem(t)
+        for kv in env:
+            logger.displayItem(kv)
 
 
 class SwitchSubCommand(AbstractSubCommand):

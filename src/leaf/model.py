@@ -11,10 +11,12 @@ from collections import OrderedDict
 from functools import total_ordering
 import io
 from leaf.constants import JsonConstants, LeafConstants
-from leaf.utils import resolveUrl, jsonLoad, jsonLoadFile
 from pathlib import Path
 import re
 from tarfile import TarFile
+
+from leaf.utils import resolveUrl, jsonLoad, jsonLoadFile, checkSupportedLeaf,\
+    versionComparator_lt, stringToTuple
 
 
 @total_ordering
@@ -22,7 +24,6 @@ class PackageIdentifier ():
 
     _NAME_REGEX = re.compile('^[a-zA-Z0-9][-a-zA-Z0-9]*$')
     _VERSION_REGEX = re.compile('^[a-zA-Z0-9][-._a-zA-Z0-9]*$')
-    _VERSION_SEPARATOR = re.compile("[-_.~]")
     _SEPARATOR = '_'
 
     @staticmethod
@@ -66,36 +67,15 @@ class PackageIdentifier ():
     def __lt__(self, other):
         if not self._is_valid_operand(other):
             return NotImplemented
-
         if not self.name == other.name:
             return self.name < other.name
-
         if self.version == other.version:
             return False
-        versionA = self.getVersion()
-        versionB = other.getVersion()
-        i = 0
-        while True:
-            if i >= len(versionA):
-                return True
-            if i >= len(versionB):
-                return False
-            a = versionA[i]
-            b = versionB[i]
-            if not type(a) == type(b):
-                a = str(a)
-                b = str(b)
-            if not a == b:
-                return a < b
-            i += 1
+        return versionComparator_lt(self.version,
+                                    other.version)
 
     def getVersion(self):
-        def tryint(x):
-            try:
-                return int(x)
-            except:
-                return x
-        return tuple(tryint(x) for x in PackageIdentifier._VERSION_SEPARATOR.split(self.version))
+        return stringToTuple(self.version)
 
 
 class JsonObject():
@@ -105,6 +85,16 @@ class JsonObject():
 
     def __init__(self, json):
         self.json = json
+
+    def jsoninit(self, *path, key=None, value=None, force=False):
+        if key is None:
+            raise ValueError("Cannot init json")
+        parent = self.jsonpath(*path)
+        if not isinstance(parent, dict):
+            raise ValueError("Cannot init json")
+        if force or key not in parent:
+            parent[key] = value
+        return parent[key]
 
     def jsonpath(self, *path, default=None):
         '''
@@ -170,6 +160,9 @@ class Manifest(JsonObject):
 
     def getSupportedLeafVersion(self):
         return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_LEAF_MINVER)
+
+    def isSupportedByCurrentLeafVersion(self):
+        return checkSupportedLeaf(self.getSupportedLeafVersion())
 
 
 class LeafArtifact(Manifest):
@@ -245,16 +238,33 @@ class RemoteRepository(JsonObject):
         return self.jsonpath(JsonConstants.REMOTE_PACKAGES, default=[])
 
 
+class WorkspaceConfiguration(JsonObject):
+    '''
+    Represent a workspace configuration, ie Profiles, env ...
+    '''
+
+    def __init__(self, json):
+        JsonObject.__init__(self, json)
+
+    def getWsEnv(self):
+        return self.jsoninit(key=JsonConstants.WS_ENV,
+                             value=OrderedDict())
+
+    def getWsProfiles(self):
+        return self.jsoninit(key=JsonConstants.WS_PROFILES,
+                             value=OrderedDict())
+
+
 class Profile(JsonObject):
     '''
     Represent a profile inside a workspace
     '''
     @staticmethod
     def emptyProfile(name, folder):
-        json = OrderedDict()
-        json[JsonConstants.PROFILE_PACKAGES] = []
-        json[JsonConstants.PROFILE_ENV] = OrderedDict()
-        return Profile(name, folder, json)
+        out = Profile(name, folder, OrderedDict())
+        out.getPackages()
+        out.getEnv()
+        return out
 
     def __init__(self, name, folder, json):
         JsonObject.__init__(self, json)
@@ -263,28 +273,21 @@ class Profile(JsonObject):
         self.isCurrentProfile = False
 
     def getPackages(self):
-        return self.jsonpath(JsonConstants.PROFILE_PACKAGES, default=[])
+        return self.jsoninit(key=JsonConstants.WS_PROFILE_PACKAGES,
+                             value=[])
 
     def getEnv(self):
-        return self.jsonpath(JsonConstants.PROFILE_ENV, default={})
+        return self.jsoninit(key=JsonConstants.WS_PROFILE_ENV,
+                             value=OrderedDict())
 
     def addPackage(self, newpi):
-        profilePiList = [PackageIdentifier.fromString(pis)
-                         for pis in self.jsonpath(JsonConstants.PROFILE_PACKAGES,
-                                                  default=[])]
+        profilePiList = [PackageIdentifier.fromString(
+            pis)for pis in self.getPackages()]
         profilePiList = [pi for pi in profilePiList if pi.name != newpi.name]
         profilePiList.append(newpi)
-        self.json[JsonConstants.PROFILE_PACKAGES] = [
+        self.json[JsonConstants.WS_PROFILE_PACKAGES] = [
             str(pi) for pi in profilePiList]
 
-    def addPackages(self, piList, clear=False):
-        if clear or JsonConstants.PROFILE_PACKAGES not in self.json:
-            self.json[JsonConstants.PROFILE_PACKAGES] = []
+    def addPackages(self, piList):
         for pi in piList:
             self.addPackage(pi)
-
-    def addEnv(self, envMap, clear=False):
-        if clear or JsonConstants.PROFILE_ENV not in self.json:
-            self.json[JsonConstants.PROFILE_ENV] = OrderedDict()
-        if envMap is not None:
-            self.json[JsonConstants.PROFILE_ENV].update(envMap)

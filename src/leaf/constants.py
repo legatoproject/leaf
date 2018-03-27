@@ -108,5 +108,8 @@ class JsonConstants(object):
     INFO_SUPPORTEDOS = 'supportedOs'
 
     # Profiles
-    PROFILE_PACKAGES = "packages"
-    PROFILE_ENV = "env"
+    WS_PROFILES = "profiles"
+    WS_LEAFMINVERSION = "leafMinVersion"
+    WS_ENV = "env"
+    WS_PROFILE_PACKAGES = "packages"
+    WS_PROFILE_ENV = "env"
