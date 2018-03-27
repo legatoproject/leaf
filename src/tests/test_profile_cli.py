@@ -72,7 +72,7 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
                              "-p", "deb_1.0",
                              "-e", "FOO=BAR",
                              "-e", "FOO2=BAR2")
-        self.leafProfileExec("switch", "foo")
+        self.leafProfileExec("sync", "foo")
         self.checkProfileContent("foo",
                                  "container-A",
                                  "container-B",
@@ -83,7 +83,7 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
         self.leafProfileExec("update", "foo",
                              "-p", "container-A",
                              "-e", "FOO3=BAR3")
-        self.leafProfileExec("switch")
+        self.leafProfileExec("sync")
         self.leafProfileExec("env", "foo")
         self.checkProfileContent("foo",
                                  "container-A",
@@ -154,7 +154,7 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
 
         self.leafProfileExec("list")
         self.leafProfileExec("env", expectedRc=2)
-        self.leafProfileExec("switch", "default")
+        self.leafProfileExec("sync", "default")
         self.leafProfileExec("list")
         self.leafProfileExec("env")
         self.checkProfileContent("default",

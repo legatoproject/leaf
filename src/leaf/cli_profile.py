@@ -207,8 +207,8 @@ class EnvSubCommand(AbstractSubCommand):
 class SwitchSubCommand(AbstractSubCommand):
     def __init__(self):
         AbstractSubCommand.__init__(self,
-                                    "switch",
-                                    "switch current profile and install packages if needed")
+                                    "sync",
+                                    "set current profile (if specified), install packages (if needed) and synchronize leaf-data tree")
 
     def internalInitArgs(self, subparser):
         AbstractSubCommand.initCommonArgs(subparser,
