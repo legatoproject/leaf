@@ -10,7 +10,7 @@ Leaf Package Manager
 from collections import OrderedDict
 from functools import total_ordering
 import io
-from leaf.constants import JsonConstants, LeafConstants
+from leaf.constants import JsonConstants, LeafConstants, LeafFiles
 from pathlib import Path
 import re
 from tarfile import TarFile
@@ -259,9 +259,24 @@ class Profile(JsonObject):
     '''
     Represent a profile inside a workspace
     '''
+
+    @staticmethod
+    def genDefaultName(piList):
+        if piList is not None and len(piList) > 0:
+            return Profile.checkValidName("_".join([pi.name.upper() for pi in piList]))
+        return LeafConstants.DEFAULT_PROFILE
+
+    @staticmethod
+    def checkValidName(name):
+        if not isinstance(name, str):
+            raise ValueError("Profile name must be a string")
+        if name in ["", LeafFiles.CURRENT_PROFILE]:
+            raise ValueError("'%s' is not a valid profile name" % name)
+        return name
+
     @staticmethod
     def emptyProfile(name, folder):
-        out = Profile(name, folder, OrderedDict())
+        out = Profile(Profile.checkValidName(name), folder, OrderedDict())
         out.getPackages()
         out.getEnv()
         return out

@@ -41,18 +41,17 @@ class TestProfile(AbstractTestWithRepo):
 
     def testInit(self):
         with self.assertRaises(Exception):
-            self.ws.createProfile(LeafConstants.DEFAULT_PROFILE)
-
-        self.ws.createProfile(LeafConstants.DEFAULT_PROFILE,
-                              initConfigFile=True)
+            self.ws.createProfile()
+        self.ws.readConfiguration(True)
+        self.ws.createProfile()
 
     def testAddDeleteProfile(self):
-        self.ws.createProfile(LeafConstants.DEFAULT_PROFILE,
-                              initConfigFile=True)
+        self.ws.readConfiguration(True)
+        self.ws.createProfile()
         self.assertEqual(1, len(self.ws.getAllProfiles()))
 
         with self.assertRaises(Exception):
-            self.ws.createProfile(LeafConstants.DEFAULT_PROFILE)
+            self.ws.createProfile()
 
         self.ws.createProfile("foo")
         self.assertEqual(2, len(self.ws.getAllProfiles()))
@@ -68,8 +67,8 @@ class TestProfile(AbstractTestWithRepo):
         self.assertEqual(1, len(self.ws.getAllProfiles()))
 
     def testUpdateDefaultProfile(self, name=LeafConstants.DEFAULT_PROFILE):
-        pf = self.ws.createProfile(name,
-                                   initConfigFile=True)
+        self.ws.readConfiguration(True)
+        pf = self.ws.createProfile(name)
         self.assertEqual([], pf.getPackages())
         self.assertEqual(OrderedDict(), pf.getEnv())
 
@@ -102,9 +101,37 @@ class TestProfile(AbstractTestWithRepo):
     def testUpdateNamedProfile(self):
         self.testUpdateDefaultProfile("foo")
 
+    def testRenameProfile(self):
+        self.ws.readConfiguration(True)
+        self.ws.createProfile("foo",
+                              ["container-A"],
+                              {"FOO": "BAR"})
+        self.ws.switchProfile("foo")
+        self.assertEqual("foo",
+                         self.ws.getCurrentProfileName())
+        self.checkProfileContent("foo",
+                                 "container-A",
+                                 "container-C",
+                                 "container-D")
+
+        self.ws.updateProfile("foo", newName="bar")
+        self.assertEqual(1, len(self.ws.getAllProfiles()))
+        self.assertEqual("bar", self.ws.retrieveProfile("bar").name)
+        self.assertEqual("bar", self.ws.retrieveProfile().name)
+        self.assertEqual("bar", self.ws.getCurrentProfileName())
+        self.checkProfileContent("bar",
+                                 "container-A",
+                                 "container-C",
+                                 "container-D")
+        self.ws.getProfileEnv("bar")
+
+        self.ws.updateProfile("bar", newName="bar")
+        self.assertEqual("bar", self.ws.getCurrentProfileName())
+        self.assertEqual("bar", self.ws.retrieveProfile().name)
+
     def testSwitchProfile(self):
-        self.ws.createProfile(LeafConstants.DEFAULT_PROFILE,
-                              initConfigFile=True)
+        self.ws.readConfiguration(True)
+        self.ws.createProfile()
 
         with self.assertRaises(Exception):
             self.ws.getCurrentProfileName()
@@ -123,12 +150,12 @@ class TestProfile(AbstractTestWithRepo):
                          self.ws.getCurrentProfileName())
 
     def testEnv(self):
+        self.ws.readConfiguration(True)
         self.ws.createProfile("myenv",
                               ["env-A_1.0",
                                "env-B_1.0"],
                               OrderedDict([("FOO", "BAR"),
-                                           ("FOO2", "BAR2")]),
-                              initConfigFile=True)
+                                           ("FOO2", "BAR2")]))
         self.app.fetchRemotes()
         self.ws.switchProfile("myenv")
         env = self.ws.getProfileEnv("myenv")
@@ -146,10 +173,10 @@ class TestProfile(AbstractTestWithRepo):
 
     def testWithoutVersion(self):
         self.app.fetchRemotes()
+        self.ws.readConfiguration(True)
         pf = self.ws.createProfile("foo",
                                    ["container-A"],
-                                   {"FOO": "BAR"},
-                                   initConfigFile=True)
+                                   {"FOO": "BAR"})
         self.assertEqual(["container-A_2.1"], pf.getPackages())
         pf.getPackages()
         self.ws.switchProfile("foo")
@@ -164,6 +191,24 @@ class TestProfile(AbstractTestWithRepo):
                                  "container-B",
                                  "container-C",
                                  "container-E")
+
+    def testDefaultProfileName(self):
+        self.app.fetchRemotes()
+        self.ws.readConfiguration(True)
+
+        pf = self.ws.createProfile(motifList=["container-A",
+                                              "deb_1.0",
+                                              "env-A"])
+        self.assertEqual(["container-A_2.1",
+                          "deb_1.0",
+                          "env-A_1.0"],
+                         pf.getPackages())
+        self.assertEqual("CONTAINER-A_DEB_ENV-A", pf.name)
+
+        with self.assertRaises(Exception):
+            self.ws.createProfile(motifList=["container-A",
+                                             "deb_1.0",
+                                             "env-A"])
 
 
 if __name__ == "__main__":

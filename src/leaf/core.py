@@ -684,7 +684,12 @@ class Workspace():
 
     def getCurrentProfileName(self):
         if self.currentLink.is_symlink():
-            return self.currentLink.resolve().name
+            try:
+                return self.currentLink.resolve().name
+            except Exception:
+                self.currentLink.unlink()
+                raise ValueError(
+                    "No current profile, you need to switch to a profile first")
         else:
             raise ValueError(
                 "No current profile, you need to switch to a profile first")
@@ -698,13 +703,22 @@ class Workspace():
         self.writeConfiguration(wsc)
         return pf
 
-    def createProfile(self, name, motifList=None, envMap=None, initConfigFile=False):
+    def createProfile(self, name=None, motifList=None, envMap=None):
         # Read configuration
-        wsc = self.readConfiguration(initIfNeeded=initConfigFile)
+        wsc = self.readConfiguration()
+
+        # Resolves package list
+        piList = []
+        if motifList is not None:
+            piList = self.app.resolveLatest(motifList, ipMap=True, apMap=True)
+
+        # compute if needed and check name
+        if name is None:
+            name = Profile.genDefaultName(piList)
+        else:
+            name = Profile.checkValidName(name)
 
         # Check profile can be created
-        if name == LeafFiles.CURRENT_PROFILE:
-            raise ValueError("%s is not a valid profile name" % name)
         if name in wsc.getWsProfiles():
             raise ValueError("Profile %s already exists" % name)
 
@@ -722,10 +736,16 @@ class Workspace():
         self.writeConfiguration(wsc)
         return pf
 
-    def updateProfile(self, name=None, motifList=None, envMap=None):
+    def updateProfile(self, name=None, motifList=None, envMap=None, newName=None):
         # Retrieve profile
         wsc = self.readConfiguration()
         pf = self.retrieveProfile(name)
+
+        # Check new name is valid in case of rename
+        if newName is not None:
+            newName = Profile.checkValidName(newName)
+            if newName != pf.name and newName in wsc.getWsProfiles():
+                raise ValueError("Profile %s already exists" % newName)
 
         # Update profile
         if motifList is not None:
@@ -736,7 +756,23 @@ class Workspace():
             pf.getEnv().update(envMap)
 
         # Update & save configuration
-        wsc.getWsProfiles()[pf.name] = pf.json
+        if newName is not None and newName != pf.name:
+            newFolder = self.dataFolder / newName
+            if pf.folder.exists():
+                pf.folder.rename(newFolder)
+            if pf.isCurrentProfile:
+                self.updateCurrentLink(newName)
+            # Delete the previous profile
+            del wsc.getWsProfiles()[pf.name]
+            # Update the name/folder
+            pf.name = newName
+            pf.folder = newFolder
+            # Save the new profile
+            wsc.getWsProfiles()[pf.name] = pf.json
+        else:
+            # Update the profile
+            wsc.getWsProfiles()[pf.name] = pf.json
+
         self.writeConfiguration(wsc)
         return pf
 
@@ -746,10 +782,16 @@ class Workspace():
         # Provision profile
         self.provisionProfile(pf)
         # Update symlink
+        self.updateCurrentLink(name)
+        return pf
+
+    def updateCurrentLink(self, name):
+        '''
+        Update the current link without any check
+        '''
         if self.currentLink.is_symlink():
             self.currentLink.unlink()
-        self.currentLink.symlink_to(pf.name)
-        return pf
+        self.currentLink.symlink_to(name)
 
     def provisionProfile(self, pf):
         # Ensure FS clean

@@ -8,7 +8,6 @@ Leaf Package Manager
 '''
 
 from abc import abstractmethod
-from leaf.constants import LeafConstants
 import os
 from pathlib import Path
 from leaf.cli import LeafCli, LeafCommand
@@ -27,6 +26,7 @@ class ProfileCli (LeafCli):
                          InitSubCommand(),
                          CreateSubCommand(),
                          UpdateSubCommand(),
+                         RenameSubCommand(),
                          DeleteSubCommand(),
                          SwitchSubCommand(),
                          EnvSubCommand())
@@ -37,10 +37,11 @@ class ProfileCli (LeafCli):
 
 
 class AbstractSubCommand(LeafCommand):
-    def __init__(self, commandName, commandDescription, autoFindWorkspace=True):
+    def __init__(self, commandName, commandDescription, autoFindWorkspace=True, commandAlias=None):
         LeafCommand.__init__(self,
                              commandName,
-                             commandDescription)
+                             commandDescription,
+                             commandAlias=commandAlias)
         self.autoFindWorkspace = autoFindWorkspace
 
     def initArgs(self, subparser):
@@ -101,15 +102,13 @@ class InitSubCommand(AbstractSubCommand):
             raise ValueError("File %s already exist" % str(ws.configFile))
         if ws.dataFolder.exists():
             raise ValueError("Folder %s already exist" % str(ws.dataFolder))
-        ws.createProfile(LeafConstants.DEFAULT_PROFILE,
-                         initConfigFile=True)
-        ws.switchProfile(LeafConstants.DEFAULT_PROFILE)
+        ws.readConfiguration(initIfNeeded=True)
         logger.printDefault("Workspace initialized", ws.rootFolder)
         if args.packages is not None or args.envvars is not None:
-            ws.updateProfile(LeafConstants.DEFAULT_PROFILE,
-                             args.packages,
-                             envListToMap(args.envvars))
-            ws.switchProfile(LeafConstants.DEFAULT_PROFILE)
+            pf = ws.createProfile(motifList=args.packages,
+                                  envMap=envListToMap(args.envvars))
+            logger.printDefault("Profile created %s" % pf.name)
+            ws.switchProfile(pf.name)
 
 
 class CreateSubCommand(AbstractSubCommand):
@@ -120,15 +119,15 @@ class CreateSubCommand(AbstractSubCommand):
 
     def internalInitArgs(self, subparser):
         AbstractSubCommand.initCommonArgs(subparser,
-                                          profileNargs=1,
+                                          profileNargs='?',
                                           withPackages=True,
                                           withEnvvars=True)
 
     def internalExecute2(self, ws, app, logger, args):
-        pf = ws.createProfile(args.profiles[0],
+        pf = ws.createProfile(args.profiles,
                               args.packages,
                               envListToMap(args.envvars))
-        logger.printDefault("Profile created")
+        logger.printDefault("Profile created %s" % pf.name)
         logger.displayItem(pf)
 
 
@@ -145,18 +144,39 @@ class UpdateSubCommand(AbstractSubCommand):
                                           withEnvvars=True)
 
     def internalExecute2(self, ws, app, logger, args):
-        pf = ws.updateProfile(args.profiles,
-                              args.packages,
-                              envListToMap(args.envvars))
+        pf = ws.updateProfile(name=args.profiles,
+                              motifList=args.packages,
+                              envMap=envListToMap(args.envvars))
         logger.printDefault("Profile updated")
         logger.displayItem(pf)
+
+
+class RenameSubCommand(AbstractSubCommand):
+    def __init__(self):
+        AbstractSubCommand.__init__(self,
+                                    "rename",
+                                    "rename a profile",
+                                    commandAlias='mv')
+
+    def internalInitArgs(self, subparser):
+        AbstractSubCommand.initCommonArgs(subparser,
+                                          profileNargs=2,
+                                          withPackages=False,
+                                          withEnvvars=False)
+
+    def internalExecute2(self, ws, app, logger, args):
+        pf = ws.updateProfile(name=args.profiles[0],
+                              newName=args.profiles[1])
+        logger.printDefault("Profile %s renamed to %s" %
+                            (args.profiles[0], pf.name))
 
 
 class DeleteSubCommand(AbstractSubCommand):
     def __init__(self):
         AbstractSubCommand.__init__(self,
                                     "delete",
-                                    "delete a profile")
+                                    "delete a profile",
+                                    commandAlias="rm")
 
     def internalInitArgs(self, subparser):
         AbstractSubCommand.initCommonArgs(subparser,
@@ -174,7 +194,8 @@ class ListSubCommand(AbstractSubCommand):
     def __init__(self):
         AbstractSubCommand.__init__(self,
                                     "list",
-                                    "list profiles")
+                                    "list profiles",
+                                    commandAlias="ls")
 
     def internalInitArgs(self, subparser):
         pass

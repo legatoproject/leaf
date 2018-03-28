@@ -2,7 +2,7 @@
 @author: seb
 '''
 
-from leaf.constants import LeafFiles, LeafConstants
+from leaf.constants import LeafFiles
 import os
 import shutil
 import unittest
@@ -28,17 +28,20 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
             self.assertTrue(item.name in content, "Unexpected link %s" % item)
         self.assertEqual(symlinkCount, len(content))
 
-    def testInit(self):
+    def testInitWithoutProfile(self):
         self.leafProfileExec("init")
+        self.leafProfileExec("list")
+        self.leafProfileExec("env", expectedRc=2)
+
+    def testInitWithProfile(self):
+        self.leafProfileExec("init", "-p", "container-A_1.0")
         self.leafProfileExec("list")
         self.leafProfileExec("env")
 
     def testWorkspaceNotInit(self):
         self.leafProfileExec("list", expectedRc=2)
-        self.leafProfileExec("env", expectedRc=2)
         self.leafProfileExec("init")
         self.leafProfileExec("list")
-        self.leafProfileExec("env")
 
     def testInitWithEnv(self):
         self.leafProfileExec("init",
@@ -57,7 +60,7 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
                              "-p", "deb_1.0")
         self.leafProfileExec("list")
         self.leafProfileExec("env")
-        self.checkProfileContent("default",
+        self.checkProfileContent("CONTAINER-A_DEB",
                                  "container-A",
                                  "container-B",
                                  "container-C",
@@ -103,6 +106,9 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
     def testReservedName(self):
         self.leafProfileExec("init")
         self.leafProfileExec("create", "current", expectedRc=2)
+        self.leafProfileExec("create", "", expectedRc=2)
+        self.leafProfileExec("create", "foo")
+        self.leafProfileExec("create", "foo", expectedRc=2)
 
     def testAutoFindWorkspace(self):
         profileConfigFile = self.getWorkspaceFolder() / LeafFiles.PROFILES_FILENAME
@@ -133,7 +139,7 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
         self.leafPackageManagerExec("refresh")
         self.leafProfileExec("init", "-p", "container-A")
         self.leafProfileExec("list")
-        self.checkProfileContent("default",
+        self.checkProfileContent("CONTAINER-A",
                                  "container-A",
                                  "container-C",
                                  "container-D")
@@ -143,7 +149,7 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
         self.leafProfileExec("init", "-p", "container-A")
         self.leafProfileExec("list")
         self.leafProfileExec("env")
-        self.checkProfileContent("default",
+        self.checkProfileContent("CONTAINER-A",
                                  "container-A",
                                  "container-C",
                                  "container-D")
@@ -154,13 +160,30 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
 
         self.leafProfileExec("list")
         self.leafProfileExec("env", expectedRc=2)
-        self.leafProfileExec("sync", "default")
+        self.leafProfileExec("sync", "CONTAINER-A")
         self.leafProfileExec("list")
         self.leafProfileExec("env")
-        self.checkProfileContent("default",
+        self.checkProfileContent("CONTAINER-A",
                                  "container-A",
                                  "container-C",
                                  "container-D")
+
+    def testRenameProfile(self):
+        self.leafPackageManagerExec("refresh")
+        self.leafProfileExec("init", "-p", "container-A")
+        self.leafProfileExec("list")
+        self.leafProfileExec("env")
+
+        self.leafProfileExec("rename", "CONTAINER-A", "foo")
+        self.leafProfileExec("list")
+        self.leafProfileExec("env")
+        self.leafProfileExec("env", "foo")
+        self.leafProfileExec("env", "default", expectedRc=2)
+
+        self.leafProfileExec("rename", "foo", "foo")
+        self.leafProfileExec("list")
+        self.leafProfileExec("env")
+        self.leafProfileExec("env", "foo")
 
 
 @unittest.skipUnless("VERBOSE" in LEAF_UT_LEVELS, "Test disabled")
