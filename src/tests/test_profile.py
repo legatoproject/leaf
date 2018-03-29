@@ -30,7 +30,7 @@ class TestProfile(AbstractTestWithRepo):
         self.ws = Workspace(self.getWorkspaceFolder(), self.app)
 
     def checkProfileContent(self, profileName, *content):
-        pfFolder = self.getWorkspaceFolder() / LeafFiles.PROFILES_FOLDERNAME / profileName
+        pfFolder = self.getWorkspaceFolder() / LeafFiles.WS_DATA_FOLDERNAME / profileName
         self.assertTrue(pfFolder.exists())
         symlinkCount = 0
         for item in pfFolder.iterdir():

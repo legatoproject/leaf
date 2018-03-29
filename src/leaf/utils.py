@@ -230,7 +230,7 @@ def jsonLoad(fp):
 
 
 def isWorkspaceRoot(folder):
-    return (folder / LeafFiles.PROFILES_FILENAME).exists()
+    return (folder / LeafFiles.WS_CONFIG_FILENAME).exists()
 
 
 def findWorkspaceRoot():

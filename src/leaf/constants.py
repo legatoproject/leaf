@@ -38,8 +38,8 @@ class LeafFiles():
     '''
     Files & Folders used by Leaf
     '''
-    PROFILES_FILENAME = "leaf-profiles.json"
-    PROFILES_FOLDERNAME = "leaf-data"
+    WS_CONFIG_FILENAME = "leaf-workspace.json"
+    WS_DATA_FOLDERNAME = "leaf-data"
     CURRENT_PROFILE = "current"
     USER_HOME = Path(os.path.expanduser("~"))
     DEFAULT_LEAF_ROOT = USER_HOME / 'leaf'

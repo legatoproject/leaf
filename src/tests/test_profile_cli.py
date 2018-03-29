@@ -19,7 +19,7 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
         LeafProfileCliWrapper.__init__(self, methodName)
 
     def checkProfileContent(self, profileName, *content):
-        pfFolder = self.getWorkspaceFolder() / LeafFiles.PROFILES_FOLDERNAME / profileName
+        pfFolder = self.getWorkspaceFolder() / LeafFiles.WS_DATA_FOLDERNAME / profileName
         self.assertTrue(pfFolder.exists())
         symlinkCount = 0
         for item in pfFolder.iterdir():
@@ -111,7 +111,7 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
         self.leafProfileExec("create", "foo", expectedRc=2)
 
     def testAutoFindWorkspace(self):
-        profileConfigFile = self.getWorkspaceFolder() / LeafFiles.PROFILES_FILENAME
+        profileConfigFile = self.getWorkspaceFolder() / LeafFiles.WS_CONFIG_FILENAME
         self.assertFalse(profileConfigFile.exists())
 
         self.leafProfileExec("init")
@@ -153,7 +153,7 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
                                  "container-A",
                                  "container-C",
                                  "container-D")
-        dataFolder = self.getWorkspaceFolder() / LeafFiles.PROFILES_FOLDERNAME
+        dataFolder = self.getWorkspaceFolder() / LeafFiles.WS_DATA_FOLDERNAME
         self.assertTrue(dataFolder.exists())
         shutil.rmtree(str(dataFolder))
         self.assertFalse(dataFolder.exists())

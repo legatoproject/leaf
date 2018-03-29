@@ -619,8 +619,8 @@ class Workspace():
 
     def __init__(self, rootFolder, app):
         self.rootFolder = rootFolder
-        self.configFile = rootFolder / LeafFiles.PROFILES_FILENAME
-        self.dataFolder = rootFolder / LeafFiles.PROFILES_FOLDERNAME
+        self.configFile = rootFolder / LeafFiles.WS_CONFIG_FILENAME
+        self.dataFolder = rootFolder / LeafFiles.WS_DATA_FOLDERNAME
         self.currentLink = self.dataFolder / LeafFiles.CURRENT_PROFILE
         self.app = app
 
@@ -646,7 +646,7 @@ class Workspace():
         wsc.jsoninit(key=JsonConstants.WS_LEAFMINVERSION,
                      value=__version__,
                      force=True)
-        tmpFile = self.dataFolder / ("tmp-" + LeafFiles.PROFILES_FILENAME)
+        tmpFile = self.dataFolder / ("tmp-" + LeafFiles.WS_CONFIG_FILENAME)
         jsonWriteFile(tmpFile, wsc.json, pp=True)
         tmpFile.rename(self.configFile)
 
