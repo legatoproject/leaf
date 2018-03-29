@@ -24,6 +24,7 @@ class ProfileCli (LeafCli):
         LeafCli.__init__(self,
                          ListSubCommand(),
                          InitSubCommand(),
+                         WorkspaceSubCommand(),
                          CreateSubCommand(),
                          UpdateSubCommand(),
                          RenameSubCommand(),
@@ -239,5 +240,29 @@ class SwitchSubCommand(AbstractSubCommand):
 
     def internalExecute2(self, ws, app, logger, args):
         pf = ws.switchProfile(args.profiles)
-        logger.printQuiet("Switched to profile", pf.name)
+        logger.printQuiet("Current profile is now %s" % pf.name)
         logger.printVerbose(pf.folder)
+
+
+class WorkspaceSubCommand(AbstractSubCommand):
+    def __init__(self):
+        AbstractSubCommand.__init__(self,
+                                    "workspace",
+                                    "configure the workspace",
+                                    commandAlias="ws")
+
+    def internalInitArgs(self, subparser):
+        AbstractSubCommand.initCommonArgs(subparser,
+                                          profileNargs=None,
+                                          withPackages=False,
+                                          withEnvvars=True)
+        subparser.add_argument('--remote',
+                               dest='remotes',
+                               action='append',
+                               metavar='URL',
+                               help='add given remote url')
+
+    def internalExecute2(self, ws, app, logger, args):
+        ws.updateWorkspace(remotes=args.remotes,
+                           envMap=envListToMap(args.envvars))
+        logger.printQuiet("Workspace updated")

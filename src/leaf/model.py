@@ -250,6 +250,10 @@ class WorkspaceConfiguration(JsonObject):
         return self.jsoninit(key=JsonConstants.WS_ENV,
                              value=OrderedDict())
 
+    def getWsRemotes(self):
+        return self.jsoninit(key=JsonConstants.WS_REMOTES,
+                             value=[])
+
     def getWsProfiles(self):
         return self.jsoninit(key=JsonConstants.WS_PROFILES,
                              value=OrderedDict())

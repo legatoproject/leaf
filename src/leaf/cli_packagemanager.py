@@ -9,12 +9,13 @@ Leaf Package Manager
 
 import argparse
 import json
-from leaf.cli import LeafCli, LeafCommand
 from leaf.cli_releng import PackCommand, IndexCommand
 from leaf.constants import LeafFiles
 from leaf.ui import filterPackageList
 import os
 import shutil
+
+from leaf.cli import LeafCli, LeafCommand
 
 
 def main():
@@ -64,7 +65,7 @@ class ConfigCommand(LeafCommand):
         if args.config_env is not None:
             app.updateConfiguration(env=args.config_env)
         logger.printDefault("Configuration file:", app.configurationFile)
-        logger.printDefault(json.dumps(app.readConfiguration(),
+        logger.printDefault(json.dumps(app.readConfiguration().json,
                                        sort_keys=True,
                                        indent=2,
                                        separators=(',', ': ')))

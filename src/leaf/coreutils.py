@@ -162,9 +162,7 @@ class StepExecutor():
             v = self.resolve(v)
             env[k] = v
         if self.extraEnv is not None:
-            for k, v in self.extraEnv.items():
-                v = self.resolve(v)
-                env[k] = v
+            env.update(self.extraEnv)
         env["LEAF_VERSION"] = str(__version__)
         stdout = subprocess.DEVNULL
         if self.logger.isVerbose() or step.get(JsonConstants.STEP_EXEC_VERBOSE,

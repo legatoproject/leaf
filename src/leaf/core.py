@@ -11,21 +11,20 @@ from builtins import filter
 from collections import OrderedDict
 from datetime import datetime
 import json
+from leaf import __version__
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles
+from leaf.coreutils import DependencyManager, StepExecutor
+from leaf.model import Manifest, InstalledPackage, AvailablePackage, LeafArtifact,\
+    PackageIdentifier, RemoteRepository, Profile,\
+    WorkspaceConfiguration, JsonObject
+from leaf.utils import resolveUrl, getCachedArtifactName, isFolderIgnored,\
+    markFolderAsIgnored, openOutputTarFile, computeSha1sum, downloadFile,\
+    AptHelper, jsonLoadFile, checkSupportedLeaf, jsonWriteFile
 import os
 from pathlib import Path
 import shutil
 from tarfile import TarFile
 import urllib.request
-
-from leaf import __version__
-from leaf.coreutils import DependencyManager, StepExecutor
-from leaf.model import Manifest, InstalledPackage, AvailablePackage, LeafArtifact,\
-    PackageIdentifier, RemoteRepository, Profile,\
-    WorkspaceConfiguration
-from leaf.utils import resolveUrl, getCachedArtifactName, isFolderIgnored,\
-    markFolderAsIgnored, openOutputTarFile, computeSha1sum, downloadFile,\
-    AptHelper, jsonLoadFile, checkSupportedLeaf, jsonWriteFile
 
 
 class LeafRepository():
@@ -105,10 +104,11 @@ class LeafApp(LeafRepository):
         Read the configuration if it exists, else return the the default configuration
         '''
         if self.configurationFile.exists():
-            return jsonLoadFile(self.configurationFile)
+            return JsonObject(jsonLoadFile(self.configurationFile))
         # Default configuration here
-        out = dict()
-        out[JsonConstants.CONFIG_ROOT] = str(LeafFiles.DEFAULT_LEAF_ROOT)
+        out = JsonObject(OrderedDict())
+        out.jsoninit(key=JsonConstants.CONFIG_ROOT,
+                     value=str(LeafFiles.DEFAULT_LEAF_ROOT))
         self.writeConfiguration(out)
         return out
 
@@ -116,15 +116,14 @@ class LeafApp(LeafRepository):
         '''
         Write the given configuration
         '''
-        jsonWriteFile(self.configurationFile, config, pp=True)
+        jsonWriteFile(self.configurationFile, config.json, pp=True)
 
     def getInstallFolder(self):
         out = LeafFiles.DEFAULT_LEAF_ROOT
         config = self.readConfiguration()
-        if config is not None:
-            root = config.get(JsonConstants.CONFIG_ROOT)
-            if root is not None:
-                out = Path(root)
+        root = config.jsonpath(JsonConstants.CONFIG_ROOT)
+        if root is not None:
+            out = Path(root)
         os.makedirs(str(out), exist_ok=True)
         return out
 
@@ -134,33 +133,33 @@ class LeafApp(LeafRepository):
         '''
         config = self.readConfiguration()
         if rootFolder is not None:
-            config[JsonConstants.CONFIG_ROOT] = str(rootFolder)
+            config.jsoninit(key=JsonConstants.CONFIG_ROOT,
+                            value=str(rootFolder),
+                            force=True)
         if env is not None:
+            configEnv = config.jsoninit(key=JsonConstants.CONFIG_ENV,
+                                        value=OrderedDict())
             for line in env:
                 k, v = line.split('=', 1)
-                if JsonConstants.CONFIG_ENV not in config:
-                    config[JsonConstants.CONFIG_ENV] = OrderedDict()
-                config[JsonConstants.CONFIG_ENV][k.strip()] = v.strip()
+                configEnv[k.strip()] = v.strip()
         self.writeConfiguration(config)
 
     def getUserEnvVariables(self):
         '''
         Returns the user custom env variables
         '''
-        config = self.readConfiguration()
-        return config.get(JsonConstants.CONFIG_ENV, {})
+        return self.readConfiguration().jsonpath(JsonConstants.CONFIG_ENV,
+                                                 default={})
 
     def remoteAdd(self, url):
         '''
         Add url to configuration file
         '''
         config = self.readConfiguration()
-        remotes = config.get(JsonConstants.CONFIG_REMOTES)
-        if remotes is None:
-            remotes = []
-            config[JsonConstants.CONFIG_REMOTES] = remotes
-        if url not in remotes:
-            remotes.append(url)
+        remoteList = config.jsoninit(key=JsonConstants.CONFIG_REMOTES,
+                                     value=[])
+        if url not in remoteList:
+            remoteList.append(url)
             self.writeConfiguration(config)
             if self.cacheFile.exists():
                 os.remove(str(self.cacheFile))
@@ -170,21 +169,22 @@ class LeafApp(LeafRepository):
         Remote given url from configuration
         '''
         config = self.readConfiguration()
-        remotes = config.get(JsonConstants.CONFIG_REMOTES)
-        if remotes is not None:
-            if url in remotes:
-                remotes.remove(url)
-                self.writeConfiguration(config)
-                if self.cacheFile.exists():
-                    os.remove(str(self.cacheFile))
+        remoteList = config.jsoninit(key=JsonConstants.CONFIG_REMOTES,
+                                     value=[])
+        if url in remoteList:
+            remoteList.remove(url)
+            self.writeConfiguration(config)
+            if self.cacheFile.exists():
+                os.remove(str(self.cacheFile))
 
     def getRemoteUrls(self):
         '''
         List all remotes from configuration
         '''
-        return self.readConfiguration().get(JsonConstants.CONFIG_REMOTES, [])
+        return self.readConfiguration().jsonpath(JsonConstants.CONFIG_REMOTES,
+                                                 default=[])
 
-    def getRemoteRepositories(self, smartRefresh=True):
+    def getRemoteRepositories(self, smartRefresh=True, onlyMaster=False):
         '''
         List all remotes from configuration
         '''
@@ -200,8 +200,13 @@ class LeafApp(LeafRepository):
         cache = jsonLoadFile(self.cacheFile)
         out = []
         masterUrls = self.getRemoteUrls()
-        for url, data in cache.items():
-            out.append(RemoteRepository(url, url in masterUrls, data))
+        for url in masterUrls:
+            rr = RemoteRepository(url, True, cache.get(url))
+            out.append(rr)
+        if not onlyMaster:
+            for url, data in cache.items():
+                if url not in masterUrls:
+                    out.append(RemoteRepository(url, url in masterUrls, data))
         return out
 
     def resolveLatest(self, motifList, ipMap=None, apMap=None):
@@ -246,10 +251,11 @@ class LeafApp(LeafRepository):
         '''
         out = OrderedDict()
         for rr in self.getRemoteRepositories(smartRefresh=smartRefresh):
-            for jsonPayload in rr.jsonpath(JsonConstants.REMOTE_PACKAGES, default=[]):
-                ap = AvailablePackage(jsonPayload, rr.url)
-                if ap.getIdentifier() not in out:
-                    out[ap.getIdentifier()] = ap
+            if rr.isFetched():
+                for jsonPayload in rr.jsonpath(JsonConstants.REMOTE_PACKAGES, default=[]):
+                    ap = AvailablePackage(jsonPayload, rr.url)
+                    if ap.getIdentifier() not in out:
+                        out[ap.getIdentifier()] = ap
         return out
 
     def recursiveFetchUrl(self, remoteurl, content):
@@ -622,12 +628,14 @@ class Workspace():
         '''
         Return the configuration and if current leaf version is supported
         '''
-
         if not self.configFile.exists() and initIfNeeded:
             self.writeConfiguration(WorkspaceConfiguration(OrderedDict()))
         wsc = WorkspaceConfiguration(jsonLoadFile(self.configFile))
         checkSupportedLeaf(wsc.jsonpath(JsonConstants.INFO_LEAF_MINVER),
                            exceptionMessage="Leaf has to be updated to work with this workspace")
+        # Configure app with ws configuration
+        for url in wsc.getWsRemotes():
+            self.app.remoteAdd(url)
         return wsc
 
     def writeConfiguration(self, wsc):
@@ -641,6 +649,16 @@ class Workspace():
         tmpFile = self.dataFolder / ("tmp-" + LeafFiles.PROFILES_FILENAME)
         jsonWriteFile(tmpFile, wsc.json, pp=True)
         tmpFile.rename(self.configFile)
+
+    def updateWorkspace(self, remotes=None, envMap=None):
+        wsc = self.readConfiguration()
+        if remotes is not None:
+            for remote in remotes:
+                if remote not in wsc.getWsRemotes():
+                    wsc.getWsRemotes().append(remote)
+        if envMap is not None:
+            wsc.getWsEnv().update(envMap)
+        self.writeConfiguration(wsc)
 
     def getAllProfiles(self, wsc=None):
         if wsc is None:
@@ -782,7 +800,7 @@ class Workspace():
         # Provision profile
         self.provisionProfile(pf)
         # Update symlink
-        self.updateCurrentLink(name)
+        self.updateCurrentLink(pf.name)
         return pf
 
     def updateCurrentLink(self, name):
@@ -815,10 +833,13 @@ class Workspace():
                 piFolder.symlink_to(ip.folder)
 
     def getProfileEnv(self, name=None):
+        wsc = self.readConfiguration()
         pf = self.retrieveProfile(name)
         self.checkProfile(pf)
         out = []
+        out.append(("LEAF_WORKSPACE", str(self.rootFolder)))
         out.append(("LEAF_PROFILE", pf.name))
         out.extend(self.app.getEnv(pf.getPackages()))
+        out.extend(wsc.getWsEnv().items())
         out.extend(pf.getEnv().items())
         return out

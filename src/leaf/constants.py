@@ -20,7 +20,7 @@ class LeafConstants():
     MIN_PYTHON_VERSION = (3, 4)
     MANIFEST = 'manifest.json'
     VAR_PREFIX = '@'
-    DOWNLOAD_TIMEOUT = 5
+    DOWNLOAD_TIMEOUT = int(os.environ.get("LEAF_TIMEOUT", "10"))
     LEAF_COMPRESSION = {'.leaf': 'xz',
                         '.tar':  '',
                         '.xz':   'xz',
@@ -111,5 +111,6 @@ class JsonConstants(object):
     WS_PROFILES = "profiles"
     WS_LEAFMINVERSION = "leafMinVersion"
     WS_ENV = "env"
+    WS_REMOTES = "remotes"
     WS_PROFILE_PACKAGES = "packages"
     WS_PROFILE_ENV = "env"
