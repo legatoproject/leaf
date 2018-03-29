@@ -650,7 +650,7 @@ class Workspace():
         jsonWriteFile(tmpFile, wsc.json, pp=True)
         tmpFile.rename(self.configFile)
 
-    def updateWorkspace(self, remotes=None, envMap=None):
+    def updateWorkspace(self, remotes=None, envMap=None, modules=None):
         wsc = self.readConfiguration()
         if remotes is not None:
             for remote in remotes:
@@ -658,6 +658,8 @@ class Workspace():
                     wsc.getWsRemotes().append(remote)
         if envMap is not None:
             wsc.getWsEnv().update(envMap)
+        if modules is not None:
+            wsc.getWsSupportedModules().extend(modules)
         self.writeConfiguration(wsc)
 
     def getAllProfiles(self, wsc=None):
@@ -795,6 +797,15 @@ class Workspace():
         return pf
 
     def switchProfile(self, name):
+        # if no name and no current, use 1st profile
+        if name is None:
+            try:
+                self.getCurrentProfileName()
+            except:
+                pfMap = self.getAllProfiles()
+                if len(pfMap) == 0:
+                    raise ValueError("There is no profile defined")
+                name = next(iter(pfMap))
         # Retrieve profile
         pf = self.retrieveProfile(name)
         # Provision profile

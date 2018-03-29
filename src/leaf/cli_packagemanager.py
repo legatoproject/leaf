@@ -9,13 +9,15 @@ Leaf Package Manager
 
 import argparse
 import json
+from leaf.cli import LeafCli, LeafCommand
 from leaf.cli_releng import PackCommand, IndexCommand
 from leaf.constants import LeafFiles
-from leaf.ui import filterPackageList
+from leaf.model import Manifest
 import os
 import shutil
 
-from leaf.cli import LeafCli, LeafCommand
+from leaf.filtering import AndPackageFilter, SupportedOsPackageFilter,\
+    MasterPackageFilter, ModulePackageFilter, KeywordPackageFilter
 
 
 def main():
@@ -162,13 +164,27 @@ class ListCommand(LeafCommand):
                                nargs=argparse.ZERO_OR_MORE)
 
     def internalExecute(self, app, logger, args):
-        ipMap = app.listInstalledPackages()
-        filteredIpList = filterPackageList(ipMap.values(),
-                                           keywords=args.keywords,
-                                           modules=args.modules)
-        for pack in filteredIpList:
-            if args.allPackages or pack.isMaster():
-                logger.displayItem(pack)
+        pkgFilter = AndPackageFilter()
+        if not args.allPackages:
+            pkgFilter.addFilter(SupportedOsPackageFilter())
+            pkgFilter.addFilter(MasterPackageFilter())
+            pass
+
+        if args.modules is not None:
+            logger.printDefault("Filter by modules:",
+                                ", ".join(args.modules))
+            pkgFilter.addFilter(ModulePackageFilter(args.modules))
+
+        if args.keywords is not None and len(args.keywords) > 0:
+            logger.printDefault("Filter by keywords:",
+                                ", ".join(args.keywords))
+            pkgFilter.addFilter(KeywordPackageFilter(args.keywords))
+
+        # Print filtered packages
+        for mf in sorted(app.listInstalledPackages().values(),
+                         key=Manifest.getIdentifier):
+            if pkgFilter.matches(mf):
+                logger.displayItem(mf)
 
 
 class SearchCommand(LeafCommand):
@@ -192,13 +208,27 @@ class SearchCommand(LeafCommand):
                                nargs=argparse.ZERO_OR_MORE)
 
     def internalExecute(self, app, logger, args):
-        apMap = app.listAvailablePackages()
-        filteredApList = filterPackageList(apMap.values(),
-                                           keywords=args.keywords,
-                                           modules=args.modules)
-        for pack in filteredApList:
-            if args.allPackages or (pack.isMaster() and pack.isSupportedOs()):
-                logger.displayItem(pack)
+        pkgFilter = AndPackageFilter()
+        if not args.allPackages:
+            pkgFilter.addFilter(SupportedOsPackageFilter())
+            pkgFilter.addFilter(MasterPackageFilter())
+            pass
+
+        if args.modules is not None:
+            logger.printDefault("Filter by modules:",
+                                ", ".join(args.modules))
+            pkgFilter.addFilter(ModulePackageFilter(args.modules))
+
+        if args.keywords is not None and len(args.keywords) > 0:
+            logger.printDefault("Filter by keywords:",
+                                ", ".join(args.keywords))
+            pkgFilter.addFilter(KeywordPackageFilter(args.keywords))
+
+        # Print filtered packages
+        for mf in sorted(app.listAvailablePackages().values(),
+                         key=Manifest.getIdentifier):
+            if pkgFilter.matches(mf):
+                logger.displayItem(mf)
 
 
 class DependsCommand(LeafCommand):

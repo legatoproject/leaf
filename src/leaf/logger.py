@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 import json
 from leaf.constants import JsonConstants, LeafConstants
+from leaf.core import Workspace
 from leaf.model import AvailablePackage, InstalledPackage, Manifest,\
     RemoteRepository, LeafArtifact, Profile
 import os
@@ -117,8 +118,28 @@ class TextLogger (ILogger):
             self.printDefault(message)
 
     def displayItem(self, item):
-        if isinstance(item, Profile):
-            print(item.name, "[current]" if item.isCurrentProfile else "")
+        if isinstance(item, Workspace):
+            print("Workspace %s" % item.rootFolder)
+            if self.isVerbose():
+                wsc = item.readConfiguration()
+                content = OrderedDict()
+                content["Workspace env"] = wsc.getWsEnv()
+                content["Remotes"] = wsc.getWsRemotes()
+                content["Modules"] = wsc.getWsSupportedModules()
+                self.prettyprintContent(content)
+
+            for pf in item.getAllProfiles().values():
+                print("-",
+                      pf.name,
+                      "[current]" if pf.isCurrentProfile else "")
+                if self.isVerbose():
+                    content = OrderedDict()
+                    content["Packages"] = pf.getPackages()
+                    content["Env"] = pf.getEnv()
+                    self.prettyprintContent(content)
+        elif isinstance(item, Profile):
+            print(item.name,
+                  "[current]" if item.isCurrentProfile else "")
             if self.isVerbose():
                 content = OrderedDict()
                 content["Packages"] = item.getPackages()
@@ -265,7 +286,15 @@ class JsonLogger(ILogger):
         itemType = None
         json = None
         extraMap = {}
-        if isinstance(item, Profile):
+        if isinstance(item, Workspace):
+            itemType = "workspace"
+            json = item.readConfiguration().json
+            extraMap['folder'] = item.rootFolder
+            try:
+                extraMap['currentProfile'] = item.getCurrentProfileName()
+            except:
+                pass
+        elif isinstance(item, Profile):
             itemType = "profile"
             json = item.json
             extraMap['name'] = item.name

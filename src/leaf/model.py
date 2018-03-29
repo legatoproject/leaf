@@ -11,12 +11,11 @@ from collections import OrderedDict
 from functools import total_ordering
 import io
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles
+from leaf.utils import resolveUrl, jsonLoad, jsonLoadFile, checkSupportedLeaf,\
+    versionComparator_lt, stringToTuple
 from pathlib import Path
 import re
 from tarfile import TarFile
-
-from leaf.utils import resolveUrl, jsonLoad, jsonLoadFile, checkSupportedLeaf,\
-    versionComparator_lt, stringToTuple
 
 
 @total_ordering
@@ -257,6 +256,10 @@ class WorkspaceConfiguration(JsonObject):
     def getWsProfiles(self):
         return self.jsoninit(key=JsonConstants.WS_PROFILES,
                              value=OrderedDict())
+
+    def getWsSupportedModules(self):
+        return self.jsoninit(key=JsonConstants.WS_MODULES,
+                             value=[])
 
 
 class Profile(JsonObject):

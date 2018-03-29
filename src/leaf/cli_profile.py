@@ -8,11 +8,17 @@ Leaf Package Manager
 '''
 
 from abc import abstractmethod
-import os
-from pathlib import Path
+import argparse
 from leaf.cli import LeafCli, LeafCommand
 from leaf.core import Workspace
+from leaf.model import PackageIdentifier, Manifest
 from leaf.utils import envListToMap, findWorkspaceRoot
+import os
+from pathlib import Path
+
+from leaf.filtering import AndPackageFilter, SupportedOsPackageFilter,\
+    MasterPackageFilter, PkgNamePackageFilter, ModulePackageFilter,\
+    KeywordPackageFilter
 
 
 def main():
@@ -30,6 +36,7 @@ class ProfileCli (LeafCli):
                          RenameSubCommand(),
                          DeleteSubCommand(),
                          SwitchSubCommand(),
+                         SearchSubCommand(),
                          EnvSubCommand())
         self.parser.add_argument("-w", "--workspace",
                                  dest="workspace",
@@ -123,13 +130,19 @@ class CreateSubCommand(AbstractSubCommand):
                                           profileNargs='?',
                                           withPackages=True,
                                           withEnvvars=True)
+        subparser.add_argument("--nosync",
+                               dest="noAutoSync",
+                               action="store_true",
+                               help="do not auto sync new profile")
 
     def internalExecute2(self, ws, app, logger, args):
         pf = ws.createProfile(args.profiles,
                               args.packages,
                               envListToMap(args.envvars))
-        logger.printDefault("Profile created %s" % pf.name)
-        logger.displayItem(pf)
+        logger.printDefault("Profile %s created" % pf.name)
+        if not args.noAutoSync:
+            ws.switchProfile(pf.name)
+            logger.printQuiet("Current profile is now %s" % pf.name)
 
 
 class UpdateSubCommand(AbstractSubCommand):
@@ -143,13 +156,19 @@ class UpdateSubCommand(AbstractSubCommand):
                                           profileNargs='?',
                                           withPackages=True,
                                           withEnvvars=True)
+        subparser.add_argument("--nosync",
+                               dest="noAutoSync",
+                               action="store_true",
+                               help="do not auto sync the modified profile")
 
     def internalExecute2(self, ws, app, logger, args):
         pf = ws.updateProfile(name=args.profiles,
                               motifList=args.packages,
                               envMap=envListToMap(args.envvars))
-        logger.printDefault("Profile updated")
-        logger.displayItem(pf)
+        logger.printDefault("Profile %s updated" % pf.name)
+        if not args.noAutoSync:
+            ws.switchProfile(pf.name)
+            logger.printQuiet("Current profile is now %s" % pf.name)
 
 
 class RenameSubCommand(AbstractSubCommand):
@@ -202,10 +221,7 @@ class ListSubCommand(AbstractSubCommand):
         pass
 
     def internalExecute2(self, ws, app, logger, args):
-        pfMap = ws.getAllProfiles()
-        logger.printVerbose("List of profiles in", ws.rootFolder)
-        for pf in pfMap.values():
-            logger.displayItem(pf)
+        logger.displayItem(ws)
 
 
 class EnvSubCommand(AbstractSubCommand):
@@ -261,8 +277,62 @@ class WorkspaceSubCommand(AbstractSubCommand):
                                action='append',
                                metavar='URL',
                                help='add given remote url')
+        subparser.add_argument('--module',
+                               dest='modules',
+                               action='append',
+                               metavar='MODULE',
+                               help='add supported modules')
 
     def internalExecute2(self, ws, app, logger, args):
         ws.updateWorkspace(remotes=args.remotes,
-                           envMap=envListToMap(args.envvars))
+                           envMap=envListToMap(args.envvars),
+                           modules=args.modules)
         logger.printQuiet("Workspace updated")
+
+
+class SearchSubCommand(AbstractSubCommand):
+    def __init__(self):
+        AbstractSubCommand.__init__(self,
+                                    "search",
+                                    "search packages")
+
+    def internalInitArgs(self, subparser):
+        subparser.add_argument('-P', "--profile",
+                               dest='searchCurrentProfile',
+                               action='store_true',
+                               help='filter packages from current profile')
+        subparser.add_argument("-a", "--all",
+                               dest="allPackages",
+                               action="store_true",
+                               help="display all packages, not only master packages")
+        subparser.add_argument('keywords',
+                               nargs=argparse.ZERO_OR_MORE)
+
+    def internalExecute2(self, ws, app, logger, args):
+        pkgFilter = AndPackageFilter()
+        if not args.allPackages:
+            pkgFilter.addFilter(SupportedOsPackageFilter())
+            pkgFilter.addFilter(MasterPackageFilter())
+            pass
+        if args.searchCurrentProfile:
+            pf = ws.retrieveProfile()
+            logger.printDefault("Filter packages from profile %s" % pf.name)
+            pkgFilter.addFilter(PkgNamePackageFilter([PackageIdentifier.fromString(pis).name
+                                                      for pis in pf.getPackages()]))
+        else:
+            wsModules = ws.readConfiguration().getWsSupportedModules()
+            if len(wsModules) > 0:
+                logger.printDefault("Filter by modules:",
+                                    ", ".join(wsModules))
+                pkgFilter.addFilter(ModulePackageFilter(wsModules))
+
+        if args.keywords is not None and len(args.keywords) > 0:
+            logger.printDefault("Filter by keywords:",
+                                ", ".join(args.keywords))
+            pkgFilter.addFilter(KeywordPackageFilter(args.keywords))
+
+        # Print filtered packages
+        for mf in sorted(app.listAvailablePackages().values(),
+                         key=Manifest.getIdentifier):
+            if pkgFilter.matches(mf):
+                logger.displayItem(mf)

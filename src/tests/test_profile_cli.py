@@ -18,6 +18,14 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
     def __init__(self, methodName):
         LeafProfileCliWrapper.__init__(self, methodName)
 
+    def checkCurrentProfile(self, name):
+        lnk = self.getWorkspaceFolder() / LeafFiles.WS_DATA_FOLDERNAME / \
+            LeafFiles.CURRENT_PROFILE
+        if name is None:
+            self.assertFalse(lnk.exists())
+        else:
+            self.assertEqual(name, lnk.resolve().name)
+
     def checkProfileContent(self, profileName, *content):
         pfFolder = self.getWorkspaceFolder() / LeafFiles.WS_DATA_FOLDERNAME / profileName
         self.assertTrue(pfFolder.exists())
@@ -52,7 +60,6 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
         self.checkProfileContent("default")
 
     def testInitWithPackages(self):
-        self.leafPackageManagerExec("refresh")
         self.leafProfileExec("init",
                              "-e", "FOO=BAR",
                              "-e", "FOO2=BAR2",
@@ -68,14 +75,12 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
                                  "deb")
 
     def testCreate(self):
-        self.leafPackageManagerExec("refresh")
         self.leafProfileExec("init")
         self.leafProfileExec("create", "foo",
                              "-p", "container-A_1.0",
                              "-p", "deb_1.0",
                              "-e", "FOO=BAR",
                              "-e", "FOO2=BAR2")
-        self.leafProfileExec("sync", "foo")
         self.checkProfileContent("foo",
                                  "container-A",
                                  "container-B",
@@ -86,7 +91,6 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
         self.leafProfileExec("update", "foo",
                              "-p", "container-A",
                              "-e", "FOO3=BAR3")
-        self.leafProfileExec("sync")
         self.leafProfileExec("env", "foo")
         self.checkProfileContent("foo",
                                  "container-A",
@@ -136,7 +140,6 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
             os.chdir(oldPwd)
 
     def testWithoutVersion(self):
-        self.leafPackageManagerExec("refresh")
         self.leafProfileExec("init", "-p", "container-A")
         self.leafProfileExec("list")
         self.checkProfileContent("CONTAINER-A",
@@ -145,8 +148,10 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
                                  "container-D")
 
     def testBootstrapWorkspace(self):
-        self.leafPackageManagerExec("refresh")
         self.leafProfileExec("init", "-p", "container-A")
+        self.checkCurrentProfile("CONTAINER-A")
+        self.leafProfileExec("create", "-p", "deb")
+        self.checkCurrentProfile("DEB")
         self.leafProfileExec("list")
         self.leafProfileExec("env")
         self.checkProfileContent("CONTAINER-A",
@@ -160,7 +165,8 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
 
         self.leafProfileExec("list")
         self.leafProfileExec("env", expectedRc=2)
-        self.leafProfileExec("sync", "CONTAINER-A")
+        self.leafProfileExec("sync")
+        self.checkCurrentProfile("CONTAINER-A")
         self.leafProfileExec("list")
         self.leafProfileExec("env")
         self.checkProfileContent("CONTAINER-A",
@@ -168,8 +174,19 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
                                  "container-C",
                                  "container-D")
 
+    def testNoAutoSync(self):
+        self.leafProfileExec("init")
+        self.checkCurrentProfile(None)
+        self.leafProfileExec("create", "foo")
+        self.checkCurrentProfile("foo")
+        self.leafProfileExec("create", "--nosync", "bar")
+        self.checkCurrentProfile("foo")
+        self.leafProfileExec("update", "--nosync", "bar", "-p", "container-A")
+        self.checkCurrentProfile("foo")
+        self.leafProfileExec("update", "bar", "-e", "FOO=BAR")
+        self.checkCurrentProfile("bar")
+
     def testRenameProfile(self):
-        self.leafPackageManagerExec("refresh")
         self.leafProfileExec("init", "-p", "container-A")
         self.leafProfileExec("list")
         self.leafProfileExec("env")
@@ -184,6 +201,14 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
         self.leafProfileExec("list")
         self.leafProfileExec("env")
         self.leafProfileExec("env", "foo")
+
+    def testSearch(self):
+        self.leafPackageManagerExec("refresh")
+        self.leafProfileExec("init", "-p", "container-A")
+        self.leafProfileExec("search")
+        self.leafProfileExec("search", "container")
+        self.leafProfileExec("search", "-P")
+        self.leafProfileExec("search", "-P", "container")
 
 
 @unittest.skipUnless("VERBOSE" in LEAF_UT_LEVELS, "Test disabled")
