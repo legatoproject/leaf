@@ -1,1 +1,2 @@
 leafsh usr/bin/
+leafenvwrapper.sh usr/share/leaf/
