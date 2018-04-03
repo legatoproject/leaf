@@ -11,7 +11,7 @@ setup(name='leaf',
       ],
       entry_points={
           'console_scripts': [
-              'leafpm = leaf.cli_packagemanager:main',
+              'lpm = leaf.cli_packagemanager:main',
               'leaf = leaf.cli_profile:main'
           ]
       },
