@@ -294,22 +294,22 @@ class Profile(JsonObject):
         self.folder = folder
         self.isCurrentProfile = False
 
-    def getPackages(self):
-        return self.jsoninit(key=JsonConstants.WS_PROFILE_PACKAGES,
-                             value=[])
-
     def getEnv(self):
         return self.jsoninit(key=JsonConstants.WS_PROFILE_ENV,
                              value=OrderedDict())
 
-    def addPackage(self, newpi):
-        profilePiList = [PackageIdentifier.fromString(
-            pis)for pis in self.getPackages()]
-        profilePiList = [pi for pi in profilePiList if pi.name != newpi.name]
-        profilePiList.append(newpi)
-        self.json[JsonConstants.WS_PROFILE_PACKAGES] = [
-            str(pi) for pi in profilePiList]
+    def getPackages(self):
+        return self.jsoninit(key=JsonConstants.WS_PROFILE_PACKAGES,
+                             value=[])
 
-    def addPackages(self, piList):
-        for pi in piList:
-            self.addPackage(pi)
+    def getPiMap(self):
+        out = OrderedDict()
+        for pis in self.getPackages():
+            pi = PackageIdentifier.fromString(pis)
+            if pi.name not in out:
+                out[pi.name] = pi
+        return out
+
+    def setPiList(self, piList):
+        self.json[JsonConstants.WS_PROFILE_PACKAGES] = [str(pi)
+                                                        for pi in piList]

@@ -465,7 +465,7 @@ class LeafApp(LeafRepository):
 
         # Check nothing to do
         if len(piList) == 0:
-            self.logger.printDefault("All package are installed")
+            self.logger.printDefault("All packages are installed")
         else:
             self.logger.progressStart('Installation',
                                       total=len(piList) * 2)
@@ -761,13 +761,9 @@ class Workspace():
             raise ValueError("Profile %s already exists" % name)
 
         # Create & update profile
+        self.logger.printDefault("Create profile %s" % name)
         pf = Profile.emptyProfile(name, self.dataFolder / name)
-        if motifList is not None:
-            pf.addPackages(self.app.resolveLatest(motifList,
-                                                  ipMap=self.app.listInstalledPackages(),
-                                                  apMap=self.app.listAvailablePackages()))
-        if envMap is not None:
-            pf.getEnv().update(envMap)
+        self.internalUpdateProfile(pf, motifList, envMap)
 
         # Update & save configuration
         wsc.getWsProfiles()[name] = pf.json
@@ -785,13 +781,8 @@ class Workspace():
             if newName != pf.name and newName in wsc.getWsProfiles():
                 raise ValueError("Profile %s already exists" % newName)
 
-        # Update profile
-        if motifList is not None:
-            pf.addPackages(self.app.resolveLatest(motifList,
-                                                  ipMap=self.app.listInstalledPackages(),
-                                                  apMap=self.app.listAvailablePackages()))
-        if envMap is not None:
-            pf.getEnv().update(envMap)
+        # Update profile content
+        self.internalUpdateProfile(pf, motifList, envMap)
 
         # Update & save configuration
         if newName is not None and newName != pf.name:
@@ -813,6 +804,30 @@ class Workspace():
 
         self.writeConfiguration(wsc)
         return pf
+
+    def internalUpdateProfile(self, pf, motifList=None, envMap=None):
+        # Update profile
+        if motifList is not None:
+            piList = self.app.resolveLatest(motifList,
+                                            ipMap=self.app.listInstalledPackages(),
+                                            apMap=self.app.listAvailablePackages())
+            profilePiMap = pf.getPiMap()
+            for pi in piList:
+                if pi.name in profilePiMap:
+                    self.logger.printDefault("Update %s, version %s -> %s" % (
+                        pi.name,
+                        profilePiMap[pi.name].version,
+                        pi.version))
+                else:
+                    self.logger.printDefault("Add %s, version %s" % (
+                        pi.name,
+                        pi.version))
+                profilePiMap[pi.name] = pi
+            pf.setPiList(profilePiMap.values())
+
+        if envMap is not None and len(envMap) > 0:
+            self.logger.printDefault("Update environment")
+            pf.getEnv().update(envMap)
 
     def switchProfile(self, name):
         # if no name and no current, use 1st profile
