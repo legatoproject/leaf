@@ -18,17 +18,17 @@ import os
 import sys
 
 
-def createLogger(verbose, quiet):
+def createLogger(verbose, quiet, nonInteractive):
     '''
     Returns the correct ILogger
     '''
     if len(os.environ.get(LeafConstants.JSON_OUTPUT, "")) > 0:
         return JsonLogger()
     if verbose:
-        return TextLogger(TextLogger.LEVEL_VERBOSE)
+        return TextLogger(TextLogger.LEVEL_VERBOSE, nonInteractive)
     if quiet:
-        return TextLogger(TextLogger.LEVEL_QUIET)
-    return TextLogger(TextLogger.LEVEL_DEFAULT)
+        return TextLogger(TextLogger.LEVEL_QUIET, nonInteractive)
+    return TextLogger(TextLogger.LEVEL_DEFAULT, nonInteractive)
 
 
 class ILogger(ABC):
@@ -71,6 +71,13 @@ class ILogger(ABC):
     def displayItem(self, item):
         pass
 
+    @abstractmethod
+    def confirm(self,
+                question="Do you want to continue?",
+                yes=["yes", "y"],
+                no=["no", "n"]):
+        pass
+
 
 class TextLogger (ILogger):
     '''
@@ -80,8 +87,9 @@ class TextLogger (ILogger):
     LEVEL_DEFAULT = 1
     LEVEL_VERBOSE = 2
 
-    def __init__(self, level):
+    def __init__(self, level, nonInteractive=True):
         self.level = level
+        self.nonInteractive = nonInteractive
 
     def isVerbose(self):
         return self.level == TextLogger.LEVEL_VERBOSE
@@ -211,6 +219,25 @@ class TextLogger (ILogger):
                           key + separator,
                           text)
 
+    def confirm(self,
+                question="Do you want to continue?",
+                yes=["yes", "y"],
+                no=["no", "n"]):
+        label = " (%s/%s) " % (
+            "/".join(map(str.upper, yes)),
+            "/".join(map(str.lower, no)))
+        while True:
+            print(question, label)
+            if self.nonInteractive:
+                return True
+            answer = input().strip()
+            if answer == "":
+                return True
+            if answer.lower() in map(str.lower, yes):
+                return True
+            if answer.lower() in map(str.lower, no):
+                return False
+
 
 class JsonLogger(ILogger):
     '''
@@ -323,3 +350,13 @@ class JsonLogger(ILogger):
             extraMap = {'value': str(item)}
 
         self.displayJsonItem(itemType, json, extraMap)
+
+    def confirm(self,
+                question=None,
+                yes=None,
+                no=None):
+        self.printJson({
+            'event': "confirm",
+            'question': question
+        })
+        return True

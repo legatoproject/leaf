@@ -11,14 +11,13 @@ from abc import abstractmethod
 import argparse
 from leaf.cli import LeafCli, LeafCommand
 from leaf.core import Workspace
+from leaf.filtering import AndPackageFilter, SupportedOsPackageFilter,\
+    MasterPackageFilter, PkgNamePackageFilter, ModulePackageFilter,\
+    KeywordPackageFilter
 from leaf.model import PackageIdentifier, Manifest
 from leaf.utils import envListToMap, findWorkspaceRoot
 import os
 from pathlib import Path
-
-from leaf.filtering import AndPackageFilter, SupportedOsPackageFilter,\
-    MasterPackageFilter, PkgNamePackageFilter, ModulePackageFilter,\
-    KeywordPackageFilter
 
 
 def main():
@@ -207,7 +206,8 @@ class DeleteSubCommand(AbstractSubCommand):
     def internalExecute2(self, ws, app, logger, args):
         for p in args.profiles:
             pf = ws.deleteProfile(p)
-            logger.printDefault("Profile deleted", pf.name)
+            if pf is not None:
+                logger.printDefault("Profile deleted", pf.name)
 
 
 class ListSubCommand(AbstractSubCommand):

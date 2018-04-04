@@ -36,6 +36,10 @@ class LeafCli():
                                  dest="customConfig",
                                  type=Path,
                                  help="use custom configuration file")
+        self.parser.add_argument("-y", "--non-interactive",
+                                 dest="nonInteractive",
+                                 action='store_true',
+                                 help="assume yes if a confirmation is asked")
 
         subparsers = self.parser.add_subparsers(dest='command',
                                                 description='supported commands',
@@ -50,7 +54,7 @@ class LeafCli():
         args = self.parser.parse_args(sys.argv[1:]
                                       if customArgs is None
                                       else customArgs)
-        logger = createLogger(args.verbose, args.quiet)
+        logger = createLogger(args.verbose, args.quiet, args.nonInteractive)
 
         configFile = LeafFiles.DEFAULT_CONFIG_FILE
         if args.customConfig is not None:

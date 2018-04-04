@@ -111,7 +111,8 @@ class LeafPackageManagerCliWrapper(AbstractTestWithRepo):
 
     def leafPackageManagerExec(self, verb, *args, expectedRc=0):
         self.eazyExecute(PackageManagerCli,
-                         self.preVerbArgs + ["--config",
+                         self.preVerbArgs + ["--non-interactive",
+                                             "--config",
                                              self.getConfigurationFile()],
                          verb,
                          self.postVerbArgs,
@@ -153,7 +154,8 @@ class LeafProfileCliWrapper(LeafPackageManagerCliWrapper):
         if altWorkspace is None:
             altWorkspace = self.getWorkspaceFolder()
         self.eazyExecute(ProfileCli,
-                         self.preVerbArgs + ["--config", self.getConfigurationFile(),
+                         self.preVerbArgs + ["--non-interactive",
+                                             "--config", self.getConfigurationFile(),
                                              "--workspace", altWorkspace],
                          verb,
                          self.postVerbArgs,

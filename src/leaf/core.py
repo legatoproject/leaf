@@ -479,6 +479,18 @@ class LeafApp(LeafRepository):
                                          bypassSupportedOs=bypassSupportedOs,
                                          bypassAptDepends=bypassAptDepends)
 
+            # Confirm
+            self.logger.printQuiet("Packages to install:",
+                                   ", ".join(map(str, piList)))
+            totalSize = 0
+            for ap in apList:
+                if ap.getSize() is not None:
+                    totalSize += ap.getSize()
+            if totalSize > 0:
+                self.logger.printDefault("Total size:", totalSize, "bytes")
+            if not self.logger.confirm():
+                raise ValueError("Installation aborted")
+
             # Download ap list
             laList = []
             for ap in apList:
@@ -528,9 +540,6 @@ class LeafApp(LeafRepository):
         if len(laList) == 0:
             self.logger.printDefault("All package are installed")
         else:
-            self.logger.progressStart('Installation',
-                                      total=len(laList))
-
             # Check ap list can be installed
             self.checkPackagesForInstall(laList,
                                          bypassSupportedOs=bypassSupportedOs,
@@ -570,11 +579,15 @@ class LeafApp(LeafRepository):
             self.logger.printDefault(
                 "No package to remove (to keep dependencies)")
         else:
+            # Confirm
+            self.logger.printQuiet("Packages to uninstall:",
+                                   ", ".join(map(str, piList)))
+            if not self.logger.confirm():
+                raise ValueError("Operation aborted")
+
             total = len(piList)
             worked = 0
             self.logger.progressStart('Uninstall package(s)',
-                                      message="Package(s) to remove: " +
-                                      ' '.join([str(pi) for pi in piList]),
                                       total=total)
             for pi in piList:
                 ip = installedPackages.get(pi)
@@ -618,11 +631,12 @@ class Workspace():
     '''
 
     def __init__(self, rootFolder, app):
+        self.app = app
+        self.logger = app.logger
         self.rootFolder = rootFolder
         self.configFile = rootFolder / LeafFiles.WS_CONFIG_FILENAME
         self.dataFolder = rootFolder / LeafFiles.WS_DATA_FOLDERNAME
         self.currentLink = self.dataFolder / LeafFiles.CURRENT_PROFILE
-        self.app = app
 
     def readConfiguration(self, initIfNeeded=False):
         '''
@@ -716,12 +730,16 @@ class Workspace():
 
     def deleteProfile(self, name):
         pf = self.retrieveProfile(name)
-        wsc = self.readConfiguration()
-        del wsc.getWsProfiles()[pf.name]
-        if pf.folder.exists():
-            shutil.rmtree(str(pf.folder))
-        self.writeConfiguration(wsc)
-        return pf
+        if self.logger.confirm(
+                question="Do you want to delete profile %s?" % pf.name):
+            wsc = self.readConfiguration()
+            del wsc.getWsProfiles()[pf.name]
+            if pf.folder.exists():
+                shutil.rmtree(str(pf.folder))
+            self.writeConfiguration(wsc)
+            if pf.isCurrentProfile:
+                self.updateCurrentLink(None)
+            return pf
 
     def createProfile(self, name=None, motifList=None, envMap=None):
         # Read configuration
@@ -820,7 +838,8 @@ class Workspace():
         '''
         if self.currentLink.is_symlink():
             self.currentLink.unlink()
-        self.currentLink.symlink_to(name)
+        if name is not None:
+            self.currentLink.symlink_to(name)
 
     def provisionProfile(self, pf):
         # Ensure FS clean

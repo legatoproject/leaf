@@ -18,7 +18,7 @@ class TestProfile(AbstractTestWithRepo):
 
     def __init__(self, methodName):
         AbstractTestWithRepo.__init__(self, methodName)
-        self.logger = createLogger(VERBOSE, False)
+        self.logger = createLogger(VERBOSE, False, True)
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
