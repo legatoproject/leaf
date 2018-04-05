@@ -15,7 +15,7 @@ from leaf.filtering import AndPackageFilter, SupportedOsPackageFilter,\
     MasterPackageFilter, PkgNamePackageFilter, ModulePackageFilter,\
     KeywordPackageFilter
 from leaf.model import PackageIdentifier, Manifest
-from leaf.utils import envListToMap, findWorkspaceRoot
+from leaf.utils import envListToMap, findWorkspaceRoot, genEnvScript
 import os
 from pathlib import Path
 
@@ -235,9 +235,18 @@ class EnvSubCommand(AbstractSubCommand):
                                           profileNargs='?',
                                           withPackages=False,
                                           withEnvvars=False)
+        subparser.add_argument('--activate-script',
+                               dest='activateScript',
+                               type=Path,
+                               help="create a script to activate the env variables of the profile")
+        subparser.add_argument('--deactivate-script',
+                               dest='deactivateScript',
+                               type=Path,
+                               help="create a script to deactivate the env variables of the profile")
 
     def internalExecute2(self, ws, app, logger, args):
         env = ws.getProfileEnv(args.profiles)
+        genEnvScript(env, args.activateScript, args.deactivateScript)
         for kv in env:
             logger.displayItem(kv)
 

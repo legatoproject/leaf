@@ -1,55 +1,38 @@
 # Functions and alias to manage terminal environment auto-update when leaf profile changes
 __leaf_load_env () {
-	\leaf env 2> /dev/null > ${LEAF_ADDENV}
-	if test -s ${LEAF_ADDENV}; then
-		__leaf_unload_env
-		source ${LEAF_ADDENV}
+	if test -f "$LEAF_DEACTIVATE"; then
+		source "$LEAF_DEACTIVATE"
+	fi
+	rm -f "$LEAF_ACTIVATE" "$LEAF_DEACTIVATE"
+	\leaf env -q \
+		--activate-script "$LEAF_ACTIVATE" \
+		--deactivate-script "$LEAF_DEACTIVATE" 2>&1 > /dev/null
+	if test $? -eq 0 -a -f "$LEAF_ACTIVATE"; then
+		source "$LEAF_ACTIVATE"
 		PS1="${LEAF_PS1:-{$LEAF_PROFILE\} $LEAF_OLDPS1}"
 	fi
 }
 
-__leaf_unload_env () {
-	if test -s ${LEAF_RMENV}; then
-		source ${LEAF_RMENV}
-	fi
-	
-	# Compute unload script
-	rm -f ${LEAF_RMENV}
-	touch ${LEAF_RMENV}
-	local unsetvar
-	for unsetvar in `cat ${LEAF_ADDENV} | sed -e "s/export \([^=]*\)=.*;/\1/"`; do
-		local oldValue="${!unsetvar}"
-		if test -n "$oldValue"; then
-			# Restore value
-			echo "export ${unsetvar}=\"${oldValue}\";" >> ${LEAF_RMENV}
-		else
-			# Simply unset
-			echo "unset ${unsetvar};" >> ${LEAF_RMENV}
-		fi
-		cat ${LEAF_RMENV} | sort -u > ${LEAF_RMENV}.new
-		cp ${LEAF_RMENV}.new ${LEAF_RMENV} && rm ${LEAF_RMENV}.new
-	done
-}
-
 __leaf_refresh_env () {
 	\leaf "$@"
-	local rc=$?
-	if test $rc -eq 0; then
-		local trigger
-		local arg
-		for arg in $@; do
-			for trigger in init create update sync workspace ws rename mv; do
-				if test "$arg" = "$trigger"; then
-					__leaf_load_env
-					return $rc
-				fi
-			done
+	local RETURN_CODE=$?
+	if test $RETURN_CODE -eq 0; then
+		local CURRENT_ARG
+		local TRIGGER_ARGS=";init;create;upgrade;update;sync;workspace;ws;rename;mv;"
+		for CURRENT_ARG in "$@"; do
+			if echo "$TRIGGER_ARGS" | grep -q ";${CURRENT_ARG};"; then
+				__leaf_load_env
+				return $RETURN_CODE
+			fi
 		done
 	fi
-	return $rc
+	return $RETURN_CODE
 }
 
-LEAF_OLDPS1="$PS1"
-LEAF_ADDENV=/tmp/leaf-$$-$RANDOM-addenv.sh
-LEAF_RMENV=/tmp/leaf-$$-$RANDOM-rmenv.sh
+# Prevent multiple source
+if test -z "$LEAF_OLDPS1"; then
+	LEAF_OLDPS1="$PS1"
+fi
+LEAF_ACTIVATE=/tmp/leaf-$$-$RANDOM-activate.env
+LEAF_DEACTIVATE=/tmp/leaf-$$-$RANDOM-deactivate.env
 alias leaf=__leaf_refresh_env

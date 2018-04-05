@@ -239,6 +239,23 @@ def findWorkspaceRoot():
     raise ValueError("Cannot find workspace root from %s" % os.getcwd())
 
 
+def genEnvScript(envKvList, activateFile=None, deactivateFile=None):
+    if deactivateFile is not None:
+        resetMap = OrderedDict()
+        for k, _ in envKvList:
+            resetMap[k] = os.environ.get(k)
+        with open(str(deactivateFile), "w") as fp:
+            for k, v in resetMap.items():
+                if v is None:
+                    fp.write("unset %s;\n" % k)
+                else:
+                    fp.write("export %s=\"%s\";\n" % (k, v))
+    if activateFile is not None:
+        with open(str(activateFile), "w") as fp:
+            for k, v in envKvList:
+                fp.write("export %s=\"%s\";\n" % (k, v))
+
+
 class AptHelper():
     '''
     Util class to check if apt packages are available/installed
