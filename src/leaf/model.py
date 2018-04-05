@@ -119,6 +119,7 @@ class Manifest(JsonObject):
 
     def __init__(self, json):
         JsonObject.__init__(self, json)
+        self.tags = []
 
     def __str__(self):
         return str(self.getIdentifier())

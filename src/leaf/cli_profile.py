@@ -11,6 +11,7 @@ from abc import abstractmethod
 import argparse
 from leaf.cli import LeafCli, LeafCommand
 from leaf.core import Workspace
+from leaf.coreutils import TagManager
 from leaf.filtering import AndPackageFilter, SupportedOsPackageFilter,\
     MasterPackageFilter, PkgNamePackageFilter, ModulePackageFilter,\
     KeywordPackageFilter
@@ -319,6 +320,7 @@ class SearchSubCommand(AbstractSubCommand):
 
     def internalExecute2(self, ws, app, logger, args):
         pkgFilter = AndPackageFilter()
+        pf = None
         if not args.allPackages:
             pkgFilter.addFilter(SupportedOsPackageFilter())
             pkgFilter.addFilter(MasterPackageFilter())
@@ -340,8 +342,15 @@ class SearchSubCommand(AbstractSubCommand):
                                 ", ".join(args.keywords))
             pkgFilter.addFilter(KeywordPackageFilter(args.keywords))
 
+        # Pkg list
+        mfList = sorted(app.listAvailablePackages().values(),
+                        key=Manifest.getIdentifier)
+        # manage tags
+        TagManager().tagLatest(mfList)
+        if pf is not None:
+            TagManager().tagCurrent(mfList, pf)
+
         # Print filtered packages
-        for mf in sorted(app.listAvailablePackages().values(),
-                         key=Manifest.getIdentifier):
+        for mf in mfList:
             if pkgFilter.matches(mf):
                 logger.displayItem(mf)

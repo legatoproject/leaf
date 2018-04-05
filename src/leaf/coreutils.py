@@ -9,11 +9,37 @@ Leaf Package Manager
 from collections import OrderedDict
 from leaf import __version__
 from leaf.constants import LeafConstants, JsonConstants
-from leaf.model import PackageIdentifier
+from leaf.model import PackageIdentifier, Manifest
 from leaf.utils import downloadFile
 import os
 import shutil
 import subprocess
+
+
+class TagManager():
+
+    def tagLatest(self, mfList):
+        mapByName = OrderedDict()
+        for mf in mfList:
+            pkgName = mf.getIdentifier().name
+            if pkgName not in mapByName:
+                mapByName[pkgName] = []
+            mapByName[pkgName].append(mf)
+        for pkgList in mapByName.values():
+            latest = next(iter(sorted(pkgList,
+                                      key=Manifest.getIdentifier,
+                                      reverse=True)))
+            latest.tags.append("latest")
+
+    def tagInstalled(self, mfList, piList):
+        for mf in mfList:
+            if mf.getIdentifier() in piList:
+                mf.tags.append("installed")
+
+    def tagCurrent(self, mfList, pf):
+        for mf in mfList:
+            if str(mf.getIdentifier()) in pf.getPackages():
+                mf.tags.append("current")
 
 
 class DependencyManager():

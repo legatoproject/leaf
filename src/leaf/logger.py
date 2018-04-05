@@ -159,7 +159,10 @@ class TextLogger (ILogger):
             else:
                 print(item.getIdentifier(), "->", item.path)
         elif isinstance(item, Manifest):
-            print(item.getIdentifier())
+            itemLabel = str(item.getIdentifier())
+            if self.level == TextLogger.LEVEL_DEFAULT and len(item.tags) > 0:
+                itemLabel += " (%s)" % ",".join(item.tags)
+            print(itemLabel)
             if self.isVerbose():
                 content = OrderedDict()
                 content["Description"] = item.getDescription()
@@ -171,8 +174,8 @@ class TextLogger (ILogger):
                 content["Systems"] = item.getSupportedOS()
                 content["Depends"] = item.getLeafDepends()
                 content["Modules"] = item.getSupportedModules()
+                content["Tags"] = item.tags
                 self.prettyprintContent(content)
-            pass
         elif isinstance(item, RemoteRepository):
             print(item.url)
             if self.isVerbose():
@@ -330,6 +333,7 @@ class JsonLogger(ILogger):
         elif isinstance(item, Manifest):
             itemType = "package"
             json = item.json
+            extraMap['tags'] = ",".join(item.tags)
             if isinstance(item, AvailablePackage):
                 extraMap['url'] = item.getUrl()
             elif isinstance(item, InstalledPackage):

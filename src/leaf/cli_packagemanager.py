@@ -12,6 +12,7 @@ import json
 from leaf.cli import LeafCli, LeafCommand
 from leaf.cli_releng import PackCommand, IndexCommand
 from leaf.constants import LeafFiles
+from leaf.coreutils import TagManager
 from leaf.filtering import AndPackageFilter, SupportedOsPackageFilter,\
     MasterPackageFilter, ModulePackageFilter, KeywordPackageFilter
 from leaf.model import Manifest
@@ -221,9 +222,15 @@ class SearchCommand(LeafCommand):
                                 ", ".join(args.keywords))
             pkgFilter.addFilter(KeywordPackageFilter(args.keywords))
 
+        # Pkg list
+        mfList = sorted(app.listAvailablePackages().values(),
+                        key=Manifest.getIdentifier)
+        # manage tags
+        TagManager().tagLatest(mfList)
+        TagManager().tagInstalled(mfList, app.listInstalledPackages().keys())
+
         # Print filtered packages
-        for mf in sorted(app.listAvailablePackages().values(),
-                         key=Manifest.getIdentifier):
+        for mf in mfList:
             if pkgFilter.matches(mf):
                 logger.displayItem(mf)
 
