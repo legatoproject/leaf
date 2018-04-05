@@ -33,6 +33,7 @@ class ProfileCli (LeafCli):
                          WorkspaceSubCommand(),
                          CreateSubCommand(),
                          UpdateSubCommand(),
+                         UpgradeSubCommand(),
                          RenameSubCommand(),
                          DeleteSubCommand(),
                          SwitchSubCommand(),
@@ -166,6 +167,32 @@ class UpdateSubCommand(AbstractSubCommand):
                               motifList=args.packages,
                               envMap=envListToMap(args.envvars))
         logger.printDefault("Profile %s updated" % pf.name)
+        if not args.noAutoSync:
+            ws.switchProfile(pf.name)
+            logger.printQuiet("Current profile is now %s" % pf.name)
+
+
+class UpgradeSubCommand(AbstractSubCommand):
+    def __init__(self):
+        AbstractSubCommand.__init__(self,
+                                    "upgrade",
+                                    "update all packages of a profile")
+
+    def internalInitArgs(self, subparser):
+        AbstractSubCommand.initCommonArgs(subparser,
+                                          profileNargs='?',
+                                          withPackages=False,
+                                          withEnvvars=False)
+        subparser.add_argument("--nosync",
+                               dest="noAutoSync",
+                               action="store_true",
+                               help="do not auto sync the modified profile")
+
+    def internalExecute2(self, ws, app, logger, args):
+        pf = ws.retrieveProfile(name=args.profiles)
+        pf = ws.updateProfile(pf.name,
+                              motifList=pf.getPiMap().keys())
+        logger.printDefault("Profile %s upgraded" % pf.name)
         if not args.noAutoSync:
             ws.switchProfile(pf.name)
             logger.printQuiet("Current profile is now %s" % pf.name)

@@ -4,7 +4,7 @@ Constants to tweak the tests
 '''
 from leaf.cli_packagemanager import PackageManagerCli
 from leaf.cli_profile import ProfileCli
-from leaf.constants import LeafConstants
+from leaf.constants import LeafConstants, LeafFiles
 from leaf.core import LeafRepository
 from leaf.logger import TextLogger
 from leaf.model import Manifest
@@ -92,6 +92,35 @@ class AbstractTestWithRepo(unittest.TestCase):
 
     def getAltWorkspaceFolder(self):
         return self.getVolatileItem("alt-workspace")
+
+    def checkInstalledPackages(self, *pisList):
+        for pis in pisList:
+            folder = self.getInstallFolder() / str(pis)
+            self.assertTrue(folder.is_dir(), msg=str(folder))
+        folderItemCount = 0
+        for i in self.getInstallFolder().iterdir():
+            if i.is_dir():
+                folderItemCount += 1
+        self.assertEqual(len(pisList),
+                         folderItemCount)
+
+    def checkCurrentProfile(self, name):
+        lnk = self.getWorkspaceFolder() / LeafFiles.WS_DATA_FOLDERNAME / \
+            LeafFiles.CURRENT_PROFILE
+        if name is None:
+            self.assertFalse(lnk.exists())
+        else:
+            self.assertEqual(name, lnk.resolve().name)
+
+    def checkProfileContent(self, profileName, *content):
+        pfFolder = self.getWorkspaceFolder() / LeafFiles.WS_DATA_FOLDERNAME / profileName
+        self.assertTrue(pfFolder.exists())
+        symlinkCount = 0
+        for item in pfFolder.iterdir():
+            if item.is_symlink():
+                symlinkCount += 1
+            self.assertTrue(item.name in content, "Unexpected link %s" % item)
+        self.assertEqual(symlinkCount, len(content))
 
 
 class LeafPackageManagerCliWrapper(AbstractTestWithRepo):

@@ -16,17 +16,6 @@ class TestPackageManagerCli_Default(LeafPackageManagerCliWrapper):
     def __init__(self, methodName):
         LeafPackageManagerCliWrapper.__init__(self, methodName)
 
-    def checkContent(self, *pisList):
-        for pis in pisList:
-            folder = self.getInstallFolder() / str(pis)
-            self.assertTrue(folder.is_dir(), msg=str(folder))
-        folderItemCount = 0
-        for i in self.getInstallFolder().iterdir():
-            if i.is_dir():
-                folderItemCount += 1
-        self.assertEqual(len(pisList),
-                         folderItemCount)
-
     def testConfig(self):
         self.leafPackageManagerExec("config")
 
@@ -49,9 +38,9 @@ class TestPackageManagerCli_Default(LeafPackageManagerCliWrapper):
         self.leafPackageManagerExec("install", "container-A")
         self.leafPackageManagerExec("list")
         self.leafPackageManagerExec("list", "--all")
-        self.checkContent('container-A_2.1',
-                          'container-C_1.0',
-                          'container-D_1.0')
+        self.checkInstalledPackages('container-A_2.1',
+                                    'container-C_1.0',
+                                    'container-D_1.0')
 
     def testEnv(self):
         self.leafPackageManagerExec("install", "env-A_1.0")
@@ -59,25 +48,25 @@ class TestPackageManagerCli_Default(LeafPackageManagerCliWrapper):
 
     def testInstallWithSteps(self):
         self.leafPackageManagerExec("install", "install_1.0")
-        self.checkContent('install_1.0')
+        self.checkInstalledPackages('install_1.0')
 
     def testInstallUninstallKeep(self):
         self.leafPackageManagerExec("install", "container-A_1.0")
-        self.checkContent('container-A_1.0',
-                          'container-B_1.0',
-                          'container-C_1.0',
-                          'container-E_1.0')
+        self.checkInstalledPackages('container-A_1.0',
+                                    'container-B_1.0',
+                                    'container-C_1.0',
+                                    'container-E_1.0')
         self.leafPackageManagerExec("install", "container-A_2.0")
-        self.checkContent('container-A_1.0',
-                          'container-A_2.0',
-                          'container-B_1.0',
-                          'container-C_1.0',
-                          'container-D_1.0',
-                          'container-C_1.0')
+        self.checkInstalledPackages('container-A_1.0',
+                                    'container-A_2.0',
+                                    'container-B_1.0',
+                                    'container-C_1.0',
+                                    'container-D_1.0',
+                                    'container-C_1.0')
         self.leafPackageManagerExec("remove", "container-A_1.0")
-        self.checkContent('container-A_2.0',
-                          'container-C_1.0',
-                          'container-D_1.0')
+        self.checkInstalledPackages('container-A_2.0',
+                                    'container-C_1.0',
+                                    'container-D_1.0')
 
     def testClean(self):
         self.leafPackageManagerExec("clean")
@@ -89,7 +78,7 @@ class TestPackageManagerCli_Default(LeafPackageManagerCliWrapper):
             "install", "failure-depends-deb_1.0", expectedRc=2)
         self.leafPackageManagerExec(
             "install", "--skip-apt", "failure-depends-deb_1.0")
-        self.checkContent('failure-depends-deb_1.0')
+        self.checkInstalledPackages('failure-depends-deb_1.0')
 
 
 @unittest.skipUnless("VERBOSE" in LEAF_UT_LEVELS, "Test disabled")

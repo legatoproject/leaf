@@ -18,24 +18,6 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
     def __init__(self, methodName):
         LeafProfileCliWrapper.__init__(self, methodName)
 
-    def checkCurrentProfile(self, name):
-        lnk = self.getWorkspaceFolder() / LeafFiles.WS_DATA_FOLDERNAME / \
-            LeafFiles.CURRENT_PROFILE
-        if name is None:
-            self.assertFalse(lnk.exists())
-        else:
-            self.assertEqual(name, lnk.resolve().name)
-
-    def checkProfileContent(self, profileName, *content):
-        pfFolder = self.getWorkspaceFolder() / LeafFiles.WS_DATA_FOLDERNAME / profileName
-        self.assertTrue(pfFolder.exists())
-        symlinkCount = 0
-        for item in pfFolder.iterdir():
-            if item.is_symlink():
-                symlinkCount += 1
-            self.assertTrue(item.name in content, "Unexpected link %s" % item)
-        self.assertEqual(symlinkCount, len(content))
-
     def testInitWithoutProfile(self):
         self.leafProfileExec("init")
         self.leafProfileExec("list")
@@ -209,6 +191,27 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
         self.leafProfileExec("search", "container")
         self.leafProfileExec("search", "-P")
         self.leafProfileExec("search", "-P", "container")
+
+    def testUpgrade(self):
+        self.leafProfileExec("init")
+        self.leafProfileExec("create", "foo",
+                             "-p", "version_1.0",
+                             "-p", "container-A_1.0")
+        self.checkCurrentProfile("foo")
+        self.checkProfileContent("foo",
+                                 "container-A",
+                                 "container-B",
+                                 "container-C",
+                                 "container-E",
+                                 "version")
+
+        self.leafProfileExec("upgrade", "foo")
+        self.checkCurrentProfile("foo")
+        self.checkProfileContent("foo",
+                                 "container-A",
+                                 "container-C",
+                                 "container-D",
+                                 "version")
 
 
 @unittest.skipUnless("VERBOSE" in LEAF_UT_LEVELS, "Test disabled")

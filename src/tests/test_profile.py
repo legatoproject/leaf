@@ -245,6 +245,24 @@ class TestProfile(AbstractTestWithRepo):
         self.assertEqual(1, len(self.app.getRemoteUrls()))
         self.assertEqual(2, len(self.app.getRemoteRepositories()))
 
+    def testUpgrade(self):
+        self.ws.readConfiguration(True)
+        pf = self.ws.createProfile("foo")
+        self.assertEqual([], pf.getPackages())
+        self.assertEqual(OrderedDict(), pf.getEnv())
+
+        self.ws.updateProfile("foo",
+                              ["container-A_1.0", "version_1.0"])
+        pf = self.ws.retrieveProfile("foo")
+        self.assertEqual(["container-A_1.0", "version_1.0"],
+                         pf.getPackages())
+
+        self.ws.updateProfile("foo",
+                              pf.getPiMap().keys())
+        pf = self.ws.retrieveProfile("foo")
+        self.assertEqual(["container-A_2.1", "version_2.0"],
+                         pf.getPackages())
+
 
 if __name__ == "__main__":
     unittest.main()
