@@ -160,17 +160,15 @@ def downloadFile(url, folder, logger, filename=None, sha1sum=None):
     targetFile = folder / filename
     if targetFile.exists():
         if sha1sum is None:
-            logger.printVerbose("File exists but cannot be verified,",
-                                targetFile.name,
-                                " will be re-downloaded")
+            logger.printVerbose("File exists but cannot be verified, %s will be re-downloaded" %
+                                targetFile.name)
             os.remove(str(targetFile))
         elif sha1sum != computeSha1sum(targetFile):
-            logger.printVerbose("File exists but SHA1 differs,",
-                                targetFile.name,
-                                " will be re-downloaded")
+            logger.printVerbose("File exists but SHA1 differs, %s will be re-downloaded" %
+                                targetFile.name)
             os.remove(str(targetFile))
         else:
-            logger.printVerbose("File already in cache:",
+            logger.printVerbose("File %s is already in cache" %
                                 targetFile.name)
     if not targetFile.exists():
         if parsedUrl.scheme.startswith("http"):
@@ -184,7 +182,7 @@ def downloadFile(url, folder, logger, filename=None, sha1sum=None):
                 for data in req.iter_content(1024 * 1024):
                     currentSize += len(data)
                     logger.progressWorked('Download file',
-                                          "Downloading " + targetFile.name,
+                                          "Downloading %s" % targetFile.name,
                                           worked=currentSize,
                                           total=size,
                                           sameLine=True)
@@ -193,12 +191,10 @@ def downloadFile(url, folder, logger, filename=None, sha1sum=None):
             logger.progressStart('Download file')
             urllib.request.urlretrieve(url, str(targetFile))
         logger.progressDone('Download file',
-                            "File downloaded: " + str(targetFile))
+                            "[100%%] Downloading %s" % targetFile.name)
         if sha1sum is not None and sha1sum != computeSha1sum(targetFile):
-            raise ValueError("Invalid SHA1 sum for " +
-                             targetFile.name +
-                             ", expecting " +
-                             sha1sum)
+            raise ValueError("Invalid SHA1 sum for %s, expecting %s" %
+                             (targetFile.name, sha1sum))
     return targetFile
 
 

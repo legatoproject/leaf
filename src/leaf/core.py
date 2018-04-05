@@ -266,7 +266,7 @@ class LeafApp(LeafRepository):
             try:
                 with urllib.request.urlopen(remoteurl, timeout=LeafConstants.DOWNLOAD_TIMEOUT) as url:
                     data = json.loads(url.read().decode())
-                    self.logger.printDefault("Fetched", remoteurl)
+                    self.logger.printVerbose("Fetched", remoteurl)
                     content[remoteurl] = data
                     composites = data.get(JsonConstants.REMOTE_COMPOSITE)
                     if composites is not None:
@@ -283,7 +283,9 @@ class LeafApp(LeafRepository):
         '''
         content = OrderedDict()
         urls = self.getRemoteUrls()
-        self.logger.progressStart('Fetch remote(s)', total=len(urls))
+        self.logger.progressStart('Fetch remote(s)',
+                                  message="Refreshing available packages...",
+                                  total=len(urls))
         worked = 0
         for url in urls:
             self.recursiveFetchUrl(url, content)
@@ -507,7 +509,7 @@ class LeafApp(LeafRepository):
                                               keepFolderOnError=keepFolderOnError)
                 out.append(ip)
                 self.logger.progressWorked('Installation',
-                                           message="Installed %s" % ap.getIdentifier(),
+                                           message="Installed %s" % la.getIdentifier(),
                                            worked=len(laList) + len(out),
                                            total=len(piList) * 2)
 
@@ -520,7 +522,7 @@ class LeafApp(LeafRepository):
                          bypassAptDepends=False,
                          keepFolderOnError=False):
         '''
-        Install pacckages from leaf artifacts
+        Install packages from leaf artifacts
         @return: InstalledPackage list
         '''
         out = []
@@ -538,7 +540,7 @@ class LeafApp(LeafRepository):
 
         # Check nothing to do
         if len(laList) == 0:
-            self.logger.printDefault("All package are installed")
+            self.logger.printDefault("All packages are installed")
         else:
             # Check ap list can be installed
             self.checkPackagesForInstall(laList,

@@ -12,12 +12,11 @@ import json
 from leaf.cli import LeafCli, LeafCommand
 from leaf.cli_releng import PackCommand, IndexCommand
 from leaf.constants import LeafFiles
+from leaf.filtering import AndPackageFilter, SupportedOsPackageFilter,\
+    MasterPackageFilter, ModulePackageFilter, KeywordPackageFilter
 from leaf.model import Manifest
 import os
 import shutil
-
-from leaf.filtering import AndPackageFilter, SupportedOsPackageFilter,\
-    MasterPackageFilter, ModulePackageFilter, KeywordPackageFilter
 
 
 def main():
@@ -138,8 +137,6 @@ class FetchCommand(LeafCommand):
 
     def internalExecute(self, app, logger, args):
         app.fetchRemotes()
-        for rr in app.getRemoteRepositories():
-            logger.displayItem(rr)
 
 
 class ListCommand(LeafCommand):
@@ -287,7 +284,7 @@ class ExtractCommand(LeafCommand):
                                      bypassLeafDepends=args.skipLeafDepends,
                                      bypassAptDepends=args.skipAptDepends,
                                      keepFolderOnError=args.keepOnError)
-        logger.printQuiet("Package extracted: " +
+        logger.printQuiet("Packages extracted: " +
                           ' '.join([str(p.getIdentifier()) for p in items]))
 
 
@@ -328,8 +325,9 @@ class InstallCommand(LeafCommand):
                                        bypassSupportedOs=args.skipOsCompat,
                                        bypassAptDepends=args.skipAptDepends,
                                        keepFolderOnError=args.keepOnError)
-        logger.printQuiet("Package installed: " +
-                          ' '.join([str(p.getIdentifier()) for p in items]))
+        if len(items) > 0:
+            logger.printQuiet("Packages installed: " +
+                              ' '.join([str(p.getIdentifier()) for p in items]))
 
 
 class RemoveCommand(LeafCommand):
