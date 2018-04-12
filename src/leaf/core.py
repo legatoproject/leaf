@@ -13,15 +13,17 @@ from datetime import datetime
 import json
 from leaf import __version__
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles
-from leaf.coreutils import DependencyManager, StepExecutor
+from leaf.coreutils import StepExecutor, VariableResolver,\
+    DynamicDependencyManager
 from leaf.model import Manifest, InstalledPackage, AvailablePackage, LeafArtifact,\
     PackageIdentifier, RemoteRepository, Profile,\
-    WorkspaceConfiguration, JsonObject
+    WorkspaceConfiguration, JsonObject, Environment
 from leaf.utils import resolveUrl, getCachedArtifactName, isFolderIgnored,\
     markFolderAsIgnored, openOutputTarFile, computeSha1sum, downloadFile,\
     AptHelper, jsonLoadFile, checkSupportedLeaf, jsonWriteFile
 import os
 from pathlib import Path
+import platform
 import shutil
 from tarfile import TarFile
 import urllib.request
@@ -127,7 +129,7 @@ class LeafApp(LeafRepository):
         os.makedirs(str(out), exist_ok=True)
         return out
 
-    def updateConfiguration(self, rootFolder=None, env=None):
+    def updateConfiguration(self, rootFolder=None, envMap=None):
         '''
         Update the configuration file
         '''
@@ -136,20 +138,26 @@ class LeafApp(LeafRepository):
             config.jsoninit(key=JsonConstants.CONFIG_ROOT,
                             value=str(rootFolder),
                             force=True)
-        if env is not None:
+        if envMap is not None:
             configEnv = config.jsoninit(key=JsonConstants.CONFIG_ENV,
                                         value=OrderedDict())
-            for line in env:
-                k, v = line.split('=', 1)
-                configEnv[k.strip()] = v.strip()
+            configEnv.update(envMap)
         self.writeConfiguration(config)
 
-    def getUserEnvVariables(self):
+    def getUserEnv(self):
         '''
         Returns the user custom env variables
         '''
-        return self.readConfiguration().jsonpath(JsonConstants.CONFIG_ENV,
-                                                 default={})
+        return self.readConfiguration().jsonpath(JsonConstants.CONFIG_ENV, default={})
+
+    def getLeafEnvironment(self):
+        out = Environment("Leaf variables")
+        out.env.append(("LEAF_PLATFORM_SYSTEM", platform.system()))
+        out.env.append(("LEAF_PLATFORM_MACHINE", platform.machine()))
+        out.env.append(("LEAF_PLATFORM_RELEASE", platform.release()))
+        out.addSubEnv(Environment("Exported by user config",
+                                  self.getUserEnv()))
+        return out
 
     def remoteAdd(self, url):
         '''
@@ -301,7 +309,7 @@ class LeafApp(LeafRepository):
         Return all installed packages
         @return: PackageIdentifier/InstalledPackage dict
         '''
-        out = {}
+        out = OrderedDict()
         for folder in self.getInstallFolder().iterdir():
             if folder.is_dir() and not isFolderIgnored(folder):
                 manifest = folder / LeafConstants.MANIFEST
@@ -311,10 +319,10 @@ class LeafApp(LeafRepository):
         return out
 
     def listDependencies(self, motifList, reverse=False, filterInstalled=False, aptDepends=False):
-        '''
-        List all dependencies for given packages
-        @return: PackageIdentifier list 
-                    or String list in case of apt dependencies
+        '''                                                                                                                                                             
+        List all dependencies for given packages                                                                                                                        
+        @return: PackageIdentifier list                                                                                                                                 
+                    or String list in case of apt dependencies                                                                                                          
         '''
         installedPackages = self.listInstalledPackages()
         availablePackages = self.listAvailablePackages()
@@ -322,32 +330,39 @@ class LeafApp(LeafRepository):
                                     ipMap=installedPackages,
                                     apMap=availablePackages)
 
-        dm = DependencyManager()
-        dm.addContent(installedPackages)
-        dm.addContent(availablePackages)
+        mfMap = OrderedDict()
+        mfMap.update(installedPackages)
+        for pi, ap in availablePackages.items():
+            if pi not in installedPackages:
+                mfMap[pi] = ap
 
-        out = dm.getDependencyTree(piList)
-        out = dm.filterAndSort(out,
-                               reverse,
-                               installedPackages.keys() if filterInstalled else None)
+        # Build the mf list
+        out = DynamicDependencyManager.computeDependencyTree(piList,
+                                                             mfMap,
+                                                             self.getLeafEnvironment(),
+                                                             reverse)
+
+        if filterInstalled:
+            out = [mf for mf in out if mf.getIdentifier() not in installedPackages]
 
         if aptDepends:
             debList = []
-            for pi in out:
-                for deb in dm.resolve(pi).getAptDepends():
+            for mf in out:
+                for deb in mf.getAptDepends():
                     if deb not in debList:
                         debList.append(deb)
             if filterInstalled:
                 ah = AptHelper()
                 debList = [p for p in debList if not ah.isInstalled(p)]
             out = debList
+        else:
+            # Keep only PI
+            out = list(map(Manifest.getIdentifier, out))
 
         return out
 
     def checkPackagesForInstall(self, mfList,
                                 bypassLeafMinVersion=False,
-                                bypassSupportedOs=False,
-                                bypassLeafDepends=False,
                                 bypassAptDepends=False):
 
         # Check leaf min version
@@ -361,30 +376,6 @@ class LeafApp(LeafRepository):
                                        " ".join([str(mf.getIdentifier()) for mf in incompatibleList]))
                 raise ValueError(
                     "Some package require a newer version of leaf")
-
-        # Check dependencies
-        if not bypassLeafDepends:
-            dm = DependencyManager()
-            dm.addContent(self.listInstalledPackages())
-            for mf in mfList:
-                missingDeps = dm.filterMissingDependencies(
-                    PackageIdentifier.fromStringList(mf.getLeafDepends()))
-                if len(missingDeps) > 0:
-                    raise ValueError("Missing dependencies for %s" %
-                                     mf.getIdentifier())
-                dm.addContent({mf.getIdentifier(): mf})
-
-        # Check supported Os
-        if not bypassSupportedOs:
-            incompatibleList = [mf
-                                for mf
-                                in mfList
-                                if not mf.isSupportedOs()]
-            if len(incompatibleList) > 0:
-                self.logger.printError("Some packages are not compatible with your system: ",
-                                       " ".join([str(mf.getIdentifier()) for mf in incompatibleList]))
-                raise ValueError(
-                    "Some package are not compatible with your system")
 
         # Check dependencies
         if not bypassAptDepends:
@@ -436,10 +427,12 @@ class LeafApp(LeafRepository):
 
             # Execute post install steps
             out = InstalledPackage(targetFolder / LeafConstants.MANIFEST)
+            vr = VariableResolver(out,
+                                  self.listInstalledPackages().values())
             se = StepExecutor(self.logger,
                               out,
-                              self.listInstalledPackages(),
-                              extraEnv=self.getUserEnvVariables())
+                              vr,
+                              extraEnv=self.getUserEnv())
             se.postInstall()
             return out
         except Exception as e:
@@ -454,38 +447,46 @@ class LeafApp(LeafRepository):
             raise e
 
     def installFromRemotes(self, motifList,
-                           bypassSupportedOs=False,
+                           extraEnv=None,
                            bypassAptDepends=False,
                            keepFolderOnError=False):
         '''
         Compute dependency tree, check compatibility, download from remotes and extract needed packages 
         @return: InstalledPackage list
         '''
+        installedPackages = self.listInstalledPackages()
+        availablePackages = self.listAvailablePackages()
+        piList = self.resolveLatest(motifList,
+                                    ipMap=installedPackages,
+                                    apMap=availablePackages)
+
+        # Build env to resolve dynamic dependencies
+        env = Environment()
+        env.addSubEnv(self.getLeafEnvironment())
+        env.addSubEnv(extraEnv)
+
+        apToInstall = DynamicDependencyManager.computeApToInstall(piList,
+                                                                  availablePackages,
+                                                                  installedPackages,
+                                                                  env)
         out = []
-        # Resolve motif list and dependencies
-        piList = self.listDependencies(motifList, filterInstalled=True)
 
         # Check nothing to do
-        if len(piList) == 0:
+        if len(apToInstall) == 0:
             self.logger.printDefault("All packages are installed")
         else:
             self.logger.progressStart('Installation',
-                                      total=len(piList) * 2)
-
-            # Build ap list
-            availablePackages = self.listAvailablePackages()
-            apList = [availablePackages[pi] for pi in piList]
+                                      total=len(apToInstall) * 2)
 
             # Check ap list can be installed
-            self.checkPackagesForInstall(apList,
-                                         bypassSupportedOs=bypassSupportedOs,
+            self.checkPackagesForInstall(apToInstall,
                                          bypassAptDepends=bypassAptDepends)
 
             # Confirm
             self.logger.printQuiet("Packages to install:",
-                                   ", ".join(map(str, piList)))
+                                   ", ".join([str(ap.getIdentifier())for ap in apToInstall]))
             totalSize = 0
-            for ap in apList:
+            for ap in apToInstall:
                 if ap.getSize() is not None:
                     totalSize += ap.getSize()
             if totalSize > 0:
@@ -495,13 +496,13 @@ class LeafApp(LeafRepository):
 
             # Download ap list
             laList = []
-            for ap in apList:
+            for ap in apToInstall:
                 la = self.downloadAvailablePackage(ap)
                 laList.append(la)
                 self.logger.progressWorked('Installation',
                                            message="Downloaded %s" % ap.getIdentifier(),
                                            worked=len(laList),
-                                           total=len(piList) * 2)
+                                           total=len(apToInstall) * 2)
 
             # Extract la list
             for la in laList:
@@ -511,13 +512,12 @@ class LeafApp(LeafRepository):
                 self.logger.progressWorked('Installation',
                                            message="Installed %s" % la.getIdentifier(),
                                            worked=len(laList) + len(out),
-                                           total=len(piList) * 2)
+                                           total=len(apToInstall) * 2)
 
         self.logger.progressDone('Installation')
         return out
 
     def installFromFiles(self, files,
-                         bypassSupportedOs=False,
                          bypassLeafDepends=False,
                          bypassAptDepends=False,
                          keepFolderOnError=False):
@@ -544,7 +544,6 @@ class LeafApp(LeafRepository):
         else:
             # Check ap list can be installed
             self.checkPackagesForInstall(laList,
-                                         bypassSupportedOs=bypassSupportedOs,
                                          bypassLeafDepends=bypassLeafDepends,
                                          bypassAptDepends=bypassAptDepends)
 
@@ -561,43 +560,38 @@ class LeafApp(LeafRepository):
         self.logger.progressDone('Installation')
         return out
 
-    def uninstallPackages(self, motifList,
-                          keepUnusedDepends=False):
+    def uninstallPackages(self, motifList):
         '''
         Remove given package
         '''
         installedPackages = self.listInstalledPackages()
         piList = self.resolveLatest(motifList, ipMap=installedPackages)
 
-        if not keepUnusedDepends:
-            dm = DependencyManager()
-            dm.addContent(installedPackages)
-            piList = dm.getDependencyTree(piList)
+        ipToRemove = DynamicDependencyManager.computeIpToUninstall(piList,
+                                                                   installedPackages)
 
-        # List of packages to install
-        piList = dm.maintainDependencies(piList)
-
-        if len(piList) == 0:
+        if len(ipToRemove) == 0:
             self.logger.printDefault(
                 "No package to remove (to keep dependencies)")
         else:
             # Confirm
             self.logger.printQuiet("Packages to uninstall:",
-                                   ", ".join(map(str, piList)))
+                                   ", ".join([str(ip.getIdentifier()) for ip in ipToRemove]))
             if not self.logger.confirm():
                 raise ValueError("Operation aborted")
 
-            total = len(piList)
+            total = len(ipToRemove)
             worked = 0
             self.logger.progressStart('Uninstall package(s)',
                                       total=total)
-            for pi in piList:
-                ip = installedPackages.get(pi)
+            for ip in ipToRemove:
                 self.logger.printDefault("Removing", ip.getIdentifier())
+                vr = VariableResolver(ip,
+                                      self.listInstalledPackages().values())
                 stepExec = StepExecutor(self.logger,
                                         ip,
-                                        installedPackages,
-                                        extraEnv=self.getUserEnvVariables())
+                                        vr,
+                                        extraEnv=self.getUserEnv())
                 stepExec.preUninstall()
                 self.logger.printVerbose("Remove folder:", ip.folder)
                 shutil.rmtree(str(ip.folder))
@@ -605,26 +599,34 @@ class LeafApp(LeafRepository):
                 self.logger.progressWorked('Uninstall package(s)',
                                            worked=worked,
                                            total=total)
-                del [installedPackages[pi]]
+                del installedPackages[ip.getIdentifier()]
             self.logger.progressDone('Uninstall package(s)',
-                                     message="%d package(s) removed" % (len(piList)))
+                                     message="%d package(s) removed" % (len(ipToRemove)))
 
-    def getEnv(self, motifList):
+    def getPackageEnv(self, motifList, env=None):
         '''
         Get the env vars declared by given packages and their dependencies
         '''
-        piList = self.listDependencies(motifList)
+
         installedPackages = self.listInstalledPackages()
-        out = []
-        for pi in piList:
-            ip = installedPackages[pi]
-            env = ip.jsonpath(JsonConstants.ENV)
-            if env is not None:
-                stepExec = StepExecutor(self.logger, ip, installedPackages)
-                for key, value in env.items():
-                    value = stepExec.resolve(value, True, False)
-                    out.append((key, value))
-        return out
+        piList = self.resolveLatest(motifList,
+                                    ipMap=installedPackages,
+                                    apMap=None)
+        if env is None:
+            env = self.getLeafEnvironment()
+
+        ipList = DynamicDependencyManager.computeDependencyTree(piList,
+                                                                installedPackages,
+                                                                env)
+
+        for ip in ipList:
+            ipEnv = Environment("Exported by package %s" % ip.getIdentifier())
+            env.addSubEnv(ipEnv)
+            vr = VariableResolver(ip, installedPackages.values())
+            for key, value in ip.getMfEnv().items():
+                ipEnv.env.append((key,
+                                  vr.resolve(value)))
+        return env
 
 
 class Workspace():
@@ -702,21 +704,18 @@ class Workspace():
         return pfMap.get(name)
 
     def checkProfile(self, pf):
-        # Check packages are installed
-        missingPiList = self.app.listDependencies(pf.getPackages(),
-                                                  filterInstalled=True)
-        if len(missingPiList) > 0:
-            raise ValueError("Some packages are not installed, please run 'leaf switch %s'" %
-                             (pf.name))
         # Check packages are linked
         installedPackages = self.app.listInstalledPackages()
-        for pis in pf.getPackages():
-            pi = PackageIdentifier.fromString(pis)
-            if pi not in installedPackages:
-                piLink = pf.folder / pi.name
-                if not piLink.is_symlink():
-                    raise ValueError("Some packages are not linked, please run 'leaf switch %s'" %
-                                     (pf.name))
+        env = self.app.getLeafEnvironment()
+        env.addSubEnv(self.readConfiguration().getWsEnvironment())
+        env.addSubEnv(pf.getPfEnvironment())
+        for ip in DynamicDependencyManager.computeDependencyTree(pf.getPfPackageIdentifiers(),
+                                                                 installedPackages,
+                                                                 env):
+            piLink = pf.folder / ip.getIdentifier().name
+            if not piLink.is_symlink():
+                raise ValueError("Some packages are not linked, please run 'leaf sync %s'" %
+                                 (pf.name))
 
     def getCurrentProfileName(self):
         if self.currentLink.is_symlink():
@@ -813,7 +812,7 @@ class Workspace():
             piList = self.app.resolveLatest(motifList,
                                             ipMap=self.app.listInstalledPackages(),
                                             apMap=self.app.listAvailablePackages())
-            profilePiMap = pf.getPiMap()
+            profilePiMap = pf.getPfPackageIdentifierMap()
             for pi in piList:
                 if pi.name in profilePiMap:
                     self.logger.printDefault("Update %s, version %s -> %s" % (
@@ -829,7 +828,7 @@ class Workspace():
 
         if envMap is not None and len(envMap) > 0:
             self.logger.printDefault("Update environment")
-            pf.getEnv().update(envMap)
+            pf.getPfEnv().update(envMap)
 
     def switchProfile(self, name):
         # if no name and no current, use 1st profile
@@ -867,26 +866,28 @@ class Workspace():
         pf.folder.mkdir()
 
         # Do nothing for empty profiles
-        if len(pf.getPackages()) > 0:
-            self.app.installFromRemotes(pf.getPackages())
+        if len(pf.getPfPackages()) > 0:
+            env = self.app.getLeafEnvironment()
+            env.addSubEnv(self.readConfiguration().getWsEnvironment())
+            env.addSubEnv(pf.getPfEnvironment())
+            self.app.installFromRemotes(pf.getPfPackages(), env)
             installedPackages = self.app.listInstalledPackages()
-            for pi in self.app.listDependencies(pf.getPackages()):
-                piFolder = pf.folder / pi.name
+            deps = DynamicDependencyManager.computeDependencyTree(pf.getPfPackageIdentifiers(),
+                                                                  installedPackages,
+                                                                  env)
+            for ip in deps:
+                piFolder = pf.folder / ip.getIdentifier().name
                 if piFolder.exists():
-                    piFolder = pf.folder / str(pi)
-                ip = installedPackages.get(pi)
-                if ip is None:
-                    raise ValueError("Cannot find package %s" % pi)
+                    piFolder = pf.folder / str(ip.getIdentifier())
                 piFolder.symlink_to(ip.folder)
 
     def getProfileEnv(self, name=None):
         wsc = self.readConfiguration()
         pf = self.retrieveProfile(name)
         self.checkProfile(pf)
-        out = []
-        out.append(("LEAF_WORKSPACE", str(self.rootFolder)))
-        out.append(("LEAF_PROFILE", pf.name))
-        out.extend(self.app.getEnv(pf.getPackages()))
-        out.extend(wsc.getWsEnv().items())
-        out.extend(pf.getEnv().items())
-        return out
+        env = self.app.getLeafEnvironment()
+        env.env.append(("LEAF_WORKSPACE", self.rootFolder))
+        env.env.append(("LEAF_PROFILE", pf.name))
+        env.addSubEnv(wsc.getWsEnvironment())
+        env.addSubEnv(pf.getPfEnvironment())
+        return self.app.getPackageEnv(pf.getPfPackages(), env)

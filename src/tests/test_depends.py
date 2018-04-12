@@ -2,12 +2,21 @@
 @author: seb
 '''
 
+from collections import OrderedDict
 from leaf.constants import LeafConstants
-from leaf.core import DependencyManager
-from leaf.model import Manifest, PackageIdentifier
+from leaf.coreutils import DynamicDependencyManager
+from leaf.model import Manifest, PackageIdentifier, Environment
 from pathlib import Path
 import unittest
 from unittest.case import TestCase
+
+
+def mkpi(pis):
+    return PackageIdentifier.fromString(pis)
+
+
+def deps2strlist(deps):
+    return list(map(str, map(Manifest.getIdentifier, deps)))
 
 
 class TestDepends(unittest.TestCase):
@@ -24,105 +33,249 @@ class TestDepends(unittest.TestCase):
             if manifestFile.exists():
                 try:
                     mf = Manifest.parse(manifestFile)
-                    mf.getLeafDepends()
                     TestDepends.MANIFEST_MAP[mf.getIdentifier()] = mf
                 except:
                     pass
         print("Found", len(TestDepends.MANIFEST_MAP), LeafConstants.MANIFEST)
 
-    def checkContains(self, piList, pisList, order=False):
-        for pis in pisList:
-            self.assertTrue(PackageIdentifier.fromString(pis)
-                            in piList, msg="Missing " + pis)
-        self.assertEqual(len(piList), len(pisList))
-        if order:
-            for i in range(len(piList)):
-                self.assertEqual(piList[i],
-                                 PackageIdentifier.fromString(pisList[i]))
-
-    def dump(self, message, items):
-        print(message)
-        for i in items:
-            print("  ", str(i))
-
-    def testAdditivity(self):
-        dm = DependencyManager()
-        dm.addContent(TestDepends.MANIFEST_MAP)
-
-        deps = dm.getDependencyTree([PackageIdentifier.fromString("container-A_1.0"),
-                                     PackageIdentifier.fromString("container-A_2.0")])
-        self.checkContains(deps,
-                           ["container-A_1.0",
-                            "container-A_2.0",
-                            "container-B_1.0",
-                            "container-C_1.0",
-                            "container-D_1.0",
-                            "container-E_1.0"])
-
     def testSort(self):
-        dm = DependencyManager()
-        dm.addContent(TestDepends.MANIFEST_MAP)
-
-        deps = dm.getDependencyTree(
-            [PackageIdentifier.fromString("container-A_1.0")])
-        deps = dm.filterAndSort(deps)
-        self.checkContains(deps,
-                           ["container-E_1.0",
-                            "container-C_1.0",
-                            "container-B_1.0",
-                            "container-A_1.0"],
-                           order=True)
+        deps = DynamicDependencyManager.computeDependencyTree(list(map(mkpi, ["container-A_1.0",
+                                                                              "container-A_2.0"])),
+                                                              TestDepends.MANIFEST_MAP,
+                                                              Environment(),
+                                                              False)
+        self.assertEqual(['container-E_1.0',
+                          'container-C_1.0',
+                          'container-D_1.0',
+                          'container-B_1.0',
+                          'container-A_2.0',
+                          'container-A_1.0'],
+                         deps2strlist(deps))
 
     def testSortReverse(self):
-        dm = DependencyManager()
-        dm.addContent(TestDepends.MANIFEST_MAP)
+        deps = DynamicDependencyManager.computeDependencyTree(list(map(mkpi, ["container-A_1.0",
+                                                                              "container-A_2.0"])),
+                                                              TestDepends.MANIFEST_MAP,
+                                                              Environment(),
+                                                              True)
+        self.assertEqual(['container-A_1.0',
+                          'container-A_2.0',
+                          'container-B_1.0',
+                          'container-D_1.0',
+                          'container-C_1.0',
+                          'container-E_1.0'],
+                         deps2strlist(deps))
 
-        deps = dm.getDependencyTree(
-            [PackageIdentifier.fromString("container-A_1.0")])
-        deps = dm.filterAndSort(deps,
-                                reverse=True)
-        self.checkContains(deps,
-                           ["container-A_1.0",
-                            "container-B_1.0",
-                            "container-C_1.0",
-                            "container-E_1.0"],
-                           order=True)
+    def testForInstall(self):
+        availablePackages = TestDepends.MANIFEST_MAP
+        installedPackages = {}
+        deps = DynamicDependencyManager.computeApToInstall(list(map(mkpi, ["container-A_1.0",
+                                                                           "container-A_2.0"])),
+                                                           availablePackages,
+                                                           installedPackages,
+                                                           Environment())
+        self.assertEqual(['container-E_1.0',
+                          'container-C_1.0',
+                          'container-D_1.0',
+                          'container-B_1.0',
+                          'container-A_2.0',
+                          'container-A_1.0'],
+                         deps2strlist(deps))
 
-    def testSortFiltered(self):
-        dm = DependencyManager()
-        dm.addContent(TestDepends.MANIFEST_MAP)
+        pi = mkpi('container-E_1.0')
+        installedPackages[pi] = TestDepends.MANIFEST_MAP.get(pi)
 
-        deps = dm.getDependencyTree(
-            [PackageIdentifier.fromString("container-A_1.0")])
-        deps = dm.filterAndSort(deps,
-                                ignoredPiList=[PackageIdentifier.fromString("container-B_1.0")])
-        self.checkContains(deps,
-                           ["container-E_1.0",
-                            "container-C_1.0",
-                            "container-A_1.0"],
-                           order=True)
+        deps = DynamicDependencyManager.computeApToInstall(list(map(mkpi, ["container-A_1.0",
+                                                                           "container-A_2.0"])),
+                                                           availablePackages,
+                                                           installedPackages,
+                                                           Environment())
+        self.assertEqual(['container-C_1.0',
+                          'container-D_1.0',
+                          'container-B_1.0',
+                          'container-A_2.0',
+                          'container-A_1.0'],
+                         deps2strlist(deps))
 
-    def testMaintainDependencies(self):
-        dm = DependencyManager()
-        dm.addContent(TestDepends.MANIFEST_MAP)
+    def testForUninstall(self):
 
-        deps = dm.getDependencyTree(
-            [PackageIdentifier.fromString("container-A_1.0")])
-        deps = dm.filterAndSort(deps,
-                                ignoredPiList=[PackageIdentifier.fromString("container-B_1.0")])
-        dm = DependencyManager()
-        for pis in ["container-A_1.0",
-                    "container-A_2.0",
-                    "container-B_1.0",
-                    "container-C_1.0",
-                    "container-D_1.0",
-                    "container-E_1.0"]:
-            pi = PackageIdentifier.fromString(pis)
-            dm.addContent({pi: TestDepends.MANIFEST_MAP.get(pi)})
-        deps = dm.maintainDependencies(deps)
-        self.checkContains(deps,
-                           ["container-A_1.0"],
-                           order=True)
+        availablePackages = TestDepends.MANIFEST_MAP
+        installedPackages = OrderedDict()
+
+        for ap in DynamicDependencyManager.computeApToInstall(list(map(mkpi, ["container-A_1.0",
+                                                                              "container-A_2.0"])),
+                                                              availablePackages,
+                                                              installedPackages,
+                                                              Environment()):
+            installedPackages[ap.getIdentifier()] = ap
+
+        self.assertEqual(['container-E_1.0',
+                          'container-C_1.0',
+                          'container-D_1.0',
+                          'container-B_1.0',
+                          'container-A_2.0',
+                          'container-A_1.0'],
+                         deps2strlist(installedPackages.values()))
+
+        deps = DynamicDependencyManager.computeIpToUninstall(list(map(mkpi, ["container-A_1.0"])),
+                                                             installedPackages)
+
+        self.assertEqual(['container-A_1.0',
+                          'container-B_1.0',
+                          'container-E_1.0'],
+                         deps2strlist(deps))
+
+    def testConditionalInstall(self):
+        availablePackages = TestDepends.MANIFEST_MAP
+        installedPackages = {}
+        env = Environment()
+        deps = DynamicDependencyManager.computeApToInstall(list(map(mkpi, ["condition_1.0"])),
+                                                           availablePackages,
+                                                           installedPackages,
+                                                           env)
+        self.assertEqual(['condition-B_1.0',
+                          'condition-D_1.0',
+                          'condition-F_1.0',
+                          'condition-H_1.0',
+                          'condition_1.0'],
+                         deps2strlist(deps))
+
+        env = Environment(content={"FOO": "1"})
+        deps = DynamicDependencyManager.computeApToInstall(list(map(mkpi, ["condition_1.0"])),
+                                                           availablePackages,
+                                                           installedPackages,
+                                                           env)
+        self.assertEqual(['condition-A_1.0',
+                          'condition-D_1.0',
+                          'condition-F_1.0',
+                          'condition-H_1.0',
+                          'condition_1.0'],
+                         deps2strlist(deps))
+
+        env = Environment(content={"FOO": "BAR"})
+        deps = DynamicDependencyManager.computeApToInstall(list(map(mkpi, ["condition_1.0"])),
+                                                           availablePackages,
+                                                           installedPackages,
+                                                           env)
+        self.assertEqual(['condition-A_1.0',
+                          'condition-C_1.0',
+                          'condition-F_1.0',
+                          'condition_1.0'],
+                         deps2strlist(deps))
+
+        env = Environment(content={"FOO": "BAR",
+                                   "FOO2": "BAR2"})
+        deps = DynamicDependencyManager.computeApToInstall(list(map(mkpi, ["condition_1.0"])),
+                                                           availablePackages,
+                                                           installedPackages,
+                                                           env)
+        self.assertEqual(['condition-A_1.0',
+                          'condition-C_1.0',
+                          'condition-F_1.0',
+                          'condition_1.0'],
+                         deps2strlist(deps))
+
+        env = Environment(content={"FOO": "BAR",
+                                   "FOO2": "BAR2",
+                                   "HELLO": "wOrlD"})
+        deps = DynamicDependencyManager.computeApToInstall(list(map(mkpi, ["condition_1.0"])),
+                                                           availablePackages,
+                                                           installedPackages,
+                                                           env)
+        self.assertEqual(['condition-A_1.0',
+                          'condition-C_1.0',
+                          'condition-E_1.0',
+                          'condition-G_1.0',
+                          'condition_1.0'],
+                         deps2strlist(deps))
+
+        pi = mkpi('condition-C_1.0')
+        installedPackages[pi] = TestDepends.MANIFEST_MAP.get(pi)
+
+        env = Environment(content={"FOO": "BAR",
+                                   "FOO2": "BAR2",
+                                   "HELLO": "wOrlD"})
+        deps = DynamicDependencyManager.computeApToInstall(list(map(mkpi, ["condition_1.0"])),
+                                                           availablePackages,
+                                                           installedPackages,
+                                                           env)
+        self.assertEqual(['condition-A_1.0',
+                          'condition-E_1.0',
+                          'condition-G_1.0',
+                          'condition_1.0'],
+                         deps2strlist(deps))
+
+    def testConditionalTree(self):
+        availablePackages = TestDepends.MANIFEST_MAP
+
+        env = Environment()
+        deps = DynamicDependencyManager.computeDependencyTree(list(map(mkpi, ["condition_1.0"])),
+                                                              availablePackages,
+                                                              env)
+        self.assertEqual(['condition-B_1.0',
+                          'condition-D_1.0',
+                          'condition-F_1.0',
+                          'condition-H_1.0',
+                          'condition_1.0'],
+                         deps2strlist(deps))
+
+        env = Environment(content={"FOO": "1"})
+        deps = DynamicDependencyManager.computeDependencyTree(list(map(mkpi, ["condition_1.0"])),
+                                                              availablePackages,
+                                                              env)
+        self.assertEqual(['condition-A_1.0',
+                          'condition-D_1.0',
+                          'condition-F_1.0',
+                          'condition-H_1.0',
+                          'condition_1.0'],
+                         deps2strlist(deps))
+
+        env = Environment(content={"FOO": "BAR"})
+        deps = DynamicDependencyManager.computeDependencyTree(list(map(mkpi, ["condition_1.0"])),
+                                                              availablePackages,
+                                                              env)
+        self.assertEqual(['condition-A_1.0',
+                          'condition-C_1.0',
+                          'condition-F_1.0',
+                          'condition_1.0'],
+                         deps2strlist(deps))
+
+        env = Environment(content={"FOO": "BAR",
+                                   "FOO2": "BAR2"})
+        deps = DynamicDependencyManager.computeDependencyTree(list(map(mkpi, ["condition_1.0"])),
+                                                              availablePackages,
+                                                              env)
+        self.assertEqual(['condition-A_1.0',
+                          'condition-C_1.0',
+                          'condition-F_1.0',
+                          'condition_1.0'],
+                         deps2strlist(deps))
+
+        env = Environment(content={"FOO": "BAR",
+                                   "FOO2": "BAR2",
+                                   "HELLO": "wOrlD"})
+        deps = DynamicDependencyManager.computeDependencyTree(list(map(mkpi, ["condition_1.0"])),
+                                                              availablePackages,
+                                                              env)
+        self.assertEqual(['condition-A_1.0',
+                          'condition-C_1.0',
+                          'condition-E_1.0',
+                          'condition-G_1.0',
+                          'condition_1.0'],
+                         deps2strlist(deps))
+
+        deps = DynamicDependencyManager.computeDependencyTree(list(map(mkpi, ["condition_1.0"])),
+                                                              availablePackages)
+        self.assertEqual(['condition-A_1.0',
+                          'condition-B_1.0',
+                          'condition-C_1.0',
+                          'condition-D_1.0',
+                          'condition-E_1.0',
+                          'condition-F_1.0',
+                          'condition-G_1.0',
+                          'condition-H_1.0',
+                          'condition_1.0'],
+                         deps2strlist(deps))
 
 
 if __name__ == "__main__":

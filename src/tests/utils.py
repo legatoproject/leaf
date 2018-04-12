@@ -7,7 +7,7 @@ from leaf.cli_profile import ProfileCli
 from leaf.constants import LeafConstants, LeafFiles
 from leaf.core import LeafRepository
 from leaf.logger import TextLogger
-from leaf.model import Manifest
+from leaf.model import Manifest, PackageIdentifier
 import os
 from pathlib import Path
 import shutil
@@ -17,7 +17,8 @@ import unittest
 from unittest.case import TestCase
 
 
-DEBUG_TESTS = os.environ.get("LEAF_UT_KEEP")
+LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
+
 SEPARATOR = "--------------------"
 ALT_FILENAMES = {
     "compress-tar_1.0": 'compress-tar_1.0.tar',
@@ -38,7 +39,7 @@ class AbstractTestWithRepo(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        if DEBUG_TESTS is not None:
+        if LEAF_UT_DEBUG is not None:
             AbstractTestWithRepo.ROOT_FOLDER = Path("/tmp/leaf")
         else:
             AbstractTestWithRepo.ROOT_FOLDER = Path(
@@ -58,7 +59,7 @@ class AbstractTestWithRepo(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        if not DEBUG_TESTS is not None:
+        if not LEAF_UT_DEBUG is not None:
             shutil.rmtree(str(AbstractTestWithRepo.ROOT_FOLDER), True)
 
     def setUp(self):
@@ -93,7 +94,12 @@ class AbstractTestWithRepo(unittest.TestCase):
     def getAltWorkspaceFolder(self):
         return self.getVolatileItem("alt-workspace")
 
-    def checkInstalledPackages(self, *pisList):
+    def checkContent(self, content, pisList):
+        self.assertEqual(len(content), len(pisList))
+        for pis in pisList:
+            self.assertTrue(PackageIdentifier.fromString(pis) in content)
+
+    def checkInstalledPackages(self, pisList):
         for pis in pisList:
             folder = self.getInstallFolder() / str(pis)
             self.assertTrue(folder.is_dir(), msg=str(folder))
@@ -112,15 +118,16 @@ class AbstractTestWithRepo(unittest.TestCase):
         else:
             self.assertEqual(name, lnk.resolve().name)
 
-    def checkProfileContent(self, profileName, *content):
+    def checkProfileContent(self, profileName, contentList):
         pfFolder = self.getWorkspaceFolder() / LeafFiles.WS_DATA_FOLDERNAME / profileName
         self.assertTrue(pfFolder.exists())
         symlinkCount = 0
         for item in pfFolder.iterdir():
             if item.is_symlink():
                 symlinkCount += 1
-            self.assertTrue(item.name in content, "Unexpected link %s" % item)
-        self.assertEqual(symlinkCount, len(content))
+            self.assertTrue(item.name in contentList,
+                            "Unexpected link %s" % item)
+        self.assertEqual(symlinkCount, len(contentList))
 
 
 class LeafPackageManagerCliWrapper(AbstractTestWithRepo):

@@ -7,7 +7,11 @@
       "leaf": [
         "container-C_1.0",
         "container-D_1.0"
-      ]
+      ],
+      "conditions": {
+        "container-C_1.0": ["FOO=BAR", "!PLOP"],
+        "container-D_1.0": ["FOO=NOBAR", "!PLOP"]
+      }
     }
   }
 }

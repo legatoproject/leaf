@@ -6,13 +6,14 @@ from datetime import datetime, timedelta
 from leaf.constants import LeafConstants
 from leaf.core import LeafApp
 from leaf.logger import createLogger
-from leaf.model import PackageIdentifier
+from leaf.model import PackageIdentifier, Environment
 from leaf.utils import isFolderIgnored
 import os
+import platform
 import time
 import unittest
 
-from tests.utils import AbstractTestWithRepo
+from tests.utils import AbstractTestWithRepo, LEAF_UT_DEBUG
 
 
 VERBOSE = True
@@ -39,14 +40,11 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.assertEqual(1, len(self.app.getRemoteUrls()))
         self.assertEqual(2, len(self.app.getRemoteRepositories()))
 
-    def checkContent(self, content, pisList):
-        self.assertEqual(len(content), len(pisList))
-        for pis in pisList:
-            self.assertTrue(PackageIdentifier.fromString(pis) in content)
-
     def testCompression(self):
-        packs = ["compress-bz2_1.0", "compress-gz_1.0",
-                 "compress-tar_1.0", "compress-xz_1.0"]
+        packs = ["compress-bz2_1.0",
+                 "compress-gz_1.0",
+                 "compress-tar_1.0",
+                 "compress-xz_1.0"]
         self.app.installFromRemotes(packs)
         self.checkContent(self.app.listInstalledPackages(), packs)
 
@@ -57,17 +55,23 @@ class TestPackageManager_File(AbstractTestWithRepo):
 
     def testContainer(self):
         self.app.installFromRemotes(["container-A_1.0"])
-        self.checkContent(self.app.listInstalledPackages(), [
-                          "container-A_1.0", "container-B_1.0", "container-C_1.0", "container-E_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), ["container-A_1.0",
+                                                             "container-B_1.0",
+                                                             "container-C_1.0",
+                                                             "container-E_1.0"])
 
         self.app.installFromRemotes(["container-A_2.0"])
-        self.checkContent(self.app.listInstalledPackages(), [
-                          "container-A_1.0", "container-B_1.0", "container-C_1.0", "container-E_1.0",
-                          "container-A_2.0", "container-D_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), ["container-A_1.0",
+                                                             "container-B_1.0",
+                                                             "container-C_1.0",
+                                                             "container-E_1.0",
+                                                             "container-A_2.0",
+                                                             "container-D_1.0"])
 
         self.app.uninstallPackages(["container-A_1.0"])
-        self.checkContent(self.app.listInstalledPackages(), [
-                          "container-A_2.0", "container-C_1.0", "container-D_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), ["container-A_2.0",
+                                                             "container-C_1.0",
+                                                             "container-D_1.0"])
 
         self.app.uninstallPackages(["container-A_2.0"])
         self.checkContent(self.app.listInstalledPackages(), [])
@@ -79,17 +83,23 @@ class TestPackageManager_File(AbstractTestWithRepo):
 
     def testContainerNotMaster(self):
         self.app.installFromRemotes(["container-A_1.1"])
-        self.checkContent(self.app.listInstalledPackages(), [
-                          "container-A_1.1", "container-B_1.0", "container-C_1.0", "container-E_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), ["container-A_1.1",
+                                                             "container-B_1.0",
+                                                             "container-C_1.0",
+                                                             "container-E_1.0"])
 
         self.app.installFromRemotes(["container-A_2.1"])
-        self.checkContent(self.app.listInstalledPackages(), [
-                          "container-A_1.1", "container-B_1.0", "container-C_1.0", "container-E_1.0",
-                          "container-A_2.1", "container-D_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), ["container-A_1.1",
+                                                             "container-B_1.0",
+                                                             "container-C_1.0",
+                                                             "container-E_1.0",
+                                                             "container-A_2.1",
+                                                             "container-D_1.0"])
 
         self.app.uninstallPackages(["container-A_1.1"])
-        self.checkContent(self.app.listInstalledPackages(), [
-                          "container-A_2.1", "container-C_1.0", "container-D_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), ["container-A_2.1",
+                                                             "container-C_1.0",
+                                                             "container-D_1.0"])
 
         self.app.uninstallPackages(["container-A_2.1"])
         self.checkContent(self.app.listInstalledPackages(), [])
@@ -104,8 +114,8 @@ class TestPackageManager_File(AbstractTestWithRepo):
 
         self.app.installFromRemotes(["failure-depends-deb_1.0"],
                                     bypassAptDepends=True)
-        self.checkContent(self.app.listInstalledPackages(), [
-                          "deb_1.0", "failure-depends-deb_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), ["deb_1.0",
+                                                             "failure-depends-deb_1.0"])
 
     def testSteps(self):
         self.app.installFromRemotes(["install_1.0"])
@@ -154,28 +164,35 @@ class TestPackageManager_File(AbstractTestWithRepo):
 
     def testCannotUninstallToKeepDependencies(self):
         self.app.installFromRemotes(["container-A_2.0"])
-        self.checkContent(self.app.listInstalledPackages(), [
-                          "container-A_2.0", "container-C_1.0", "container-D_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), ["container-A_2.0",
+                                                             "container-C_1.0",
+                                                             "container-D_1.0"])
 
         self.app.uninstallPackages(["container-C_1.0"])
-        self.checkContent(self.app.listInstalledPackages(), [
-                          "container-A_2.0", "container-C_1.0", "container-D_1.0"])
+        self.checkContent(self.app.listInstalledPackages(), ["container-A_2.0",
+                                                             "container-C_1.0",
+                                                             "container-D_1.0"])
 
     def testEnv(self):
         self.app.installFromRemotes(["env-A_1.0"])
         self.checkContent(self.app.listInstalledPackages(),
-                          ["env-A_1.0", "env-B_1.0"])
+                          ["env-A_1.0",
+                           "env-B_1.0"])
 
-        env = self.app.getEnv(["env-A_1.0"])
-        self.assertEqual(4, len(env))
+        env = self.app.getPackageEnv(["env-A_1.0"])
+        self.assertEqual(7, len(env.toList()))
         self.assertEqual([
+            ("LEAF_PLATFORM_SYSTEM", platform.system()),
+            ("LEAF_PLATFORM_MACHINE", platform.machine()),
+            ("LEAF_PLATFORM_RELEASE", platform.release()),
             ('LEAF_ENV_B', 'BAR'),
             ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
             ('LEAF_ENV_A', 'FOO'),
             ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
-             (self.getInstallFolder(), self.getInstallFolder()))],
-            env)
+                            (self.getInstallFolder(), self.getInstallFolder()))],
+            env.toList())
 
+    @unittest.skipIf(LEAF_UT_DEBUG is not None, "Disable timeout test")
     def testSilentFail(self):
         with self.assertRaises(Exception):
             self.app.installFromRemotes(["failure-postinstall-download_1.0"])
@@ -190,6 +207,7 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.checkContent(self.app.listInstalledPackages(), ["failure-postinstall-download-silent_1.0",
                                                              "failure-postinstall-exec-silent_1.0"])
 
+    @unittest.skipIf(LEAF_UT_DEBUG is not None, "Disable timeout test")
     def testDownloadTimeout(self):
         start = time.time()
         with self.assertRaises(Exception):
@@ -200,20 +218,6 @@ class TestPackageManager_File(AbstractTestWithRepo):
                         msg="Duration: " + str(duration))
         self.assertTrue(duration < (LeafConstants.DOWNLOAD_TIMEOUT + 2),
                         msg="Duration: " + str(duration))
-
-    def testDepends(self):
-        self.assertEqual(["python3"],
-                         self.app.listDependencies(["deb_1.0"],
-                                                   aptDepends=True))
-        self.assertEqual(["python42"],
-                         self.app.listDependencies(["failure-depends-deb_1.0"],
-                                                   aptDepends=True))
-        self.assertEqual(["python3", "python42"],
-                         self.app.listDependencies(["deb_1.0", "failure-depends-deb_1.0"],
-                                                   aptDepends=True))
-        self.assertEqual(["python42"],
-                         self.app.listDependencies(["deb_1.0", "failure-depends-deb_1.0"],
-                                                   aptDepends=True, filterInstalled=True))
 
     def testResolveLastVersion(self):
         self.app.installFromRemotes(["container-A_2.0"])
@@ -256,6 +260,62 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.app.getRemoteRepositories(smartRefresh=True)
         self.assertNotEqual(previousInode,
                             self.app.cacheFile.stat().st_ino)
+
+    def testDepends(self):
+        self.assertEqual(["python3"],
+                         self.app.listDependencies(["deb_1.0"],
+                                                   aptDepends=True))
+        self.assertEqual(["python42"],
+                         self.app.listDependencies(["failure-depends-deb_1.0"],
+                                                   aptDepends=True))
+        self.assertEqual(["python3", "python42"],
+                         self.app.listDependencies(["deb_1.0", "failure-depends-deb_1.0"],
+                                                   aptDepends=True))
+        self.assertEqual(["python42"],
+                         self.app.listDependencies(["deb_1.0", "failure-depends-deb_1.0"],
+                                                   aptDepends=True, filterInstalled=True))
+
+    def testConditionalInstall(self):
+        self.app.installFromRemotes(["condition_1.0"])
+        self.checkContent(self.app.listInstalledPackages(),
+                          ["condition_1.0",
+                           "condition-B_1.0",
+                           "condition-D_1.0",
+                           "condition-F_1.0",
+                           "condition-H_1.0"])
+
+        self.app.installFromRemotes(["condition_1.0"],
+                                    extraEnv=Environment("test",
+                                                         {"FOO": "BAR"}))
+        self.checkContent(self.app.listInstalledPackages(),
+                          ["condition_1.0",
+                           "condition-A_1.0",
+                           "condition-B_1.0",
+                           "condition-C_1.0",
+                           "condition-D_1.0",
+                           "condition-F_1.0",
+                           "condition-H_1.0"])
+
+        self.app.updateConfiguration(envMap={"FOO2": "BAR2",
+                                             "HELLO": "WoRld"})
+
+        self.app.installFromRemotes(["condition_1.0"],
+                                    extraEnv=Environment("test",
+                                                         {"FOO": "BAR"}))
+        self.checkContent(self.app.listInstalledPackages(),
+                          ["condition_1.0",
+                           "condition-A_1.0",
+                           "condition-B_1.0",
+                           "condition-C_1.0",
+                           "condition-D_1.0",
+                           "condition-E_1.0",
+                           "condition-F_1.0",
+                           "condition-G_1.0",
+                           "condition-H_1.0"])
+
+        self.app.uninstallPackages(["condition_1.0"])
+        self.checkContent(self.app.listInstalledPackages(),
+                          [])
 
 
 if __name__ == "__main__":

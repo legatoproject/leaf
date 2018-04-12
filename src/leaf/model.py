@@ -21,19 +21,19 @@ from tarfile import TarFile
 @total_ordering
 class PackageIdentifier ():
 
-    _NAME_REGEX = re.compile('^[a-zA-Z0-9][-a-zA-Z0-9]*$')
-    _VERSION_REGEX = re.compile('^[a-zA-Z0-9][-._a-zA-Z0-9]*$')
-    _SEPARATOR = '_'
+    NAME_PATTERN = '[a-zA-Z0-9][-a-zA-Z0-9]*'
+    VERSION_PATTERN = '[a-zA-Z0-9][-._a-zA-Z0-9]*'
+    SEPARATOR = '_'
 
     @staticmethod
     def isValidIdentifier(pis):
-        split = pis.partition(PackageIdentifier._SEPARATOR)
-        return (PackageIdentifier._NAME_REGEX.match(split[0]) is not None and
-                PackageIdentifier._VERSION_REGEX.match(split[2]) is not None)
+        split = pis.partition(PackageIdentifier.SEPARATOR)
+        return (re.compile(PackageIdentifier.NAME_PATTERN).fullmatch(split[0]) is not None and
+                re.compile(PackageIdentifier.VERSION_PATTERN).fullmatch(split[2]) is not None)
 
     @staticmethod
     def fromString(pis):
-        split = pis.partition(PackageIdentifier._SEPARATOR)
+        split = pis.partition(PackageIdentifier.SEPARATOR)
         return PackageIdentifier(split[0], split[2])
 
     @staticmethod
@@ -41,15 +41,15 @@ class PackageIdentifier ():
         return [PackageIdentifier.fromString(pis) for pis in pisList]
 
     def __init__(self, name, version):
-        if PackageIdentifier._NAME_REGEX.match(name) is None:
+        if re.compile(PackageIdentifier.NAME_PATTERN).fullmatch(name) is None:
             raise ValueError("Invalid package name: " + name)
-        if PackageIdentifier._VERSION_REGEX.match(version) is None:
+        if re.compile(PackageIdentifier.VERSION_PATTERN).fullmatch(version) is None:
             raise ValueError("Invalid package version: " + version)
         self.name = name
         self.version = version
 
     def __str__(self):
-        return self.name + PackageIdentifier._SEPARATOR + self.version
+        return self.name + PackageIdentifier.SEPARATOR + self.version
 
     def _is_valid_operand(self, other):
         return (hasattr(other, "name") and
@@ -75,6 +75,59 @@ class PackageIdentifier ():
 
     def getVersion(self):
         return stringToTuple(self.version)
+
+
+class ConditionalPackageIdentifier(PackageIdentifier):
+
+    CONDITION_PATTERN = '\((.+?)\)'
+    COND_SET = "(!)?([A-Za-z0-9_]+)"
+    COND_EQ = "([A-Za-z0-9_]+)(=|!=|~|!~)(.+)"
+
+    @staticmethod
+    def fromString(pisc):
+        p = re.compile("(%s)%s(%s)(%s)*" % (PackageIdentifier.NAME_PATTERN,
+                                            PackageIdentifier.SEPARATOR,
+                                            PackageIdentifier.VERSION_PATTERN,
+                                            ConditionalPackageIdentifier.CONDITION_PATTERN))
+        m = p.fullmatch(pisc)
+        if m is None:
+            raise ValueError("Invalid conditional package identifier: %s" %
+                             pisc)
+        conditions = re.compile(
+            ConditionalPackageIdentifier.CONDITION_PATTERN).findall(pisc)
+        return ConditionalPackageIdentifier(m.group(1), m.group(2), conditions)
+
+    def __init__(self, name, version, conditions):
+        PackageIdentifier.__init__(self, name, version)
+        self.conditions = conditions
+
+    def isOk(self, env):
+        if self.conditions is None:
+            return True
+        for cond in self.conditions:
+            if not ConditionalPackageIdentifier.isValidCondition(cond, env):
+                return False
+        return True
+
+    @staticmethod
+    def isValidCondition(cond, env):
+        m = re.compile(ConditionalPackageIdentifier.COND_SET).fullmatch(cond)
+        if m is not None:
+            return (m.group(1) is None) ^ (env.findValue(m.group(2)) is None)
+
+        m = re.compile(ConditionalPackageIdentifier.COND_EQ).fullmatch(cond)
+        if m is not None:
+            value = env.findValue(m.group(1))
+            if m.group(2) == "!=":
+                return value != m.group(3)
+            elif m.group(2) == "=":
+                return value == m.group(3)
+            elif m.group(2) == "~":
+                return value is not None and m.group(3).lower() in value.lower()
+            elif m.group(2) == "!~":
+                return value is None or m.group(3).lower() not in value.lower()
+
+        raise ValueError("Unknown condition: %s" % cond)
 
 
 class JsonObject():
@@ -145,18 +198,19 @@ class Manifest(JsonObject):
     def getLeafDepends(self):
         return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_DEPENDS, JsonConstants.INFO_DEPENDS_LEAF, default=[])
 
+    def getLeafDepends2(self, env):
+        out = []
+        for pisc in self.getLeafDepends():
+            cpi = ConditionalPackageIdentifier.fromString(pisc)
+            if cpi not in out and (env is None or cpi.isOk(env)):
+                out.append(cpi)
+        return out
+
     def getAptDepends(self):
         return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_DEPENDS, JsonConstants.INFO_DEPENDS_DEB, default=[])
 
     def getSupportedModules(self):
         return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_SUPPORTEDMODULES)
-
-    def getSupportedOS(self):
-        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_SUPPORTEDOS)
-
-    def isSupportedOs(self):
-        supportedOs = self.getSupportedOS()
-        return supportedOs is None or len(supportedOs) == 0 or LeafConstants.CURRENT_OS in supportedOs
 
     def getSupportedLeafVersion(self):
         return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_LEAF_MINVER)
@@ -220,6 +274,9 @@ class InstalledPackage(Manifest):
     def __str__(self):
         return "{pi} [{path}]".format(pi=self.getIdentifier(), path=str(self.folder))
 
+    def getMfEnv(self):
+        return self.jsonpath(JsonConstants.ENV, default={})
+
 
 class RemoteRepository(JsonObject):
     '''
@@ -249,6 +306,10 @@ class WorkspaceConfiguration(JsonObject):
     def getWsEnv(self):
         return self.jsoninit(key=JsonConstants.WS_ENV,
                              value=OrderedDict())
+
+    def getWsEnvironment(self):
+        return Environment("Exported by workspace config",
+                           self.getWsEnv())
 
     def getWsRemotes(self):
         return self.jsoninit(key=JsonConstants.WS_REMOTES,
@@ -285,8 +346,8 @@ class Profile(JsonObject):
     @staticmethod
     def emptyProfile(name, folder):
         out = Profile(Profile.checkValidName(name), folder, OrderedDict())
-        out.getPackages()
-        out.getEnv()
+        out.getPfPackages()
+        out.getPfEnv()
         return out
 
     def __init__(self, name, folder, json):
@@ -295,17 +356,26 @@ class Profile(JsonObject):
         self.folder = folder
         self.isCurrentProfile = False
 
-    def getEnv(self):
+    def getPfEnv(self):
         return self.jsoninit(key=JsonConstants.WS_PROFILE_ENV,
                              value=OrderedDict())
 
-    def getPackages(self):
+    def getPfEnvironment(self):
+        return Environment("Exported by profile %s" % self.name,
+                           self.getPfEnv())
+
+    def getPfPackages(self):
         return self.jsoninit(key=JsonConstants.WS_PROFILE_PACKAGES,
                              value=[])
 
-    def getPiMap(self):
+    def getPfPackageIdentifiers(self):
+        return list(map(PackageIdentifier.fromString,
+                        self.jsoninit(key=JsonConstants.WS_PROFILE_PACKAGES,
+                                      value=[])))
+
+    def getPfPackageIdentifierMap(self):
         out = OrderedDict()
-        for pis in self.getPackages():
+        for pis in self.getPfPackages():
             pi = PackageIdentifier.fromString(pis)
             if pi.name not in out:
                 out[pi.name] = pi
@@ -314,3 +384,70 @@ class Profile(JsonObject):
     def setPiList(self, piList):
         self.json[JsonConstants.WS_PROFILE_PACKAGES] = [str(pi)
                                                         for pi in piList]
+
+
+class Environment():
+
+    @staticmethod
+    def exportCommand(key, value):
+        return "export %s=\"%s\";" % (key, value)
+
+    @staticmethod
+    def unsetCommand(key):
+        return "unset %s" % (key)
+
+    def __init__(self, comment=None, content=None):
+        self.comment = comment
+        self.env = []
+        self.children = []
+        if isinstance(content, dict):
+            self.env += content.items()
+        elif isinstance(content, list):
+            self.env += content
+
+    def addSubEnv(self, child):
+        if child is not None:
+            if not isinstance(child, Environment):
+                raise ValueError()
+            self.children.append(child)
+
+    def printEnv(self, commentConsumer=None, kvConsumer=None):
+        if len(self.env) > 0:
+            if self.comment is not None and commentConsumer is not None:
+                commentConsumer(self.comment)
+            if kvConsumer is not None:
+                for k, v in self.env:
+                    kvConsumer(k, v)
+        for e in self.children:
+            e.printEnv(commentConsumer, kvConsumer)
+
+    def toList(self, acc=None):
+        if acc is None:
+            acc = []
+        acc += self.env
+        for e in self.children:
+            e.toList(acc=acc)
+        return acc
+
+    def keys(self):
+        out = set()
+        for k, _ in self.toList():
+            out.add(k)
+        return out
+
+    def findValue(self, key):
+        out = None
+        for k, v in self.env:
+            if k == key:
+                out = v
+        for c in self.children:
+            out2 = c.findValue(key)
+            if out2 is not None:
+                out = out2
+        return out
+
+    def unset(self, key):
+        if key in self.env:
+            del self.env[key]
+        for c in self.children:
+            c.unset(key)

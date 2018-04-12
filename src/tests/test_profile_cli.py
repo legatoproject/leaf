@@ -39,7 +39,7 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
                              "-e", "FOO2=BAR2")
         self.leafProfileExec("list")
         self.leafProfileExec("env")
-        self.checkProfileContent("default")
+        self.checkProfileContent("default", [])
 
     def testInitWithPackages(self):
         self.leafProfileExec("init",
@@ -49,12 +49,11 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
                              "-p", "deb_1.0")
         self.leafProfileExec("list")
         self.leafProfileExec("env")
-        self.checkProfileContent("CONTAINER-A_DEB",
-                                 "container-A",
-                                 "container-B",
-                                 "container-C",
-                                 "container-E",
-                                 "deb")
+        self.checkProfileContent("CONTAINER-A_DEB", ["container-A",
+                                                     "container-B",
+                                                     "container-C",
+                                                     "container-E",
+                                                     "deb"])
 
     def testCreate(self):
         self.leafProfileExec("init")
@@ -63,22 +62,20 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
                              "-p", "deb_1.0",
                              "-e", "FOO=BAR",
                              "-e", "FOO2=BAR2")
-        self.checkProfileContent("foo",
-                                 "container-A",
-                                 "container-B",
-                                 "container-C",
-                                 "container-E",
-                                 "deb")
+        self.checkProfileContent("foo", ["container-A",
+                                         "container-B",
+                                         "container-C",
+                                         "container-E",
+                                         "deb"])
         self.leafProfileExec("list")
         self.leafProfileExec("update", "foo",
                              "-p", "container-A",
                              "-e", "FOO3=BAR3")
         self.leafProfileExec("env", "foo")
-        self.checkProfileContent("foo",
-                                 "container-A",
-                                 "container-C",
-                                 "container-D",
-                                 "deb")
+        self.checkProfileContent("foo", ["container-A",
+                                         "container-C",
+                                         "container-D",
+                                         "deb"])
         self.leafProfileExec("create", "foo", expectedRc=2)
 
     def testDelete(self):
@@ -124,10 +121,9 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
     def testWithoutVersion(self):
         self.leafProfileExec("init", "-p", "container-A")
         self.leafProfileExec("list")
-        self.checkProfileContent("CONTAINER-A",
-                                 "container-A",
-                                 "container-C",
-                                 "container-D")
+        self.checkProfileContent("CONTAINER-A", ["container-A",
+                                                 "container-C",
+                                                 "container-D"])
 
     def testBootstrapWorkspace(self):
         self.leafProfileExec("init", "-p", "container-A")
@@ -136,10 +132,9 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
         self.checkCurrentProfile("DEB")
         self.leafProfileExec("list")
         self.leafProfileExec("env")
-        self.checkProfileContent("CONTAINER-A",
-                                 "container-A",
-                                 "container-C",
-                                 "container-D")
+        self.checkProfileContent("CONTAINER-A", ["container-A",
+                                                 "container-C",
+                                                 "container-D"])
         dataFolder = self.getWorkspaceFolder() / LeafFiles.WS_DATA_FOLDERNAME
         self.assertTrue(dataFolder.exists())
         shutil.rmtree(str(dataFolder))
@@ -151,10 +146,9 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
         self.checkCurrentProfile("CONTAINER-A")
         self.leafProfileExec("list")
         self.leafProfileExec("env")
-        self.checkProfileContent("CONTAINER-A",
-                                 "container-A",
-                                 "container-C",
-                                 "container-D")
+        self.checkProfileContent("CONTAINER-A", ["container-A",
+                                                 "container-C",
+                                                 "container-D"])
 
     def testNoAutoSync(self):
         self.leafProfileExec("init")
@@ -185,7 +179,6 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
         self.leafProfileExec("env", "foo")
 
     def testSearch(self):
-        self.leafPackageManagerExec("refresh")
         self.leafProfileExec("init", "-p", "container-A")
         self.leafProfileExec("search")
         self.leafProfileExec("search", "container")
@@ -198,20 +191,225 @@ class TestProfileCli_Default(LeafProfileCliWrapper):
                              "-p", "version_1.0",
                              "-p", "container-A_1.0")
         self.checkCurrentProfile("foo")
-        self.checkProfileContent("foo",
-                                 "container-A",
-                                 "container-B",
-                                 "container-C",
-                                 "container-E",
-                                 "version")
+        self.checkProfileContent("foo", ["container-A",
+                                         "container-B",
+                                         "container-C",
+                                         "container-E",
+                                         "version"])
 
         self.leafProfileExec("upgrade", "foo")
         self.checkCurrentProfile("foo")
-        self.checkProfileContent("foo",
-                                 "container-A",
-                                 "container-C",
-                                 "container-D",
-                                 "version")
+        self.checkProfileContent("foo", ["container-A",
+                                         "container-C",
+                                         "container-D",
+                                         "version"])
+
+    def testEnv(self):
+        self.leafProfileExec("init", "-p", "env-A")
+        self.leafProfileExec("env", "ENV-A")
+        self.leafProfileExec("env")
+        self.leafProfileExec("env",
+                             "--activate-script",
+                             str(self.getWorkspaceFolder() / "in.env"),
+                             "--deactivate-script",
+                             str(self.getWorkspaceFolder() / "out.env"))
+        self.assertTrue((self.getWorkspaceFolder() / "in.env").exists())
+        self.assertTrue((self.getWorkspaceFolder() / "out.env").exists())
+
+    def testConditionalInstall_user(self):
+        self.leafProfileExec("init")
+
+        self.leafProfileExec("create", "foo",
+                             "-p" "condition")
+
+        self.leafProfileExec("sync", "foo")
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-B_1.0",
+                                     "condition-D_1.0",
+                                     "condition-F_1.0",
+                                     "condition-H_1.0"])
+        self.checkProfileContent("foo", ["condition-B",
+                                         "condition-D",
+                                         "condition-F",
+                                         "condition-H",
+                                         "condition"])
+
+        self.leafPackageManagerExec("config", "--env", "FOO=BAR")
+        self.leafProfileExec("sync", "foo")
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-A_1.0",
+                                     "condition-B_1.0",
+                                     "condition-C_1.0",
+                                     "condition-D_1.0",
+                                     "condition-F_1.0",
+                                     "condition-H_1.0"])
+        self.checkProfileContent("foo", ["condition-A",
+                                         "condition-C",
+                                         "condition-F",
+                                         "condition"])
+
+        self.leafPackageManagerExec("config", "--env", "HELLO=PLOP")
+        self.leafProfileExec("sync", "foo")
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-A_1.0",
+                                     "condition-B_1.0",
+                                     "condition-C_1.0",
+                                     "condition-D_1.0",
+                                     "condition-F_1.0",
+                                     "condition-H_1.0"])
+        self.checkProfileContent("foo", ["condition-A",
+                                         "condition-C",
+                                         "condition-F",
+                                         "condition"])
+
+        self.leafPackageManagerExec("config",
+                                    "--env", "FOO2=BAR2",
+                                    "--env", "HELLO=wOrlD")
+        self.leafProfileExec("sync", "foo")
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-A_1.0",
+                                     "condition-B_1.0",
+                                     "condition-C_1.0",
+                                     "condition-D_1.0",
+                                     "condition-E_1.0",
+                                     "condition-F_1.0",
+                                     "condition-G_1.0",
+                                     "condition-H_1.0"])
+        self.checkProfileContent("foo", ["condition-A",
+                                         "condition-C",
+                                         "condition-E",
+                                         "condition-G",
+                                         "condition"])
+
+    def testConditionalInstall_ws(self):
+        self.leafProfileExec("init")
+
+        self.leafProfileExec("create", "foo",
+                             "-p" "condition")
+
+        self.leafProfileExec("sync", "foo")
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-B_1.0",
+                                     "condition-D_1.0",
+                                     "condition-F_1.0",
+                                     "condition-H_1.0"])
+        self.checkProfileContent("foo", ["condition-B",
+                                         "condition-D",
+                                         "condition-F",
+                                         "condition-H",
+                                         "condition"])
+
+        self.leafProfileExec("workspace", "--env", "FOO=BAR")
+        self.leafProfileExec("sync", "foo")
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-A_1.0",
+                                     "condition-B_1.0",
+                                     "condition-C_1.0",
+                                     "condition-D_1.0",
+                                     "condition-F_1.0",
+                                     "condition-H_1.0"])
+        self.checkProfileContent("foo", ["condition-A",
+                                         "condition-C",
+                                         "condition-F",
+                                         "condition"])
+
+        self.leafProfileExec("workspace", "--env", "HELLO=PLOP")
+        self.leafProfileExec("sync", "foo")
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-A_1.0",
+                                     "condition-B_1.0",
+                                     "condition-C_1.0",
+                                     "condition-D_1.0",
+                                     "condition-F_1.0",
+                                     "condition-H_1.0"])
+        self.checkProfileContent("foo", ["condition-A",
+                                         "condition-C",
+                                         "condition-F",
+                                         "condition"])
+
+        self.leafProfileExec("workspace",
+                             "--env", "FOO2=BAR2",
+                             "--env", "HELLO=wOrlD")
+        self.leafProfileExec("sync", "foo")
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-A_1.0",
+                                     "condition-B_1.0",
+                                     "condition-C_1.0",
+                                     "condition-D_1.0",
+                                     "condition-E_1.0",
+                                     "condition-F_1.0",
+                                     "condition-G_1.0",
+                                     "condition-H_1.0"])
+        self.checkProfileContent("foo", ["condition-A",
+                                         "condition-C",
+                                         "condition-E",
+                                         "condition-G",
+                                         "condition"])
+
+    def testConditionalInstall_pf(self):
+        self.leafProfileExec("init")
+
+        self.leafProfileExec("create", "foo",
+                             "-p" "condition")
+
+        self.leafProfileExec("sync", "foo")
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-B_1.0",
+                                     "condition-D_1.0",
+                                     "condition-F_1.0",
+                                     "condition-H_1.0"])
+        self.checkProfileContent("foo", ["condition-B",
+                                         "condition-D",
+                                         "condition-F",
+                                         "condition-H",
+                                         "condition"])
+
+        self.leafProfileExec("update", "--env", "FOO=BAR")
+        self.leafProfileExec("sync", "foo")
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-A_1.0",
+                                     "condition-B_1.0",
+                                     "condition-C_1.0",
+                                     "condition-D_1.0",
+                                     "condition-F_1.0",
+                                     "condition-H_1.0"])
+        self.checkProfileContent("foo", ["condition-A",
+                                         "condition-C",
+                                         "condition-F",
+                                         "condition"])
+
+        self.leafProfileExec("update", "--env", "HELLO=PLOP")
+        self.leafProfileExec("sync", "foo")
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-A_1.0",
+                                     "condition-B_1.0",
+                                     "condition-C_1.0",
+                                     "condition-D_1.0",
+                                     "condition-F_1.0",
+                                     "condition-H_1.0"])
+        self.checkProfileContent("foo", ["condition-A",
+                                         "condition-C",
+                                         "condition-F",
+                                         "condition"])
+
+        self.leafProfileExec("update",
+                             "--env", "FOO2=BAR2",
+                             "--env", "HELLO=wOrlD")
+        self.leafProfileExec("sync", "foo")
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-A_1.0",
+                                     "condition-B_1.0",
+                                     "condition-C_1.0",
+                                     "condition-D_1.0",
+                                     "condition-E_1.0",
+                                     "condition-F_1.0",
+                                     "condition-G_1.0",
+                                     "condition-H_1.0"])
+        self.checkProfileContent("foo", ["condition-A",
+                                         "condition-C",
+                                         "condition-E",
+                                         "condition-G",
+                                         "condition"])
 
 
 @unittest.skipUnless("VERBOSE" in LEAF_UT_LEVELS, "Test disabled")

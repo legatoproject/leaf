@@ -8,17 +8,54 @@ Leaf Package Manager
 '''
 from collections import OrderedDict
 from leaf import __version__
-from leaf.constants import LeafConstants, JsonConstants
-from leaf.model import PackageIdentifier, Manifest
+from leaf.constants import JsonConstants
+from leaf.model import Manifest, Environment
 from leaf.utils import downloadFile
 import os
 import shutil
 import subprocess
 
 
+def genEnvScript(env, activateFile=None, deactivateFile=None):
+    '''
+    Generates environment script to activate and desactivate a profile
+    '''
+    if deactivateFile is not None:
+        resetMap = OrderedDict()
+        for k in env.keys():
+            resetMap[k] = os.environ.get(k)
+        with open(str(deactivateFile), "w") as fp:
+            for k, v in resetMap.items():
+                # If the value was not present in env before, reset it
+                if v is None:
+                    fp.write(Environment.unsetCommand(k) + "\n")
+                else:
+                    fp.write(Environment.exportCommand(k, v) + "\n")
+    if activateFile is not None:
+        with open(str(activateFile), "w") as fp:
+            def commentConsumer(c):
+                fp.write("# %s\n" % c)
+
+            def kvConsumer(k, v):
+                fp.write(Environment.exportCommand(k, v) + "\n")
+
+            env.printEnv(commentConsumer=commentConsumer,
+                         kvConsumer=kvConsumer)
+
+
 class TagManager():
+    '''
+    Class used to tag packages
+    '''
+
+    LATEST = 'latest'
+    INSTALLED = 'installed'
+    CURRENT = 'current'
 
     def tagLatest(self, mfList):
+        '''
+        Add the 'latest' tag to packages with the latest version
+        '''
         mapByName = OrderedDict()
         for mf in mfList:
             pkgName = mf.getIdentifier().name
@@ -29,100 +66,162 @@ class TagManager():
             latest = next(iter(sorted(pkgList,
                                       key=Manifest.getIdentifier,
                                       reverse=True)))
-            latest.tags.append("latest")
+            latest.tags.append(TagManager.LATEST)
 
     def tagInstalled(self, mfList, piList):
+        '''
+        Tag packages from given mfList as installed if they are in the given piList 
+        '''
         for mf in mfList:
             if mf.getIdentifier() in piList:
-                mf.tags.append("installed")
+                mf.tags.append(TagManager.INSTALLED)
 
     def tagCurrent(self, mfList, pf):
+        '''
+        Tag packages in mfList as current if they are in the given profile
+        '''
         for mf in mfList:
-            if str(mf.getIdentifier()) in pf.getPackages():
-                mf.tags.append("current")
+            if str(mf.getIdentifier()) in pf.getPfPackages():
+                mf.tags.append(TagManager.CURRENT)
 
 
-class DependencyManager():
-
-    def __init__(self):
-        self.content = OrderedDict()
-
-    def addContent(self, mfMap, clear=False):
-        if clear:
-            self.content.clear()
-        for pi, mf in mfMap.items():
-            if pi not in self.content:
-                self.content[pi] = mf
-
-    def resolve(self, pi):
-        out = self.content.get(pi)
-        if out is None:
-            raise ValueError("Cannot find package: " + str(pi))
-        return out
-
-    def getDependencyTree(self, piList, acc=None):
+class DynamicDependencyManager():
+    '''
+    Used to build the dependency tree using dynamic conditions
+    '''
+    @staticmethod
+    def computeDependencyTree(piList, mfMap, env=None, reverse=False, ignoreUnknown=False):
         '''
-        Return the list of PackageIdentifiers of the given list plus all needed dependencies
-        @return: PackageIdentifiers list
+        @return: Manifest list
         '''
-        out = [] if acc is None else acc
+        out = []
+        # Get all packages to install
         for pi in piList:
-            if pi not in out:
-                mf = self.resolve(pi)
-                out.append(pi)
-                self.getDependencyTree(
-                    PackageIdentifier.fromStringList(mf.getLeafDepends()),
-                    acc=out)
+            DynamicDependencyManager._recursiveGetDepends(pi,
+                                                          mfMap,
+                                                          env,
+                                                          ignoreUnknown,
+                                                          out)
+        # Sort package to install
+        out = DynamicDependencyManager._sortPiListForInstall(out,
+                                                             mfMap,
+                                                             env,
+                                                             reverse=reverse)
         return out
 
-    def filterAndSort(self, piList, reverse=False, ignoredPiList=None):
+    @staticmethod
+    def computeIpToUninstall(piList, ipMap):
         '''
-        Sort and filter the given PackageIdentifiers
-        @return: PackageIdentifiers list
+        @return: InstalledPackage list
+        '''
+        out = DynamicDependencyManager.computeDependencyTree(piList,
+                                                             ipMap,
+                                                             reverse=True,
+                                                             ignoreUnknown=True)
+
+        # Maintain dependencies
+        for ip in ipMap.values():
+            if ip not in out:
+                neededIpList = []
+                DynamicDependencyManager._recursiveGetDepends(ip.getIdentifier(),
+                                                              ipMap,
+                                                              None,
+                                                              True,
+                                                              neededIpList)
+                out = [ip for ip in out if ip not in neededIpList]
+
+        return out
+
+    @staticmethod
+    def computeApToInstall(piList, apMap, ipMap, env):
+        '''
+        @return: AvailablePackage list
+        '''
+        out = DynamicDependencyManager.computeDependencyTree(piList,
+                                                             apMap,
+                                                             env=env)
+
+        # Remove installed packages
+        out = [ap for ap in out if ap.getIdentifier() not in ipMap]
+
+        return out
+
+    @staticmethod
+    def _recursiveGetDepends(pi, mfMap, env, ignoreUnknown, out):
+        mf = mfMap.get(pi)
+        if mf is None:
+            if not ignoreUnknown:
+                raise ValueError("Cannot find package %s" % pi)
+        else:
+            if mf not in out:
+                out.append(mf)
+                for cpi in mf.getLeafDepends2(env):
+                    DynamicDependencyManager._recursiveGetDepends(cpi,
+                                                                  mfMap,
+                                                                  env,
+                                                                  ignoreUnknown,
+                                                                  out)
+
+    @staticmethod
+    def _sortPiListForInstall(mfList, mfMap, env, reverse=False):
+        '''
+        Sort and filter the given packages
+        @return: Manifest list
         '''
         out = []
 
-        def checker(mf):
-            for pi in PackageIdentifier.fromStringList(mf.getLeafDepends()):
-                if pi in out:
-                    continue
-                if ignoredPiList is not None and pi in ignoredPiList:
-                    continue
-                return False
+        def isTerminal(mf):
+            for cpi in mf.getLeafDepends2(env):
+                if cpi in mfMap and mfMap.get(cpi) not in out:
+                    return False
             return True
 
-        piList = list(piList)
+        mfList = list(mfList)
+        curLen = len(mfList)
+
         # Ordering
-        while len(piList) > 0:
-            for pi in piList:
-                mf = self.content[pi]
-                if mf is None:
-                    raise ValueError('Cannot sort dependency list')
-                if checker(mf):
-                    out.append(pi)
-            piList = [pi for pi in piList if pi not in out]
-        # filter
-        if ignoredPiList is not None:
-            out = [pi for pi in out if pi not in ignoredPiList]
+        while len(mfList) > 0:
+            for mf in mfList[:]:
+                if isTerminal(mf):
+                    out.append(mf)
+                    mfList.remove(mf)
+            if curLen == len(mfList):
+                raise ValueError(
+                    "Infinite loop when computing dependency tree")
+            curLen = len(mfList)
+
         # reverse
         if reverse:
             out.reverse()
         return out
 
-    def filterMissingDependencies(self, piList):
-        '''
-        Returns the list of PackageIdentifiers not in internal content
-        @return: PackageIdentifier list
-        '''
-        return [pi for pi in piList if pi not in self.content]
 
-    def maintainDependencies(self, piList):
-        '''
-        @return: PackageIdentifiers list
-        '''
-        otherPiList = [pi for pi in self.content.keys() if pi not in piList]
-        keepList = self.getDependencyTree(otherPiList)
-        return [pi for pi in piList if pi not in keepList]
+class VariableResolver():
+
+    def __init__(self, currentPkg=None, otherPkgList=None):
+        self.content = {}
+        if currentPkg is not None:
+            self.useInstalledPackage(currentPkg, True)
+        if otherPkgList is not None:
+            for pkg in otherPkgList:
+                self.useInstalledPackage(pkg)
+
+    def useInstalledPackage(self, pkg, isCurrentPkg=False):
+        suffix = "" if isCurrentPkg else (":%s" % pkg.getIdentifier())
+        self.addVariable("DIR" + suffix, pkg.folder)
+        self.addVariable("NAME" + suffix, pkg.getIdentifier().name)
+        self.addVariable("VERSION" + suffix, pkg.getIdentifier().version)
+
+    def addVariable(self, k, v):
+        self.content["@{%s}" % k] = v
+
+    def resolve(self, value, failOnUnknownVariable=True):
+        out = value
+        for k, v in self.content.items():
+            out = out.replace(k, str(v))
+        if failOnUnknownVariable and '@{' in out:
+            raise ValueError("Cannot resolve all variables in: %s" % out)
+        return out
 
 
 class StepExecutor():
@@ -130,21 +229,12 @@ class StepExecutor():
     Used to execute post install & pre uninstall steps
     '''
 
-    def __init__(self, logger, package, otherPackages, extraEnv=None):
+    def __init__(self, logger, package, variableResolver, extraEnv=None):
         self.logger = logger
         self.package = package
         self.extraEnv = extraEnv
         self.targetFolder = package.folder
-        self.variables = dict()
-        self.variables[LeafConstants.VAR_PREFIX +
-                       "{DIR}"] = str(package.folder)
-        self.variables[LeafConstants.VAR_PREFIX +
-                       "{NAME}"] = package.getName()
-        self.variables[LeafConstants.VAR_PREFIX +
-                       "{VERSION}"] = package.getVersion()
-        for pi, pack in otherPackages.items():
-            key = "%s{DIR:%s}" % (LeafConstants.VAR_PREFIX, str(pi))
-            self.variables[key] = str(pack.folder)
+        self.variableResolver = variableResolver
 
     def postInstall(self, ):
         steps = self.package.jsonpath(JsonConstants.INSTALL, default=[])
@@ -244,11 +334,8 @@ class StepExecutor():
                 raise e
 
     def resolve(self, value, failOnUnknownVariable=True, prefixWithFolder=False):
-        out = str(value)
-        for key, value in self.variables.items():
-            out = out.replace(key, value)
-        if failOnUnknownVariable and (LeafConstants.VAR_PREFIX + '{') in out:
-            raise ValueError("Cannot resolve all variables for: " + out)
+        out = self.variableResolver.resolve(value,
+                                            failOnUnknownVariable=failOnUnknownVariable)
         if prefixWithFolder:
             return str(self.targetFolder / out)
         return out

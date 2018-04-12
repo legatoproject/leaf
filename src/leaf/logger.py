@@ -13,7 +13,7 @@ import json
 from leaf.constants import JsonConstants, LeafConstants
 from leaf.core import Workspace
 from leaf.model import AvailablePackage, InstalledPackage, Manifest,\
-    RemoteRepository, LeafArtifact, Profile
+    RemoteRepository, LeafArtifact, Profile, Environment
 import os
 import sys
 
@@ -126,7 +126,16 @@ class TextLogger (ILogger):
             self.printDefault(message)
 
     def displayItem(self, item):
-        if isinstance(item, Workspace):
+        if isinstance(item, Environment):
+            def commentConsumer(c):
+                print("# %s" % c)
+
+            def kvConsumer(k, v):
+                print(Environment.exportCommand(k, v))
+
+            item.printEnv(commentConsumer=commentConsumer,
+                          kvConsumer=kvConsumer)
+        elif isinstance(item, Workspace):
             print("Workspace %s" % item.rootFolder)
             if self.isVerbose():
                 wsc = item.readConfiguration()
@@ -135,23 +144,22 @@ class TextLogger (ILogger):
                 content["Remotes"] = wsc.getWsRemotes()
                 content["Modules"] = wsc.getWsSupportedModules()
                 self.prettyprintContent(content)
-
             for pf in item.getAllProfiles().values():
                 print("-",
                       pf.name,
                       "[current]" if pf.isCurrentProfile else "")
                 if self.isVerbose():
                     content = OrderedDict()
-                    content["Packages"] = pf.getPackages()
-                    content["Env"] = pf.getEnv()
+                    content["Packages"] = pf.getPfPackages()
+                    content["Env"] = pf.getPfEnv()
                     self.prettyprintContent(content)
         elif isinstance(item, Profile):
             print(item.name,
                   "[current]" if item.isCurrentProfile else "")
             if self.isVerbose():
                 content = OrderedDict()
-                content["Packages"] = item.getPackages()
-                content["Env"] = item.getEnv()
+                content["Packages"] = item.getPfPackages()
+                content["Env"] = item.getPfEnv()
                 self.prettyprintContent(content)
         elif isinstance(item, LeafArtifact):
             if self.level == TextLogger.LEVEL_QUIET:
@@ -171,7 +179,6 @@ class TextLogger (ILogger):
                     content["Source"] = item.getUrl()
                 elif isinstance(item, InstalledPackage):
                     content["Folder"] = item.folder
-                content["Systems"] = item.getSupportedOS()
                 content["Depends"] = item.getLeafDepends()
                 content["Modules"] = item.getSupportedModules()
                 content["Tags"] = item.tags
@@ -316,7 +323,16 @@ class JsonLogger(ILogger):
         itemType = None
         json = None
         extraMap = {}
-        if isinstance(item, Workspace):
+        if isinstance(item, Environment):
+            def commentConsumer(c):
+                self.displayJsonItem("comment", extraMap={"comment": c})
+
+            def kvConsumer(k, v):
+                self.displayJsonItem("env", extraMap={"key": k, "value": v})
+
+            item.printEnv(commentConsumer=commentConsumer,
+                          kvConsumer=kvConsumer)
+        elif isinstance(item, Workspace):
             itemType = "workspace"
             json = item.readConfiguration().json
             extraMap['folder'] = item.rootFolder
@@ -353,7 +369,8 @@ class JsonLogger(ILogger):
             itemType = "string"
             extraMap = {'value': str(item)}
 
-        self.displayJsonItem(itemType, json, extraMap)
+        if itemType is not None:
+            self.displayJsonItem(itemType, json, extraMap)
 
     def confirm(self,
                 question=None,

@@ -49,14 +49,6 @@ class AndPackageFilter(OrPackageFilter):
         return True
 
 
-class SupportedOsPackageFilter(PackageFilter):
-    def __init__(self):
-        PackageFilter.__init__(self)
-
-    def matches(self, mf):
-        return mf.isSupportedOs()
-
-
 class MasterPackageFilter(PackageFilter):
     def __init__(self):
         PackageFilter.__init__(self)

@@ -13,9 +13,9 @@ from leaf.cli import LeafCli, LeafCommand
 from leaf.cli_releng import PackCommand, IndexCommand
 from leaf.constants import LeafFiles
 from leaf.coreutils import TagManager
-from leaf.filtering import AndPackageFilter, SupportedOsPackageFilter,\
-    MasterPackageFilter, ModulePackageFilter, KeywordPackageFilter
+from leaf.filtering import AndPackageFilter, MasterPackageFilter, ModulePackageFilter, KeywordPackageFilter
 from leaf.model import Manifest
+from leaf.utils import envListToMap
 import os
 import shutil
 
@@ -55,17 +55,18 @@ class ConfigCommand(LeafCommand):
                                dest='root_folder',
                                metavar='DIR',
                                help="set the root folder, default: " + str(LeafFiles.DEFAULT_LEAF_ROOT))
-        subparser.add_argument('--env',
+
+        subparser.add_argument('-e', '--env',
                                dest='config_env',
                                action='append',
                                metavar='KEY=VALUE',
-                               help="set custom env variables for exec steps")
+                               help="configure environment variables at user level")
 
     def internalExecute(self, app, logger, args):
         if args.root_folder is not None:
             app.updateConfiguration(rootFolder=args.root_folder)
         if args.config_env is not None:
-            app.updateConfiguration(env=args.config_env)
+            app.updateConfiguration(envMap=envListToMap(args.config_env))
         logger.printDefault("Configuration file:", app.configurationFile)
         logger.printDefault(json.dumps(app.readConfiguration().json,
                                        sort_keys=True,
@@ -164,7 +165,6 @@ class ListCommand(LeafCommand):
     def internalExecute(self, app, logger, args):
         pkgFilter = AndPackageFilter()
         if not args.allPackages:
-            pkgFilter.addFilter(SupportedOsPackageFilter())
             pkgFilter.addFilter(MasterPackageFilter())
             pass
 
@@ -208,7 +208,6 @@ class SearchCommand(LeafCommand):
     def internalExecute(self, app, logger, args):
         pkgFilter = AndPackageFilter()
         if not args.allPackages:
-            pkgFilter.addFilter(SupportedOsPackageFilter())
             pkgFilter.addFilter(MasterPackageFilter())
             pass
 
@@ -278,17 +277,11 @@ class ExtractCommand(LeafCommand):
 
     def internalInitArgs(self, subparser):
         InstallCommand.initInstallArguments(subparser)
-        subparser.add_argument("--skip-depends",
-                               dest="skipLeafDepends",
-                               action="store_true",
-                               help="extract packages without checking & installing leaf dependencies")
         subparser.add_argument('packages',
                                nargs=argparse.REMAINDER)
 
     def internalExecute(self, app, logger, args):
         items = app.installFromFiles(args.packages,
-                                     bypassSupportedOs=args.skipOsCompat,
-                                     bypassLeafDepends=args.skipLeafDepends,
                                      bypassAptDepends=args.skipAptDepends,
                                      keepFolderOnError=args.keepOnError)
         logger.printQuiet("Packages extracted: " +
@@ -309,18 +302,10 @@ class InstallCommand(LeafCommand):
                                dest="keepOnError",
                                action="store_true",
                                help="keep package folder in case of installation error")
-        subparser.add_argument("--accept-licenses",
-                               dest="skipLicenses",
-                               action="store_true",
-                               help="automatically accept all licenses")
         subparser.add_argument("--skip-apt",
                                dest="skipAptDepends",
                                action="store_true",
                                help="do not check apt dependencies")
-        subparser.add_argument("--skip-compat",
-                               dest="skipOsCompat",
-                               action="store_true",
-                               help="do not check if package are compatible with current OS")
 
     def internalInitArgs(self, subparser):
         InstallCommand.initInstallArguments(subparser)
@@ -329,7 +314,6 @@ class InstallCommand(LeafCommand):
 
     def internalExecute(self, app, logger, args):
         items = app.installFromRemotes(args.packages,
-                                       bypassSupportedOs=args.skipOsCompat,
                                        bypassAptDepends=args.skipAptDepends,
                                        keepFolderOnError=args.keepOnError)
         if len(items) > 0:
@@ -363,5 +347,5 @@ class EnvCommand(LeafCommand):
         subparser.add_argument('packages', nargs=argparse.REMAINDER)
 
     def internalExecute(self, app, logger, args):
-        for t in app.getEnv(args.packages):
-            logger.displayItem(t)
+        env = app.getPackageEnv(args.packages)
+        logger.displayItem(env)

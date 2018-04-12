@@ -10,7 +10,6 @@ Leaf Package Manager
 from datetime import timedelta
 import os
 from pathlib import Path
-import platform
 
 
 class LeafConstants():
@@ -19,8 +18,7 @@ class LeafConstants():
     '''
     MIN_PYTHON_VERSION = (3, 4)
     MANIFEST = 'manifest.json'
-    VAR_PREFIX = '@'
-    DOWNLOAD_TIMEOUT = int(os.environ.get("LEAF_TIMEOUT", "10"))
+    DOWNLOAD_TIMEOUT = int(os.environ.get("LEAF_TIMEOUT", "5"))
     LEAF_COMPRESSION = {'.leaf': 'xz',
                         '.tar':  '',
                         '.xz':   'xz',
@@ -28,7 +26,6 @@ class LeafConstants():
                         '.tgz':  'gz',
                         '.gz':   'gz'}
     ARCHS = {'x86_64': '64', 'i386': '32'}
-    CURRENT_OS = platform.system().lower() + ARCHS.get(platform.machine(), "")
     DEFAULT_PROFILE = "default"
     CACHE_DELTA = timedelta(days=1)
     JSON_OUTPUT = "LEAF_JSON_OUTPUT"
@@ -105,7 +102,6 @@ class JsonConstants(object):
 
     # Extra
     INFO_SUPPORTEDMODULES = 'supportedModules'
-    INFO_SUPPORTEDOS = 'supportedOs'
 
     # Profiles
     WS_PROFILES = "profiles"

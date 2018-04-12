@@ -38,9 +38,9 @@ class TestPackageManagerCli_Default(LeafPackageManagerCliWrapper):
         self.leafPackageManagerExec("install", "container-A")
         self.leafPackageManagerExec("list")
         self.leafPackageManagerExec("list", "--all")
-        self.checkInstalledPackages('container-A_2.1',
-                                    'container-C_1.0',
-                                    'container-D_1.0')
+        self.checkInstalledPackages(['container-A_2.1',
+                                     'container-C_1.0',
+                                     'container-D_1.0'])
 
     def testEnv(self):
         self.leafPackageManagerExec("install", "env-A_1.0")
@@ -48,25 +48,25 @@ class TestPackageManagerCli_Default(LeafPackageManagerCliWrapper):
 
     def testInstallWithSteps(self):
         self.leafPackageManagerExec("install", "install_1.0")
-        self.checkInstalledPackages('install_1.0')
+        self.checkInstalledPackages(['install_1.0'])
 
     def testInstallUninstallKeep(self):
         self.leafPackageManagerExec("install", "container-A_1.0")
-        self.checkInstalledPackages('container-A_1.0',
-                                    'container-B_1.0',
-                                    'container-C_1.0',
-                                    'container-E_1.0')
+        self.checkInstalledPackages(['container-A_1.0',
+                                     'container-B_1.0',
+                                     'container-C_1.0',
+                                     'container-E_1.0'])
         self.leafPackageManagerExec("install", "container-A_2.0")
-        self.checkInstalledPackages('container-A_1.0',
-                                    'container-A_2.0',
-                                    'container-B_1.0',
-                                    'container-C_1.0',
-                                    'container-D_1.0',
-                                    'container-C_1.0')
+        self.checkInstalledPackages(['container-A_1.0',
+                                     'container-A_2.0',
+                                     'container-B_1.0',
+                                     'container-C_1.0',
+                                     'container-D_1.0',
+                                     'container-C_1.0'])
         self.leafPackageManagerExec("remove", "container-A_1.0")
-        self.checkInstalledPackages('container-A_2.0',
-                                    'container-C_1.0',
-                                    'container-D_1.0')
+        self.checkInstalledPackages(['container-A_2.0',
+                                     'container-C_1.0',
+                                     'container-D_1.0'])
 
     def testClean(self):
         self.leafPackageManagerExec("clean")
@@ -78,7 +78,41 @@ class TestPackageManagerCli_Default(LeafPackageManagerCliWrapper):
             "install", "failure-depends-deb_1.0", expectedRc=2)
         self.leafPackageManagerExec(
             "install", "--skip-apt", "failure-depends-deb_1.0")
-        self.checkInstalledPackages('failure-depends-deb_1.0')
+        self.checkInstalledPackages(['failure-depends-deb_1.0'])
+
+    def testConditionalInstall(self):
+        self.leafPackageManagerExec("install", "condition")
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-B_1.0",
+                                     "condition-D_1.0",
+                                     "condition-F_1.0",
+                                     "condition-H_1.0"])
+
+        self.leafPackageManagerExec("remove", "condition")
+        self.checkInstalledPackages([])
+
+        self.leafPackageManagerExec("config", "--env", "FOO=BAR")
+        self.leafPackageManagerExec("install", "condition")
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-A_1.0",
+                                     "condition-C_1.0",
+                                     "condition-F_1.0"])
+
+        self.leafPackageManagerExec("remove", "condition")
+        self.checkInstalledPackages([])
+
+        self.leafPackageManagerExec("config",
+                                    "--env", "FOO2=BAR2",
+                                    "--env", "HELLO=WorlD")
+        self.leafPackageManagerExec("install", "condition")
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-A_1.0",
+                                     "condition-C_1.0",
+                                     "condition-E_1.0",
+                                     "condition-G_1.0"])
+
+        self.leafPackageManagerExec("remove", "condition")
+        self.checkInstalledPackages([])
 
 
 @unittest.skipUnless("VERBOSE" in LEAF_UT_LEVELS, "Test disabled")

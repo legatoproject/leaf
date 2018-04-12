@@ -11,12 +11,11 @@ from abc import abstractmethod
 import argparse
 from leaf.cli import LeafCli, LeafCommand
 from leaf.core import Workspace
-from leaf.coreutils import TagManager
-from leaf.filtering import AndPackageFilter, SupportedOsPackageFilter,\
-    MasterPackageFilter, PkgNamePackageFilter, ModulePackageFilter,\
+from leaf.coreutils import TagManager, genEnvScript
+from leaf.filtering import AndPackageFilter, MasterPackageFilter, PkgNamePackageFilter, ModulePackageFilter,\
     KeywordPackageFilter
 from leaf.model import PackageIdentifier, Manifest
-from leaf.utils import envListToMap, findWorkspaceRoot, genEnvScript
+from leaf.utils import envListToMap, findWorkspaceRoot
 import os
 from pathlib import Path
 
@@ -88,7 +87,7 @@ class AbstractSubCommand(LeafCommand):
             subparser.add_argument('-e', '--env',
                                    dest='envvars',
                                    action='append',
-                                   metavar='ENV_VAR',
+                                   metavar='KEY=VALUE',
                                    help='use given env variable in profile')
 
 
@@ -191,7 +190,7 @@ class UpgradeSubCommand(AbstractSubCommand):
     def internalExecute2(self, ws, app, logger, args):
         pf = ws.retrieveProfile(name=args.profiles)
         pf = ws.updateProfile(pf.name,
-                              motifList=pf.getPiMap().keys())
+                              motifList=pf.getPfPackageIdentifierMap().keys())
         logger.printDefault("Profile %s upgraded" % pf.name)
         if not args.noAutoSync:
             ws.switchProfile(pf.name)
@@ -274,9 +273,8 @@ class EnvSubCommand(AbstractSubCommand):
 
     def internalExecute2(self, ws, app, logger, args):
         env = ws.getProfileEnv(args.profiles)
+        logger.displayItem(env)
         genEnvScript(env, args.activateScript, args.deactivateScript)
-        for kv in env:
-            logger.displayItem(kv)
 
 
 class SwitchSubCommand(AbstractSubCommand):
@@ -349,14 +347,13 @@ class SearchSubCommand(AbstractSubCommand):
         pkgFilter = AndPackageFilter()
         pf = None
         if not args.allPackages:
-            pkgFilter.addFilter(SupportedOsPackageFilter())
             pkgFilter.addFilter(MasterPackageFilter())
             pass
         if args.searchCurrentProfile:
             pf = ws.retrieveProfile()
             logger.printDefault("Filter packages from profile %s" % pf.name)
             pkgFilter.addFilter(PkgNamePackageFilter([PackageIdentifier.fromString(pis).name
-                                                      for pis in pf.getPackages()]))
+                                                      for pis in pf.getPfPackages()]))
         else:
             wsModules = ws.readConfiguration().getWsSupportedModules()
             if len(wsModules) > 0:
