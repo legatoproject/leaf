@@ -372,7 +372,7 @@ class LeafApp(LeafRepository):
                                   sha1sum=ap.getSha1sum())
         return LeafArtifact(cachedFile)
 
-    def extractLeafArtifact(self, la, keepFolderOnError=False):
+    def extractLeafArtifact(self, la, env, keepFolderOnError=False):
         '''
         Install a leaf artifact
         @return InstalledPackage
@@ -398,7 +398,7 @@ class LeafApp(LeafRepository):
             se = StepExecutor(self.logger,
                               out,
                               vr,
-                              extraEnv=self.readConfiguration().getEnvMap())
+                              env=env)
             se.postInstall()
             return out
         except Exception as e:
@@ -413,7 +413,7 @@ class LeafApp(LeafRepository):
             raise e
 
     def installFromRemotes(self, motifList,
-                           extraEnv=None,
+                           env=None,
                            bypassAptDepends=False,
                            keepFolderOnError=False):
         '''
@@ -427,9 +427,8 @@ class LeafApp(LeafRepository):
                                     apMap=availablePackages)
 
         # Build env to resolve dynamic dependencies
-        env = Environment()
-        env.addSubEnv(self.getLeafEnvironment())
-        env.addSubEnv(extraEnv)
+        if env is None:
+            env = self.getLeafEnvironment()
 
         apToInstall = DynamicDependencyManager.computeApToInstall(piList,
                                                                   availablePackages,
@@ -472,7 +471,7 @@ class LeafApp(LeafRepository):
 
             # Extract la list
             for la in laList:
-                ip = self.extractLeafArtifact(la,
+                ip = self.extractLeafArtifact(la, env,
                                               keepFolderOnError=keepFolderOnError)
                 out.append(ip)
                 self.logger.progressWorked('Installation',
@@ -514,7 +513,7 @@ class LeafApp(LeafRepository):
                 stepExec = StepExecutor(self.logger,
                                         ip,
                                         vr,
-                                        extraEnv=self.readConfiguration().getEnvMap())
+                                        env=self.getLeafEnvironment())
                 stepExec.preUninstall()
                 self.logger.printVerbose("Remove folder:", ip.folder)
                 shutil.rmtree(str(ip.folder))
@@ -810,7 +809,7 @@ class Workspace():
             env = self.app.getLeafEnvironment()
             env.addSubEnv(self.readConfiguration().getEnvironment())
             env.addSubEnv(pf.getEnvironment())
-            self.app.installFromRemotes(pf.getPackages(), env)
+            self.app.installFromRemotes(pf.getPackages(), env=env)
             installedPackages = self.app.listInstalledPackages()
             deps = DynamicDependencyManager.computeDependencyTree(pf.getPackageIdentifiers(),
                                                                   installedPackages,

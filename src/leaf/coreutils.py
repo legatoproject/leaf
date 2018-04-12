@@ -155,7 +155,7 @@ class DynamicDependencyManager():
         else:
             if mf not in out:
                 out.append(mf)
-                for cpi in mf.getLeafDepends2(env):
+                for cpi in mf.getLeafDependsFromEnv(env):
                     DynamicDependencyManager._recursiveGetDepends(cpi,
                                                                   mfMap,
                                                                   env,
@@ -171,7 +171,7 @@ class DynamicDependencyManager():
         out = []
 
         def isTerminal(mf):
-            for cpi in mf.getLeafDepends2(env):
+            for cpi in mf.getLeafDependsFromEnv(env):
                 if cpi in mfMap and mfMap.get(cpi) not in out:
                     return False
             return True
@@ -229,10 +229,10 @@ class StepExecutor():
     Used to execute post install & pre uninstall steps
     '''
 
-    def __init__(self, logger, package, variableResolver, extraEnv=None):
+    def __init__(self, logger, package, variableResolver, env=None):
         self.logger = logger
         self.package = package
-        self.extraEnv = extraEnv
+        self.env = env
         self.targetFolder = package.folder
         self.variableResolver = variableResolver
 
@@ -277,8 +277,8 @@ class StepExecutor():
         for k, v in step.get(JsonConstants.STEP_EXEC_ENV, {}).items():
             v = self.resolve(v)
             env[k] = v
-        if self.extraEnv is not None:
-            env.update(self.extraEnv)
+        if self.env is not None:
+            env.update(self.env.toMap())
         env["LEAF_VERSION"] = str(__version__)
         stdout = subprocess.DEVNULL
         if self.logger.isVerbose() or step.get(JsonConstants.STEP_EXEC_VERBOSE,

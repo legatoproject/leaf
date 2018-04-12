@@ -285,8 +285,8 @@ class TestPackageManager_File(AbstractTestWithRepo):
                            "condition-H_1.0"])
 
         self.app.installFromRemotes(["condition_1.0"],
-                                    extraEnv=Environment("test",
-                                                         {"FOO": "BAR"}))
+                                    env=Environment("test",
+                                                    {"FOO": "BAR"}))
         self.checkContent(self.app.listInstalledPackages(),
                           ["condition_1.0",
                            "condition-A_1.0",
@@ -299,9 +299,10 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.app.updateUserConfiguration(envSetMap={"FOO2": "BAR2",
                                                     "HELLO": "WoRld"})
 
+        env = self.app.getLeafEnvironment()
+        env.addSubEnv(Environment("test", {"FOO": "BAR"}))
         self.app.installFromRemotes(["condition_1.0"],
-                                    extraEnv=Environment("test",
-                                                         {"FOO": "BAR"}))
+                                    env=env)
         self.checkContent(self.app.listInstalledPackages(),
                           ["condition_1.0",
                            "condition-A_1.0",

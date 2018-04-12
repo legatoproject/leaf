@@ -198,10 +198,7 @@ class Manifest(JsonObject):
     def getLeafDepends(self):
         return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_DEPENDS, JsonConstants.INFO_DEPENDS_LEAF, default=[])
 
-    def getLeafDepends2(self, env):
-        '''
-        TODO Rename this method
-        '''
+    def getLeafDependsFromEnv(self, env):
         out = []
         for pisc in self.getLeafDepends():
             cpi = ConditionalPackageIdentifier.fromString(pisc)
@@ -512,6 +509,12 @@ class Environment():
         for e in self.children:
             e.toList(acc=acc)
         return acc
+
+    def toMap(self):
+        out = OrderedDict()
+        for k in self.keys():
+            out[k] = self.findValue(k)
+        return out
 
     def keys(self):
         out = set()
