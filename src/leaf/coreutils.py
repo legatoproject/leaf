@@ -34,7 +34,7 @@ def genEnvScript(env, activateFile=None, deactivateFile=None):
     if activateFile is not None:
         with open(str(activateFile), "w") as fp:
             def commentConsumer(c):
-                fp.write("# %s\n" % c)
+                fp.write(Environment.comment(c) + "\n")
 
             def kvConsumer(k, v):
                 fp.write(Environment.exportCommand(k, v) + "\n")
@@ -81,7 +81,7 @@ class TagManager():
         Tag packages in mfList as current if they are in the given profile
         '''
         for mf in mfList:
-            if str(mf.getIdentifier()) in pf.getPfPackages():
+            if str(mf.getIdentifier()) in pf.getPackages():
                 mf.tags.append(TagManager.CURRENT)
 
 

@@ -5,114 +5,115 @@
 import os
 import unittest
 
-from tests.utils import LeafPackageManagerCliWrapper
+from tests.utils import LeafCliWrapper
 
 
 LEAF_UT_LEVELS = os.environ.get("LEAF_UT_LEVELS", "QUIET,VERBOSE,JSON")
 
 
-class TestPackageManagerCli_Default(LeafPackageManagerCliWrapper):
+class TestPackageManagerCli_Default(LeafCliWrapper):
 
     def __init__(self, methodName):
-        LeafPackageManagerCliWrapper.__init__(self, methodName)
+        LeafCliWrapper.__init__(self, methodName)
 
     def testConfig(self):
-        self.leafPackageManagerExec("config")
+        self.leafExec("config:user")
 
     def testRemote(self):
-        self.leafPackageManagerExec("remote", "--add", self.getRemoteUrl())
-        self.leafPackageManagerExec("remote")
-        self.leafPackageManagerExec("remote", "--rm", self.getRemoteUrl())
-        self.leafPackageManagerExec("remote")
+        self.leafExec("config:user", "--add-remote", self.getRemoteUrl())
+        self.leafExec("config:u", "--rm-remote", self.getRemoteUrl())
 
     def testSearch(self):
-        self.leafPackageManagerExec("search")
-        self.leafPackageManagerExec("search", "--all")
+        self.leafExec("search")
+        self.leafExec("search", "--all")
 
     def testDepends(self):
-        self.leafPackageManagerExec("install", "container-A_1.0")
-        self.leafPackageManagerExec("dependencies", "container-A_2.0")
-        self.leafPackageManagerExec("dependencies", "-i", "container-A_2.0")
+        self.leafExec(["pkg", "install"], "container-A_1.0")
+        self.leafExec(["pkg", "dependencies"], "container-A_2.0")
+        self.leafExec(["pkg", "dependencies"], "-i", "container-A_2.0")
 
     def testInstall(self):
-        self.leafPackageManagerExec("install", "container-A")
-        self.leafPackageManagerExec("list")
-        self.leafPackageManagerExec("list", "--all")
+        self.leafExec(["pkg", "install"], "container-A")
+        self.leafExec(["pkg", "list"])
+        self.leafExec(["pkg", "list"], "--all")
         self.checkInstalledPackages(['container-A_2.1',
                                      'container-C_1.0',
                                      'container-D_1.0'])
 
     def testEnv(self):
-        self.leafPackageManagerExec("install", "env-A_1.0")
-        self.leafPackageManagerExec("env", "env-A_1.0")
+        self.leafExec(["pkg", "install"], "env-A_1.0")
+        self.leafExec(["pkg", "env"], "env-A_1.0")
 
     def testInstallWithSteps(self):
-        self.leafPackageManagerExec("install", "install_1.0")
+        self.leafExec(["pkg", "install"], "install_1.0")
         self.checkInstalledPackages(['install_1.0'])
 
     def testInstallUninstallKeep(self):
-        self.leafPackageManagerExec("install", "container-A_1.0")
+        self.leafExec(["pkg", "install"], "container-A_1.0")
         self.checkInstalledPackages(['container-A_1.0',
                                      'container-B_1.0',
                                      'container-C_1.0',
                                      'container-E_1.0'])
-        self.leafPackageManagerExec("install", "container-A_2.0")
+        self.leafExec(["pkg", "install"], "container-A_2.0")
         self.checkInstalledPackages(['container-A_1.0',
                                      'container-A_2.0',
                                      'container-B_1.0',
                                      'container-C_1.0',
                                      'container-D_1.0',
                                      'container-C_1.0'])
-        self.leafPackageManagerExec("remove", "container-A_1.0")
+        self.leafExec(["pkg", "remove"], "container-A_1.0")
         self.checkInstalledPackages(['container-A_2.0',
                                      'container-C_1.0',
                                      'container-D_1.0'])
 
-    def testClean(self):
-        self.leafPackageManagerExec("clean")
-
     def testMissingApt(self):
-        self.leafPackageManagerExec("dependencies", "--apt",
-                                    "deb_1.0", "failure-depends-deb_1.0")
-        self.leafPackageManagerExec(
-            "install", "failure-depends-deb_1.0", expectedRc=2)
-        self.leafPackageManagerExec(
-            "install", "--skip-apt", "failure-depends-deb_1.0")
+        self.leafExec(["pkg", "dependencies"], "--apt",
+                      "deb_1.0", "failure-depends-deb_1.0")
+        self.leafExec(["pkg", "install"],
+                      "failure-depends-deb_1.0", expectedRc=2)
+        self.leafExec(["pkg", "install"], "--skip-apt",
+                      "failure-depends-deb_1.0")
         self.checkInstalledPackages(['failure-depends-deb_1.0'])
 
     def testConditionalInstall(self):
-        self.leafPackageManagerExec("install", "condition")
+        self.leafExec(["pkg", "install"], "condition")
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-B_1.0",
                                      "condition-D_1.0",
                                      "condition-F_1.0",
                                      "condition-H_1.0"])
 
-        self.leafPackageManagerExec("remove", "condition")
+        self.leafExec(["pkg", "remove"], "condition")
         self.checkInstalledPackages([])
 
-        self.leafPackageManagerExec("config", "--env", "FOO=BAR")
-        self.leafPackageManagerExec("install", "condition")
+        self.leafExec("config:user", "--set", "FOO=BAR")
+        self.leafExec(["pkg", "install"], "condition")
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-A_1.0",
                                      "condition-C_1.0",
                                      "condition-F_1.0"])
 
-        self.leafPackageManagerExec("remove", "condition")
+        self.leafExec(["pkg", "remove"], "condition")
         self.checkInstalledPackages([])
 
-        self.leafPackageManagerExec("config",
-                                    "--env", "FOO2=BAR2",
-                                    "--env", "HELLO=WorlD")
-        self.leafPackageManagerExec("install", "condition")
+        self.leafExec("config:user",
+                      "--set", "FOO2=BAR2",
+                      "--set", "HELLO=WorlD")
+        self.leafExec(["pkg", "install"], "condition")
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-A_1.0",
                                      "condition-C_1.0",
                                      "condition-E_1.0",
                                      "condition-G_1.0"])
 
-        self.leafPackageManagerExec("remove", "condition")
+        self.leafExec(["pkg", "remove"], "condition")
         self.checkInstalledPackages([])
+
+    def testRemotes(self):
+        self.leafExec("remotes")
+        self.leafExec("config:user", "--add-remote",
+                      "https://foo.tld/bar/index.json")
+        self.leafExec("remotes")
 
 
 @unittest.skipUnless("VERBOSE" in LEAF_UT_LEVELS, "Test disabled")

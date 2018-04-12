@@ -11,8 +11,7 @@ setup(name='leaf',
       ],
       entry_points={
           'console_scripts': [
-              'lpm = leaf.cli_packagemanager:main',
-              'leaf = leaf.cli_profile:main'
+              'leaf = leaf.cli:main'
           ]
       },
       test_suite='nose.collector',

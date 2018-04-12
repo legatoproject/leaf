@@ -54,7 +54,6 @@ class JsonConstants(object):
     CONFIG_REMOTES = 'remotes'
     CONFIG_ENV = 'env'
     CONFIG_ROOT = 'rootfolder'
-    CONFIG_VARIABLES = 'variables'
 
     # Index
     REMOTE_NAME = 'name'
@@ -107,7 +106,6 @@ class JsonConstants(object):
     WS_PROFILES = "profiles"
     WS_LEAFMINVERSION = "leafMinVersion"
     WS_ENV = "env"
-    WS_MODULES = "modules"
     WS_REMOTES = "remotes"
     WS_PROFILE_PACKAGES = "packages"
     WS_PROFILE_ENV = "env"

@@ -199,6 +199,9 @@ class Manifest(JsonObject):
         return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_DEPENDS, JsonConstants.INFO_DEPENDS_LEAF, default=[])
 
     def getLeafDepends2(self, env):
+        '''
+        TODO Rename this method
+        '''
         out = []
         for pisc in self.getLeafDepends():
             cpi = ConditionalPackageIdentifier.fromString(pisc)
@@ -274,7 +277,7 @@ class InstalledPackage(Manifest):
     def __str__(self):
         return "{pi} [{path}]".format(pi=self.getIdentifier(), path=str(self.folder))
 
-    def getMfEnv(self):
+    def getEnvMap(self):
         return self.jsonpath(JsonConstants.ENV, default={})
 
 
@@ -295,6 +298,60 @@ class RemoteRepository(JsonObject):
         return self.jsonpath(JsonConstants.REMOTE_PACKAGES, default=[])
 
 
+class UserConfiguration(JsonObject):
+    '''
+    Represent a user configuration
+    '''
+
+    def __init__(self, json):
+        JsonObject.__init__(self, json)
+
+    def getEnvMap(self):
+        return self.jsoninit(key=JsonConstants.CONFIG_ENV,
+                             value=OrderedDict())
+
+    def updateEnv(self, setMap=None, unsetList=None):
+        envMap = self.getEnvMap()
+        if setMap is not None:
+            envMap.update(setMap)
+        if unsetList is not None:
+            for k in unsetList:
+                if k in envMap:
+                    del envMap[k]
+
+    def getEnvironment(self):
+        return Environment("Exported by user config",
+                           self.getEnvMap())
+
+    def getRemotes(self):
+        return self.jsoninit(key=JsonConstants.CONFIG_REMOTES,
+                             value=[])
+
+    def updateRemotes(self, addList, rmList):
+        out = False
+        remoteList = self.getRemotes()
+        if addList is not None:
+            for r in addList:
+                if r not in remoteList:
+                    remoteList.append(r)
+                    out = True
+        if rmList is not None:
+            for r in rmList:
+                if r in remoteList:
+                    remoteList.remove(r)
+                    out = True
+        return out
+
+    def getRootFolder(self):
+        return Path(self.jsoninit(key=JsonConstants.CONFIG_ROOT,
+                                  value=str(LeafFiles.DEFAULT_LEAF_ROOT)))
+
+    def setRootFolder(self, folder):
+        self.jsoninit(key=JsonConstants.CONFIG_ROOT,
+                      value=str(folder),
+                      force=True)
+
+
 class WorkspaceConfiguration(JsonObject):
     '''
     Represent a workspace configuration, ie Profiles, env ...
@@ -303,25 +360,41 @@ class WorkspaceConfiguration(JsonObject):
     def __init__(self, json):
         JsonObject.__init__(self, json)
 
-    def getWsEnv(self):
+    def getEnvMap(self):
         return self.jsoninit(key=JsonConstants.WS_ENV,
                              value=OrderedDict())
 
-    def getWsEnvironment(self):
-        return Environment("Exported by workspace config",
-                           self.getWsEnv())
+    def updateEnv(self, setMap=None, unsetList=None):
+        envMap = self.getEnvMap()
+        if setMap is not None:
+            envMap.update(setMap)
+        if unsetList is not None:
+            for k in unsetList:
+                if k in envMap:
+                    del envMap[k]
 
-    def getWsRemotes(self):
+    def getEnvironment(self):
+        return Environment("Exported by workspace config",
+                           self.getEnvMap())
+
+    def getRemotes(self):
         return self.jsoninit(key=JsonConstants.WS_REMOTES,
                              value=[])
 
-    def getWsProfiles(self):
+    def updateRemotes(self, addList, rmList):
+        remoteList = self.getRemotes()
+        if addList is not None:
+            for r in addList:
+                if r not in remoteList:
+                    remoteList.append(r)
+        if rmList is not None:
+            for r in rmList:
+                if r in remoteList:
+                    remoteList.remove(r)
+
+    def getProfiles(self):
         return self.jsoninit(key=JsonConstants.WS_PROFILES,
                              value=OrderedDict())
-
-    def getWsSupportedModules(self):
-        return self.jsoninit(key=JsonConstants.WS_MODULES,
-                             value=[])
 
 
 class Profile(JsonObject):
@@ -346,8 +419,8 @@ class Profile(JsonObject):
     @staticmethod
     def emptyProfile(name, folder):
         out = Profile(Profile.checkValidName(name), folder, OrderedDict())
-        out.getPfPackages()
-        out.getPfEnv()
+        out.getPackages()
+        out.getEnvMap()
         return out
 
     def __init__(self, name, folder, json):
@@ -356,32 +429,39 @@ class Profile(JsonObject):
         self.folder = folder
         self.isCurrentProfile = False
 
-    def getPfEnv(self):
+    def getEnvMap(self):
         return self.jsoninit(key=JsonConstants.WS_PROFILE_ENV,
                              value=OrderedDict())
 
-    def getPfEnvironment(self):
-        return Environment("Exported by profile %s" % self.name,
-                           self.getPfEnv())
+    def updateEnv(self, setMap=None, unsetList=None):
+        envMap = self.getEnvMap()
+        if setMap is not None:
+            envMap.update(setMap)
+        if unsetList is not None:
+            for k in unsetList:
+                if k in envMap:
+                    del envMap[k]
 
-    def getPfPackages(self):
+    def getEnvironment(self):
+        return Environment("Exported by profile %s" % self.name,
+                           self.getEnvMap())
+
+    def getPackages(self):
         return self.jsoninit(key=JsonConstants.WS_PROFILE_PACKAGES,
                              value=[])
 
-    def getPfPackageIdentifiers(self):
+    def getPackageIdentifiers(self):
         return list(map(PackageIdentifier.fromString,
-                        self.jsoninit(key=JsonConstants.WS_PROFILE_PACKAGES,
-                                      value=[])))
+                        self.getPackages()))
 
-    def getPfPackageIdentifierMap(self):
+    def getPackageMap(self):
         out = OrderedDict()
-        for pis in self.getPfPackages():
-            pi = PackageIdentifier.fromString(pis)
+        for pi in self.getPackageIdentifiers():
             if pi.name not in out:
                 out[pi.name] = pi
         return out
 
-    def setPiList(self, piList):
+    def setPackages(self, piList):
         self.json[JsonConstants.WS_PROFILE_PACKAGES] = [str(pi)
                                                         for pi in piList]
 
@@ -389,12 +469,16 @@ class Profile(JsonObject):
 class Environment():
 
     @staticmethod
+    def comment(line):
+        return "# %s" % line
+
+    @staticmethod
     def exportCommand(key, value):
         return "export %s=\"%s\";" % (key, value)
 
     @staticmethod
     def unsetCommand(key):
-        return "unset %s" % (key)
+        return "unset %s;" % (key)
 
     def __init__(self, comment=None, content=None):
         self.comment = comment

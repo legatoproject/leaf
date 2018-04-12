@@ -17,7 +17,7 @@ from leaf.coreutils import StepExecutor, VariableResolver,\
     DynamicDependencyManager
 from leaf.model import Manifest, InstalledPackage, AvailablePackage, LeafArtifact,\
     PackageIdentifier, RemoteRepository, Profile,\
-    WorkspaceConfiguration, JsonObject, Environment
+    WorkspaceConfiguration, Environment, UserConfiguration
 from leaf.utils import resolveUrl, getCachedArtifactName, isFolderIgnored,\
     markFolderAsIgnored, openOutputTarFile, computeSha1sum, downloadFile,\
     AptHelper, jsonLoadFile, checkSupportedLeaf, jsonWriteFile
@@ -105,92 +105,58 @@ class LeafApp(LeafRepository):
         '''
         Read the configuration if it exists, else return the the default configuration
         '''
-        if self.configurationFile.exists():
-            return JsonObject(jsonLoadFile(self.configurationFile))
-        # Default configuration here
-        out = JsonObject(OrderedDict())
-        out.jsoninit(key=JsonConstants.CONFIG_ROOT,
-                     value=str(LeafFiles.DEFAULT_LEAF_ROOT))
-        self.writeConfiguration(out)
-        return out
+        if not self.configurationFile.exists():
+            # Default configuration here
+            skel = UserConfiguration({})
+            skel.setRootFolder(LeafFiles.DEFAULT_LEAF_ROOT)
+            self.writeConfiguration(skel)
 
-    def writeConfiguration(self, config):
+        return UserConfiguration(jsonLoadFile(self.configurationFile))
+
+    def writeConfiguration(self, usrc):
         '''
         Write the given configuration
         '''
-        jsonWriteFile(self.configurationFile, config.json, pp=True)
+        jsonWriteFile(self.configurationFile, usrc.json, pp=True)
 
     def getInstallFolder(self):
-        out = LeafFiles.DEFAULT_LEAF_ROOT
-        config = self.readConfiguration()
-        root = config.jsonpath(JsonConstants.CONFIG_ROOT)
-        if root is not None:
-            out = Path(root)
+        out = self.readConfiguration().getRootFolder()
         os.makedirs(str(out), exist_ok=True)
         return out
 
-    def updateConfiguration(self, rootFolder=None, envMap=None):
+    def updateUserConfiguration(self,
+                                rootFolder=None,
+                                envSetMap=None, envUnsetList=None,
+                                remoteAddList=None, remoteRmList=None):
         '''
         Update the configuration file
         '''
-        config = self.readConfiguration()
+        usrc = self.readConfiguration()
         if rootFolder is not None:
-            config.jsoninit(key=JsonConstants.CONFIG_ROOT,
-                            value=str(rootFolder),
-                            force=True)
-        if envMap is not None:
-            configEnv = config.jsoninit(key=JsonConstants.CONFIG_ENV,
-                                        value=OrderedDict())
-            configEnv.update(envMap)
-        self.writeConfiguration(config)
+            usrc.setRootFolder(rootFolder)
 
-    def getUserEnv(self):
-        '''
-        Returns the user custom env variables
-        '''
-        return self.readConfiguration().jsonpath(JsonConstants.CONFIG_ENV, default={})
+        # Update env
+        usrc.updateEnv(envSetMap, envUnsetList)
+
+        # Update remotes
+        needRefresh = usrc.updateRemotes(remoteAddList, remoteRmList)
+
+        # Save and clean cache
+        self.writeConfiguration(usrc)
+        if needRefresh and self.cacheFile.exists():
+            os.remove(str(self.cacheFile))
 
     def getLeafEnvironment(self):
         out = Environment("Leaf variables")
         out.env.append(("LEAF_PLATFORM_SYSTEM", platform.system()))
         out.env.append(("LEAF_PLATFORM_MACHINE", platform.machine()))
         out.env.append(("LEAF_PLATFORM_RELEASE", platform.release()))
-        out.addSubEnv(Environment("Exported by user config",
-                                  self.getUserEnv()))
+        out.addSubEnv(self.getUserEnvironment())
         return out
 
-    def remoteAdd(self, url):
-        '''
-        Add url to configuration file
-        '''
-        config = self.readConfiguration()
-        remoteList = config.jsoninit(key=JsonConstants.CONFIG_REMOTES,
-                                     value=[])
-        if url not in remoteList:
-            remoteList.append(url)
-            self.writeConfiguration(config)
-            if self.cacheFile.exists():
-                os.remove(str(self.cacheFile))
-
-    def remoteRemove(self, url):
-        '''
-        Remote given url from configuration
-        '''
-        config = self.readConfiguration()
-        remoteList = config.jsoninit(key=JsonConstants.CONFIG_REMOTES,
-                                     value=[])
-        if url in remoteList:
-            remoteList.remove(url)
-            self.writeConfiguration(config)
-            if self.cacheFile.exists():
-                os.remove(str(self.cacheFile))
-
-    def getRemoteUrls(self):
-        '''
-        List all remotes from configuration
-        '''
-        return self.readConfiguration().jsonpath(JsonConstants.CONFIG_REMOTES,
-                                                 default=[])
+    def getUserEnvironment(self):
+        return Environment("Exported by user config",
+                           self.readConfiguration().getEnvMap())
 
     def getRemoteRepositories(self, smartRefresh=True, onlyMaster=False):
         '''
@@ -207,7 +173,7 @@ class LeafApp(LeafRepository):
 
         cache = jsonLoadFile(self.cacheFile)
         out = []
-        masterUrls = self.getRemoteUrls()
+        masterUrls = self.readConfiguration().getRemotes()
         for url in masterUrls:
             rr = RemoteRepository(url, True, cache.get(url))
             out.append(rr)
@@ -260,7 +226,7 @@ class LeafApp(LeafRepository):
         out = OrderedDict()
         for rr in self.getRemoteRepositories(smartRefresh=smartRefresh):
             if rr.isFetched():
-                for jsonPayload in rr.jsonpath(JsonConstants.REMOTE_PACKAGES, default=[]):
+                for jsonPayload in rr.getPackages():
                     ap = AvailablePackage(jsonPayload, rr.url)
                     if ap.getIdentifier() not in out:
                         out[ap.getIdentifier()] = ap
@@ -290,7 +256,7 @@ class LeafApp(LeafRepository):
         Fetch remotes
         '''
         content = OrderedDict()
-        urls = self.getRemoteUrls()
+        urls = self.readConfiguration().getRemotes()
         self.logger.progressStart('Fetch remote(s)',
                                   message="Refreshing available packages...",
                                   total=len(urls))
@@ -432,7 +398,7 @@ class LeafApp(LeafRepository):
             se = StepExecutor(self.logger,
                               out,
                               vr,
-                              extraEnv=self.getUserEnv())
+                              extraEnv=self.readConfiguration().getEnvMap())
             se.postInstall()
             return out
         except Exception as e:
@@ -517,49 +483,6 @@ class LeafApp(LeafRepository):
         self.logger.progressDone('Installation')
         return out
 
-    def installFromFiles(self, files,
-                         bypassLeafDepends=False,
-                         bypassAptDepends=False,
-                         keepFolderOnError=False):
-        '''
-        Install packages from leaf artifacts
-        @return: InstalledPackage list
-        '''
-        out = []
-        installedPackages = self.listInstalledPackages()
-
-        # Build the list of artifact to install
-        laList = []
-        for f in files:
-            la = f if isinstance(f, LeafArtifact) else LeafArtifact(f)
-            if la.getIdentifier() in installedPackages:
-                self.logger.printVerbose(la.getIdentifier(),
-                                         "is already installed")
-            elif la not in laList:
-                laList.append(la)
-
-        # Check nothing to do
-        if len(laList) == 0:
-            self.logger.printDefault("All packages are installed")
-        else:
-            # Check ap list can be installed
-            self.checkPackagesForInstall(laList,
-                                         bypassLeafDepends=bypassLeafDepends,
-                                         bypassAptDepends=bypassAptDepends)
-
-            # Extract la list
-            for la in laList:
-                ip = self.extractLeafArtifact(la,
-                                              keepFolderOnError=keepFolderOnError)
-                out.append(ip)
-                self.logger.progressWorked('Installation',
-                                           message="Installed %s" % la.getIdentifier(),
-                                           worked=len(out),
-                                           total=len(laList) * 2)
-
-        self.logger.progressDone('Installation')
-        return out
-
     def uninstallPackages(self, motifList):
         '''
         Remove given package
@@ -591,7 +514,7 @@ class LeafApp(LeafRepository):
                 stepExec = StepExecutor(self.logger,
                                         ip,
                                         vr,
-                                        extraEnv=self.getUserEnv())
+                                        extraEnv=self.readConfiguration().getEnvMap())
                 stepExec.preUninstall()
                 self.logger.printVerbose("Remove folder:", ip.folder)
                 shutil.rmtree(str(ip.folder))
@@ -607,7 +530,6 @@ class LeafApp(LeafRepository):
         '''
         Get the env vars declared by given packages and their dependencies
         '''
-
         installedPackages = self.listInstalledPackages()
         piList = self.resolveLatest(motifList,
                                     ipMap=installedPackages,
@@ -623,7 +545,7 @@ class LeafApp(LeafRepository):
             ipEnv = Environment("Exported by package %s" % ip.getIdentifier())
             env.addSubEnv(ipEnv)
             vr = VariableResolver(ip, installedPackages.values())
-            for key, value in ip.getMfEnv().items():
+            for key, value in ip.getEnvMap().items():
                 ipEnv.env.append((key,
                                   vr.resolve(value)))
         return env
@@ -652,8 +574,7 @@ class Workspace():
         checkSupportedLeaf(wsc.jsonpath(JsonConstants.INFO_LEAF_MINVER),
                            exceptionMessage="Leaf has to be updated to work with this workspace")
         # Configure app with ws configuration
-        for url in wsc.getWsRemotes():
-            self.app.remoteAdd(url)
+        self.app.updateUserConfiguration(remoteAddList=wsc.getRemotes())
         return wsc
 
     def writeConfiguration(self, wsc):
@@ -668,23 +589,19 @@ class Workspace():
         jsonWriteFile(tmpFile, wsc.json, pp=True)
         tmpFile.rename(self.configFile)
 
-    def updateWorkspace(self, remotes=None, envMap=None, modules=None):
+    def updateWorkspaceConfiguration(self,
+                                     envSetMap=None, envUnsetList=None,
+                                     remoteAddList=None, remoteRmList=None):
         wsc = self.readConfiguration()
-        if remotes is not None:
-            for remote in remotes:
-                if remote not in wsc.getWsRemotes():
-                    wsc.getWsRemotes().append(remote)
-        if envMap is not None:
-            wsc.getWsEnv().update(envMap)
-        if modules is not None:
-            wsc.getWsSupportedModules().extend(modules)
+        wsc.updateEnv(envSetMap, envUnsetList)
+        wsc.updateRemotes(remoteAddList, remoteRmList)
         self.writeConfiguration(wsc)
 
     def getAllProfiles(self, wsc=None):
         if wsc is None:
             wsc = self.readConfiguration()
         out = OrderedDict()
-        for name, pfJson in wsc.getWsProfiles().items():
+        for name, pfJson in wsc.getProfiles().items():
             out[name] = Profile(name,
                                 self.dataFolder / name,
                                 pfJson)
@@ -694,28 +611,47 @@ class Workspace():
             pass
         return out
 
-    def retrieveProfile(self, name=None, pfMap=None):
+    def retrieveCurrentProfile(self, pfMap=None):
+        return self.retrieveProfile(self.getCurrentProfileName())
+
+    def retrieveProfile(self, name, pfMap=None):
         if name is None:
-            name = self.getCurrentProfileName()
+            raise ValueError("Cannot retrieve profile")
         if pfMap is None:
             pfMap = self.getAllProfiles()
         if name not in pfMap:
             raise ValueError("Cannot find profile %s" % name)
         return pfMap.get(name)
 
-    def checkProfile(self, pf):
+    def checkProfile(self, pf, silent=False, raiseIfNotSync=True):
         # Check packages are linked
         installedPackages = self.app.listInstalledPackages()
         env = self.app.getLeafEnvironment()
-        env.addSubEnv(self.readConfiguration().getWsEnvironment())
-        env.addSubEnv(pf.getPfEnvironment())
-        for ip in DynamicDependencyManager.computeDependencyTree(pf.getPfPackageIdentifiers(),
-                                                                 installedPackages,
-                                                                 env):
-            piLink = pf.folder / ip.getIdentifier().name
-            if not piLink.is_symlink():
-                raise ValueError("Some packages are not linked, please run 'leaf sync %s'" %
-                                 (pf.name))
+        env.addSubEnv(self.readConfiguration().getEnvironment())
+        env.addSubEnv(pf.getEnvironment())
+        out = True
+        try:
+            ipList = DynamicDependencyManager.computeDependencyTree(pf.getPackageIdentifiers(),
+                                                                    installedPackages,
+                                                                    env)
+            if ipList is not None:
+                for ip in ipList:
+                    linkedManifest = pf.folder / ip.getIdentifier().name / LeafConstants.MANIFEST
+                    if InstalledPackage(linkedManifest).getIdentifier() != ip.getIdentifier():
+                        raise ValueError("Missing package %s" %
+                                         ip.getIdentifier())
+        except:
+            out = False
+
+        if not out:
+            if not silent:
+                message = "Profile %s is out of sync, please run 'leaf sync'" % (
+                    pf.name)
+                if raiseIfNotSync:
+                    raise ValueError(message)
+                self.logger.printError(message)
+            return False
+        return True
 
     def getCurrentProfileName(self):
         if self.currentLink.is_symlink():
@@ -724,17 +660,17 @@ class Workspace():
             except Exception:
                 self.currentLink.unlink()
                 raise ValueError(
-                    "No current profile, you need to switch to a profile first")
+                    "No current profile, you need to select a profile first")
         else:
             raise ValueError(
-                "No current profile, you need to switch to a profile first")
+                "No current profile, you need to select to a profile first")
 
     def deleteProfile(self, name):
         pf = self.retrieveProfile(name)
         if self.logger.confirm(
                 question="Do you want to delete profile %s?" % pf.name):
             wsc = self.readConfiguration()
-            del wsc.getWsProfiles()[pf.name]
+            del wsc.getProfiles()[pf.name]
             if pf.folder.exists():
                 shutil.rmtree(str(pf.folder))
             self.writeConfiguration(wsc)
@@ -742,36 +678,34 @@ class Workspace():
                 self.updateCurrentLink(None)
             return pf
 
-    def createProfile(self, name=None, motifList=None, envMap=None):
+    def createProfile(self, name):
         # Read configuration
         wsc = self.readConfiguration()
 
-        # Resolves package list
-        piList = []
-        if motifList is not None:
-            piList = self.app.resolveLatest(motifList, ipMap=True, apMap=True)
-
-        # compute if needed and check name
-        if name is None:
-            name = Profile.genDefaultName(piList)
-        else:
-            name = Profile.checkValidName(name)
+        name = Profile.checkValidName(name)
 
         # Check profile can be created
-        if name in wsc.getWsProfiles():
+        if name in wsc.getProfiles():
             raise ValueError("Profile %s already exists" % name)
 
         # Create & update profile
         self.logger.printDefault("Create profile %s" % name)
         pf = Profile.emptyProfile(name, self.dataFolder / name)
-        self.internalUpdateProfile(pf, motifList, envMap)
 
         # Update & save configuration
-        wsc.getWsProfiles()[name] = pf.json
+        wsc.getProfiles()[name] = pf.json
         self.writeConfiguration(wsc)
+
+        # Switch to new profile
+        self.switchProfile(name)
+
         return pf
 
-    def updateProfile(self, name=None, motifList=None, envMap=None, newName=None):
+    def updateProfile(self,
+                      name,
+                      newName=None,
+                      mpkgAddList=None, mpkgRmList=None,
+                      envSetMap=None, envUnsetList=None):
         # Retrieve profile
         wsc = self.readConfiguration()
         pf = self.retrieveProfile(name)
@@ -779,13 +713,52 @@ class Workspace():
         # Check new name is valid in case of rename
         if newName is not None:
             newName = Profile.checkValidName(newName)
-            if newName != pf.name and newName in wsc.getWsProfiles():
+            if newName != pf.name and newName in wsc.getProfiles():
                 raise ValueError("Profile %s already exists" % newName)
 
-        # Update profile content
-        self.internalUpdateProfile(pf, motifList, envMap)
+        # Add needed packages
+        pkgMap = pf.getPackageMap()
+        if mpkgAddList is not None:
+            piAddList = self.app.resolveLatest(mpkgAddList,
+                                               ipMap=self.app.listInstalledPackages(),
+                                               apMap=self.app.listAvailablePackages())
+            for pi in piAddList:
+                addPi = False
+                if pi.name in pkgMap:
+                    oldPi = pkgMap[pi.name]
+                    if oldPi != pi:
+                        addPi = self.logger.confirm(question="Do you want to update package %s from %s to %s?" % (
+                            pi.name,
+                            oldPi.version,
+                            pi.version))
+                else:
+                    self.logger.printDefault("Add package %s" % (pi))
+                    addPi = True
+                if addPi:
+                    pkgMap[pi.name] = pi
 
-        # Update & save configuration
+        # Remove needed packages
+        if mpkgRmList is not None:
+            for mpkg in mpkgRmList:
+                pi = None
+                if PackageIdentifier.isValidIdentifier(mpkg):
+                    pi = PackageIdentifier.fromString(mpkg)
+                elif mpkg in pkgMap:
+                    pi = pkgMap[mpkg]
+                else:
+                    raise ValueError("Cannot find package %s in profile %s" %
+                                     (mpkg, pf.name))
+                self.logger.printDefault("Remove package %s" % (pi))
+                del pkgMap[pi.name]
+
+        # replace pkg list
+        pf.setPackages(pkgMap.values())
+
+        # Update profile
+        pf.updateEnv(setMap=envSetMap,
+                     unsetList=envUnsetList)
+
+        # Handle rename
         if newName is not None and newName != pf.name:
             newFolder = self.dataFolder / newName
             if pf.folder.exists():
@@ -793,59 +766,25 @@ class Workspace():
             if pf.isCurrentProfile:
                 self.updateCurrentLink(newName)
             # Delete the previous profile
-            del wsc.getWsProfiles()[pf.name]
+            del wsc.getProfiles()[pf.name]
             # Update the name/folder
             pf.name = newName
             pf.folder = newFolder
-            # Save the new profile
-            wsc.getWsProfiles()[pf.name] = pf.json
-        else:
-            # Update the profile
-            wsc.getWsProfiles()[pf.name] = pf.json
 
+        # Update & save configuration
+        wsc.getProfiles()[pf.name] = pf.json
         self.writeConfiguration(wsc)
+        self.checkProfile(pf, raiseIfNotSync=False)
         return pf
 
-    def internalUpdateProfile(self, pf, motifList=None, envMap=None):
-        # Update profile
-        if motifList is not None:
-            piList = self.app.resolveLatest(motifList,
-                                            ipMap=self.app.listInstalledPackages(),
-                                            apMap=self.app.listAvailablePackages())
-            profilePiMap = pf.getPfPackageIdentifierMap()
-            for pi in piList:
-                if pi.name in profilePiMap:
-                    self.logger.printDefault("Update %s, version %s -> %s" % (
-                        pi.name,
-                        profilePiMap[pi.name].version,
-                        pi.version))
-                else:
-                    self.logger.printDefault("Add %s, version %s" % (
-                        pi.name,
-                        pi.version))
-                profilePiMap[pi.name] = pi
-            pf.setPiList(profilePiMap.values())
-
-        if envMap is not None and len(envMap) > 0:
-            self.logger.printDefault("Update environment")
-            pf.getPfEnv().update(envMap)
-
     def switchProfile(self, name):
-        # if no name and no current, use 1st profile
-        if name is None:
-            try:
-                self.getCurrentProfileName()
-            except:
-                pfMap = self.getAllProfiles()
-                if len(pfMap) == 0:
-                    raise ValueError("There is no profile defined")
-                name = next(iter(pfMap))
-        # Retrieve profile
         pf = self.retrieveProfile(name)
-        # Provision profile
-        self.provisionProfile(pf)
+        # Check folder exist
+        if not pf.folder.exists():
+            pf.folder.mkdir(parents=True)
         # Update symlink
         self.updateCurrentLink(pf.name)
+        self.logger.printDefault("Current profile is now %s" % pf.name)
         return pf
 
     def updateCurrentLink(self, name):
@@ -857,7 +796,8 @@ class Workspace():
         if name is not None:
             self.currentLink.symlink_to(name)
 
-    def provisionProfile(self, pf):
+    def provisionProfile(self, name):
+        pf = self.retrieveProfile(name)
         # Ensure FS clean
         if not self.dataFolder.is_dir():
             self.dataFolder.mkdir()
@@ -866,13 +806,13 @@ class Workspace():
         pf.folder.mkdir()
 
         # Do nothing for empty profiles
-        if len(pf.getPfPackages()) > 0:
+        if len(pf.getPackages()) > 0:
             env = self.app.getLeafEnvironment()
-            env.addSubEnv(self.readConfiguration().getWsEnvironment())
-            env.addSubEnv(pf.getPfEnvironment())
-            self.app.installFromRemotes(pf.getPfPackages(), env)
+            env.addSubEnv(self.readConfiguration().getEnvironment())
+            env.addSubEnv(pf.getEnvironment())
+            self.app.installFromRemotes(pf.getPackages(), env)
             installedPackages = self.app.listInstalledPackages()
-            deps = DynamicDependencyManager.computeDependencyTree(pf.getPfPackageIdentifiers(),
+            deps = DynamicDependencyManager.computeDependencyTree(pf.getPackageIdentifiers(),
                                                                   installedPackages,
                                                                   env)
             for ip in deps:
@@ -881,13 +821,13 @@ class Workspace():
                     piFolder = pf.folder / str(ip.getIdentifier())
                 piFolder.symlink_to(ip.folder)
 
-    def getProfileEnv(self, name=None):
+    def getProfileEnv(self, name):
         wsc = self.readConfiguration()
         pf = self.retrieveProfile(name)
-        self.checkProfile(pf)
+        self.checkProfile(pf, raiseIfNotSync=True)
         env = self.app.getLeafEnvironment()
         env.env.append(("LEAF_WORKSPACE", self.rootFolder))
         env.env.append(("LEAF_PROFILE", pf.name))
-        env.addSubEnv(wsc.getWsEnvironment())
-        env.addSubEnv(pf.getPfEnvironment())
-        return self.app.getPackageEnv(pf.getPfPackages(), env)
+        env.addSubEnv(wsc.getEnvironment())
+        env.addSubEnv(pf.getEnvironment())
+        return self.app.getPackageEnv(pf.getPackages(), env)

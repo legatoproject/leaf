@@ -202,8 +202,11 @@ def envListToMap(envList):
     out = OrderedDict()
     if envList is not None:
         for line in envList:
-            k, v = line.split('=', 1)
-            out[k.strip()] = v.strip()
+            if '=' in line:
+                k, v = line.split('=', 1)
+                out[k.strip()] = v.strip()
+            else:
+                out[line] = ""
     return out
 
 
@@ -226,17 +229,19 @@ def jsonLoad(fp):
 
 
 def isWorkspaceRoot(folder):
-    return (folder / LeafFiles.WS_CONFIG_FILENAME).exists()
+    return folder is not None and (folder / LeafFiles.WS_CONFIG_FILENAME).is_file()
 
 
-def findWorkspaceRoot():
-    currentFolder = Path(os.getcwd())
+def findWorkspaceRoot(currentFolder=None, failIfNoWs=True):
+    if currentFolder is None:
+        currentFolder = Path(os.getcwd())
     if isWorkspaceRoot(currentFolder):
         return currentFolder
     for parent in currentFolder.parents:
         if isWorkspaceRoot(parent):
             return parent
-    raise ValueError("Cannot find workspace root from %s" % os.getcwd())
+    if failIfNoWs:
+        raise ValueError("Cannot find workspace root from %s" % os.getcwd())
 
 
 class AptHelper():

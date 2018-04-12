@@ -2,8 +2,7 @@
 '''
 Constants to tweak the tests
 '''
-from leaf.cli_packagemanager import PackageManagerCli
-from leaf.cli_profile import ProfileCli
+from leaf.cli import LeafCli
 from leaf.constants import LeafConstants, LeafFiles
 from leaf.core import LeafRepository
 from leaf.logger import TextLogger
@@ -120,17 +119,20 @@ class AbstractTestWithRepo(unittest.TestCase):
 
     def checkProfileContent(self, profileName, contentList):
         pfFolder = self.getWorkspaceFolder() / LeafFiles.WS_DATA_FOLDERNAME / profileName
-        self.assertTrue(pfFolder.exists())
-        symlinkCount = 0
-        for item in pfFolder.iterdir():
-            if item.is_symlink():
-                symlinkCount += 1
-            self.assertTrue(item.name in contentList,
-                            "Unexpected link %s" % item)
-        self.assertEqual(symlinkCount, len(contentList))
+        if contentList is None:
+            self.assertFalse(pfFolder.exists())
+        else:
+            self.assertTrue(pfFolder.exists())
+            symlinkCount = 0
+            for item in pfFolder.iterdir():
+                if item.is_symlink():
+                    symlinkCount += 1
+                self.assertTrue(item.name in contentList,
+                                "Unexpected link %s" % item)
+            self.assertEqual(symlinkCount, len(contentList))
 
 
-class LeafPackageManagerCliWrapper(AbstractTestWithRepo):
+class LeafCliWrapper(AbstractTestWithRepo):
 
     def __init__(self, methodName):
         AbstractTestWithRepo.__init__(self, methodName)
@@ -140,16 +142,18 @@ class LeafPackageManagerCliWrapper(AbstractTestWithRepo):
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
-        self.leafPackageManagerExec("config",
-                                    "--root", self.getInstallFolder())
-        self.leafPackageManagerExec("remote",
-                                    "--add", self.getRemoteUrl())
+        self.leafExec("config:user",
+                      "--root", self.getInstallFolder())
+        self.leafExec("config:user",
+                      "--add-remote", self.getRemoteUrl())
 
-    def leafPackageManagerExec(self, verb, *args, expectedRc=0):
-        self.eazyExecute(PackageManagerCli,
+    def leafExec(self, verb, *args, altWorkspace=None, expectedRc=0):
+        if altWorkspace is None:
+            altWorkspace = self.getWorkspaceFolder()
+        self.eazyExecute(LeafCli,
                          self.preVerbArgs + ["--non-interactive",
-                                             "--config",
-                                             self.getConfigurationFile()],
+                                             "--config", self.getConfigurationFile(),
+                                             "--workspace", altWorkspace],
                          verb,
                          self.postVerbArgs,
                          args,
@@ -160,7 +164,10 @@ class LeafPackageManagerCliWrapper(AbstractTestWithRepo):
         if preArgs is not None:
             command += preArgs
         if verb is not None:
-            command.append(verb)
+            if isinstance(verb, list):
+                command += verb
+            else:
+                command.append(verb)
         if postArgs is not None:
             command += postArgs
         if args is not None:
@@ -176,27 +183,6 @@ class LeafPackageManagerCliWrapper(AbstractTestWithRepo):
         if expectedRc is not None:
             self.assertEqual(expectedRc, out, " ".join(command))
         return out
-
-
-class LeafProfileCliWrapper(LeafPackageManagerCliWrapper):
-
-    def __init__(self, methodName):
-        LeafPackageManagerCliWrapper.__init__(self, methodName)
-
-    def setUp(self):
-        LeafPackageManagerCliWrapper.setUp(self)
-
-    def leafProfileExec(self, verb, *args, altWorkspace=None, expectedRc=0):
-        if altWorkspace is None:
-            altWorkspace = self.getWorkspaceFolder()
-        self.eazyExecute(ProfileCli,
-                         self.preVerbArgs + ["--non-interactive",
-                                             "--config", self.getConfigurationFile(),
-                                             "--workspace", altWorkspace],
-                         verb,
-                         self.postVerbArgs,
-                         args,
-                         expectedRc)
 
 
 def generateRepo(sourceFolder, outputFolder, logger):

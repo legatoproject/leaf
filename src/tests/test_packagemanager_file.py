@@ -31,13 +31,13 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.app = LeafApp(self.logger,
                            self.getConfigurationFile(),
                            self.getRemoteCacheFile())
-        self.app.updateConfiguration(self.getInstallFolder())
+        self.app.updateUserConfiguration(rootFolder=self.getInstallFolder())
         self.assertEqual(0, len(self.app.listAvailablePackages()))
         self.assertEqual(0, len(self.app.listInstalledPackages()))
-        self.assertEqual(0, len(self.app.getRemoteUrls()))
+        self.assertEqual(0, len(self.app.readConfiguration().getRemotes()))
         self.assertEqual(0, len(self.app.getRemoteRepositories()))
-        self.app.remoteAdd(self.getRemoteUrl())
-        self.assertEqual(1, len(self.app.getRemoteUrls()))
+        self.app.updateUserConfiguration(remoteAddList=[self.getRemoteUrl()])
+        self.assertEqual(1, len(self.app.readConfiguration().getRemotes()))
         self.assertEqual(2, len(self.app.getRemoteRepositories()))
 
     def testCompression(self):
@@ -296,8 +296,8 @@ class TestPackageManager_File(AbstractTestWithRepo):
                            "condition-F_1.0",
                            "condition-H_1.0"])
 
-        self.app.updateConfiguration(envMap={"FOO2": "BAR2",
-                                             "HELLO": "WoRld"})
+        self.app.updateUserConfiguration(envSetMap={"FOO2": "BAR2",
+                                                    "HELLO": "WoRld"})
 
         self.app.installFromRemotes(["condition_1.0"],
                                     extraEnv=Environment("test",

@@ -6,7 +6,7 @@ __leaf_load_env () {
 	rm -f "$LEAF_ACTIVATE" "$LEAF_DEACTIVATE"
 	\leaf env -q \
 		--activate-script "$LEAF_ACTIVATE" \
-		--deactivate-script "$LEAF_DEACTIVATE" 2>&1 > /dev/null
+		--deactivate-script "$LEAF_DEACTIVATE" > /dev/null 2>&1
 	if test $? -eq 0 -a -f "$LEAF_ACTIVATE"; then
 		source "$LEAF_ACTIVATE"
 		PS1="${LEAF_PS1:-{$LEAF_PROFILE\} $LEAF_OLDPS1}"
@@ -17,10 +17,9 @@ __leaf_refresh_env () {
 	\leaf "$@"
 	local RETURN_CODE=$?
 	if test $RETURN_CODE -eq 0; then
-		local CURRENT_ARG
-		local TRIGGER_ARGS=";init;create;upgrade;update;sync;workspace;ws;rename;mv;"
+		local CURRENT_ARG	
 		for CURRENT_ARG in "$@"; do
-			if echo "$TRIGGER_ARGS" | grep -q ";${CURRENT_ARG};"; then
+		  if echo "$CURRENT_ARG" | grep -Eq "^(setup|select|sync|update|create|rename|delete|config:[uwp]|env:[uwp])"; then
 				__leaf_load_env
 				return $RETURN_CODE
 			fi

@@ -36,6 +36,9 @@ class ILogger(ABC):
     Logger interface
     '''
 
+    def isQuiet(self):
+        return False
+
     def isVerbose(self):
         return False
 
@@ -74,8 +77,9 @@ class ILogger(ABC):
     @abstractmethod
     def confirm(self,
                 question="Do you want to continue?",
-                yes=["yes", "y"],
-                no=["no", "n"]):
+                yes=["y"],
+                no=["n"],
+                failOnDecline=False):
         pass
 
 
@@ -90,6 +94,9 @@ class TextLogger (ILogger):
     def __init__(self, level, nonInteractive=True):
         self.level = level
         self.nonInteractive = nonInteractive
+
+    def isQuiet(self):
+        return self.level == TextLogger.LEVEL_QUIET
 
     def isVerbose(self):
         return self.level == TextLogger.LEVEL_VERBOSE
@@ -128,7 +135,7 @@ class TextLogger (ILogger):
     def displayItem(self, item):
         if isinstance(item, Environment):
             def commentConsumer(c):
-                print("# %s" % c)
+                print(Environment.comment(c))
 
             def kvConsumer(k, v):
                 print(Environment.exportCommand(k, v))
@@ -140,9 +147,8 @@ class TextLogger (ILogger):
             if self.isVerbose():
                 wsc = item.readConfiguration()
                 content = OrderedDict()
-                content["Workspace env"] = wsc.getWsEnv()
-                content["Remotes"] = wsc.getWsRemotes()
-                content["Modules"] = wsc.getWsSupportedModules()
+                content["Workspace env"] = wsc.getEnvMap()
+                content["Remotes"] = wsc.getRemotes()
                 self.prettyprintContent(content)
             for pf in item.getAllProfiles().values():
                 print("-",
@@ -150,16 +156,17 @@ class TextLogger (ILogger):
                       "[current]" if pf.isCurrentProfile else "")
                 if self.isVerbose():
                     content = OrderedDict()
-                    content["Packages"] = pf.getPfPackages()
-                    content["Env"] = pf.getPfEnv()
+                    content["Packages"] = pf.getPackages()
+                    content["Env"] = pf.getEnvMap()
+                    content["Sync"] = item.checkProfile(pf, silent=True)
                     self.prettyprintContent(content)
         elif isinstance(item, Profile):
             print(item.name,
                   "[current]" if item.isCurrentProfile else "")
             if self.isVerbose():
                 content = OrderedDict()
-                content["Packages"] = item.getPfPackages()
-                content["Env"] = item.getPfEnv()
+                content["Packages"] = item.getPackages()
+                content["Env"] = item.getEnvMap()
                 self.prettyprintContent(content)
         elif isinstance(item, LeafArtifact):
             if self.level == TextLogger.LEVEL_QUIET:
@@ -231,8 +238,9 @@ class TextLogger (ILogger):
 
     def confirm(self,
                 question="Do you want to continue?",
-                yes=["yes", "y"],
-                no=["no", "n"]):
+                yes=["y"],
+                no=["n"],
+                failOnDecline=False):
         label = " (%s/%s) " % (
             "/".join(map(str.upper, yes)),
             "/".join(map(str.lower, no)))
@@ -246,6 +254,8 @@ class TextLogger (ILogger):
             if answer.lower() in map(str.lower, yes):
                 return True
             if answer.lower() in map(str.lower, no):
+                if failOnDecline:
+                    raise ValueError("Operation aborted")
                 return False
 
 
@@ -375,7 +385,8 @@ class JsonLogger(ILogger):
     def confirm(self,
                 question=None,
                 yes=None,
-                no=None):
+                no=None,
+                failOnDecline=False):
         self.printJson({
             'event': "confirm",
             'question': question

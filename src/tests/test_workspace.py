@@ -26,29 +26,29 @@ class TestProfile(AbstractTestWithRepo):
         self.app = LeafApp(self.logger,
                            self.getConfigurationFile(),
                            self.getRemoteCacheFile())
-        self.app.remoteAdd(self.getRemoteUrl())
-        self.app.updateConfiguration(self.getInstallFolder())
+        self.app.updateUserConfiguration(rootFolder=self.getInstallFolder(),
+                                         remoteAddList=[self.getRemoteUrl()])
         self.ws = Workspace(self.getWorkspaceFolder(), self.app)
 
     def testInit(self):
         with self.assertRaises(Exception):
             self.ws.createProfile()
         self.ws.readConfiguration(True)
-        self.ws.createProfile()
+        self.ws.createProfile("foo")
 
     def testAddDeleteProfile(self):
         self.ws.readConfiguration(True)
-        self.ws.createProfile()
+        self.ws.createProfile("foo")
         self.assertEqual(1, len(self.ws.getAllProfiles()))
 
         with self.assertRaises(Exception):
-            self.ws.createProfile()
+            self.ws.createProfile("foo")
 
-        self.ws.createProfile("foo")
+        self.ws.createProfile("bar")
         self.assertEqual(2, len(self.ws.getAllProfiles()))
 
         with self.assertRaises(Exception):
-            self.ws.createProfile("foo")
+            self.ws.createProfile("bar")
 
         self.ws.deleteProfile("foo")
         self.assertEqual(1, len(self.ws.getAllProfiles()))
@@ -57,57 +57,60 @@ class TestProfile(AbstractTestWithRepo):
             self.ws.deleteProfile("foo")
         self.assertEqual(1, len(self.ws.getAllProfiles()))
 
-    def testUpdateDefaultProfile(self, name=LeafConstants.DEFAULT_PROFILE):
+    def testUpdatetProfile(self):
         self.ws.readConfiguration(True)
-        pf = self.ws.createProfile(name)
-        self.assertEqual([], pf.getPfPackages())
-        self.assertEqual(OrderedDict(), pf.getPfEnv())
+        pf = self.ws.createProfile("foo")
+        self.assertEqual([], pf.getPackages())
+        self.assertEqual(OrderedDict(), pf.getEnvMap())
 
-        self.ws.updateProfile(name,
-                              ["container-A_1.0"],
-                              OrderedDict([("FOO", "BAR"), ("FOO2", "BAR2")]))
-        pf = self.ws.retrieveProfile(name)
+        self.ws.updateProfile("foo",
+                              mpkgAddList=["container-A_1.0"],
+                              envSetMap=OrderedDict([("FOO", "BAR"),
+                                                     ("FOO2", "BAR2")]))
+        pf = self.ws.retrieveProfile("foo")
         self.assertEqual(["container-A_1.0"],
-                         pf.getPfPackages())
-        self.assertEqual(OrderedDict([("FOO", "BAR"), ("FOO2", "BAR2")]),
-                         pf.getPfEnv())
+                         pf.getPackages())
+        self.assertEqual(OrderedDict([("FOO", "BAR"),
+                                      ("FOO2", "BAR2")]),
+                         pf.getEnvMap())
 
-        self.ws.updateProfile(name,
-                              ["container-A"])
-        pf = self.ws.retrieveProfile(name)
+        self.ws.updateProfile("foo",
+                              mpkgAddList=["container-A"])
+        pf = self.ws.retrieveProfile("foo")
         self.assertEqual(["container-A_2.1"],
-                         pf.getPfPackages())
+                         pf.getPackages())
 
-        self.ws.updateProfile(name,
-                              ["env-A_1.0"])
-        pf = self.ws.retrieveProfile(name)
-        self.assertEqual(["container-A_2.1", "env-A_1.0"],
-                         pf.getPfPackages())
+        self.ws.updateProfile("foo",
+                              mpkgAddList=["env-A_1.0"])
+        pf = self.ws.retrieveProfile("foo")
+        self.assertEqual(["container-A_2.1",
+                          "env-A_1.0"],
+                         pf.getPackages())
 
         with self.assertRaises(Exception):
             self.ws.updateProfile("fooooooooo",
-                                  ["container-A_1.0", "container-A_2.0"],
-                                  {"FOO": "BAR", "FOO2": "BAR2"})
-
-    def testUpdateNamedProfile(self):
-        self.testUpdateDefaultProfile("foo")
+                                  mpkgAddList=["container-A_1.0",
+                                               "container-A_2.0"],
+                                  envSetMap={"FOO": "BAR",
+                                             "FOO2": "BAR2"})
 
     def testRenameProfile(self):
         self.ws.readConfiguration(True)
-        self.ws.createProfile("foo",
-                              ["container-A"],
-                              {"FOO": "BAR"})
-        self.ws.switchProfile("foo")
+        self.ws.createProfile("foo")
+        self.ws.updateProfile("foo",
+                              mpkgAddList=["container-A"],
+                              envSetMap={"FOO": "BAR"})
+        self.ws.provisionProfile("foo")
         self.assertEqual("foo",
                          self.ws.getCurrentProfileName())
-        self.checkProfileContent("foo", ["container-A",
-                                         "container-C",
-                                         "container-D"])
+        self.checkProfileContent("foo",
+                                 ["container-A",
+                                  "container-C",
+                                  "container-D"])
 
         self.ws.updateProfile("foo", newName="bar")
         self.assertEqual(1, len(self.ws.getAllProfiles()))
         self.assertEqual("bar", self.ws.retrieveProfile("bar").name)
-        self.assertEqual("bar", self.ws.retrieveProfile().name)
         self.assertEqual("bar", self.ws.getCurrentProfileName())
         self.checkProfileContent("bar", ["container-A",
                                          "container-C",
@@ -116,37 +119,30 @@ class TestProfile(AbstractTestWithRepo):
 
         self.ws.updateProfile("bar", newName="bar")
         self.assertEqual("bar", self.ws.getCurrentProfileName())
-        self.assertEqual("bar", self.ws.retrieveProfile().name)
+        self.assertEqual("bar", self.ws.retrieveProfile("bar").name)
 
     def testSwitchProfile(self):
         self.ws.readConfiguration(True)
-        self.ws.createProfile()
-
-        with self.assertRaises(Exception):
-            self.ws.getCurrentProfileName()
-
-        with self.assertRaises(Exception):
-            self.ws.switchProfile("foo")
-
-        self.ws.switchProfile("default")
-
-        self.assertEqual(LeafConstants.DEFAULT_PROFILE,
-                         self.ws.getCurrentProfileName())
-
         self.ws.createProfile("foo")
         self.ws.switchProfile("foo")
         self.assertEqual("foo",
                          self.ws.getCurrentProfileName())
 
+        self.ws.createProfile("bar")
+        self.ws.switchProfile("bar")
+        self.assertEqual("bar",
+                         self.ws.getCurrentProfileName())
+
     def testEnv(self):
         self.ws.readConfiguration(True)
-        self.ws.createProfile("myenv",
-                              ["env-A_1.0",
-                               "env-B_1.0"],
-                              OrderedDict([("FOO", "BAR"),
-                                           ("FOO2", "BAR2")]))
-        self.app.fetchRemotes()
+        self.ws.createProfile("myenv")
+        self.ws.updateProfile("myenv",
+                              mpkgAddList=["env-A_1.0",
+                                           "env-B_1.0"],
+                              envSetMap=OrderedDict([("FOO", "BAR"),
+                                                     ("FOO2", "BAR2")]))
         self.ws.switchProfile("myenv")
+        self.ws.provisionProfile("myenv")
         env = self.ws.getProfileEnv("myenv")
         self.assertEqual(11, len(env.toList()))
         self.assertEqual([
@@ -164,7 +160,7 @@ class TestProfile(AbstractTestWithRepo):
              (self.getInstallFolder(), self.getInstallFolder()))],
             env.toList())
 
-        self.ws.updateWorkspace(envMap={"HELLO": "world"})
+        self.ws.updateWorkspaceConfiguration(envSetMap={"HELLO": "world"})
         env = self.ws.getProfileEnv("myenv")
         self.assertEqual(12, len(env.toList()))
         self.assertEqual([
@@ -186,73 +182,64 @@ class TestProfile(AbstractTestWithRepo):
     def testWithoutVersion(self):
         self.app.fetchRemotes()
         self.ws.readConfiguration(True)
-        pf = self.ws.createProfile("foo",
-                                   ["container-A"],
-                                   {"FOO": "BAR"})
-        self.assertEqual(["container-A_2.1"], pf.getPfPackages())
-        self.ws.switchProfile("foo")
+        self.ws.createProfile("foo")
+        pf = self.ws.updateProfile("foo",
+                                   mpkgAddList=["container-A"],
+                                   envSetMap={"FOO": "BAR"})
+        self.assertEqual(["container-A_2.1"],
+                         pf.getPackages())
+        self.ws.provisionProfile("foo")
         self.checkProfileContent("foo", ["container-A",
                                          "container-C",
                                          "container-D"])
-        self.ws.updateProfile("foo", ["container-A_1.0"], None)
-        self.ws.switchProfile("foo")
+        self.ws.updateProfile("foo",
+                              mpkgAddList=["container-A_1.0"])
+        self.ws.provisionProfile("foo")
         self.checkProfileContent("foo", ["container-A",
                                          "container-B",
                                          "container-C",
                                          "container-E"])
 
-    def testDefaultProfileName(self):
-        self.app.fetchRemotes()
-        self.ws.readConfiguration(True)
-
-        pf = self.ws.createProfile(motifList=["container-A",
-                                              "deb_1.0",
-                                              "env-A"])
-        self.assertEqual(["container-A_2.1",
-                          "deb_1.0",
-                          "env-A_1.0"],
-                         pf.getPfPackages())
-        self.assertEqual("CONTAINER-A_DEB_ENV-A", pf.name)
-
-        with self.assertRaises(Exception):
-            self.ws.createProfile(motifList=["container-A",
-                                             "deb_1.0",
-                                             "env-A"])
-
     def testRemoteInWorkspace(self):
-        for url in self.app.getRemoteUrls():
-            self.app.remoteRemove(url)
-        self.assertEqual(0, len(self.app.getRemoteUrls()))
+        self.app.updateUserConfiguration(
+            remoteRmList=self.app.readConfiguration().getRemotes())
+        self.assertEqual(0, len(self.app.readConfiguration().getRemotes()))
         self.assertEqual(0, len(self.app.getRemoteRepositories()))
         self.assertEqual(0, len(self.app.listAvailablePackages()))
 
         self.ws.readConfiguration(True)
-        self.ws.updateWorkspace(remotes=[self.getRemoteUrl()])
-        pf = self.ws.createProfile(motifList=["container-A"])
-        pf = self.ws.switchProfile(pf.name)
-        self.checkProfileContent(pf.name, ["container-A",
-                                           "container-C",
-                                           "container-D"])
-        self.assertEqual(1, len(self.app.getRemoteUrls()))
+        self.ws.updateWorkspaceConfiguration(
+            remoteAddList=[self.getRemoteUrl()])
+        self.ws.createProfile("foo")
+        self.ws.updateProfile("foo", mpkgAddList=["container-A"])
+        self.ws.switchProfile("foo")
+        self.ws.provisionProfile("foo")
+        self.checkProfileContent("foo", ["container-A",
+                                         "container-C",
+                                         "container-D"])
+        self.assertEqual(1, len(self.app.readConfiguration().getRemotes()))
         self.assertEqual(2, len(self.app.getRemoteRepositories()))
 
     def testUpgrade(self):
         self.ws.readConfiguration(True)
         pf = self.ws.createProfile("foo")
-        self.assertEqual([], pf.getPfPackages())
-        self.assertEqual(OrderedDict(), pf.getPfEnv())
+        self.assertEqual([], pf.getPackages())
+        self.assertEqual(OrderedDict(), pf.getEnvMap())
 
         self.ws.updateProfile("foo",
-                              ["container-A_1.0", "version_1.0"])
+                              mpkgAddList=["container-A_1.0",
+                                           "version_1.0"])
         pf = self.ws.retrieveProfile("foo")
-        self.assertEqual(["container-A_1.0", "version_1.0"],
-                         pf.getPfPackages())
+        self.assertEqual(["container-A_1.0",
+                          "version_1.0"],
+                         pf.getPackages())
 
         self.ws.updateProfile("foo",
-                              pf.getPfPackageIdentifierMap().keys())
+                              mpkgAddList=pf.getPackageMap().keys())
         pf = self.ws.retrieveProfile("foo")
-        self.assertEqual(["container-A_2.1", "version_2.0"],
-                         pf.getPfPackages())
+        self.assertEqual(["container-A_2.1",
+                          "version_2.0"],
+                         pf.getPackages())
 
 
 if __name__ == "__main__":

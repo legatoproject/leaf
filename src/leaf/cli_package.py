@@ -6,186 +6,33 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-
 import argparse
-import json
-from leaf.cli import LeafCli, LeafCommand
-from leaf.cli_releng import PackCommand, IndexCommand
-from leaf.constants import LeafFiles
 from leaf.coreutils import TagManager
-from leaf.filtering import AndPackageFilter, MasterPackageFilter, ModulePackageFilter, KeywordPackageFilter
+from leaf.filtering import AndPackageFilter, MasterPackageFilter,\
+    KeywordPackageFilter, ModulePackageFilter
 from leaf.model import Manifest
-from leaf.utils import envListToMap
-import os
-import shutil
+
+from leaf.cliutils import LeafCommand
 
 
-def main():
-    return PackageManagerCli().run()
-
-
-class PackageManagerCli (LeafCli):
-    def __init__(self):
-        LeafCli.__init__(self,
-                         ConfigCommand(),
-                         CleanCommand(),
-                         RemoteCommand(),
-                         FetchCommand(),
-                         ListCommand(),
-                         SearchCommand(),
-                         DependsCommand(),
-                         ExtractCommand(),
-                         InstallCommand(),
-                         RemoveCommand(),
-                         EnvCommand(),
-                         # Releng
-                         PackCommand(),
-                         IndexCommand())
-
-
-class ConfigCommand(LeafCommand):
+class RemotesCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
-                             "config",
-                             "manage configuration")
-
-    def internalInitArgs(self, subparser):
-        subparser.add_argument('--root',
-                               dest='root_folder',
-                               metavar='DIR',
-                               help="set the root folder, default: " + str(LeafFiles.DEFAULT_LEAF_ROOT))
-
-        subparser.add_argument('-e', '--env',
-                               dest='config_env',
-                               action='append',
-                               metavar='KEY=VALUE',
-                               help="configure environment variables at user level")
-
-    def internalExecute(self, app, logger, args):
-        if args.root_folder is not None:
-            app.updateConfiguration(rootFolder=args.root_folder)
-        if args.config_env is not None:
-            app.updateConfiguration(envMap=envListToMap(args.config_env))
-        logger.printDefault("Configuration file:", app.configurationFile)
-        logger.printDefault(json.dumps(app.readConfiguration().json,
-                                       sort_keys=True,
-                                       indent=2,
-                                       separators=(',', ': ')))
-
-
-class CleanCommand(LeafCommand):
-
-    def __init__(self):
-        LeafCommand.__init__(self,
-                             "clean",
-                             "clean cache folder")
+                             "remotes",
+                             "display informations about remotes")
 
     def internalInitArgs(self, subparser):
         pass
 
     def internalExecute(self, app, logger, args):
-        logger.printDefault("Clean cache folder: ",
-                            LeafFiles.CACHE_FOLDER)
-        shutil.rmtree(str(LeafFiles.FILES_CACHE_FOLDER), True)
-        cacheFile = LeafFiles.REMOTES_CACHE_FILE
-        if cacheFile.exists():
-            os.remove(str(cacheFile))
-        shutil.rmtree(str(LeafFiles.FILES_CACHE_FOLDER), True)
+        rrList = app.getRemoteRepositories(smartRefresh=False,
+                                           onlyMaster=True)
+        for rr in rrList:
+            logger.displayItem(rr)
 
 
-class RemoteCommand(LeafCommand):
-
-    def __init__(self):
-        LeafCommand.__init__(self,
-                             "remote",
-                             "manage remote repositories")
-
-    def internalInitArgs(self, subparser):
-        subparser.add_argument('--add',
-                               dest='remote_add',
-                               action='append',
-                               metavar='URL',
-                               help='add given remote url')
-        subparser.add_argument('--rm',
-                               dest='remote_rm',
-                               action='append',
-                               metavar='URL',
-                               help='remove given remote url')
-
-    def internalExecute(self, app, logger, args):
-        if args.remote_add is not None:
-            for url in args.remote_add:
-                app.remoteAdd(url)
-        if args.remote_rm is not None:
-            for url in args.remote_rm:
-                app.remoteRemove(url)
-        if args.remote_add is None and args.remote_rm is None:
-            for rr in app.getRemoteRepositories():
-                if rr.isRootRepository or logger.isVerbose():
-                    logger.displayItem(rr)
-
-
-class FetchCommand(LeafCommand):
-
-    def __init__(self):
-        LeafCommand.__init__(self,
-                             "refresh",
-                             "refresh remote repositories packages list",
-                             commandAlias="f")
-
-    def internalInitArgs(self, subparser):
-        pass
-
-    def internalExecute(self, app, logger, args):
-        app.fetchRemotes()
-
-
-class ListCommand(LeafCommand):
-
-    def __init__(self):
-        LeafCommand.__init__(self,
-                             "list",
-                             "list installed packages",
-                             commandAlias="ls")
-
-    def internalInitArgs(self, subparser):
-        subparser.add_argument("-a", "--all",
-                               dest="allPackages",
-                               action="store_true",
-                               help="display all packages, not only master packages")
-        subparser.add_argument("-m", "--module",
-                               dest="modules",
-                               action="append",
-                               metavar="MODULE",
-                               help="filter packages supporting given module")
-        subparser.add_argument('keywords',
-                               nargs=argparse.ZERO_OR_MORE)
-
-    def internalExecute(self, app, logger, args):
-        pkgFilter = AndPackageFilter()
-        if not args.allPackages:
-            pkgFilter.addFilter(MasterPackageFilter())
-            pass
-
-        if args.modules is not None:
-            logger.printDefault("Filter by modules:",
-                                ", ".join(args.modules))
-            pkgFilter.addFilter(ModulePackageFilter(args.modules))
-
-        if args.keywords is not None and len(args.keywords) > 0:
-            logger.printDefault("Filter by keywords:",
-                                ", ".join(args.keywords))
-            pkgFilter.addFilter(KeywordPackageFilter(args.keywords))
-
-        # Print filtered packages
-        for mf in sorted(app.listInstalledPackages().values(),
-                         key=Manifest.getIdentifier):
-            if pkgFilter.matches(mf):
-                logger.displayItem(mf)
-
-
-class SearchCommand(LeafCommand):
+class PackageSearchCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
@@ -234,13 +81,104 @@ class SearchCommand(LeafCommand):
                 logger.displayItem(mf)
 
 
-class DependsCommand(LeafCommand):
+class PackageCommand(LeafCommand):
+
+    def __init__(self):
+        LeafCommand.__init__(self,
+                             "package",
+                             "core package manager commands",
+                             cmdAliases=["pkg"],
+                             addVerboseQuiet=False)
+        self.subCommands = [
+            PackageListSubCommand(),
+            PackageRefreshSubCommand(),
+            PackageInstallSubCommand(),
+            PackageRemoveSubCommand(),
+            PackageEnvSubCommand(),
+            PackageDependsSubCommand()]
+
+    def internalInitArgs(self, subparser):
+        subsubparsers = subparser.add_subparsers(dest='subCommand',
+                                                 description='supported subcommands',
+                                                 metavar="SUBCOMMAND",
+                                                 help='actions to execute')
+        subsubparsers.required = True
+        for subCommand in self.subCommands:
+            subCommand.create(subsubparsers)
+
+    def internalExecute(self, app, logger, args):
+        for subCommand in self.subCommands:
+            if subCommand.isHandled(args.subCommand):
+                return subCommand.execute(app, logger, args)
+        raise ValueError("Cannot find subcommand for %s" % args.subcommand)
+
+
+class PackageRefreshSubCommand(LeafCommand):
+
+    def __init__(self):
+        LeafCommand.__init__(self,
+                             "refresh",
+                             "refresh remote repositories packages list",
+                             cmdAliases=["f"])
+
+    def internalInitArgs(self, subparser):
+        pass
+
+    def internalExecute(self, app, logger, args):
+        app.fetchRemotes()
+
+
+class PackageListSubCommand(LeafCommand):
+
+    def __init__(self):
+        LeafCommand.__init__(self,
+                             "list",
+                             "list installed packages",
+                             cmdAliases=["ls"])
+
+    def internalInitArgs(self, subparser):
+        subparser.add_argument("-a", "--all",
+                               dest="allPackages",
+                               action="store_true",
+                               help="display all packages, not only master packages")
+        subparser.add_argument("-m", "--module",
+                               dest="modules",
+                               action="append",
+                               metavar="MODULE",
+                               help="filter packages supporting given module")
+        subparser.add_argument('keywords',
+                               nargs=argparse.ZERO_OR_MORE)
+
+    def internalExecute(self, app, logger, args):
+        pkgFilter = AndPackageFilter()
+        if not args.allPackages:
+            pkgFilter.addFilter(MasterPackageFilter())
+            pass
+
+        if args.modules is not None:
+            logger.printDefault("Filter by modules:",
+                                ", ".join(args.modules))
+            pkgFilter.addFilter(ModulePackageFilter(args.modules))
+
+        if args.keywords is not None and len(args.keywords) > 0:
+            logger.printDefault("Filter by keywords:",
+                                ", ".join(args.keywords))
+            pkgFilter.addFilter(KeywordPackageFilter(args.keywords))
+
+        # Print filtered packages
+        for mf in sorted(app.listInstalledPackages().values(),
+                         key=Manifest.getIdentifier):
+            if pkgFilter.matches(mf):
+                logger.displayItem(mf)
+
+
+class PackageDependsSubCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
                              "dependencies",
                              "Build the dependency chain",
-                             commandAlias="deps")
+                             cmdAliases=["deps"])
 
     def internalInitArgs(self, subparser):
         subparser.add_argument("-r", "--reverse",
@@ -267,34 +205,13 @@ class DependsCommand(LeafCommand):
             logger.displayItem(i)
 
 
-class ExtractCommand(LeafCommand):
-
-    def __init__(self):
-        LeafCommand.__init__(self,
-                             "extract",
-                             "extract given packages",
-                             commandAlias="x")
-
-    def internalInitArgs(self, subparser):
-        InstallCommand.initInstallArguments(subparser)
-        subparser.add_argument('packages',
-                               nargs=argparse.REMAINDER)
-
-    def internalExecute(self, app, logger, args):
-        items = app.installFromFiles(args.packages,
-                                     bypassAptDepends=args.skipAptDepends,
-                                     keepFolderOnError=args.keepOnError)
-        logger.printQuiet("Packages extracted: " +
-                          ' '.join([str(p.getIdentifier()) for p in items]))
-
-
-class InstallCommand(LeafCommand):
+class PackageInstallSubCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
                              "install",
                              "install packages (download + extract)",
-                             commandAlias="i")
+                             cmdAliases=["i"])
 
     @staticmethod
     def initInstallArguments(subparser):
@@ -308,7 +225,7 @@ class InstallCommand(LeafCommand):
                                help="do not check apt dependencies")
 
     def internalInitArgs(self, subparser):
-        InstallCommand.initInstallArguments(subparser)
+        PackageInstallSubCommand.initInstallArguments(subparser)
         subparser.add_argument('packages',
                                nargs=argparse.REMAINDER)
 
@@ -321,13 +238,13 @@ class InstallCommand(LeafCommand):
                               ' '.join([str(p.getIdentifier()) for p in items]))
 
 
-class RemoveCommand(LeafCommand):
+class PackageRemoveSubCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
                              "remove",
                              "remove packages",
-                             commandAlias="rm")
+                             cmdAliases=["rm"])
 
     def internalInitArgs(self, subparser):
         subparser.add_argument('packages', nargs=argparse.REMAINDER)
@@ -336,7 +253,7 @@ class RemoveCommand(LeafCommand):
         app.uninstallPackages(args.packages)
 
 
-class EnvCommand(LeafCommand):
+class PackageEnvSubCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,

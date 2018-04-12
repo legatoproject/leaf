@@ -7,9 +7,9 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-from abc import abstractmethod, ABC
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from leaf import __help_description__, __version__
+from leaf.cli_releng import RepositoryCommand
 from leaf.constants import LeafFiles
 from leaf.core import LeafApp
 from leaf.logger import createLogger
@@ -18,11 +18,48 @@ from pathlib import Path
 import sys
 import traceback
 
+from leaf.cli_misc import StatusCommand, UserConfigCommand, SetupCommand
+from leaf.cli_package import PackageCommand, PackageSearchCommand,\
+    RemotesCommand
+from leaf.cli_workspace import WorkspaceConfigCommand, ProfileConfigCommand,\
+    WorkspaceInitCommand, ProfileCreateCommand, ProfileSelectCommand,\
+    ProfileSyncCommand, ProfileRenameCommand, ProfileDeleteCommand,\
+    ProfileEnvCommand, ProfileUpdateCommand
+
+
+def main():
+    return LeafCli().run()
+
 
 class LeafCli():
 
-    def __init__(self, *commands):
+    def __init__(self):
         checkPythonVersion()
+
+        self.commands = [
+            # Common commands
+            StatusCommand(),
+            PackageSearchCommand(),
+            SetupCommand(),
+            # Config
+            UserConfigCommand(),
+            WorkspaceConfigCommand(),
+            ProfileConfigCommand(),
+            # Workspace common operations
+            ProfileSelectCommand(),
+            ProfileSyncCommand(),
+            ProfileEnvCommand(),
+            ProfileUpdateCommand(),
+            # Workspace other operations
+            WorkspaceInitCommand(),
+            ProfileCreateCommand(),
+            ProfileRenameCommand(),
+            ProfileDeleteCommand(),
+            # Other commands
+            PackageCommand(),
+            RemotesCommand(),
+            RepositoryCommand()
+        ]
 
         # Setup argument parser
         self.parser = ArgumentParser(description=__help_description__,
@@ -40,17 +77,20 @@ class LeafCli():
                                  dest="nonInteractive",
                                  action='store_true',
                                  help="assume yes if a confirmation is asked")
+        self.parser.add_argument("-w", "--workspace",
+                                 dest="workspace",
+                                 type=Path,
+                                 help="use given workspace")
 
         subparsers = self.parser.add_subparsers(dest='command',
                                                 description='supported commands',
                                                 metavar="COMMAND",
                                                 help='actions to execute')
         subparsers.required = True
-        self.commands = commands
         for command in self.commands:
             command.create(subparsers)
 
-    def run(self, customArgs=None):
+    def run(self, customArgs=None, handleExceptions=True):
         args = self.parser.parse_args(sys.argv[1:]
                                       if customArgs is None
                                       else customArgs)
@@ -67,50 +107,9 @@ class LeafCli():
                     return cmd.execute(app, logger, args)
             raise ValueError("Cannot find command for %s" % args.command)
         except Exception as e:
+            if not handleExceptions:
+                raise e
             logger.printError(e)
             if logger.isVerbose():
                 traceback.print_exc()
             return 2
-
-
-class LeafCommand(ABC):
-    '''
-    Abstract class to define parser for leaf commands
-    '''
-
-    def __init__(self, commandName, commandHelp, commandAlias=None):
-        self.commandName = commandName
-        self.commandHelp = commandHelp
-        self.commandAlias = commandAlias
-
-    def isHandled(self, cmd):
-        return cmd == self.commandName or cmd == self.commandAlias
-
-    def create(self, subparsers):
-        parser = subparsers.add_parser(self.commandName,
-                                       help=self.commandHelp,
-                                       aliases=[] if self.commandAlias is None else [self.commandAlias])
-        self.initArgs(parser)
-
-    def initArgs(self, subparser):
-        subparser.add_argument("-v", "--verbose",
-                               dest="verbose",
-                               action='store_true',
-                               help="increase output verbosity")
-        subparser.add_argument("-q", "--quiet",
-                               dest="quiet",
-                               action='store_true',
-                               help="decrease output verbosity")
-        self.internalInitArgs(subparser)
-
-    def execute(self, app, logger, args):
-        out = self.internalExecute(app, logger, args)
-        return 0 if out is None else out
-
-    @abstractmethod
-    def internalInitArgs(self, subparser):
-        pass
-
-    @abstractmethod
-    def internalExecute(self, app, logger, args):
-        pass

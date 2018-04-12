@@ -8,11 +8,41 @@ Leaf Package Manager
 '''
 
 import argparse
-from leaf.cli import LeafCommand
 from pathlib import Path
 
+from leaf.cliutils import LeafCommand
 
-class PackCommand(LeafCommand):
+
+class RepositoryCommand(LeafCommand):
+
+    def __init__(self):
+        LeafCommand.__init__(self,
+                             "repository",
+                             "commands to maintain a leaf repository",
+                             cmdAliases=["repo"],
+                             addVerboseQuiet=False)
+        self.subCommands = [
+            RepositoryPackSubCommand(),
+            RepositoryIndexSubCommand()
+        ]
+
+    def internalInitArgs(self, subparser):
+        subsubparsers = subparser.add_subparsers(dest='subCommand',
+                                                 description='supported subcommands',
+                                                 metavar="SUBCOMMAND",
+                                                 help='actions to execute')
+        subsubparsers.required = True
+        for subCommand in self.subCommands:
+            subCommand.create(subsubparsers)
+
+    def internalExecute(self, app, logger, args):
+        for subCommand in self.subCommands:
+            if subCommand.isHandled(args.subCommand):
+                return subCommand.execute(app, logger, args)
+        raise ValueError("Cannot find subcommand for %s" % args.subcommand)
+
+
+class RepositoryPackSubCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
@@ -34,7 +64,7 @@ class PackCommand(LeafCommand):
         app.pack(args.manifest, args.pack_output)
 
 
-class IndexCommand(LeafCommand):
+class RepositoryIndexSubCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
