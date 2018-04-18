@@ -140,8 +140,8 @@ class TextLogger (ILogger):
             def kvConsumer(k, v):
                 print(Environment.exportCommand(k, v))
 
-            item.printEnv(commentConsumer=commentConsumer,
-                          kvConsumer=kvConsumer)
+            item.printEnv(kvConsumer=kvConsumer,
+                          commentConsumer=None if self.isQuiet() else commentConsumer)
         elif isinstance(item, Workspace):
             print("Workspace %s" % item.rootFolder)
             if self.isVerbose():
@@ -340,8 +340,8 @@ class JsonLogger(ILogger):
             def kvConsumer(k, v):
                 self.displayJsonItem("env", extraMap={"key": k, "value": v})
 
-            item.printEnv(commentConsumer=commentConsumer,
-                          kvConsumer=kvConsumer)
+            item.printEnv(kvConsumer=kvConsumer,
+                          commentConsumer=commentConsumer)
         elif isinstance(item, Workspace):
             itemType = "workspace"
             json = item.readConfiguration().json

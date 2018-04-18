@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
 LEAF_ENV=`leaf env -q`
-eval $LEAF_ENV
+eval "$LEAF_ENV"
 test -z "$1" && echo "Spawning a shell for profile ${LEAF_PROFILE}; use exit to return to parent shell."
 exec $SHELL "$@"

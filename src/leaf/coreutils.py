@@ -39,8 +39,8 @@ def genEnvScript(env, activateFile=None, deactivateFile=None):
             def kvConsumer(k, v):
                 fp.write(Environment.exportCommand(k, v) + "\n")
 
-            env.printEnv(commentConsumer=commentConsumer,
-                         kvConsumer=kvConsumer)
+            env.printEnv(kvConsumer=kvConsumer,
+                         commentConsumer=commentConsumer)
 
 
 class TagManager():

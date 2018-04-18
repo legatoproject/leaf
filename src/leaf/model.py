@@ -492,7 +492,7 @@ class Environment():
                 raise ValueError()
             self.children.append(child)
 
-    def printEnv(self, commentConsumer=None, kvConsumer=None):
+    def printEnv(self, kvConsumer=None, commentConsumer=None):
         if len(self.env) > 0:
             if self.comment is not None and commentConsumer is not None:
                 commentConsumer(self.comment)
@@ -500,7 +500,7 @@ class Environment():
                 for k, v in self.env:
                     kvConsumer(k, v)
         for e in self.children:
-            e.printEnv(commentConsumer, kvConsumer)
+            e.printEnv(kvConsumer, commentConsumer)
 
     def toList(self, acc=None):
         if acc is None:
