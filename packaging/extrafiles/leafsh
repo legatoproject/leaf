@@ -1,5 +1,9 @@
 #!/bin/sh
 set -e
+if test -n "$LEAF_PROFILE"; then
+	echo "Cannot spawn a shell if a leaf profile is already loaded."
+	exit 1
+fi
 LEAF_ENV=`leaf env -q`
 eval "$LEAF_ENV"
 test -z "$1" && echo "Spawning a shell for profile ${LEAF_PROFILE}; use exit to return to parent shell."
