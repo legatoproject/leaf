@@ -73,7 +73,7 @@ class LeafCli():
                                  dest="customConfig",
                                  type=Path,
                                  help="use custom configuration file")
-        self.parser.add_argument("-y", "--non-interactive",
+        self.parser.add_argument("--non-interactive",
                                  dest="nonInteractive",
                                  action='store_true',
                                  help="assume yes if a confirmation is asked")
@@ -100,7 +100,7 @@ class LeafCli():
         if args.customConfig is not None:
             configFile = args.customConfig
 
-        app = LeafApp(logger, configFile)
+        app = LeafApp(logger, configFile, nonInteractive=args.nonInteractive)
         try:
             for cmd in self.commands:
                 if cmd.isHandled(args.command):

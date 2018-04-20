@@ -8,9 +8,11 @@ Leaf Package Manager
 '''
 import argparse
 from leaf.coreutils import TagManager
-from leaf.filtering import AndPackageFilter, MasterPackageFilter,\
+from leaf.filtering import AndPackageFilter, MasterPackageFilter, \
     KeywordPackageFilter, ModulePackageFilter
 from leaf.model import Manifest
+from leaf.utils import mkTmpLeafRootDir
+from pathlib import Path
 
 from leaf.cliutils import LeafCommand
 
@@ -95,7 +97,8 @@ class PackageCommand(LeafCommand):
             PackageInstallSubCommand(),
             PackageRemoveSubCommand(),
             PackageEnvSubCommand(),
-            PackageDependsSubCommand()]
+            PackageDependsSubCommand(),
+            PackagePrereqSubCommand()]
 
     def internalInitArgs(self, subparser):
         subsubparsers = subparser.add_subparsers(dest='subCommand',
@@ -189,18 +192,13 @@ class PackageDependsSubCommand(LeafCommand):
                                dest="filterInstalled",
                                action="store_true",
                                help="filter already installed packages")
-        subparser.add_argument("--apt",
-                               dest="aptDepends",
-                               action="store_true",
-                               help="display apt dependencies")
         subparser.add_argument('packages',
                                nargs=argparse.REMAINDER)
 
     def internalExecute(self, app, logger, args):
         items = app.listDependencies(args.packages,
                                      reverse=args.reverseOrder,
-                                     filterInstalled=args.filterInstalled,
-                                     aptDepends=args.aptDepends)
+                                     filterInstalled=args.filterInstalled)
         for i in items:
             logger.displayItem(i)
 
@@ -219,10 +217,6 @@ class PackageInstallSubCommand(LeafCommand):
                                dest="keepOnError",
                                action="store_true",
                                help="keep package folder in case of installation error")
-        subparser.add_argument("--skip-apt",
-                               dest="skipAptDepends",
-                               action="store_true",
-                               help="do not check apt dependencies")
 
     def internalInitArgs(self, subparser):
         PackageInstallSubCommand.initInstallArguments(subparser)
@@ -231,11 +225,37 @@ class PackageInstallSubCommand(LeafCommand):
 
     def internalExecute(self, app, logger, args):
         items = app.installFromRemotes(args.packages,
-                                       bypassAptDepends=args.skipAptDepends,
                                        keepFolderOnError=args.keepOnError)
         if len(items) > 0:
             logger.printQuiet("Packages installed: " +
                               ' '.join([str(p.getIdentifier()) for p in items]))
+
+
+class PackagePrereqSubCommand(LeafCommand):
+
+    def __init__(self):
+        LeafCommand.__init__(self,
+                             "prereq",
+                             "check prereq packages")
+
+    def internalInitArgs(self, subparser):
+        subparser.add_argument("--target",
+                               dest="prereqRootFolder",
+                               type=Path,
+                               help="a alternative root folder for required packages installation")
+        subparser.add_argument('packages',
+                               nargs=argparse.REMAINDER)
+
+    def internalExecute(self, app, logger, args):
+        tmpRootFolder = args.prereqRootFolder
+        if tmpRootFolder is None:
+            tmpRootFolder = mkTmpLeafRootDir()
+        logger.printQuiet("Prereq root folder: %s" % tmpRootFolder)
+        errorCount = app.installPrereqFromRemotes(args.packages,
+                                                  tmpRootFolder,
+                                                  raiseOnError=False)
+        logger.printQuiet("Prereq installed with %d error(s)" % errorCount)
+        return errorCount
 
 
 class PackageRemoveSubCommand(LeafCommand):

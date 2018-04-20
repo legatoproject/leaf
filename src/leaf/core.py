@@ -13,14 +13,14 @@ from datetime import datetime
 import json
 from leaf import __version__
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles
-from leaf.coreutils import StepExecutor, VariableResolver,\
+from leaf.coreutils import StepExecutor, VariableResolver, \
     DynamicDependencyManager
-from leaf.model import Manifest, InstalledPackage, AvailablePackage, LeafArtifact,\
-    PackageIdentifier, RemoteRepository, Profile,\
+from leaf.model import Manifest, InstalledPackage, AvailablePackage, LeafArtifact, \
+    PackageIdentifier, RemoteRepository, Profile, \
     WorkspaceConfiguration, Environment, UserConfiguration
-from leaf.utils import resolveUrl, getCachedArtifactName, isFolderIgnored,\
-    markFolderAsIgnored, openOutputTarFile, computeSha1sum, downloadFile,\
-    AptHelper, jsonLoadFile, checkSupportedLeaf, jsonWriteFile
+from leaf.utils import resolveUrl, getCachedArtifactName, isFolderIgnored, \
+    markFolderAsIgnored, openOutputTarFile, computeSha1sum, downloadFile, \
+    jsonLoadFile, checkSupportedLeaf, jsonWriteFile, mkTmpLeafRootDir
 import os
 from pathlib import Path
 import platform
@@ -91,13 +91,16 @@ class LeafApp(LeafRepository):
     Main API for using Leaf
     '''
 
-    def __init__(self, logger, configurationFile, remoteCacheFile=LeafFiles.REMOTES_CACHE_FILE):
+    def __init__(self, logger, configurationFile,
+                 remoteCacheFile=LeafFiles.REMOTES_CACHE_FILE,
+                 nonInteractive=False):
         '''
         Constructor
         '''
         super().__init__(logger)
         self.configurationFile = configurationFile
         self.cacheFile = remoteCacheFile
+        self.nonInteractive = nonInteractive
         # Create folders if needed
         os.makedirs(str(LeafFiles.FILES_CACHE_FOLDER), exist_ok=True)
 
@@ -151,6 +154,8 @@ class LeafApp(LeafRepository):
         out.env.append(("LEAF_PLATFORM_SYSTEM", platform.system()))
         out.env.append(("LEAF_PLATFORM_MACHINE", platform.machine()))
         out.env.append(("LEAF_PLATFORM_RELEASE", platform.release()))
+        if self.nonInteractive:
+            out.env.append(("LEAF_NON_INTERACTIVE", "1"))
         out.addSubEnv(self.getUserEnvironment())
         return out
 
@@ -284,11 +289,10 @@ class LeafApp(LeafRepository):
                     out[ip.getIdentifier()] = ip
         return out
 
-    def listDependencies(self, motifList, reverse=False, filterInstalled=False, aptDepends=False):
+    def listDependencies(self, motifList, reverse=False, filterInstalled=False):
         '''                                                                                                                                                             
         List all dependencies for given packages                                                                                                                        
         @return: PackageIdentifier list                                                                                                                                 
-                    or String list in case of apt dependencies                                                                                                          
         '''
         installedPackages = self.listInstalledPackages()
         availablePackages = self.listAvailablePackages()
@@ -311,25 +315,13 @@ class LeafApp(LeafRepository):
         if filterInstalled:
             out = [mf for mf in out if mf.getIdentifier() not in installedPackages]
 
-        if aptDepends:
-            debList = []
-            for mf in out:
-                for deb in mf.getAptDepends():
-                    if deb not in debList:
-                        debList.append(deb)
-            if filterInstalled:
-                ah = AptHelper()
-                debList = [p for p in debList if not ah.isInstalled(p)]
-            out = debList
-        else:
-            # Keep only PI
-            out = list(map(Manifest.getIdentifier, out))
+        # Keep only PI
+        out = list(map(Manifest.getIdentifier, out))
 
         return out
 
     def checkPackagesForInstall(self, mfList,
-                                bypassLeafMinVersion=False,
-                                bypassAptDepends=False):
+                                bypassLeafMinVersion=False):
 
         # Check leaf min version
         if not bypassLeafMinVersion:
@@ -342,21 +334,6 @@ class LeafApp(LeafRepository):
                                        " ".join([str(mf.getIdentifier()) for mf in incompatibleList]))
                 raise ValueError(
                     "Some package require a newer version of leaf")
-
-        # Check dependencies
-        if not bypassAptDepends:
-            ah = AptHelper()
-            missingAptDepends = []
-            for mf in mfList:
-                for deb in mf.getAptDepends():
-                    if deb not in missingAptDepends and not ah.isInstalled(deb):
-                        missingAptDepends.append(deb)
-            if len(missingAptDepends) > 0:
-                self.logger.printError(
-                    "You may have to install missing dependencies by running:")
-                self.logger.printError(
-                    "  $ sudo apt-get update && sudo apt-get install %s" % ' '.join(missingAptDepends))
-                raise ValueError("Missing apt dependencies")
 
     def downloadAvailablePackage(self, ap):
         '''
@@ -372,12 +349,16 @@ class LeafApp(LeafRepository):
                                   sha1sum=ap.getSha1sum())
         return LeafArtifact(cachedFile)
 
-    def extractLeafArtifact(self, la, env, keepFolderOnError=False):
+    def extractLeafArtifact(self, la, env,
+                            keepFolderOnError=False,
+                            altInstallFolder=None):
         '''
         Install a leaf artifact
         @return InstalledPackage
         '''
-        targetFolder = self.getInstallFolder() / str(la.getIdentifier())
+        if altInstallFolder is None:
+            altInstallFolder = self.getInstallFolder()
+        targetFolder = altInstallFolder / str(la.getIdentifier())
         if targetFolder.is_dir():
             raise ValueError("Folder already exists: " + str(targetFolder))
 
@@ -412,74 +393,137 @@ class LeafApp(LeafRepository):
                 shutil.rmtree(str(targetFolder), True)
             raise e
 
+    def installPrereqFromRemotes(self, motifList, tmpRootFolder,
+                                 availablePackages=None,
+                                 raiseOnError=True):
+        '''
+        Install given prereg available package in alternative root folder
+        @return: error count
+        '''
+
+        if availablePackages is None:
+            availablePackages = self.listAvailablePackages()
+
+        piList = self.resolveLatest(motifList,
+                                    apMap=availablePackages)
+
+        apList = DynamicDependencyManager.computePrereqList(piList,
+                                                            availablePackages)
+
+        errorCount = 0
+        if len(apList) > 0:
+            self.logger.printVerbose("Installing %d pre-required package(s) in %s" %
+                                     (len(apList), tmpRootFolder))
+            for prereqAp in apList:
+                try:
+                    prereqLa = self.downloadAvailablePackage(prereqAp)
+                    prereqIp = self.extractLeafArtifact(prereqLa,
+                                                        self.getLeafEnvironment(),
+                                                        keepFolderOnError=True,
+                                                        altInstallFolder=tmpRootFolder)
+                    self.logger.printVerbose("Prereq package %s is OK" %
+                                             prereqIp.getIdentifier())
+                except Exception as e:
+                    if raiseOnError:
+                        raise e
+                    self.logger.printVerbose("Prereq package %s has error: %s" %
+                                             (prereqAp.getIdentifier(), e))
+                    errorCount += 1
+        return errorCount
+
     def installFromRemotes(self, motifList,
                            env=None,
-                           bypassAptDepends=False,
                            keepFolderOnError=False):
         '''
         Compute dependency tree, check compatibility, download from remotes and extract needed packages 
         @return: InstalledPackage list
         '''
+        prereqRootFolder = None
         installedPackages = self.listInstalledPackages()
         availablePackages = self.listAvailablePackages()
         piList = self.resolveLatest(motifList,
                                     ipMap=installedPackages,
                                     apMap=availablePackages)
+        try:
+            # Build env to resolve dynamic dependencies
+            if env is None:
+                env = self.getLeafEnvironment()
 
-        # Build env to resolve dynamic dependencies
-        if env is None:
-            env = self.getLeafEnvironment()
+            apToInstall = DynamicDependencyManager.computeApToInstall(piList,
+                                                                      availablePackages,
+                                                                      installedPackages,
+                                                                      env)
+            out = []
 
-        apToInstall = DynamicDependencyManager.computeApToInstall(piList,
-                                                                  availablePackages,
-                                                                  installedPackages,
-                                                                  env)
-        out = []
+            # Check nothing to do
+            if len(apToInstall) == 0:
+                self.logger.printDefault("All packages are installed")
+            else:
+                self.logger.progressStart('Installation',
+                                          total=len(apToInstall) * 2)
 
-        # Check nothing to do
-        if len(apToInstall) == 0:
-            self.logger.printDefault("All packages are installed")
-        else:
-            self.logger.progressStart('Installation',
-                                      total=len(apToInstall) * 2)
+                # Check ap list can be installed
+                self.checkPackagesForInstall(apToInstall)
 
-            # Check ap list can be installed
-            self.checkPackagesForInstall(apToInstall,
-                                         bypassAptDepends=bypassAptDepends)
+                # Confirm
+                self.logger.printQuiet("Packages to install:",
+                                       ", ".join([str(ap.getIdentifier())for ap in apToInstall]))
+                totalSize = 0
+                for ap in apToInstall:
+                    if ap.getSize() is not None:
+                        totalSize += ap.getSize()
+                if totalSize > 0:
+                    self.logger.printDefault("Total size:", totalSize, "bytes")
+                if not self.logger.confirm():
+                    raise ValueError("Installation aborted")
 
-            # Confirm
-            self.logger.printQuiet("Packages to install:",
-                                   ", ".join([str(ap.getIdentifier())for ap in apToInstall]))
-            totalSize = 0
-            for ap in apToInstall:
-                if ap.getSize() is not None:
-                    totalSize += ap.getSize()
-            if totalSize > 0:
-                self.logger.printDefault("Total size:", totalSize, "bytes")
-            if not self.logger.confirm():
-                raise ValueError("Installation aborted")
+                # Install prereq
+                prereqIpsList = []
+                for ap in apToInstall:
+                    prereqIpsList += ap.getLeafRequires()
 
-            # Download ap list
-            laList = []
-            for ap in apToInstall:
-                la = self.downloadAvailablePackage(ap)
-                laList.append(la)
+                if len(prereqIpsList) > 0:
+                    prereqRootFolder = mkTmpLeafRootDir()
+                    self.installPrereqFromRemotes(prereqIpsList,
+                                                  prereqRootFolder,
+                                                  availablePackages=availablePackages)
+                    env.addSubEnv(Environment("Required packages",
+                                              {"LEAF_PREREQ_ROOT": prereqRootFolder}))
+
                 self.logger.progressWorked('Installation',
-                                           message="Downloaded %s" % ap.getIdentifier(),
-                                           worked=len(laList),
-                                           total=len(apToInstall) * 2)
+                                           message="Required packages checked",
+                                           worked=1,
+                                           total=len(apToInstall) * 2 + 1)
 
-            # Extract la list
-            for la in laList:
-                ip = self.extractLeafArtifact(la, env,
-                                              keepFolderOnError=keepFolderOnError)
-                out.append(ip)
-                self.logger.progressWorked('Installation',
-                                           message="Installed %s" % la.getIdentifier(),
-                                           worked=len(laList) + len(out),
-                                           total=len(apToInstall) * 2)
+                # Download ap list
+                laList = []
+                for ap in apToInstall:
+                    la = self.downloadAvailablePackage(ap)
+                    laList.append(la)
+                    self.logger.progressWorked('Installation',
+                                               message="Downloaded %s" % ap.getIdentifier(),
+                                               worked=len(laList) + 1,
+                                               total=len(apToInstall) * 2 + 1)
 
-        self.logger.progressDone('Installation')
+                # Extract la list
+                for la in laList:
+                    ip = self.extractLeafArtifact(la, env,
+                                                  keepFolderOnError=keepFolderOnError)
+                    out.append(ip)
+                    self.logger.progressWorked('Installation',
+                                               message="Installed %s" % la.getIdentifier(),
+                                               worked=len(laList) +
+                                               len(out) + 1,
+                                               total=len(apToInstall) * 2 + 1)
+
+            self.logger.progressDone('Installation')
+
+        finally:
+            if not keepFolderOnError and prereqRootFolder is not None:
+                self.logger.printVerbose("Remove prereq root folder %s" %
+                                         prereqRootFolder)
+                shutil.rmtree(str(prereqRootFolder), True)
+
         return out
 
     def uninstallPackages(self, motifList):

@@ -1,0 +1,14 @@
+{
+  "info": {
+    "name": "prereq-true",
+    "version": "1.0"
+  },
+  "install": [
+    {
+      "type": "exec",
+      "command": [
+        "true"
+      ]
+    }
+  ]
+}

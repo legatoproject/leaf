@@ -2,10 +2,8 @@
   "info": {
     "name": "failure-depends-leaf",
     "version": "1.0",
-    "depends": {
-      "leaf": [
-        "foobar"
-      ]
-    }
+    "depends": [
+      "foobar"
+    ]
   }
 }

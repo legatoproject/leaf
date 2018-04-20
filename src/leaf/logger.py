@@ -187,6 +187,7 @@ class TextLogger (ILogger):
                 elif isinstance(item, InstalledPackage):
                     content["Folder"] = item.folder
                 content["Depends"] = item.getLeafDepends()
+                content["Requires"] = item.getLeafRequires()
                 content["Modules"] = item.getSupportedModules()
                 content["Tags"] = item.tags
                 self.prettyprintContent(content)

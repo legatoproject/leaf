@@ -2,11 +2,9 @@
   "info": {
     "name": "env-A",
     "version": "1.0",
-    "depends": {
-      "leaf": [
-        "env-B_1.0"
-      ]
-    }
+    "depends": [
+      "env-B_1.0"
+    ]
   },
   "env": {
     "LEAF_ENV_A": "FOO",

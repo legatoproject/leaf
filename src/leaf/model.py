@@ -11,7 +11,7 @@ from collections import OrderedDict
 from functools import total_ordering
 import io
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles
-from leaf.utils import resolveUrl, jsonLoad, jsonLoadFile, checkSupportedLeaf,\
+from leaf.utils import resolveUrl, jsonLoad, jsonLoadFile, checkSupportedLeaf, \
     versionComparator_lt, stringToTuple
 from pathlib import Path
 import re
@@ -196,7 +196,10 @@ class Manifest(JsonObject):
         return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_MASTER, default=False)
 
     def getLeafDepends(self):
-        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_DEPENDS, JsonConstants.INFO_DEPENDS_LEAF, default=[])
+        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_DEPENDS, default=[])
+
+    def getLeafRequires(self):
+        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_REQUIRES, default=[])
 
     def getLeafDependsFromEnv(self, env):
         out = []
@@ -206,17 +209,14 @@ class Manifest(JsonObject):
                 out.append(cpi)
         return out
 
-    def getAptDepends(self):
-        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_DEPENDS, JsonConstants.INFO_DEPENDS_DEB, default=[])
-
-    def getSupportedModules(self):
-        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_SUPPORTEDMODULES)
-
     def getSupportedLeafVersion(self):
         return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_LEAF_MINVER)
 
     def isSupportedByCurrentLeafVersion(self):
         return checkSupportedLeaf(self.getSupportedLeafVersion())
+
+    def getSupportedModules(self):
+        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_SUPPORTEDMODULES)
 
 
 class LeafArtifact(Manifest):
@@ -526,7 +526,7 @@ class Environment():
         out = None
         for k, v in self.env:
             if k == key:
-                out = v
+                out = str(v)
         for c in self.children:
             out2 = c.findValue(key)
             if out2 is not None:

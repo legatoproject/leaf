@@ -2,11 +2,9 @@
   "info": {
     "name": "container-A",
     "version": "1.1",
-    "depends": {
-      "leaf": [
-        "container-B_1.0",
-        "container-C_1.0"
-      ]
-    }
+    "depends": [
+      "container-B_1.0",
+      "container-C_1.0"
+    ]
   }
 }

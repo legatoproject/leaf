@@ -42,7 +42,7 @@ class TestProfileCli_Default(LeafCliWrapper):
         self.leafExec("create", "foo")
         self.leafExec("config:profile",
                       "-p", "container-A_1.0",
-                      "--package", "deb_1.0")
+                      "--package", "install_1.0")
         self.leafExec("config:profile",
                       "--set", "FOO=BAR",
                       "--set", "FOO2=BAR2")
@@ -52,7 +52,7 @@ class TestProfileCli_Default(LeafCliWrapper):
                                          "container-B",
                                          "container-C",
                                          "container-E",
-                                         "deb"])
+                                         "install"])
 
         self.leafExec("create", "foo", expectedRc=2)
 

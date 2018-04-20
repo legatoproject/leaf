@@ -104,19 +104,6 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.app.uninstallPackages(["container-A_2.1"])
         self.checkContent(self.app.listInstalledPackages(), [])
 
-    def testDebDepends(self):
-        self.app.installFromRemotes(["deb_1.0"])
-        self.checkContent(self.app.listInstalledPackages(), ["deb_1.0"])
-
-        with self.assertRaises(Exception):
-            self.app.installFromRemotes(["failure-depends-deb_1.0"])
-        self.checkContent(self.app.listInstalledPackages(), ["deb_1.0"])
-
-        self.app.installFromRemotes(["failure-depends-deb_1.0"],
-                                    bypassAptDepends=True)
-        self.checkContent(self.app.listInstalledPackages(), ["deb_1.0",
-                                                             "failure-depends-deb_1.0"])
-
     def testSteps(self):
         self.app.installFromRemotes(["install_1.0"])
         self.checkContent(self.app.listInstalledPackages(), ["install_1.0"])
@@ -261,20 +248,6 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.assertNotEqual(previousInode,
                             self.app.cacheFile.stat().st_ino)
 
-    def testDepends(self):
-        self.assertEqual(["python3"],
-                         self.app.listDependencies(["deb_1.0"],
-                                                   aptDepends=True))
-        self.assertEqual(["python42"],
-                         self.app.listDependencies(["failure-depends-deb_1.0"],
-                                                   aptDepends=True))
-        self.assertEqual(["python3", "python42"],
-                         self.app.listDependencies(["deb_1.0", "failure-depends-deb_1.0"],
-                                                   aptDepends=True))
-        self.assertEqual(["python42"],
-                         self.app.listDependencies(["deb_1.0", "failure-depends-deb_1.0"],
-                                                   aptDepends=True, filterInstalled=True))
-
     def testConditionalInstall(self):
         self.app.installFromRemotes(["condition_1.0"])
         self.checkContent(self.app.listInstalledPackages(),
@@ -317,6 +290,42 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.app.uninstallPackages(["condition_1.0"])
         self.checkContent(self.app.listInstalledPackages(),
                           [])
+
+    def testPrereqRoot(self):
+        motifList = ["prereq-A_1.0",
+                     "prereq-B_1.0",
+                     "prereq-C_1.0",
+                     "prereq-D_1.0",
+                     "prereq-true_1.0",
+                     "prereq-false_1.0"]
+        errorCount = self.app.installPrereqFromRemotes(motifList,
+                                                       self.getAltWorkspaceFolder(),
+                                                       raiseOnError=False)
+        self.assertEqual(1, errorCount)
+        for m in motifList:
+            self.assertEqual("false" not in m,
+                             (self.getAltWorkspaceFolder() / m).is_dir())
+
+    def testPrereqA(self):
+        self.app.installFromRemotes(["prereq-A_1.0"])
+        self.checkContent(self.app.listInstalledPackages(),
+                          ["prereq-A_1.0"])
+
+    def testPrereqB(self):
+        self.app.installFromRemotes(["prereq-B_1.0"])
+        self.checkContent(self.app.listInstalledPackages(),
+                          ["prereq-A_1.0",
+                           "prereq-B_1.0"])
+
+    def testPrereqC(self):
+        self.app.installFromRemotes(["prereq-C_1.0"])
+        self.checkContent(self.app.listInstalledPackages(),
+                          ["prereq-C_1.0",
+                           "prereq-true_1.0"])
+
+    def testPrereqD(self):
+        with self.assertRaises(ValueError):
+            self.app.installFromRemotes(["prereq-D_1.0"])
 
 
 if __name__ == "__main__":

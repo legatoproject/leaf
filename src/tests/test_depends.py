@@ -277,6 +277,18 @@ class TestDepends(unittest.TestCase):
                           'condition_1.0'],
                          deps2strlist(deps))
 
+    def testPrereq(self):
+        availablePackages = TestDepends.MANIFEST_MAP
+
+        self.assertEqual(availablePackages[mkpi("prereq-A_1.0")].getLeafRequires(),
+                         ["prereq-true_1.0"])
+        self.assertEqual(availablePackages[mkpi("prereq-C_1.0")].getLeafRequires(),
+                         ["prereq-A_1.0",
+                          "prereq-B_1.0"])
+        self.assertEqual(availablePackages[mkpi("prereq-D_1.0")].getLeafRequires(),
+                         ["prereq-true_1.0",
+                          "prereq-false_1.0"])
+
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'TestDepends.testName']

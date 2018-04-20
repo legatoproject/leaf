@@ -66,15 +66,6 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
                                      'container-C_1.0',
                                      'container-D_1.0'])
 
-    def testMissingApt(self):
-        self.leafExec(["pkg", "dependencies"], "--apt",
-                      "deb_1.0", "failure-depends-deb_1.0")
-        self.leafExec(["pkg", "install"],
-                      "failure-depends-deb_1.0", expectedRc=2)
-        self.leafExec(["pkg", "install"], "--skip-apt",
-                      "failure-depends-deb_1.0")
-        self.checkInstalledPackages(['failure-depends-deb_1.0'])
-
     def testConditionalInstall(self):
         self.leafExec(["pkg", "install"], "condition")
         self.checkInstalledPackages(["condition_1.0",
@@ -114,6 +105,16 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
         self.leafExec("config:user", "--add-remote",
                       "https://foo.tld/bar/index.json")
         self.leafExec("remotes")
+
+    def testPrereq(self):
+        self.leafExec(["pkg", "prereq"], "prereq-true_1.0")
+        self.assertFalse(
+            (self.getAltWorkspaceFolder() / "prereq-true_1.0").is_dir())
+        self.leafExec(["pkg", "prereq"],
+                      "--target", self.getAltWorkspaceFolder(),
+                      "prereq-true_1.0")
+        self.assertTrue(
+            (self.getAltWorkspaceFolder() / "prereq-true_1.0").is_dir())
 
 
 @unittest.skipUnless("VERBOSE" in LEAF_UT_LEVELS, "Test disabled")

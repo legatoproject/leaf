@@ -1,0 +1,13 @@
+{
+  "info": {
+    "name": "prereq-C",
+    "version": "1.0",
+    "requires": [
+      "prereq-A_1.0",
+      "prereq-B_1.0"
+    ],
+    "depends": [
+      "prereq-true_1.0"
+    ]
+  }
+}

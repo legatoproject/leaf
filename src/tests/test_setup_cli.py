@@ -4,7 +4,6 @@
 
 from leaf.constants import LeafFiles
 import os
-import shutil
 import unittest
 
 from tests.utils import LeafCliWrapper

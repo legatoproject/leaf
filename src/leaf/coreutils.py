@@ -9,7 +9,7 @@ Leaf Package Manager
 from collections import OrderedDict
 from leaf import __version__
 from leaf.constants import JsonConstants
-from leaf.model import Manifest, Environment
+from leaf.model import Manifest, Environment, PackageIdentifier
 from leaf.utils import downloadFile
 import os
 import shutil
@@ -33,6 +33,7 @@ def genEnvScript(env, activateFile=None, deactivateFile=None):
                     fp.write(Environment.exportCommand(k, v) + "\n")
     if activateFile is not None:
         with open(str(activateFile), "w") as fp:
+
             def commentConsumer(c):
                 fp.write(Environment.comment(c) + "\n")
 
@@ -89,6 +90,22 @@ class DynamicDependencyManager():
     '''
     Used to build the dependency tree using dynamic conditions
     '''
+
+    @staticmethod
+    def computePrereqList(piList, apMap):
+        '''
+        Return the list of ap to install as prereq
+        @return: AvailablePackage list
+        '''
+        out = []
+        for pi in piList:
+            ap = apMap.get(pi)
+            if ap is None:
+                raise ValueError("Cannot find package %s" % pi)
+            if ap not in out:
+                out.append(ap)
+        return out
+
     @staticmethod
     def computeDependencyTree(piList, mfMap, env=None, reverse=False, ignoreUnknown=False):
         '''
@@ -236,7 +253,7 @@ class StepExecutor():
         self.targetFolder = package.folder
         self.variableResolver = variableResolver
 
-    def postInstall(self, ):
+    def postInstall(self,):
         steps = self.package.jsonpath(JsonConstants.INSTALL, default=[])
         if len(steps) > 0:
             self.runSteps(steps, self.package, label="Post-install")

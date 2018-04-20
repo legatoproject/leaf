@@ -7,7 +7,6 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-import apt
 from collections import OrderedDict
 import hashlib
 import json
@@ -21,6 +20,7 @@ import requests
 import string
 import sys
 from tarfile import TarFile
+import tempfile
 import time
 import urllib
 from urllib.parse import urlparse, urlunparse
@@ -244,20 +244,5 @@ def findWorkspaceRoot(currentFolder=None, failIfNoWs=True):
         raise ValueError("Cannot find workspace root from %s" % os.getcwd())
 
 
-class AptHelper():
-    '''
-    Util class to check if apt packages are available/installed
-    '''
-
-    def __init__(self):
-        self.cache = apt.Cache()
-
-    def isInstallable(self, pack):
-        return self.cache.is_virtual_package(pack) or pack in self.cache
-
-    def isInstalled(self, pack):
-        if self.cache.is_virtual_package(pack):
-            return len([p for p in self.cache.get_providing_packages(pack) if self.cache[p].installed]) > 0
-        if pack in self.cache:
-            return self.cache[pack].installed is not None
-        return False
+def mkTmpLeafRootDir():
+    return Path(tempfile.mkdtemp(prefix="leaf-alt-root_"))
