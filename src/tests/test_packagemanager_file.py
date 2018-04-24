@@ -117,6 +117,7 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.assertFalse((self.getInstallFolder() / "uninstall.log").is_file())
         self.assertTrue((folder / "postinstall.log").is_file())
         self.assertTrue((folder / "targetFileFromEnv").is_file())
+        self.assertTrue((folder / "dump.env").is_file())
         self.assertTrue((folder / "downloadedFile").is_file())
         self.assertTrue((folder / "folder2").is_dir())
         self.assertTrue((folder / "folder2" / "data2-symlink").is_symlink())

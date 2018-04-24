@@ -439,6 +439,29 @@ class TestProfileCli_Default(LeafCliWrapper):
                     fooCount += 1
             self.assertEqual(1, fooCount)
 
+    def testInstallFromWorkspace(self):
+        self.leafExec("init")
+        self.leafExec("create", "foo")
+        self.leafExec("config:p", "-p", "install_1.0")
+        self.leafExec("sync")
+
+        envDumpFile = self.getInstallFolder() / "install_1.0" / "dump.env"
+        keys = []
+        with open(str(envDumpFile), "r") as fp:
+            for line in fp.readlines():
+                if line.startswith("LEAF_"):
+                    keys.append(line.split("=")[0])
+
+        for key in ['LEAF_NON_INTERACTIVE',
+                    'LEAF_PLATFORM_MACHINE',
+                    'LEAF_PLATFORM_RELEASE',
+                    'LEAF_PLATFORM_SYSTEM',
+                    'LEAF_WORKSPACE',
+                    'LEAF_PROFILE',
+                    'LEAF_VERSION']:
+            self.assertTrue(key in keys, msg=key)
+        print(keys)
+
 
 @unittest.skipUnless("VERBOSE" in LEAF_UT_LEVELS, "Test disabled")
 class TestProfileCli_Verbose(TestProfileCli_Default):

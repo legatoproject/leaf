@@ -154,7 +154,7 @@ class TestProfile(AbstractTestWithRepo):
             ('LEAF_ENV_B', 'BAR'),
             ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
             ('LEAF_ENV_A', 'FOO'),
-            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' % 
+            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
              (self.getInstallFolder(), self.getInstallFolder()))],
             env.toList())
 
@@ -173,7 +173,7 @@ class TestProfile(AbstractTestWithRepo):
             ('LEAF_ENV_B', 'BAR'),
             ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
             ('LEAF_ENV_A', 'FOO'),
-            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' % 
+            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
              (self.getInstallFolder(), self.getInstallFolder()))],
             env.toList())
 

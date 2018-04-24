@@ -850,9 +850,7 @@ class Workspace():
 
         # Do nothing for empty profiles
         if len(pf.getPackages()) > 0:
-            env = self.app.getLeafEnvironment()
-            env.addSubEnv(self.readConfiguration().getEnvironment())
-            env.addSubEnv(pf.getEnvironment())
+            env = self.getSkelEnvironement(pf)
             self.app.installFromRemotes(pf.getPackages(), env=env)
             installedPackages = self.app.listInstalledPackages()
             deps = DynamicDependencyManager.computeDependencyTree(pf.getPackageIdentifiers(),
@@ -865,12 +863,16 @@ class Workspace():
                 piFolder.symlink_to(ip.folder)
 
     def getProfileEnv(self, name):
-        wsc = self.readConfiguration()
         pf = self.retrieveProfile(name)
         self.checkProfile(pf, raiseIfNotSync=True)
-        env = self.app.getLeafEnvironment()
-        env.env.append(("LEAF_WORKSPACE", self.rootFolder))
-        env.env.append(("LEAF_PROFILE", pf.name))
-        env.addSubEnv(wsc.getEnvironment())
-        env.addSubEnv(pf.getEnvironment())
-        return self.app.getPackageEnv(pf.getPackages(), env)
+        return self.app.getPackageEnv(pf.getPackages(),
+                                      env=self.getSkelEnvironement(pf))
+
+    def getSkelEnvironement(self, pf=None):
+        out = self.app.getLeafEnvironment()
+        out.env.append(("LEAF_WORKSPACE", self.rootFolder))
+        out.addSubEnv(self.readConfiguration().getEnvironment())
+        if pf is not None:
+            out.env.append(("LEAF_PROFILE", pf.name))
+            out.addSubEnv(pf.getEnvironment())
+        return out

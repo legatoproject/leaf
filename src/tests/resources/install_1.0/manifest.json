@@ -58,6 +58,14 @@
       "files": [
         "folder/data2"
       ]
+    },
+    {
+      "type": "exec",
+      "command": [
+        "sh",
+        "-c",
+        "env > dump.env"
+      ]
     }
   ],
   "uninstall": [
