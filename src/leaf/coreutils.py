@@ -9,7 +9,7 @@ Leaf Package Manager
 from collections import OrderedDict
 from leaf import __version__
 from leaf.constants import JsonConstants
-from leaf.model import Manifest, Environment, PackageIdentifier
+from leaf.model import Manifest, Environment
 from leaf.utils import downloadFile
 import os
 import shutil

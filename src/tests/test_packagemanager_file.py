@@ -3,17 +3,15 @@
 '''
 
 from datetime import datetime, timedelta
-from leaf.constants import LeafConstants
 from leaf.core import LeafApp
 from leaf.logger import createLogger
 from leaf.model import PackageIdentifier, Environment
 from leaf.utils import isFolderIgnored
 import os
 import platform
-import time
 import unittest
 
-from tests.utils import AbstractTestWithRepo, LEAF_UT_DEBUG
+from tests.utils import AbstractTestWithRepo
 
 
 VERBOSE = True
@@ -179,7 +177,6 @@ class TestPackageManager_File(AbstractTestWithRepo):
                             (self.getInstallFolder(), self.getInstallFolder()))],
             env.toList())
 
-    @unittest.skipIf(LEAF_UT_DEBUG is not None, "Disable timeout test")
     def testSilentFail(self):
         with self.assertRaises(Exception):
             self.app.installFromRemotes(["failure-postinstall-download_1.0"])
@@ -193,18 +190,6 @@ class TestPackageManager_File(AbstractTestWithRepo):
                                      "failure-postinstall-exec-silent_1.0"])
         self.checkContent(self.app.listInstalledPackages(), ["failure-postinstall-download-silent_1.0",
                                                              "failure-postinstall-exec-silent_1.0"])
-
-    @unittest.skipIf(LEAF_UT_DEBUG is not None, "Disable timeout test")
-    def testDownloadTimeout(self):
-        start = time.time()
-        with self.assertRaises(Exception):
-            self.app.installFromRemotes(["failure-postinstall-download_1.0"])
-        self.checkContent(self.app.listInstalledPackages(), [])
-        duration = time.time() - start
-        self.assertTrue(duration > LeafConstants.DOWNLOAD_TIMEOUT,
-                        msg="Duration: " + str(duration))
-        self.assertTrue(duration < (LeafConstants.DOWNLOAD_TIMEOUT + 2),
-                        msg="Duration: " + str(duration))
 
     def testResolveLastVersion(self):
         self.app.installFromRemotes(["container-A_2.0"])
