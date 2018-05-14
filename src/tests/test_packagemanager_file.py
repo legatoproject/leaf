@@ -3,12 +3,14 @@
 '''
 
 from datetime import datetime, timedelta
+from leaf.constants import LeafConstants
 from leaf.core import LeafApp
 from leaf.logger import createLogger
 from leaf.model import PackageIdentifier, Environment
 from leaf.utils import isFolderIgnored
 import os
 import platform
+import time
 import unittest
 
 from tests.utils import AbstractTestWithRepo
@@ -26,9 +28,12 @@ class TestPackageManager_File(AbstractTestWithRepo):
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
 
-        self.app = LeafApp(self.logger,
-                           self.getConfigurationFile(),
-                           self.getRemoteCacheFile())
+        os.environ[LeafConstants.ENV_CONFIG_FILE] = str(
+            self.getConfigurationFile())
+        os.environ[LeafConstants.ENV_CACHE_FOLDER] = str(
+            self.getCacheFolder())
+        self.app = LeafApp(self.logger, nonInteractive=True)
+
         self.app.updateUserConfiguration(rootFolder=self.getInstallFolder())
         self.assertEqual(0, len(self.app.listAvailablePackages()))
         self.assertEqual(0, len(self.app.listInstalledPackages()))
@@ -166,11 +171,12 @@ class TestPackageManager_File(AbstractTestWithRepo):
                            "env-B_1.0"])
 
         env = self.app.getPackageEnv(["env-A_1.0"])
-        self.assertEqual(7, len(env.toList()))
+        self.assertEqual(8, len(env.toList()))
         self.assertEqual([
             ("LEAF_PLATFORM_SYSTEM", platform.system()),
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),
+            ("LEAF_NON_INTERACTIVE", "1"),
             ('LEAF_ENV_B', 'BAR'),
             ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
             ('LEAF_ENV_A', 'FOO'),
@@ -204,35 +210,52 @@ class TestPackageManager_File(AbstractTestWithRepo):
             self.app.resolveLatest(["container-A"])
 
     def testOutdatedCacheFile(self):
-        self.app.getRemoteRepositories(smartRefresh=True)
-        previousInode = self.app.cacheFile.stat().st_ino
 
-        self.app.getRemoteRepositories(smartRefresh=True)
-        self.assertEqual(previousInode, self.app.cacheFile.stat().st_ino)
-        os.remove(str(self.app.cacheFile))
+        def getMtime():
+            return self.app.remoteCacheFile.stat().st_mtime
 
+        # Initial refresh
         self.app.getRemoteRepositories(smartRefresh=True)
-        self.assertNotEqual(previousInode,
-                            self.app.cacheFile.stat().st_ino)
-        previousInode = self.app.cacheFile.stat().st_ino
+        previousMtime = getMtime()
 
+        # Second refresh, same day, file should not be updated
+        time.sleep(1)
         self.app.getRemoteRepositories(smartRefresh=True)
-        self.assertEqual(previousInode, self.app.cacheFile.stat().st_ino)
+        self.assertEqual(previousMtime, getMtime())
+        os.remove(str(self.app.remoteCacheFile))
+        self.assertFalse(self.app.remoteCacheFile.exists())
 
+        # File has been deleted
+        time.sleep(1)
+        self.app.getRemoteRepositories(smartRefresh=True)
+        self.assertNotEqual(previousMtime, getMtime())
+        previousMtime = getMtime()
+
+        # Initial refresh
+        time.sleep(1)
+        self.app.getRemoteRepositories(smartRefresh=True)
+        self.assertEqual(previousMtime, getMtime())
+
+        # New refresh, 23h ago, file should not be updated
+        time.sleep(1)
         today = datetime.now()
         almostyesterday = today - timedelta(hours=23)
-        os.utime(str(self.app.cacheFile), (int(almostyesterday.timestamp()),
-                                           int(almostyesterday.timestamp())))
+        os.utime(str(self.app.remoteCacheFile), (int(almostyesterday.timestamp()),
+                                                 int(almostyesterday.timestamp())))
+        self.assertNotEqual(previousMtime, getMtime())
+        previousMtime = getMtime()
         self.app.getRemoteRepositories(smartRefresh=True)
-        self.assertEqual(previousInode,
-                         self.app.cacheFile.stat().st_ino)
+        self.assertEqual(previousMtime, getMtime())
 
+        # New refresh, 24h ago, file should be updated
+        time.sleep(1)
         yesterday = today - timedelta(hours=24)
-        os.utime(str(self.app.cacheFile), (int(yesterday.timestamp()),
-                                           int(yesterday.timestamp())))
+        os.utime(str(self.app.remoteCacheFile), (int(yesterday.timestamp()),
+                                                 int(yesterday.timestamp())))
+        self.assertNotEqual(previousMtime, getMtime())
+        previousMtime = getMtime()
         self.app.getRemoteRepositories(smartRefresh=True)
-        self.assertNotEqual(previousInode,
-                            self.app.cacheFile.stat().st_ino)
+        self.assertNotEqual(previousMtime, getMtime())
 
     def testConditionalInstall(self):
         self.app.installFromRemotes(["condition_1.0"])

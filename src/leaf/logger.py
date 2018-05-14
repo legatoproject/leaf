@@ -22,7 +22,7 @@ def createLogger(verbose, quiet, nonInteractive):
     '''
     Returns the correct ILogger
     '''
-    if len(os.environ.get(LeafConstants.JSON_OUTPUT, "")) > 0:
+    if len(os.environ.get(LeafConstants.ENV_JSON_OUTPUT, "")) > 0:
         return JsonLogger()
     if verbose:
         return TextLogger(TextLogger.LEVEL_VERBOSE, nonInteractive)

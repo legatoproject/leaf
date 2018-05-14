@@ -7,14 +7,13 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 import argparse
+from leaf.cliutils import LeafCommand
 from leaf.coreutils import TagManager
 from leaf.filtering import AndPackageFilter, MasterPackageFilter, \
     KeywordPackageFilter, ModulePackageFilter
 from leaf.model import Manifest
 from leaf.utils import mkTmpLeafRootDir
 from pathlib import Path
-
-from leaf.cliutils import LeafCommand
 
 
 class RemotesCommand(LeafCommand):
@@ -28,10 +27,10 @@ class RemotesCommand(LeafCommand):
         pass
 
     def internalExecute(self, app, logger, args):
-        rrList = app.getRemoteRepositories(smartRefresh=False,
-                                           onlyMaster=True)
+        rrList = app.getRemoteRepositories(smartRefresh=False)
         for rr in rrList:
-            logger.displayItem(rr)
+            if rr.isRootRepository:
+                logger.displayItem(rr)
 
 
 class PackageSearchCommand(LeafCommand):

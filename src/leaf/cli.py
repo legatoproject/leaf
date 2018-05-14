@@ -9,22 +9,20 @@ Leaf Package Manager
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from leaf import __help_description__, __version__
+from leaf.cli_misc import StatusCommand, UserConfigCommand, SetupCommand
+from leaf.cli_package import PackageCommand, PackageSearchCommand,\
+    RemotesCommand
 from leaf.cli_releng import RepositoryCommand
-from leaf.constants import LeafFiles
+from leaf.cli_workspace import WorkspaceConfigCommand, ProfileConfigCommand,\
+    WorkspaceInitCommand, ProfileCreateCommand, ProfileSelectCommand,\
+    ProfileSyncCommand, ProfileRenameCommand, ProfileDeleteCommand,\
+    ProfileEnvCommand, ProfileUpdateCommand
 from leaf.core import LeafApp
 from leaf.logger import createLogger
 from leaf.utils import checkPythonVersion
 from pathlib import Path
 import sys
 import traceback
-
-from leaf.cli_misc import StatusCommand, UserConfigCommand, SetupCommand
-from leaf.cli_package import PackageCommand, PackageSearchCommand,\
-    RemotesCommand
-from leaf.cli_workspace import WorkspaceConfigCommand, ProfileConfigCommand,\
-    WorkspaceInitCommand, ProfileCreateCommand, ProfileSelectCommand,\
-    ProfileSyncCommand, ProfileRenameCommand, ProfileDeleteCommand,\
-    ProfileEnvCommand, ProfileUpdateCommand
 
 
 def main():
@@ -68,11 +66,6 @@ class LeafCli():
         self.parser.add_argument('-V', '--version',
                                  action='version',
                                  version="v%s" % __version__)
-        self.parser.add_argument("--config",
-                                 metavar='CONFIG_FILE',
-                                 dest="customConfig",
-                                 type=Path,
-                                 help="use custom configuration file")
         self.parser.add_argument("--non-interactive",
                                  dest="nonInteractive",
                                  action='store_true',
@@ -96,11 +89,8 @@ class LeafCli():
                                       else customArgs)
         logger = createLogger(args.verbose, args.quiet, args.nonInteractive)
 
-        configFile = LeafFiles.DEFAULT_CONFIG_FILE
-        if args.customConfig is not None:
-            configFile = args.customConfig
+        app = LeafApp(logger, nonInteractive=args.nonInteractive)
 
-        app = LeafApp(logger, configFile, nonInteractive=args.nonInteractive)
         try:
             for cmd in self.commands:
                 if cmd.isHandled(args.command):

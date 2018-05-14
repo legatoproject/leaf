@@ -20,7 +20,8 @@ from leaf.model import Manifest, InstalledPackage, AvailablePackage, LeafArtifac
     WorkspaceConfiguration, Environment, UserConfiguration
 from leaf.utils import resolveUrl, getCachedArtifactName, isFolderIgnored, \
     markFolderAsIgnored, openOutputTarFile, computeSha1sum, downloadFile, \
-    jsonLoadFile, checkSupportedLeaf, jsonWriteFile, mkTmpLeafRootDir
+    jsonLoadFile, checkSupportedLeaf, jsonWriteFile, mkTmpLeafRootDir,\
+    getAltEnvPath
 import os
 from pathlib import Path
 import platform
@@ -91,18 +92,19 @@ class LeafApp(LeafRepository):
     Main API for using Leaf
     '''
 
-    def __init__(self, logger, configurationFile,
-                 remoteCacheFile=LeafFiles.REMOTES_CACHE_FILE,
+    def __init__(self, logger,
                  nonInteractive=False):
         '''
         Constructor
         '''
         super().__init__(logger)
-        self.configurationFile = configurationFile
-        self.cacheFile = remoteCacheFile
+        self.configurationFile = getAltEnvPath(LeafConstants.ENV_CONFIG_FILE,
+                                               LeafFiles.DEFAULT_CONFIG_FILE)
+        cacheFolder = getAltEnvPath(LeafConstants.ENV_CACHE_FOLDER,
+                                    LeafFiles.DEFAULT_CACHE_FOLDER)
+        self.remoteCacheFile = cacheFolder / LeafFiles.CACHE_REMOTES_FILENAME
+        self.downloadCacheFolder = cacheFolder / LeafFiles.CACHE_DOWNLOAD_FOLDERNAME
         self.nonInteractive = nonInteractive
-        # Create folders if needed
-        os.makedirs(str(LeafFiles.FILES_CACHE_FOLDER), exist_ok=True)
 
     def readConfiguration(self):
         '''
@@ -124,7 +126,8 @@ class LeafApp(LeafRepository):
 
     def getInstallFolder(self):
         out = self.readConfiguration().getRootFolder()
-        os.makedirs(str(out), exist_ok=True)
+        if not out.exists():
+            out.mkdir()
         return out
 
     def updateUserConfiguration(self,
@@ -146,8 +149,8 @@ class LeafApp(LeafRepository):
 
         # Save and clean cache
         self.writeConfiguration(usrc)
-        if needRefresh and self.cacheFile.exists():
-            os.remove(str(self.cacheFile))
+        if needRefresh and self.remoteCacheFile.exists():
+            os.remove(str(self.remoteCacheFile))
 
     def getLeafEnvironment(self):
         out = Environment("Leaf variables")
@@ -163,29 +166,24 @@ class LeafApp(LeafRepository):
         return Environment("Exported by user config",
                            self.readConfiguration().getEnvMap())
 
-    def getRemoteRepositories(self, smartRefresh=True, onlyMaster=False):
+    def getRemoteRepositories(self, smartRefresh=True):
         '''
         List all remotes from configuration
         '''
-        if self.cacheFile.exists():
-            if datetime.fromtimestamp(self.cacheFile.stat().st_mtime) < datetime.now() - LeafConstants.CACHE_DELTA:
+        if self.remoteCacheFile.exists():
+            if datetime.fromtimestamp(self.remoteCacheFile.stat().st_mtime) < datetime.now() - LeafConstants.CACHE_DELTA:
                 self.logger.printDefault("Cache file is outdated")
                 if smartRefresh:
-                    os.remove(str(self.cacheFile))
+                    os.remove(str(self.remoteCacheFile))
 
-        if not self.cacheFile.exists():
+        if not self.remoteCacheFile.exists():
             self.fetchRemotes()
 
-        cache = jsonLoadFile(self.cacheFile)
+        cache = jsonLoadFile(self.remoteCacheFile)
         out = []
         masterUrls = self.readConfiguration().getRemotes()
-        for url in masterUrls:
-            rr = RemoteRepository(url, True, cache.get(url))
-            out.append(rr)
-        if not onlyMaster:
-            for url, data in cache.items():
-                if url not in masterUrls:
-                    out.append(RemoteRepository(url, url in masterUrls, data))
+        for url, data in cache.items():
+            out.append(RemoteRepository(url, url in masterUrls, data))
         return out
 
     def resolveLatest(self, motifList, ipMap=None, apMap=None):
@@ -272,7 +270,7 @@ class LeafApp(LeafRepository):
             self.logger.progressWorked('Fetch remote(s)',
                                        worked=worked,
                                        total=len(urls))
-        jsonWriteFile(self.cacheFile, content)
+        jsonWriteFile(self.remoteCacheFile, content)
         self.logger.progressDone('Fetch remote(s)')
 
     def listInstalledPackages(self):
@@ -283,7 +281,7 @@ class LeafApp(LeafRepository):
         out = OrderedDict()
         for folder in self.getInstallFolder().iterdir():
             if folder.is_dir() and not isFolderIgnored(folder):
-                manifest = folder / LeafConstants.MANIFEST
+                manifest = folder / LeafFiles.MANIFEST
                 if manifest.is_file():
                     ip = InstalledPackage(manifest)
                     out[ip.getIdentifier()] = ip
@@ -342,8 +340,10 @@ class LeafApp(LeafRepository):
         '''
         filename = getCachedArtifactName(ap.getFilename(),
                                          ap.getSha1sum())
+        if not self.downloadCacheFolder.is_dir():
+            self.downloadCacheFolder.mkdir()
         cachedFile = downloadFile(ap.getUrl(),
-                                  LeafFiles.FILES_CACHE_FOLDER,
+                                  self.downloadCacheFolder,
                                   self.logger,
                                   filename=filename,
                                   sha1sum=ap.getSha1sum())
@@ -373,7 +373,7 @@ class LeafApp(LeafRepository):
                 tf.extractall(str(targetFolder))
 
             # Execute post install steps
-            out = InstalledPackage(targetFolder / LeafConstants.MANIFEST)
+            out = InstalledPackage(targetFolder / LeafFiles.MANIFEST)
             vr = VariableResolver(out,
                                   self.listInstalledPackages().values())
             se = StepExecutor(self.logger,
@@ -605,7 +605,7 @@ class Workspace():
         self.rootFolder = rootFolder
         self.configFile = rootFolder / LeafFiles.WS_CONFIG_FILENAME
         self.dataFolder = rootFolder / LeafFiles.WS_DATA_FOLDERNAME
-        self.currentLink = self.dataFolder / LeafFiles.CURRENT_PROFILE
+        self.currentLink = self.dataFolder / LeafFiles.CURRENT_PROFILE_LINKNAME
 
     def readConfiguration(self, initIfNeeded=False):
         '''
@@ -624,7 +624,8 @@ class Workspace():
         '''
         Write the configuration and set the min leaf version to current version
         '''
-        self.dataFolder.mkdir(exist_ok=True)
+        if not self.dataFolder.exists():
+            self.dataFolder.mkdir()
         wsc.jsoninit(key=JsonConstants.WS_LEAFMINVERSION,
                      value=__version__,
                      force=True)
@@ -679,7 +680,7 @@ class Workspace():
                                                                     env)
             if ipList is not None:
                 for ip in ipList:
-                    linkedManifest = pf.folder / ip.getIdentifier().name / LeafConstants.MANIFEST
+                    linkedManifest = pf.folder / ip.getIdentifier().name / LeafFiles.MANIFEST
                     if InstalledPackage(linkedManifest).getIdentifier() != ip.getIdentifier():
                         raise ValueError("Missing package %s" %
                                          ip.getIdentifier())

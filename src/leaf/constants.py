@@ -17,7 +17,6 @@ class LeafConstants():
     Constants needed by Leaf
     '''
     MIN_PYTHON_VERSION = (3, 4)
-    MANIFEST = 'manifest.json'
     DOWNLOAD_TIMEOUT = int(os.environ.get("LEAF_TIMEOUT", "5"))
     LEAF_COMPRESSION = {'.leaf': 'xz',
                         '.tar':  '',
@@ -25,25 +24,27 @@ class LeafConstants():
                         '.bz2':  'bz2',
                         '.tgz':  'gz',
                         '.gz':   'gz'}
-    ARCHS = {'x86_64': '64', 'i386': '32'}
     DEFAULT_PROFILE = "default"
     CACHE_DELTA = timedelta(days=1)
-    JSON_OUTPUT = "LEAF_JSON_OUTPUT"
+    ENV_JSON_OUTPUT = "LEAF_JSON_OUTPUT"
+    ENV_CONFIG_FILE = "LEAF_CONFIG_FILE"
+    ENV_CACHE_FOLDER = "LEAF_CACHE_FOLDER"
 
 
 class LeafFiles():
     '''
     Files & Folders used by Leaf
     '''
+    MANIFEST = 'manifest.json'
     WS_CONFIG_FILENAME = "leaf-workspace.json"
     WS_DATA_FOLDERNAME = "leaf-data"
-    CURRENT_PROFILE = "current"
+    CURRENT_PROFILE_LINKNAME = "current"
     USER_HOME = Path(os.path.expanduser("~"))
     DEFAULT_LEAF_ROOT = USER_HOME / 'leaf'
     DEFAULT_CONFIG_FILE = USER_HOME / '.leaf-config.json'
-    CACHE_FOLDER = USER_HOME / '.cache' / 'leaf'
-    FILES_CACHE_FOLDER = CACHE_FOLDER / "files"
-    REMOTES_CACHE_FILE = CACHE_FOLDER / 'remotes.json'
+    DEFAULT_CACHE_FOLDER = USER_HOME / '.cache'
+    CACHE_DOWNLOAD_FOLDERNAME = "files"
+    CACHE_REMOTES_FILENAME = 'remotes.json'
 
 
 class JsonConstants(object):

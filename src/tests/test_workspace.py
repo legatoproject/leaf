@@ -3,12 +3,15 @@
 '''
 
 from collections import OrderedDict
+from leaf.constants import LeafConstants
 from leaf.core import Workspace, LeafApp
 from leaf.logger import createLogger
+import os
 import platform
 import unittest
 
 from tests.utils import AbstractTestWithRepo
+
 
 VERBOSE = True
 
@@ -21,9 +24,13 @@ class TestProfile(AbstractTestWithRepo):
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
-        self.app = LeafApp(self.logger,
-                           self.getConfigurationFile(),
-                           self.getRemoteCacheFile())
+
+        os.environ[LeafConstants.ENV_CONFIG_FILE] = str(
+            self.getConfigurationFile())
+        os.environ[LeafConstants.ENV_CACHE_FOLDER] = str(
+            self.getCacheFolder())
+        self.app = LeafApp(self.logger, nonInteractive=True)
+
         self.app.updateUserConfiguration(rootFolder=self.getInstallFolder(),
                                          remoteAddList=[self.getRemoteUrl()])
         self.ws = Workspace(self.getWorkspaceFolder(), self.app)
@@ -142,11 +149,12 @@ class TestProfile(AbstractTestWithRepo):
         self.ws.switchProfile("myenv")
         self.ws.provisionProfile("myenv")
         env = self.ws.getProfileEnv("myenv")
-        self.assertEqual(11, len(env.toList()))
+        self.assertEqual(12, len(env.toList()))
         self.assertEqual([
             ("LEAF_PLATFORM_SYSTEM", platform.system()),
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),
+            ("LEAF_NON_INTERACTIVE", "1"),
             ('LEAF_WORKSPACE', self.getWorkspaceFolder()),
             ('LEAF_PROFILE', 'myenv'),
             ('FOO', 'BAR'),
@@ -160,11 +168,12 @@ class TestProfile(AbstractTestWithRepo):
 
         self.ws.updateWorkspaceConfiguration(envSetMap={"HELLO": "world"})
         env = self.ws.getProfileEnv("myenv")
-        self.assertEqual(12, len(env.toList()))
+        self.assertEqual(13, len(env.toList()))
         self.assertEqual([
             ("LEAF_PLATFORM_SYSTEM", platform.system()),
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),
+            ("LEAF_NON_INTERACTIVE", "1"),
             ('LEAF_WORKSPACE', self.getWorkspaceFolder()),
             ('LEAF_PROFILE', 'myenv'),
             ('HELLO', 'world'),

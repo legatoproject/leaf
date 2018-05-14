@@ -228,7 +228,7 @@ class LeafArtifact(Manifest):
         self.path = path
         with TarFile.open(str(self.path), 'r') as tarfile:
             Manifest.__init__(self,
-                              jsonLoad(io.TextIOWrapper(tarfile.extractfile(LeafConstants.MANIFEST))))
+                              jsonLoad(io.TextIOWrapper(tarfile.extractfile(LeafFiles.MANIFEST))))
 
 
 class AvailablePackage(Manifest):
@@ -409,7 +409,7 @@ class Profile(JsonObject):
     def checkValidName(name):
         if not isinstance(name, str):
             raise ValueError("Profile name must be a string")
-        if name in ["", LeafFiles.CURRENT_PROFILE]:
+        if name in ["", LeafFiles.CURRENT_PROFILE_LINKNAME]:
             raise ValueError("'%s' is not a valid profile name" % name)
         return name
 

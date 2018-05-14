@@ -3,7 +3,7 @@
 '''
 
 from collections import OrderedDict
-from leaf.constants import LeafConstants
+from leaf.constants import LeafFiles
 from leaf.coreutils import DynamicDependencyManager
 from leaf.model import Manifest, PackageIdentifier, Environment
 from pathlib import Path
@@ -29,14 +29,14 @@ class TestDepends(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         for f in Path("tests/resources/").iterdir():
-            manifestFile = f / LeafConstants.MANIFEST
+            manifestFile = f / LeafFiles.MANIFEST
             if manifestFile.exists():
                 try:
                     mf = Manifest.parse(manifestFile)
                     TestDepends.MANIFEST_MAP[mf.getIdentifier()] = mf
                 except:
                     pass
-        print("Found", len(TestDepends.MANIFEST_MAP), LeafConstants.MANIFEST)
+        print("Found", len(TestDepends.MANIFEST_MAP), LeafFiles.MANIFEST)
 
     def testSort(self):
         deps = DynamicDependencyManager.computeDependencyTree(list(map(mkpi, ["container-A_1.0",

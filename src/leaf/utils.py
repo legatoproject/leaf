@@ -246,3 +246,8 @@ def findWorkspaceRoot(currentFolder=None, failIfNoWs=True):
 
 def mkTmpLeafRootDir():
     return Path(tempfile.mkdtemp(prefix="leaf-alt-root_"))
+
+
+def getAltEnvPath(value, default=None):
+    out = os.environ.get(value, default)
+    return Path(out) if out is not None else None

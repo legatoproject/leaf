@@ -84,8 +84,8 @@ class AbstractTestWithRepo(unittest.TestCase):
     def getInstallFolder(self):
         return self.getVolatileItem("packages")
 
-    def getRemoteCacheFile(self):
-        return self.getVolatileItem("cache.json", mkdir=False)
+    def getCacheFolder(self):
+        return self.getVolatileItem("cache", mkdir=True)
 
     def getWorkspaceFolder(self):
         return self.getVolatileItem("workspace")
@@ -111,7 +111,7 @@ class AbstractTestWithRepo(unittest.TestCase):
 
     def checkCurrentProfile(self, name):
         lnk = self.getWorkspaceFolder() / LeafFiles.WS_DATA_FOLDERNAME / \
-            LeafFiles.CURRENT_PROFILE
+            LeafFiles.CURRENT_PROFILE_LINKNAME
         if name is None:
             self.assertFalse(lnk.exists())
         else:
@@ -150,9 +150,14 @@ class LeafCliWrapper(AbstractTestWithRepo):
     def leafExec(self, verb, *args, altWorkspace=None, expectedRc=0):
         if altWorkspace is None:
             altWorkspace = self.getWorkspaceFolder()
+
+        os.environ[LeafConstants.ENV_CONFIG_FILE] = str(
+            self.getConfigurationFile())
+        os.environ[LeafConstants.ENV_CACHE_FOLDER] = str(
+            self.getCacheFolder())
+
         self.eazyExecute(LeafCli,
                          self.preVerbArgs + ["--non-interactive",
-                                             "--config", self.getConfigurationFile(),
                                              "--workspace", altWorkspace],
                          verb,
                          self.postVerbArgs,
@@ -177,7 +182,7 @@ class LeafCliWrapper(AbstractTestWithRepo):
               '[%s] %s> %s' % (type(self).__name__,
                                cliClazz.__name__,
                                " ".join(command)))
-        os.environ[LeafConstants.JSON_OUTPUT] = self.jsonEnvValue
+        os.environ[LeafConstants.ENV_JSON_OUTPUT] = self.jsonEnvValue
         out = cliClazz().run(command)
         print(SEPARATOR + SEPARATOR + SEPARATOR)
         if expectedRc is not None:
@@ -186,14 +191,15 @@ class LeafCliWrapper(AbstractTestWithRepo):
 
 
 def generateRepo(sourceFolder, outputFolder, logger):
-    outputFolder.mkdir(parents=True, exist_ok=True)
+    if not outputFolder.is_dir():
+        outputFolder.mkdir(parents=True)
     artifactsList = []
     artifactsListComposite = []
 
     app = LeafRepository(logger)
     for packageFolder in sourceFolder.iterdir():
         if packageFolder.is_dir():
-            manifestFile = packageFolder / LeafConstants.MANIFEST
+            manifestFile = packageFolder / LeafFiles.MANIFEST
             if manifestFile.is_file():
                 manifest = Manifest.parse(manifestFile)
                 if str(manifest.getIdentifier()) != packageFolder.name:

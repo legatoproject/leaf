@@ -141,8 +141,6 @@ class LeafCommandGenerator():
 
     def initCommonArgs(self, args):
         # Alt config/ws
-        if args.customConfig is not None:
-            self.preVerbArgs["--config"] = args.customConfig
         if args.workspace is not None:
             self.preVerbArgs["--workspace"] = args.workspace
         if args.nonInteractive:
