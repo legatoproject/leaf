@@ -73,6 +73,11 @@ For each specified *-p* option, the required package will be added to the curren
 
 Finally, the profile provisioning will be triggered to install the required packages (if necessary) and refresh the *leaf-data* structure.
 
+*What's next?*::
+
+Once your workspace and profile is created, you can enter a *leaf shell* to have your terminal
+configured and ready to use the environment configured thanks to your current configuration.
+
 == SEE ALSO
 
-*leaf init*, *leaf profile*, *leaf select*
+*leaf init*, *leaf profile*, *leaf select*, *leaf shell*

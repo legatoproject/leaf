@@ -8,8 +8,11 @@ from leaf import __version__
 SETUP_FOLDER = Path(__file__).parent
 MANPAGE_FOLDER = SETUP_FOLDER / 'man' / 'man1'
 EXTENSIONS_FOLDER = SETUP_FOLDER / 'extensions'
+SHARED_FOLDER = SETUP_FOLDER / 'share'
+
 assert MANPAGE_FOLDER.exists()
 assert EXTENSIONS_FOLDER.exists()
+assert SHARED_FOLDER.exists()
 
 setup(name='leaf',
       version=__version__,
@@ -25,7 +28,9 @@ setup(name='leaf',
                         if x.is_file() and x.name.startswith("leaf")]),
           ('bin', [str(x.relative_to(SETUP_FOLDER))
                    for x in EXTENSIONS_FOLDER.iterdir()
-                   if x.is_file() and x.name.startswith("leaf-")])
+                   if x.is_file() and x.name.startswith("leaf-")]),
+          ('share/leaf', [str(x.relative_to(SETUP_FOLDER))
+                          for x in SHARED_FOLDER.iterdir()])
       ],
       include_package_data=True,
       entry_points={

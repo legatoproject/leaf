@@ -63,7 +63,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.showDescription:
-        print("Update current profile packages")
+        print("update current profile packages")
         exit(0)
 
     try:

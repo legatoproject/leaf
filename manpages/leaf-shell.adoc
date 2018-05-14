@@ -1,0 +1,89 @@
+= leaf-shell(1)
+
+== NAME
+
+leaf-shell - Run a shell within the Leaf profile environment.
+
+== SYNOPSIS
+
+*leaf* *shell* [*-n* _SHELL_NAME_] [*-c* _COMMAND_ARGS_]
+
+== DESCRIPTION
+
+*leaf shell* allows users to easily use a leaf configured environment and run command line tools
+within that environment.
+
+Leaf SDK packages can provide environment variables that support the build process.  For example,
+these packages can provide an updated path to their bundled command line tools.  They can also
+provide, variables that fine tune the building process, define target information and anything else
+that enables the tooling to build software for your target.
+
+Any variables that you have defined at the leaf user|workspace|profile level are available to you in
+the leaf shell.
+
+See *leaf help env* for more details.
+
+For greater visibility the *leaf shell* will append a status text onto the prompt.  The rest of the
+prompt will continue to function as normal.  If the shell's working directory is currently within a
+workspace with an active profile, the status text will reflect this.
+
+For example, if the user's default prompt is: *user@computer: \~ $* and they start their Leaf shell
+within a workspace, *~/myWorkspace* Then the prompt would be:
+
+*(lsh:my-profile) user@computer: ~/myWorkspace $*
+
+If the shell isn't in a workspace then the prompt would simply include the Leaf Shell prefix:
+
+*(lsh) user@computer: ~ $*
+
+== OPTIONS
+
+*-n* _SHELL_NAME_::
+
+Specify the name of the shell to run.  Currently supported shells are *Bash* and *Zsh*.  If *-n* is
+not specified, *leaf shell* will run the user's default shell.  (Found in the environment variable
+_$SHELL_.)  If the requested shell is not found, then *leaf shell* will fallback to Bash support.
+
+*-c* _COMMAND_ARGS_::
+
+If given, the requested shell will be launched within the Leaf environment and the command(s) given
+will be executed and the shell will terminate.  This is useful to run a quick command within a
+leaf environment without having to run an interactive shell.  This can also be used to run commands
+within a leaf environment from an external script.
+
+== ENVIRONMENT VARIABLES
+
+*LEAF_SHELL_PROMPT_PREFIX*::
+
+The prefix to append to the Leaf status.  The default value is lsh.
+
+*LEAF_SHELL_ZSH_PROMPT_SIDE*::
+
+For Zsh shells, this variable allows the user to choose which prompt to append the Leaf status to.
+If set to the value, *right*, the Leaf status will appear on the right hand side.  If unset, or
+set to anything other than *right* the prompt will appear on the left.  The default value is unset.
+
+== EXAMPLES
+
+=== Start up the user default shell
+
+*leaf shell*
+
+=== Start up a shell that isn't the user's default shell
+
+*leaf shell -n zsh*
+
+=== Run a build and terminate the sub-shell
+
+*leaf shell -c make*
+
+=== Run multiple commands within a sub-shell and then exit it
+
+*leaf shell -c "cd subDir && make && make install"*
+
+Note that we needed to add quotes this time around the command.  This is to prevent the host shell
+from trying to interpret the _&&_ operator and allow it to be passed down to the sub-shell.
+
+== SEE ALSO
+
+*leaf env*

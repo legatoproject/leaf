@@ -35,6 +35,7 @@ All in one command to setup a workspace, and configure a profile inside
 *select*::
 
 Change to a different active profile in the current workspace
+
 *shell*::
 
 Spawn a shell with the development environment loaded in the current workspace

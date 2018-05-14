@@ -34,6 +34,13 @@ class TestExtensionsCli(LeafCliWrapper):
             os.environ['MANPATH'] = TestExtensionsCli.OLD_MANPATH
         LeafCliWrapper.tearDown(self)
 
+#    def testShell(self):
+#        self.leafExec("setup", "-p", "env-A")
+#
+#        self.leafExec("shell", "-c", "echo \$LEGATO_ROOT")
+#        self.leafExec("shell", "-n", "zsh", "-c", "echo \$LEGATO_ROOT")
+#        self.leafExec("shell", "-n", "bash", "-c", "echo \$LEGATO_ROOT")
+
     def testHelp(self):
         try:
             self.leafExec("help", "unknown_page", expectedRc=3)
