@@ -289,6 +289,19 @@ class TestDepends(unittest.TestCase):
                          ["prereq-true_1.0",
                           "prereq-false_1.0"])
 
+    def testPrereqOrder(self):
+        availablePackages = TestDepends.MANIFEST_MAP
+
+        prereqs = availablePackages[mkpi("prereq-D_1.0")].getLeafRequires()
+        self.assertEqual(["prereq-true_1.0",
+                          "prereq-false_1.0"],
+                         prereqs)
+        prereqs = DynamicDependencyManager.computePrereqList(list(map(mkpi, prereqs)),
+                                                             availablePackages)
+        self.assertEqual(["prereq-false_1.0",
+                          "prereq-true_1.0"],
+                         list(map(str, map(Manifest.getIdentifier, prereqs))))
+
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'TestDepends.testName']

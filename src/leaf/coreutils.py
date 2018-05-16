@@ -104,6 +104,7 @@ class DynamicDependencyManager():
                 raise ValueError("Cannot find package %s" % pi)
             if ap not in out:
                 out.append(ap)
+        out = list(sorted(out, key=Manifest.getIdentifier))
         return out
 
     @staticmethod
