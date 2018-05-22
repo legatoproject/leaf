@@ -13,7 +13,7 @@ import platform
 import time
 import unittest
 
-from tests.utils import AbstractTestWithRepo
+from tests.utils import AbstractTestWithRepo, envFileToMap
 
 
 VERBOSE = True
@@ -128,10 +128,9 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.assertTrue((folder / "folder2" / "data2-symlink").is_symlink())
         self.assertTrue((folder / "data2-copy").is_file())
         with open(str(folder / "targetFileFromEnv"), 'r') as fp:
-            content = fp.readlines()
+            content = fp.read().splitlines()
             self.assertEqual(1, len(content))
-            # FIXME \n at the end?
-            self.assertEqual(str(folder) + "\n", content[0])
+            self.assertEqual(str(folder), content[0])
 
         self.app.uninstallPackages(["install_1.0"])
         self.checkContent(self.app.listInstalledPackages(), [])
@@ -306,6 +305,7 @@ class TestPackageManager_File(AbstractTestWithRepo):
                      "prereq-C_1.0",
                      "prereq-D_1.0",
                      "prereq-true_1.0",
+                     "prereq-env_1.0",
                      "prereq-false_1.0"]
         errorCount = self.app.installPrereqFromRemotes(motifList,
                                                        self.getAltWorkspaceFolder(),
@@ -335,6 +335,18 @@ class TestPackageManager_File(AbstractTestWithRepo):
     def testPrereqD(self):
         with self.assertRaises(ValueError):
             self.app.installFromRemotes(["prereq-D_1.0"])
+
+    def testPrereqEnv(self):
+        motifList = ["prereq-env_1.0"]
+        errorCount = self.app.installPrereqFromRemotes(motifList,
+                                                       self.getAltWorkspaceFolder(),
+                                                       raiseOnError=False)
+        self.assertEqual(0, errorCount)
+        envDumpFile = self.getAltWorkspaceFolder() / "prereq-env_1.0" / "dump.env"
+        self.assertTrue(envDumpFile.exists())
+        env = envFileToMap(envDumpFile)
+        self.assertEqual(env["LEAF_PREREQ_ROOT"],
+                         str(self.getAltWorkspaceFolder()))
 
 
 if __name__ == "__main__":

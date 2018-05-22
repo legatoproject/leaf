@@ -395,6 +395,7 @@ class LeafApp(LeafRepository):
 
     def installPrereqFromRemotes(self, motifList, tmpRootFolder,
                                  availablePackages=None,
+                                 env=None,
                                  raiseOnError=True):
         '''
         Install given prereg available package in alternative root folder
@@ -414,11 +415,15 @@ class LeafApp(LeafRepository):
         if len(apList) > 0:
             self.logger.printVerbose("Installing %d pre-required package(s) in %s" %
                                      (len(apList), tmpRootFolder))
+            if env is None:
+                env = self.getLeafEnvironment()
+            env.addSubEnv(Environment("Prereq",
+                                      {"LEAF_PREREQ_ROOT": tmpRootFolder}))
             for prereqAp in apList:
                 try:
                     prereqLa = self.downloadAvailablePackage(prereqAp)
                     prereqIp = self.extractLeafArtifact(prereqLa,
-                                                        self.getLeafEnvironment(),
+                                                        env,
                                                         keepFolderOnError=True,
                                                         altInstallFolder=tmpRootFolder)
                     self.logger.printVerbose("Prereq package %s is OK" %
@@ -486,9 +491,8 @@ class LeafApp(LeafRepository):
                     prereqRootFolder = mkTmpLeafRootDir()
                     self.installPrereqFromRemotes(prereqIpsList,
                                                   prereqRootFolder,
-                                                  availablePackages=availablePackages)
-                    env.addSubEnv(Environment("Required packages",
-                                              {"LEAF_PREREQ_ROOT": prereqRootFolder}))
+                                                  availablePackages=availablePackages,
+                                                  env=env)
 
                 self.logger.progressWorked('Installation',
                                            message="Required packages checked",

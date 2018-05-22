@@ -1,0 +1,16 @@
+{
+  "info": {
+    "name": "prereq-env",
+    "version": "1.0"
+  },
+  "install": [
+    {
+      "type": "exec",
+      "command": [
+        "sh",
+        "-c",
+        "env >> dump.env"
+      ]
+    }
+  ]
+}

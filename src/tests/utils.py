@@ -239,3 +239,12 @@ def checkMime(file, expectedMime):
     mime = subprocess.getoutput("file -bi " + str(file))
     if not mime.startswith("application/" + expectedMime):
         raise ValueError("File %s has invalid mime type %s" % (file, mime))
+
+
+def envFileToMap(envDumpFile):
+    out = {}
+    with open(str(envDumpFile), "r") as fp:
+        for line in fp.read().splitlines():
+            i = line.index("=")
+            out[line[:i]] = line[i + 1:]
+    return out

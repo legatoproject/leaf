@@ -7,7 +7,7 @@ import os
 import shutil
 import unittest
 
-from tests.utils import LeafCliWrapper
+from tests.utils import LeafCliWrapper, envFileToMap
 
 
 LEAF_UT_LEVELS = os.environ.get("LEAF_UT_LEVELS", "QUIET,VERBOSE,JSON")
@@ -427,15 +427,15 @@ class TestProfileCli_Default(LeafCliWrapper):
 
         with open(str(inScript)) as fp:
             fooCount = 0
-            for line in fp.readlines():
-                if line.strip() == 'export FOO="bar";':
+            for line in fp.read().splitlines():
+                if line == 'export FOO="bar";':
                     fooCount += 1
             self.assertEqual(3, fooCount)
 
         with open(str(outScript)) as fp:
             fooCount = 0
-            for line in fp.readlines():
-                if line.strip() == 'unset FOO;':
+            for line in fp.read().splitlines():
+                if line == 'unset FOO;':
                     fooCount += 1
             self.assertEqual(1, fooCount)
 
@@ -446,12 +446,8 @@ class TestProfileCli_Default(LeafCliWrapper):
         self.leafExec("sync")
 
         envDumpFile = self.getInstallFolder() / "install_1.0" / "dump.env"
-        keys = []
-        with open(str(envDumpFile), "r") as fp:
-            for line in fp.readlines():
-                if line.startswith("LEAF_"):
-                    keys.append(line.split("=")[0])
-
+        keys = [k for k in envFileToMap(envDumpFile).keys()
+                if k.startswith("LEAF_")]
         for key in ['LEAF_NON_INTERACTIVE',
                     'LEAF_PLATFORM_MACHINE',
                     'LEAF_PLATFORM_RELEASE',
