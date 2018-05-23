@@ -60,8 +60,13 @@ class LeafCli():
         ]
 
         # Setup argument parser
-        self.parser = ArgumentParser(description=__help_description__,
-                                     formatter_class=RawDescriptionHelpFormatter)
+        apkw = {'description': __help_description__,
+                'formatter_class': RawDescriptionHelpFormatter}
+        # Disable args abbreviation, only supported in 3.5+
+        if sys.version_info > (3, 5):
+            apkw['allow_abbrev'] = False
+
+        self.parser = ArgumentParser(**apkw)
 
         self.parser.add_argument('-V', '--version',
                                  action='version',
