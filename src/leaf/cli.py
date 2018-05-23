@@ -71,7 +71,7 @@ class LeafCli():
 
         self.parser.add_argument('-V', '--version',
                                  action='version',
-                                 version="v%s" % __version__)
+                                 version="leaf version %s" % __version__)
         self.parser.add_argument("--non-interactive",
                                  dest="nonInteractive",
                                  action='store_true',
