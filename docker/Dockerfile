@@ -4,8 +4,8 @@ ENV LANG C.UTF-8
 
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends \
-		python3-all python3-requests python3-pip python3-setuptools python3-nose python3-coverage tox \
-		debhelper dh-python devscripts build-essential fakeroot \
+		python3-all python3-requests python3-argcomplete python3-pip python3-setuptools python3-nose python3-coverage tox \
+		debhelper dh-python devscripts build-essential fakeroot bash-completion \
 		file git rsync \
 	&& apt-get clean
 

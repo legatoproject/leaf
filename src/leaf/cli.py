@@ -7,6 +7,7 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
+import argcomplete
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from leaf import __help_description__, __version__
 from leaf.cli_misc import StatusCommand, UserConfigCommand, SetupCommand
@@ -87,6 +88,7 @@ class LeafCli():
         subparsers.required = True
         for command in self.commands:
             command.create(subparsers)
+        argcomplete.autocomplete(self.parser)
 
     def run(self, customArgs=None, handleExceptions=True):
         args = self.parser.parse_args(sys.argv[1:]

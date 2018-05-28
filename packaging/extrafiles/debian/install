@@ -1,2 +1,3 @@
-leafsh usr/bin/
-leafenvwrapper.sh usr/share/leaf/
+leafsh                usr/bin/
+leafenvwrapper.sh     usr/share/leaf/
+completion/bash/leaf  usr/share/bash-completion/completions/

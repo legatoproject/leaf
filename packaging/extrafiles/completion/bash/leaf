@@ -1,0 +1,49 @@
+#compdef leaf
+
+# If sourced from ZSH, ensure bashcompinit is loaded 
+if [ -n "$ZSH_VERSION" ]; then
+	autoload bashcompinit
+	bashcompinit
+fi
+
+_python_argcomplete() {
+    local IFS=$'\013'
+    local SUPPRESS_SPACE=0
+    if compopt +o nospace 2> /dev/null; then
+        SUPPRESS_SPACE=1
+    fi
+    COMPREPLY=( $(IFS="$IFS" \
+                  COMP_LINE="$COMP_LINE" \
+                  COMP_POINT="$COMP_POINT" \
+                  COMP_TYPE="$COMP_TYPE" \
+                  _ARGCOMPLETE_COMP_WORDBREAKS="$COMP_WORDBREAKS" \
+                  _ARGCOMPLETE=1 \
+                  _ARGCOMPLETE_SUPPRESS_SPACE=$SUPPRESS_SPACE \
+                  "$1" 8>&1 9>&2 1>/dev/null 2>/dev/null) )
+    if [[ $? != 0 ]]; then
+        unset COMPREPLY
+    elif [[ $SUPPRESS_SPACE == 1 ]] && [[ "$COMPREPLY" =~ [=/:]$ ]]; then
+        compopt -o nospace
+    fi
+}
+
+_leaf_completions()
+{
+	local CURRENT_WORD="${COMP_WORDS[COMP_CWORD]}"
+	local PREVIOUS_WORD="${COMP_WORDS[COMP_CWORD-1]}"
+	case "$PREVIOUS_WORD" in
+		"search"|"install"|"-p"|"--package")
+			COMPREPLY+=($(leaf search -aq "$CURRENT_WORD"))
+			;;
+		"remove")
+			COMPREPLY+=($(leaf package list -aq "$CURRENT_WORD"))
+			;;
+		"select")
+			COMPREPLY+=($(leaf status | awk '/^- / {print $2}'))
+			;;
+		*)
+		  _python_argcomplete "$@"
+		  ;;
+	esac
+} 
+complete -o nospace -o default -F _leaf_completions "leaf"
