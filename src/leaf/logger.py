@@ -158,7 +158,12 @@ class TextLogger (ILogger):
                     content = OrderedDict()
                     content["Packages"] = pf.getPackages()
                     content["Env"] = pf.getEnvMap()
-                    content["Sync"] = item.checkProfile(pf, silent=True)
+                    isSync = True
+                    try:
+                        item.checkProfile(pf)
+                    except:
+                        isSync = False
+                    content["Sync"] = isSync
                     self.prettyprintContent(content)
         elif isinstance(item, Profile):
             print(item.name,

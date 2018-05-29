@@ -24,13 +24,7 @@ class TestProfile(AbstractTestWithRepo):
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
-
-        os.environ[LeafConstants.ENV_CONFIG_FILE] = str(
-            self.getConfigurationFile())
-        os.environ[LeafConstants.ENV_CACHE_FOLDER] = str(
-            self.getCacheFolder())
         self.app = LeafApp(self.logger, nonInteractive=True)
-
         self.app.updateUserConfiguration(rootFolder=self.getInstallFolder(),
                                          remoteAddList=[self.getRemoteUrl()])
         self.ws = Workspace(self.getWorkspaceFolder(), self.app)

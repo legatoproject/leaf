@@ -65,6 +65,10 @@ class AbstractTestWithRepo(unittest.TestCase):
         shutil.rmtree(str(AbstractTestWithRepo.VOLATILE_FOLDER),
                       ignore_errors=True)
         AbstractTestWithRepo.VOLATILE_FOLDER.mkdir()
+        os.environ[LeafConstants.ENV_CONFIG_FILE] = str(
+            self.getConfigurationFile())
+        os.environ[LeafConstants.ENV_CACHE_FOLDER] = str(
+            self.getCacheFolder())
 
     def tearDown(self):
         pass
@@ -150,12 +154,6 @@ class LeafCliWrapper(AbstractTestWithRepo):
     def leafExec(self, verb, *args, altWorkspace=None, expectedRc=0):
         if altWorkspace is None:
             altWorkspace = self.getWorkspaceFolder()
-
-        os.environ[LeafConstants.ENV_CONFIG_FILE] = str(
-            self.getConfigurationFile())
-        os.environ[LeafConstants.ENV_CACHE_FOLDER] = str(
-            self.getCacheFolder())
-
         self.eazyExecute(LeafCli,
                          self.preVerbArgs + ["--non-interactive",
                                              "--workspace", altWorkspace],

@@ -462,6 +462,19 @@ class Profile(JsonObject):
         self.json[JsonConstants.WS_PROFILE_PACKAGES] = [str(pi)
                                                         for pi in piList]
 
+    def getLinkedPackages(self):
+        '''
+        Return a list of linked packages
+        '''
+        out = []
+        for link in self.folder.iterdir():
+            if link.is_symlink():
+                try:
+                    out.append(InstalledPackage(link / LeafFiles.MANIFEST))
+                except:
+                    pass
+        return out
+
 
 class Environment():
 

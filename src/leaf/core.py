@@ -671,33 +671,41 @@ class Workspace():
             raise ValueError("Cannot find profile %s" % name)
         return pfMap.get(name)
 
-    def checkProfile(self, pf, silent=False, raiseIfNotSync=True):
-        # Check packages are linked
+    def checkProfile(self, pf, raiseIfNotSync=True):
+        '''
+        Check if a profile contains all needed links to all contained packages
+        '''
         installedPackages = self.app.listInstalledPackages()
         env = self.app.getLeafEnvironment()
         env.addSubEnv(self.readConfiguration().getEnvironment())
         env.addSubEnv(pf.getEnvironment())
-        out = True
-        try:
-            ipList = DynamicDependencyManager.computeDependencyTree(pf.getPackageIdentifiers(),
-                                                                    installedPackages,
-                                                                    env)
-            if ipList is not None:
-                for ip in ipList:
-                    linkedManifest = pf.folder / ip.getIdentifier().name / LeafFiles.MANIFEST
-                    if InstalledPackage(linkedManifest).getIdentifier() != ip.getIdentifier():
-                        raise ValueError("Missing package %s" %
-                                         ip.getIdentifier())
-        except:
-            out = False
 
-        if not out:
-            if not silent:
-                message = "Profile %s is out of sync, please run 'leaf sync'" % (
-                    pf.name)
-                if raiseIfNotSync:
-                    raise ValueError(message)
-                self.logger.printError(message)
+        linkedPiList = list(map(
+            Manifest.getIdentifier,
+            pf.getLinkedPackages()))
+        neededPiList = list(map(
+            Manifest.getIdentifier,
+            DynamicDependencyManager.computeDependencyTree(
+                pf.getPackageIdentifiers(),
+                installedPackages,
+                env=env,
+                ignoreUnknown=True)))
+
+        missingPiList = [pi for pi in neededPiList if pi not in linkedPiList]
+        extraPiList = [pi for pi in linkedPiList if pi not in neededPiList]
+
+        if len(extraPiList) > 0 or len(missingPiList) > 0:
+            message = "Profile %s is out of sync, please run 'leaf sync'" % (
+                pf.name)
+            if raiseIfNotSync:
+                raise ValueError(message)
+            self.logger.printError(message)
+            if len(missingPiList) > 0:
+                self.logger.printVerbose("Profile is missing package(s):",
+                                         ", ".join(map(str, missingPiList)))
+            if len(extraPiList) > 0:
+                self.logger.printVerbose("Profile should not have package(s):",
+                                         ", ".join(map(str, extraPiList)))
             return False
         return True
 
@@ -869,7 +877,7 @@ class Workspace():
 
     def getProfileEnv(self, name):
         pf = self.retrieveProfile(name)
-        self.checkProfile(pf, raiseIfNotSync=True)
+        self.checkProfile(pf)
         return self.app.getPackageEnv(pf.getPackages(),
                                       env=self.getSkelEnvironement(pf))
 
