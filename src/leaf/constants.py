@@ -40,7 +40,7 @@ class LeafFiles():
     WS_DATA_FOLDERNAME = "leaf-data"
     CURRENT_PROFILE_LINKNAME = "current"
     USER_HOME = Path(os.path.expanduser("~"))
-    DEFAULT_LEAF_ROOT = USER_HOME / 'leaf'
+    DEFAULT_LEAF_ROOT = USER_HOME / '.leaf'
     DEFAULT_CONFIG_FILE = USER_HOME / '.leaf-config.json'
     DEFAULT_CACHE_FOLDER = USER_HOME / '.cache' / 'leaf'
     CACHE_DOWNLOAD_FOLDERNAME = "files"
