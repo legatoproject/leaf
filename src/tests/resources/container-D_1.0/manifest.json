@@ -1,6 +1,10 @@
 {
   "info": {
     "name": "container-D",
-    "version": "1.0"
+    "version": "1.0",
+    "tags": [
+      "foo",
+      "bar"
+    ]
   }
 }

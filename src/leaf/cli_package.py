@@ -9,8 +9,7 @@ Leaf Package Manager
 import argparse
 from leaf.cliutils import LeafCommand
 from leaf.coreutils import TagManager
-from leaf.filtering import AndPackageFilter, MasterPackageFilter, \
-    KeywordPackageFilter, ModulePackageFilter
+from leaf.filtering import MetaPackageFilter
 from leaf.model import Manifest
 from leaf.utils import mkTmpLeafRootDir
 from pathlib import Path
@@ -21,7 +20,7 @@ class RemotesCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(self,
                              "remotes",
-                             "display informations about remotes")
+                             "display remotes information")
 
     def internalInitArgs(self, subparser):
         pass
@@ -45,29 +44,26 @@ class PackageSearchCommand(LeafCommand):
                                dest="allPackages",
                                action="store_true",
                                help="display all packages, not only master packages")
-        subparser.add_argument("-m", "--module",
-                               dest="modules",
+        subparser.add_argument("-t", "--tag",
+                               dest="tags",
                                action="append",
-                               metavar="MODULE",
-                               help="filter packages supporting given module")
+                               metavar="TAG",
+                               help="filter search results matching with given tag")
         subparser.add_argument('keywords',
                                nargs=argparse.ZERO_OR_MORE)
 
     def internalExecute(self, app, logger, args):
-        pkgFilter = AndPackageFilter()
+        pkgFilter = MetaPackageFilter()
         if not args.allPackages:
-            pkgFilter.addFilter(MasterPackageFilter())
-            pass
+            pkgFilter.onlyMasterPackages()
 
-        if args.modules is not None:
-            logger.printDefault("Filter by modules:",
-                                ", ".join(args.modules))
-            pkgFilter.addFilter(ModulePackageFilter(args.modules))
+        if args.tags is not None:
+            for t in args.tags:
+                pkgFilter.withTag(t)
 
         if args.keywords is not None and len(args.keywords) > 0:
-            logger.printDefault("Filter by keywords:",
-                                ", ".join(args.keywords))
-            pkgFilter.addFilter(KeywordPackageFilter(args.keywords))
+            for kw in args.keywords:
+                pkgFilter.withKeyword(kw)
 
         # Pkg list
         mfList = sorted(app.listAvailablePackages().values(),
@@ -77,6 +73,7 @@ class PackageSearchCommand(LeafCommand):
         TagManager().tagInstalled(mfList, app.listInstalledPackages().keys())
 
         # Print filtered packages
+        logger.printDefault("Filter:", pkgFilter)
         for mf in mfList:
             if pkgFilter.matches(mf):
                 logger.displayItem(mf)
@@ -143,31 +140,29 @@ class PackageListSubCommand(LeafCommand):
                                dest="allPackages",
                                action="store_true",
                                help="display all packages, not only master packages")
-        subparser.add_argument("-m", "--module",
-                               dest="modules",
+        subparser.add_argument("-t", "--tag",
+                               dest="tags",
                                action="append",
-                               metavar="MODULE",
-                               help="filter packages supporting given module")
+                               metavar="tag",
+                               help="filter search results matching with given tag")
         subparser.add_argument('keywords',
                                nargs=argparse.ZERO_OR_MORE)
 
     def internalExecute(self, app, logger, args):
-        pkgFilter = AndPackageFilter()
+        pkgFilter = MetaPackageFilter()
         if not args.allPackages:
-            pkgFilter.addFilter(MasterPackageFilter())
-            pass
+            pkgFilter.onlyMasterPackages()
 
-        if args.modules is not None:
-            logger.printDefault("Filter by modules:",
-                                ", ".join(args.modules))
-            pkgFilter.addFilter(ModulePackageFilter(args.modules))
+        if args.tags is not None:
+            for t in args.tags:
+                pkgFilter.withTag(t)
 
         if args.keywords is not None and len(args.keywords) > 0:
-            logger.printDefault("Filter by keywords:",
-                                ", ".join(args.keywords))
-            pkgFilter.addFilter(KeywordPackageFilter(args.keywords))
+            for kw in args.keywords:
+                pkgFilter.withKeyword(kw)
 
         # Print filtered packages
+        logger.printDefault("Filter:", pkgFilter)
         for mf in sorted(app.listInstalledPackages().values(),
                          key=Manifest.getIdentifier):
             if pkgFilter.matches(mf):

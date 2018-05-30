@@ -172,7 +172,7 @@ class Manifest(JsonObject):
 
     def __init__(self, json):
         JsonObject.__init__(self, json)
-        self.tags = []
+        self.customTags = []
 
     def __str__(self):
         return str(self.getIdentifier())
@@ -215,8 +215,11 @@ class Manifest(JsonObject):
     def isSupportedByCurrentLeafVersion(self):
         return checkSupportedLeaf(self.getSupportedLeafVersion())
 
-    def getSupportedModules(self):
-        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_SUPPORTEDMODULES)
+    def getTags(self):
+        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_TAGS, default=[])
+
+    def getAllTags(self):
+        return self.customTags + self.getTags()
 
 
 class LeafArtifact(Manifest):

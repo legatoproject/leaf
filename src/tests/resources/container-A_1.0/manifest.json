@@ -6,6 +6,9 @@
     "depends": [
       "container-B_1.0",
       "container-C_1.0"
+    ],
+    "tags": [
+      "foo"
     ]
   }
 }

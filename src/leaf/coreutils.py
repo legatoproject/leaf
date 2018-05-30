@@ -67,7 +67,7 @@ class TagManager():
             latest = next(iter(sorted(pkgList,
                                       key=Manifest.getIdentifier,
                                       reverse=True)))
-            latest.tags.append(TagManager.LATEST)
+            latest.customTags.append(TagManager.LATEST)
 
     def tagInstalled(self, mfList, piList):
         '''
@@ -75,7 +75,7 @@ class TagManager():
         '''
         for mf in mfList:
             if mf.getIdentifier() in piList:
-                mf.tags.append(TagManager.INSTALLED)
+                mf.customTags.append(TagManager.INSTALLED)
 
     def tagCurrent(self, mfList, pf):
         '''
@@ -83,7 +83,7 @@ class TagManager():
         '''
         for mf in mfList:
             if str(mf.getIdentifier()) in pf.getPackages():
-                mf.tags.append(TagManager.CURRENT)
+                mf.customTags.append(TagManager.CURRENT)
 
 
 class DynamicDependencyManager():

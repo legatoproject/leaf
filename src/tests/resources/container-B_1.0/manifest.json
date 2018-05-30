@@ -4,6 +4,9 @@
     "version": "1.0",
     "depends": [
       "container-E_1.0"
+    ],
+    "tags": [
+      "foo"
     ]
   }
 }

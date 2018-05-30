@@ -7,7 +7,7 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from leaf.coreutils import genEnvScript, TagManager
-from leaf.filtering import PkgNamePackageFilter, AndPackageFilter
+from leaf.filtering import MetaPackageFilter
 from leaf.model import Manifest
 from leaf.utils import envListToMap
 from pathlib import Path
@@ -103,9 +103,8 @@ class ProfileUpdateCommand(LeafWsCommand):
     def internalExecute2(self, ws, app, logger, args):
         pf = ws.retrieveCurrentProfile()
 
-        pkgFilter = AndPackageFilter()
-        pkgFilter.addFilter(PkgNamePackageFilter(
-            [pi.name for pi in pf.getPackageIdentifiers()]))
+        pkgFilter = MetaPackageFilter()
+        pkgFilter.withNames([pi.name for pi in pf.getPackageIdentifiers()])
 
         # Pkg list
         mfList = sorted(app.listAvailablePackages().values(),

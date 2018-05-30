@@ -75,6 +75,7 @@ class JsonConstants(object):
     INFO_REQUIRES = 'requires'
     INFO_MASTER = 'master'
     INFO_DESCRIPTION = 'description'
+    INFO_TAGS = 'tags'
     INSTALL = 'install'
     UNINSTALL = 'uninstall'
     STEP_TYPE = 'type'
@@ -98,9 +99,6 @@ class JsonConstants(object):
     STEP_DOWNLOAD_FILENAME = 'filename'
     STEP_DOWNLOAD_SHA1SUM = REMOTE_PACKAGE_SHA1SUM
     ENV = 'env'
-
-    # Extra
-    INFO_SUPPORTEDMODULES = 'supportedModules'
 
     # Profiles
     WS_PROFILES = "profiles"
