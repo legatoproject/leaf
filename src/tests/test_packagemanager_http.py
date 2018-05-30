@@ -7,6 +7,7 @@ from multiprocessing import Process
 import os
 import socketserver
 import sys
+from time import sleep
 import unittest
 
 from tests.test_packagemanager_file import TestPackageManager_File
@@ -41,6 +42,8 @@ class TestPackageManager_Http(TestPackageManager_File):
         TestPackageManager_Http.process = Process(target=startHttpServer,
                                                   args=(AbstractTestWithRepo.REPO_FOLDER,))
         TestPackageManager_Http.process.start()
+        # Wait 2 seconds for the http server to start
+        sleep(2)
 
     @classmethod
     def tearDownClass(cls):
