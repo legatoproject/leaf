@@ -10,6 +10,7 @@ Leaf Package Manager
 import argcomplete
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from leaf import __help_description__, __version__
+from leaf.cli_external import findLeafExternalCommands
 from leaf.cli_misc import StatusCommand, UserConfigCommand, SetupCommand
 from leaf.cli_package import PackageCommand, PackageSearchCommand,\
     RemotesCommand
@@ -18,21 +19,21 @@ from leaf.cli_workspace import WorkspaceConfigCommand, ProfileConfigCommand,\
     WorkspaceInitCommand, ProfileCreateCommand, ProfileSelectCommand,\
     ProfileSyncCommand, ProfileRenameCommand, ProfileDeleteCommand,\
     ProfileEnvCommand, ProfileUpdateCommand
-from leaf.core import LeafApp
-from leaf.logger import createLogger
 from leaf.utils import checkPythonVersion
 from pathlib import Path
 import sys
-import traceback
 
 
 def main():
-    return LeafCli().run()
+    enabledExternalCommands = []
+    # Add names in this array to enable external commands
+    #enabledExternalCommands.append('mycommand')
+    return LeafCli(externalCommands=enabledExternalCommands).run()
 
 
 class LeafCli():
 
-    def __init__(self):
+    def __init__(self, externalCommands=None):
         checkPythonVersion()
 
         self.commands = [
@@ -59,6 +60,9 @@ class LeafCli():
             RemotesCommand(),
             RepositoryCommand()
         ]
+        self.commands += findLeafExternalCommands(
+            whitelistCommands=externalCommands,
+            blacklistCommands=[cmd.cmdName for cmd in self.commands])
 
         # Setup argument parser
         apkw = {'description': __help_description__,
@@ -94,19 +98,7 @@ class LeafCli():
         args = self.parser.parse_args(sys.argv[1:]
                                       if customArgs is None
                                       else customArgs)
-        logger = createLogger(args.verbose, args.quiet, args.nonInteractive)
-
-        app = LeafApp(logger, nonInteractive=args.nonInteractive)
-
-        try:
-            for cmd in self.commands:
-                if cmd.isHandled(args.command):
-                    return cmd.execute(app, logger, args)
-            raise ValueError("Cannot find command for %s" % args.command)
-        except Exception as e:
-            if not handleExceptions:
-                raise e
-            logger.printError(e)
-            if logger.isVerbose():
-                traceback.print_exc()
-            return 2
+        for cmd in self.commands:
+            if cmd.isHandled(args.command):
+                return cmd.doExecute(args, catchException=handleExceptions)
+        raise ValueError("Cannot find command for %s" % args.command)

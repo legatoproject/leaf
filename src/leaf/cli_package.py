@@ -7,7 +7,7 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 import argparse
-from leaf.cliutils import LeafCommand
+from leaf.cliutils import LeafCommand, GenericCommand
 from leaf.coreutils import TagManager
 from leaf.filtering import MetaPackageFilter
 from leaf.model import Manifest
@@ -22,10 +22,10 @@ class RemotesCommand(LeafCommand):
                              "remotes",
                              "display remotes information")
 
-    def internalInitArgs(self, subparser):
-        pass
+    def execute(self, args):
+        logger = self.getLogger(args)
+        app = self.getApp(args, logger=logger)
 
-    def internalExecute(self, app, logger, args):
         rrList = app.getRemoteRepositories(smartRefresh=False)
         for rr in rrList:
             if rr.isRootRepository:
@@ -39,20 +39,24 @@ class PackageSearchCommand(LeafCommand):
                              "search",
                              "search for available packages")
 
-    def internalInitArgs(self, subparser):
-        subparser.add_argument("-a", "--all",
-                               dest="allPackages",
-                               action="store_true",
-                               help="display all packages, not only master packages")
-        subparser.add_argument("-t", "--tag",
-                               dest="tags",
-                               action="append",
-                               metavar="TAG",
-                               help="filter search results matching with given tag")
-        subparser.add_argument('keywords',
-                               nargs=argparse.ZERO_OR_MORE)
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        parser.add_argument("-a", "--all",
+                            dest="allPackages",
+                            action="store_true",
+                            help="display all packages, not only master packages")
+        parser.add_argument("-t", "--tag",
+                            dest="tags",
+                            action="append",
+                            metavar="TAG",
+                            help="filter search results matching with given tag")
+        parser.add_argument('keywords',
+                            nargs=argparse.ZERO_OR_MORE)
 
-    def internalExecute(self, app, logger, args):
+    def execute(self, args):
+        logger = self.getLogger(args)
+        app = self.getApp(args, logger=logger)
+
         pkgFilter = MetaPackageFilter()
         if not args.allPackages:
             pkgFilter.onlyMasterPackages()
@@ -79,14 +83,13 @@ class PackageSearchCommand(LeafCommand):
                 logger.displayItem(mf)
 
 
-class PackageCommand(LeafCommand):
+class PackageCommand(GenericCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
                              "package",
                              "core package manager commands",
-                             cmdAliases=["pkg"],
-                             addVerboseQuiet=False)
+                             cmdAliases=["pkg"])
         self.subCommands = [
             PackageListSubCommand(),
             PackageRefreshSubCommand(),
@@ -96,19 +99,20 @@ class PackageCommand(LeafCommand):
             PackageDependsSubCommand(),
             PackagePrereqSubCommand()]
 
-    def internalInitArgs(self, subparser):
-        subsubparsers = subparser.add_subparsers(dest='subCommand',
-                                                 description='supported subcommands',
-                                                 metavar="SUBCOMMAND",
-                                                 help='actions to execute')
-        subsubparsers.required = True
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        subparsers = parser.add_subparsers(dest='subCommand',
+                                           description='supported subcommands',
+                                           metavar="SUBCOMMAND",
+                                           help='actions to execute')
+        subparsers.required = True
         for subCommand in self.subCommands:
-            subCommand.create(subsubparsers)
+            subCommand.create(subparsers)
 
-    def internalExecute(self, app, logger, args):
+    def execute(self, args):
         for subCommand in self.subCommands:
             if subCommand.isHandled(args.subCommand):
-                return subCommand.execute(app, logger, args)
+                return subCommand.execute(args)
         raise ValueError("Cannot find subcommand for %s" % args.subcommand)
 
 
@@ -120,11 +124,8 @@ class PackageRefreshSubCommand(LeafCommand):
                              "refresh remote repositories packages list",
                              cmdAliases=["f"])
 
-    def internalInitArgs(self, subparser):
-        pass
-
-    def internalExecute(self, app, logger, args):
-        app.fetchRemotes()
+    def execute(self, args):
+        self.getApp(args).fetchRemotes()
 
 
 class PackageListSubCommand(LeafCommand):
@@ -135,20 +136,24 @@ class PackageListSubCommand(LeafCommand):
                              "list installed packages",
                              cmdAliases=["ls"])
 
-    def internalInitArgs(self, subparser):
-        subparser.add_argument("-a", "--all",
-                               dest="allPackages",
-                               action="store_true",
-                               help="display all packages, not only master packages")
-        subparser.add_argument("-t", "--tag",
-                               dest="tags",
-                               action="append",
-                               metavar="tag",
-                               help="filter search results matching with given tag")
-        subparser.add_argument('keywords',
-                               nargs=argparse.ZERO_OR_MORE)
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        parser.add_argument("-a", "--all",
+                            dest="allPackages",
+                            action="store_true",
+                            help="display all packages, not only master packages")
+        parser.add_argument("-t", "--tag",
+                            dest="tags",
+                            action="append",
+                            metavar="tag",
+                            help="filter search results matching with given tag")
+        parser.add_argument('keywords',
+                            nargs=argparse.ZERO_OR_MORE)
 
-    def internalExecute(self, app, logger, args):
+    def execute(self, args):
+        logger = self.getLogger(args)
+        app = self.getApp(args, logger=logger)
+
         pkgFilter = MetaPackageFilter()
         if not args.allPackages:
             pkgFilter.onlyMasterPackages()
@@ -177,19 +182,23 @@ class PackageDependsSubCommand(LeafCommand):
                              "Build the dependency chain",
                              cmdAliases=["deps"])
 
-    def internalInitArgs(self, subparser):
-        subparser.add_argument("-r", "--reverse",
-                               dest="reverseOrder",
-                               action="store_true",
-                               help="reverse order")
-        subparser.add_argument("-i", "--filter-installed",
-                               dest="filterInstalled",
-                               action="store_true",
-                               help="filter already installed packages")
-        subparser.add_argument('packages',
-                               nargs=argparse.REMAINDER)
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        parser.add_argument("-r", "--reverse",
+                            dest="reverseOrder",
+                            action="store_true",
+                            help="reverse order")
+        parser.add_argument("-i", "--filter-installed",
+                            dest="filterInstalled",
+                            action="store_true",
+                            help="filter already installed packages")
+        parser.add_argument('packages',
+                            nargs=argparse.REMAINDER)
 
-    def internalExecute(self, app, logger, args):
+    def execute(self, args):
+        logger = self.getLogger(args)
+        app = self.getApp(args, logger=logger)
+
         items = app.listDependencies(args.packages,
                                      reverse=args.reverseOrder,
                                      filterInstalled=args.filterInstalled)
@@ -212,12 +221,16 @@ class PackageInstallSubCommand(LeafCommand):
                                action="store_true",
                                help="keep package folder in case of installation error")
 
-    def internalInitArgs(self, subparser):
-        PackageInstallSubCommand.initInstallArguments(subparser)
-        subparser.add_argument('packages',
-                               nargs=argparse.REMAINDER)
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        PackageInstallSubCommand.initInstallArguments(parser)
+        parser.add_argument('packages',
+                            nargs=argparse.REMAINDER)
 
-    def internalExecute(self, app, logger, args):
+    def execute(self, args):
+        logger = self.getLogger(args)
+        app = self.getApp(args, logger=logger)
+
         items = app.installFromRemotes(args.packages,
                                        keepFolderOnError=args.keepOnError)
         if len(items) > 0:
@@ -232,15 +245,19 @@ class PackagePrereqSubCommand(LeafCommand):
                              "prereq",
                              "check prereq packages")
 
-    def internalInitArgs(self, subparser):
-        subparser.add_argument("--target",
-                               dest="prereqRootFolder",
-                               type=Path,
-                               help="a alternative root folder for required packages installation")
-        subparser.add_argument('packages',
-                               nargs=argparse.REMAINDER)
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        parser.add_argument("--target",
+                            dest="prereqRootFolder",
+                            type=Path,
+                            help="a alternative root folder for required packages installation")
+        parser.add_argument('packages',
+                            nargs=argparse.REMAINDER)
 
-    def internalExecute(self, app, logger, args):
+    def execute(self, args):
+        logger = self.getLogger(args)
+        app = self.getApp(args, logger=logger)
+
         tmpRootFolder = args.prereqRootFolder
         if tmpRootFolder is None:
             tmpRootFolder = mkTmpLeafRootDir()
@@ -260,10 +277,14 @@ class PackageRemoveSubCommand(LeafCommand):
                              "remove packages",
                              cmdAliases=["rm"])
 
-    def internalInitArgs(self, subparser):
-        subparser.add_argument('packages', nargs=argparse.REMAINDER)
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        parser.add_argument('packages', nargs=argparse.REMAINDER)
 
-    def internalExecute(self, app, logger, args):
+    def execute(self, args):
+        logger = self.getLogger(args)
+        app = self.getApp(args, logger=logger)
+
         app.uninstallPackages(args.packages)
 
 
@@ -274,9 +295,13 @@ class PackageEnvSubCommand(LeafCommand):
                              "env",
                              "display environment variables exported by packages")
 
-    def internalInitArgs(self, subparser):
-        subparser.add_argument('packages', nargs=argparse.REMAINDER)
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        parser.add_argument('packages', nargs=argparse.REMAINDER)
 
-    def internalExecute(self, app, logger, args):
+    def execute(self, args):
+        logger = self.getLogger(args)
+        app = self.getApp(args, logger=logger)
+
         env = app.getPackageEnv(args.packages)
         logger.displayItem(env)

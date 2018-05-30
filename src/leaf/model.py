@@ -240,7 +240,7 @@ class AvailablePackage(Manifest):
     '''
 
     def __init__(self, jsonPayload, remoteUrl):
-        super().__init__(jsonPayload)
+        Manifest.__init__(self, jsonPayload)
         self.remoteUrl = remoteUrl
 
     def __str__(self, *args, **kwargs):
@@ -271,7 +271,7 @@ class InstalledPackage(Manifest):
     '''
 
     def __init__(self, manifestFile):
-        super().__init__(jsonLoadFile(manifestFile))
+        Manifest.__init__(self, jsonLoadFile(manifestFile))
         self.folder = manifestFile.parent
 
     def __str__(self):

@@ -17,6 +17,7 @@ from unittest.case import TestCase
 
 
 LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
+RESOURCE_FOLDER = Path("tests/resources/")
 
 SEPARATOR = "--------------------"
 ALT_FILENAMES = {
@@ -50,9 +51,8 @@ class AbstractTestWithRepo(unittest.TestCase):
         shutil.rmtree(str(AbstractTestWithRepo.ROOT_FOLDER),
                       ignore_errors=True)
 
-        resourcesFolder = Path("tests/resources/")
-        assert resourcesFolder.exists(), "Cannot find resources folder!"
-        generateRepo(resourcesFolder,
+        assert RESOURCE_FOLDER.exists(), "Cannot find resources folder!"
+        generateRepo(RESOURCE_FOLDER,
                      AbstractTestWithRepo.REPO_FOLDER,
                      TextLogger(TextLogger.LEVEL_QUIET))
 
@@ -154,15 +154,14 @@ class LeafCliWrapper(AbstractTestWithRepo):
     def leafExec(self, verb, *args, altWorkspace=None, expectedRc=0):
         if altWorkspace is None:
             altWorkspace = self.getWorkspaceFolder()
-        self.eazyExecute(LeafCli,
-                         self.preVerbArgs + ["--non-interactive",
+        self.eazyExecute(self.preVerbArgs + ["--non-interactive",
                                              "--workspace", altWorkspace],
                          verb,
                          self.postVerbArgs,
                          args,
                          expectedRc)
 
-    def eazyExecute(self, cliClazz, preArgs, verb, postArgs, args, expectedRc):
+    def eazyExecute(self, preArgs, verb, postArgs, args, expectedRc):
         command = []
         if preArgs is not None:
             command += preArgs
@@ -177,11 +176,10 @@ class LeafCliWrapper(AbstractTestWithRepo):
             command += args
         command = [str(i) for i in command]
         print(SEPARATOR,
-              '[%s] %s> %s' % (type(self).__name__,
-                               cliClazz.__name__,
-                               " ".join(command)))
+              '[%s] leaf %s' % (type(self).__name__,
+                                " ".join(command)))
         os.environ[LeafConstants.ENV_JSON_OUTPUT] = self.jsonEnvValue
-        out = cliClazz().run(command)
+        out = LeafCli().run(command)
         print(SEPARATOR + SEPARATOR + SEPARATOR)
         if expectedRc is not None:
             self.assertEqual(expectedRc, out, " ".join(command))

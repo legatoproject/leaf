@@ -6,65 +6,67 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
+from leaf.cliutils import LeafCommand, initCommonArgs
 from leaf.coreutils import genEnvScript, TagManager
 from leaf.filtering import MetaPackageFilter
 from leaf.model import Manifest
 from leaf.utils import envListToMap
 from pathlib import Path
 
-from leaf.cliutils import LeafWsCommand, initCommonArgs
 
-
-class WorkspaceConfigCommand(LeafWsCommand):
+class WorkspaceConfigCommand(LeafCommand):
 
     def __init__(self):
-        LeafWsCommand.__init__(self,
-                               "config:workspace",
-                               "update workspace configuration",
-                               cmdAliases=["config:w"])
+        LeafCommand.__init__(self,
+                             "config:workspace",
+                             "update workspace configuration",
+                             cmdAliases=["config:w"])
 
-    def internalInitArgs(self, subparser):
-        initCommonArgs(subparser,
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        initCommonArgs(parser,
                        withEnv=True,
                        withRemotes=True)
 
-    def internalExecute2(self, ws, app, logger, args):
+    def execute(self, args):
+        ws = self.getWorkspace(args)
         ws.updateWorkspaceConfiguration(envSetMap=envListToMap(args.setEnvList),
                                         envUnsetList=args.unsetEnvList,
                                         remoteAddList=args.addRemoteList,
                                         remoteRmList=args.rmRemoteList)
 
 
-class ProfileConfigCommand(LeafWsCommand):
+class ProfileConfigCommand(LeafCommand):
     def __init__(self):
-        LeafWsCommand.__init__(self,
-                               "config:profile",
-                               "update current profile configuration",
-                               cmdAliases=["config:p"])
+        LeafCommand.__init__(self,
+                             "config:profile",
+                             "update current profile configuration",
+                             cmdAliases=["config:p"])
 
-    def internalInitArgs(self, subparser):
-        initCommonArgs(subparser,
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        initCommonArgs(parser,
                        withEnv=True,
                        withPackages=True)
 
-    def internalExecute2(self, ws, app, logger, args):
+    def execute(self, args):
+        ws = self.getWorkspace(args)
         ws.updateProfile(ws.getCurrentProfileName(),
                          envSetMap=envListToMap(args.setEnvList),
                          envUnsetList=args.unsetEnvList,
                          mpkgAddList=args.motifList)
 
 
-class WorkspaceInitCommand(LeafWsCommand):
+class WorkspaceInitCommand(LeafCommand):
     def __init__(self):
-        LeafWsCommand.__init__(self,
-                               "init",
-                               "initialize workspace",
-                               autoFindWorkspace=False)
+        LeafCommand.__init__(self,
+                             "init",
+                             "initialize workspace")
 
-    def internalInitArgs(self, subparser):
-        pass
+    def execute(self, args):
+        logger = self.getLogger(args)
+        ws = self.getWorkspace(args, autoFindWorkspace=False)
 
-    def internalExecute2(self, ws, app, logger, args):
         if ws.configFile.exists():
             raise ValueError("File %s already exist" % str(ws.configFile))
         if ws.dataFolder.exists():
@@ -73,34 +75,42 @@ class WorkspaceInitCommand(LeafWsCommand):
         logger.printDefault("Workspace initialized", ws.rootFolder)
 
 
-class ProfileCreateCommand(LeafWsCommand):
+class ProfileCreateCommand(LeafCommand):
     def __init__(self):
-        LeafWsCommand.__init__(self,
-                               "create",
-                               "create a profile")
+        LeafCommand.__init__(self,
+                             "create",
+                             "create a profile")
 
-    def internalInitArgs(self, subparser):
-        initCommonArgs(subparser,
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        initCommonArgs(parser,
                        profileNargs=1)
 
-    def internalExecute2(self, ws, app, logger, args):
+    def execute(self, args):
+        logger = self.getLogger(args)
+        ws = self.getWorkspace(args)
         pf = ws.createProfile(args.profiles[0])
         logger.printDefault("Profile %s created" % pf.name)
 
 
-class ProfileUpdateCommand(LeafWsCommand):
+class ProfileUpdateCommand(LeafCommand):
     def __init__(self):
-        LeafWsCommand.__init__(self,
-                               "update",
-                               "update all packages of the current profile")
+        LeafCommand.__init__(self,
+                             "update",
+                             "update all packages of the current profile")
 
-    def internalInitArgs(self, subparser):
-        subparser.add_argument('--list',
-                               dest='listOnly',
-                               action='store_true',
-                               help='only show available updates, do not update the profile')
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        parser.add_argument('--list',
+                            dest='listOnly',
+                            action='store_true',
+                            help='only show available updates, do not update the profile')
 
-    def internalExecute2(self, ws, app, logger, args):
+    def execute(self, args):
+        logger = self.getLogger(args)
+        app = self.getApp(args, logger=logger)
+        ws = self.getWorkspace(args, app=app)
+
         pf = ws.retrieveCurrentProfile()
 
         pkgFilter = MetaPackageFilter()
@@ -127,64 +137,77 @@ class ProfileUpdateCommand(LeafWsCommand):
                                   mpkgAddList=pf.getPackageMap().keys())
 
 
-class ProfileRenameCommand(LeafWsCommand):
+class ProfileRenameCommand(LeafCommand):
     def __init__(self):
-        LeafWsCommand.__init__(self,
-                               "rename",
-                               "rename current profile")
+        LeafCommand.__init__(self,
+                             "rename",
+                             "rename current profile")
 
-    def internalInitArgs(self, subparser):
-        subparser.add_argument('newName',
-                               metavar='NEW_NAME',
-                               nargs=1,
-                               help='the new profile name')
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        parser.add_argument('newName',
+                            metavar='NEW_NAME',
+                            nargs=1,
+                            help='the new profile name')
 
-    def internalExecute2(self, ws, app, logger, args):
+    def execute(self, args):
+        logger = self.getLogger(args)
+        ws = self.getWorkspace(args)
+
         oldName = ws.getCurrentProfileName()
         pf = ws.updateProfile(name=oldName,
                               newName=args.newName[0])
         logger.printDefault("Profile %s renamed to %s" % (oldName, pf.name))
 
 
-class ProfileDeleteCommand(LeafWsCommand):
+class ProfileDeleteCommand(LeafCommand):
     def __init__(self):
-        LeafWsCommand.__init__(self,
-                               "delete",
-                               "delete current profile")
+        LeafCommand.__init__(self,
+                             "delete",
+                             "delete current profile")
 
-    def internalInitArgs(self, subparser):
-        initCommonArgs(subparser,
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        initCommonArgs(parser,
                        profileNargs=1)
 
-    def internalExecute2(self, ws, app, logger, args):
+    def execute(self, args):
+        logger = self.getLogger(args)
+        ws = self.getWorkspace(args)
+
         pf = ws.deleteProfile(args.profiles[0])
         if pf is not None:
             logger.printDefault("Profile %s deleted" % pf.name)
 
 
-class ProfileEnvCommand(LeafWsCommand):
+class ProfileEnvCommand(LeafCommand):
     def __init__(self):
-        LeafWsCommand.__init__(self,
-                               "env",
-                               "display profile environment",
-                               cmdAliases=["env:u", "env:user",
-                                           "env:w", "env:workspace",
-                                           "env:p", "env:profile"])
+        LeafCommand.__init__(self,
+                             "env",
+                             "display profile environment",
+                             cmdAliases=["env:u", "env:user",
+                                         "env:w", "env:workspace",
+                                         "env:p", "env:profile"])
 
-    def internalInitArgs(self, subparser):
-        initCommonArgs(subparser,
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        initCommonArgs(parser,
                        withEnv=True,
                        profileNargs='?')
-        subparser.add_argument('--activate-script',
-                               dest='activateScript',
-                               type=Path,
-                               help="create a script to activate the env variables of the profile")
-        subparser.add_argument('--deactivate-script',
-                               dest='deactivateScript',
-                               type=Path,
-                               help="create a script to deactivate the env variables of the profile")
+        parser.add_argument('--activate-script',
+                            dest='activateScript',
+                            type=Path,
+                            help="create a script to activate the env variables of the profile")
+        parser.add_argument('--deactivate-script',
+                            dest='deactivateScript',
+                            type=Path,
+                            help="create a script to deactivate the env variables of the profile")
 
-    def internalExecute2(self, ws, app, logger, args):
+    def execute(self, args):
+        logger = self.getLogger(args)
+        app = self.getApp(args, logger=logger)
+        ws = self.getWorkspace(args, app=app)
+
         cmdName = args.command
         if cmdName == "env":
             if args.setEnvList is not None or args.unsetEnvList is not None:
@@ -210,29 +233,30 @@ class ProfileEnvCommand(LeafWsCommand):
         genEnvScript(env, args.activateScript, args.deactivateScript)
 
 
-class ProfileSelectCommand(LeafWsCommand):
+class ProfileSelectCommand(LeafCommand):
     def __init__(self):
-        LeafWsCommand.__init__(self,
-                               "select",
-                               "set current profile")
+        LeafCommand.__init__(self,
+                             "select",
+                             "set current profile")
 
-    def internalInitArgs(self, subparser):
-        initCommonArgs(subparser,
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        initCommonArgs(parser,
                        profileNargs=1)
 
-    def internalExecute2(self, ws, app, logger, args):
+    def execute(self, args):
+        logger = self.getLogger(args)
+        ws = self.getWorkspace(args)
         pf = ws.switchProfile(args.profiles[0])
         logger.printVerbose("Profile package folder:", pf.folder)
 
 
-class ProfileSyncCommand(LeafWsCommand):
+class ProfileSyncCommand(LeafCommand):
     def __init__(self):
-        LeafWsCommand.__init__(self,
-                               "sync",
-                               "install needed packages if needed for the current profile")
+        LeafCommand.__init__(self,
+                             "sync",
+                             "install needed packages if needed for the current profile")
 
-    def internalInitArgs(self, subparser):
-        pass
-
-    def internalExecute2(self, ws, app, logger, args):
+    def execute(self, args):
+        ws = self.getWorkspace(args)
         ws.provisionProfile(ws.getCurrentProfileName())

@@ -97,7 +97,7 @@ class LeafApp(LeafRepository):
         '''
         Constructor
         '''
-        super().__init__(logger)
+        LeafRepository.__init__(self, logger)
         self.configurationFile = getAltEnvPath(LeafConstants.ENV_CONFIG_FILE,
                                                LeafFiles.DEFAULT_CONFIG_FILE)
         cacheFolder = getAltEnvPath(LeafConstants.ENV_CACHE_FOLDER,

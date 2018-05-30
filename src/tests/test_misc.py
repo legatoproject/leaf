@@ -2,11 +2,10 @@
 @author: seb
 '''
 
-from tempfile import mktemp
-import unittest
-
 from leaf.model import JsonObject
 from leaf.utils import checkSupportedLeaf, jsonWriteFile, jsonLoadFile
+from tempfile import mktemp
+import unittest
 
 
 class TestMisc(unittest.TestCase):

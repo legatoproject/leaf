@@ -5,7 +5,7 @@
 import os
 import unittest
 
-from tests.utils import LeafCliWrapper
+from tests.utils import LeafCliWrapper, RESOURCE_FOLDER
 
 
 LEAF_UT_LEVELS = os.environ.get("LEAF_UT_LEVELS", "QUIET,VERBOSE,JSON")
@@ -115,6 +115,17 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
                       "prereq-true_1.0")
         self.assertTrue(
             (self.getAltWorkspaceFolder() / "prereq-true_1.0").is_dir())
+
+    def DISABLED_testExternalCommand(self):
+        with self.assertRaises(SystemExit):
+            self.leafExec("foo")
+        oldPath = os.environ['PATH']
+        try:
+            self.assertTrue(RESOURCE_FOLDER.is_dir())
+            os.environ['PATH'] = oldPath + ":" + str(RESOURCE_FOLDER)
+            self.leafExec("foo")
+        finally:
+            os.environ['PATH'] = oldPath
 
 
 @unittest.skipUnless("VERBOSE" in LEAF_UT_LEVELS, "Test disabled")

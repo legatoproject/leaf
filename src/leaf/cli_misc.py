@@ -6,14 +6,13 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
+from leaf.cliutils import LeafCommand, initCommonArgs, LeafCommandGenerator
 from leaf.constants import LeafFiles
 from leaf.core import Workspace
 from leaf.model import Profile
 from leaf.utils import envListToMap, findWorkspaceRoot
 import os
 from pathlib import Path
-
-from leaf.cliutils import LeafCommand, initCommonArgs, LeafCommandGenerator
 
 
 class UserConfigCommand(LeafCommand):
@@ -24,22 +23,24 @@ class UserConfigCommand(LeafCommand):
                              "update user configuration",
                              cmdAliases=["config:u"])
 
-    def internalInitArgs(self, subparser):
-        initCommonArgs(subparser,
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        initCommonArgs(parser,
                        withEnv=True,
                        withRemotes=True)
-        subparser.add_argument('--root',
-                               dest='rootFolder',
-                               type=Path,
-                               metavar='DIR',
-                               help="set the root folder, default: %s" % LeafFiles.DEFAULT_LEAF_ROOT)
+        parser.add_argument('--root',
+                            dest='rootFolder',
+                            type=Path,
+                            metavar='DIR',
+                            help="set the root folder, default: %s" % LeafFiles.DEFAULT_LEAF_ROOT)
 
-    def internalExecute(self, app, logger, args):
-        app.updateUserConfiguration(args.rootFolder,
-                                    envListToMap(args.setEnvList),
-                                    args.unsetEnvList,
-                                    args.addRemoteList,
-                                    args.rmRemoteList)
+    def execute(self, args):
+        self.getApp(args).updateUserConfiguration(args.rootFolder,
+                                                  envListToMap(
+                                                      args.setEnvList),
+                                                  args.unsetEnvList,
+                                                  args.addRemoteList,
+                                                  args.rmRemoteList)
 
 
 class StatusCommand(LeafCommand):
@@ -49,17 +50,14 @@ class StatusCommand(LeafCommand):
                              "print leaf status",
                              cmdAliases=["s"])
 
-    def internalInitArgs(self, subparser):
-        pass
-
-    def internalExecute(self, app, logger, args):
+    def execute(self, args):
         wspath = findWorkspaceRoot(currentFolder=args.workspace,
                                    failIfNoWs=False)
         if wspath is not None:
-            ws = Workspace(wspath, app)
-            logger.displayItem(ws)
+            ws = Workspace(wspath, self.getApp(args))
+            self.getLogger(args).displayItem(ws)
         else:
-            logger.printDefault(
+            self.getLogger(args).printDefault(
                 "Not in a workspace, use 'leaf init' to create one")
 
 
@@ -69,8 +67,9 @@ class SetupCommand(LeafCommand):
                              "setup",
                              "all in one command to create a profile in a workspace")
 
-    def internalInitArgs(self, subparser):
-        initCommonArgs(subparser,
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        initCommonArgs(parser,
                        withEnv=True,
                        withPackages=True,
                        profileNargs='?')
@@ -82,9 +81,12 @@ class SetupCommand(LeafCommand):
             logger.printQuiet("  -> Execute command:", "leaf", *command)
         from leaf.cli import LeafCli
         return LeafCli().run(customArgs=command,
-                             handleExceptions=None)
+                             handleExceptions=False)
 
-    def internalExecute(self, app, logger, args):
+    def execute(self, args):
+
+        logger = self.getLogger(args)
+        app = self.getApp(args, logger=logger)
 
         cmdGenerator = LeafCommandGenerator()
         cmdGenerator.initCommonArgs(args)

@@ -9,10 +9,12 @@ Leaf Package Manager
 
 from abc import abstractmethod, ABC
 from collections import OrderedDict
-from leaf.core import Workspace
+from leaf.core import Workspace, LeafApp
+from leaf.logger import createLogger
 from leaf.utils import findWorkspaceRoot
 import os
 from pathlib import Path
+import traceback
 
 
 def initCommonArgs(subparser, withEnv=False, withRemotes=False, withPackages=False, profileNargs=None):
@@ -51,16 +53,15 @@ def initCommonArgs(subparser, withEnv=False, withRemotes=False, withPackages=Fal
                                help='the profile name')
 
 
-class LeafCommand(ABC):
+class GenericCommand(ABC):
     '''
-    Abstract class to define parser for leaf commands
+    Generic command used by leaf
     '''
 
-    def __init__(self, cmdName, cmdHelp, cmdAliases=None, addVerboseQuiet=True):
+    def __init__(self, cmdName, cmdHelp, cmdAliases=None):
         self.cmdName = cmdName
         self.cmdHelp = cmdHelp
         self.cmdAliases = [] if cmdAliases is None else cmdAliases
-        self.addVerboseQuiet = addVerboseQuiet
 
     def isHandled(self, cmd):
         return cmd == self.cmdName or cmd in self.cmdAliases
@@ -69,68 +70,79 @@ class LeafCommand(ABC):
         parser = subparsers.add_parser(self.cmdName,
                                        help=self.cmdHelp,
                                        aliases=self.cmdAliases)
-        self._initArgs(parser)
-
-    def _initArgs(self, subparser):
-        if self.addVerboseQuiet:
-            subparser.add_argument("-v", "--verbose",
-                                   dest="verbose",
-                                   action='store_true',
-                                   help="increase output verbosity")
-            subparser.add_argument("-q", "--quiet",
-                                   dest="quiet",
-                                   action='store_true',
-                                   help="decrease output verbosity")
-        self.internalInitArgs(subparser)
-
-    def execute(self, app, logger, args):
-        out = self.internalExecute(app, logger, args)
-        return 0 if out is None else out
+        self.initArgs(parser)
 
     @abstractmethod
-    def internalInitArgs(self, subparser):
+    def initArgs(self, parser):
         pass
 
     @abstractmethod
-    def internalExecute(self, app, logger, args):
+    def execute(self, args):
         pass
 
+    def doExecute(self, args, catchException=False):
+        try:
+            out = self.execute(args)
+            return 0 if out is None else out
+        except Exception as e:
+            if not catchException:
+                raise e
+            traceback.print_exc()
+            return 2
 
-class LeafWsCommand(LeafCommand):
+
+class LeafCommand(GenericCommand):
     '''
-    Abstract class to define parser for leaf commands
+    Define a leaf commands which uses -v/-q to set the logger verbosity
     '''
 
-    def __init__(self, cmdName, cmdHelp, cmdAliases=None, autoFindWorkspace=True):
-        LeafCommand.__init__(self,
-                             cmdName,
-                             cmdHelp,
-                             cmdAliases=cmdAliases,
-                             addVerboseQuiet=True)
-        self.autoFindWorkspace = autoFindWorkspace
+    def __init__(self, cmdName, cmdHelp, cmdAliases=None):
+        GenericCommand.__init__(self, cmdName, cmdHelp, cmdAliases)
 
-    def execute(self, app, logger, args):
+    def initArgs(self, parser):
+        GenericCommand.initArgs(self, parser)
+        parser.add_argument("-v", "--verbose",
+                            dest="verbose",
+                            action='store_true',
+                            help="increase output verbosity")
+        parser.add_argument("-q", "--quiet",
+                            dest="quiet",
+                            action='store_true',
+                            help="decrease output verbosity")
+
+    def getLogger(self, args):
+        return createLogger(args.verbose, args.quiet, args.nonInteractive)
+
+    def getApp(self, args, logger=None):
+        if logger is None:
+            logger = self.getLogger(args)
+        return LeafApp(logger, nonInteractive=args.nonInteractive)
+
+    def getWorkspace(self, args, autoFindWorkspace=True, app=None):
         wspath = None
-        if args.workspace is not None:
+        if args is not None and args.workspace is not None:
             wspath = args.workspace
-        elif self.autoFindWorkspace:
+        elif autoFindWorkspace:
             wspath = findWorkspaceRoot()
         else:
             wspath = Path(os.getcwd())
-        ws = Workspace(wspath, app)
-        out = self.internalExecute2(ws, app, logger, args)
-        return 0 if out is None else out
 
-    @abstractmethod
-    def internalInitArgs(self, subparser):
-        pass
+        if app is None:
+            app = self.getApp(args)
+        return Workspace(wspath, app)
 
-    @abstractmethod
-    def internalExecute2(self, ws, app, logger, args):
-        pass
-
-    def internalExecute(self, app, logger, args):
-        raise ValueError("Internal Error")
+    def doExecute(self, args, catchException=False):
+        try:
+            out = self.execute(args)
+            return 0 if out is None else out
+        except Exception as e:
+            if not catchException:
+                raise e
+            logger = self.getLogger(args)
+            logger.printError(e)
+            if logger.isVerbose():
+                traceback.print_exc()
+            return 2
 
 
 class LeafCommandGenerator():

@@ -9,7 +9,7 @@ TARGET="$ROOT/target"
 WORKING_DIR="$TARGET/src"
 VERSION=$(git describe --tags)
 
-# Clean target folder 
+# Clean target folder
 rm -fr "$TARGET"
 mkdir "$TARGET"
 
@@ -23,14 +23,22 @@ test -f "$DIST_FILE"
 
 # Extract source
 mkdir "$WORKING_DIR"
-tar -xzf "$DIST_FILE" -C "$WORKING_DIR" --strip-components=1 
+tar -xzf "$DIST_FILE" -C "$WORKING_DIR" --strip-components=1
 
-# Init version 
+# Init version
 sed -i -e "s/0.0.0/$VERSION/" "$WORKING_DIR/leaf/__init__.py"
 tar -czf "$TARGET/leaf_$VERSION.tar.gz" -C "$WORKING_DIR" .
 
 # Copy debian skel
-rsync -Pra "$ROOT/packaging/extrafiles/" "$WORKING_DIR/"
+rsync -Pra \
+	"$ROOT/packaging/extrafiles/" \
+	"$WORKING_DIR/"
+
+# Copy external commands
+rsync -Pra \
+	--exclude 'README.txt' \
+	"$ROOT/extensions/" \
+	"$WORKING_DIR/"
 
 # Create deb
 (
