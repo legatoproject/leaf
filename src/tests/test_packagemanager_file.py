@@ -10,6 +10,7 @@ from leaf.model import PackageIdentifier, Environment
 from leaf.utils import isFolderIgnored
 import os
 import platform
+import sys
 import time
 import unittest
 
@@ -23,7 +24,6 @@ class TestPackageManager_File(AbstractTestWithRepo):
 
     def __init__(self, methodName):
         AbstractTestWithRepo.__init__(self, methodName)
-        self.logger = createLogger(VERBOSE, False, True)
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
@@ -32,7 +32,15 @@ class TestPackageManager_File(AbstractTestWithRepo):
             self.getConfigurationFile())
         os.environ[LeafConstants.ENV_CACHE_FOLDER] = str(
             self.getCacheFolder())
-        self.app = LeafApp(self.logger, nonInteractive=True)
+        self.app = LeafApp(
+            createLogger(VERBOSE, False, True),
+            nonInteractive=True)
+
+        if "LEAF_TIMEOUT" not in os.environ:
+            # Fix CI timeout
+            os.environ["LEAF_TIMEOUT"] = "30"
+            print("Override LEAF_TIMEOUT=" + os.environ["LEAF_TIMEOUT"],
+                  file=sys.stderr)
 
         self.app.updateUserConfiguration(rootFolder=self.getInstallFolder())
         self.assertEqual(0, len(self.app.listAvailablePackages()))

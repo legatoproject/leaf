@@ -2,11 +2,9 @@
 @author: seb
 '''
 
-from contextlib import closing
 from http.server import SimpleHTTPRequestHandler
 from multiprocessing import Process
 import os
-import socket
 import socketserver
 import sys
 import unittest
@@ -18,19 +16,16 @@ from tests.utils import AbstractTestWithRepo
 # Needed for http server
 sys.path.insert(0, os.path.abspath('..'))
 
-
-def find_free_port():
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(('', 0))
-        return s.getsockname()[1]
+HTTP_PORT = os.environ.get("LEAF_HTTP_PORT", "54940")
 
 
-def startHttpServer(port, rootFolder):
+def startHttpServer(rootFolder):
+    print("Start http server for %s on port %s" %
+          (rootFolder, HTTP_PORT), file=sys.stderr)
     os.chdir(str(rootFolder))
-    httpd = socketserver.TCPServer(("", port),
+    socketserver.TCPServer.allow_reuse_address = True
+    httpd = socketserver.TCPServer(("", int(HTTP_PORT)),
                                    SimpleHTTPRequestHandler)
-    print("Start http server for %s on port %d" %
-          (rootFolder, port), file=sys.stderr)
     httpd.serve_forever()
 
 
@@ -42,12 +37,9 @@ class TestPackageManager_Http(TestPackageManager_File):
     @classmethod
     def setUpClass(cls):
         TestPackageManager_File.setUpClass()
-        TestPackageManager_Http.httpPort = find_free_port()
-        print("Using http port %d" %
-              TestPackageManager_Http.httpPort, file=sys.stderr)
+        print("Using http port %s" % HTTP_PORT, file=sys.stderr)
         TestPackageManager_Http.process = Process(target=startHttpServer,
-                                                  args=(TestPackageManager_Http.httpPort,
-                                                        AbstractTestWithRepo.REPO_FOLDER))
+                                                  args=(AbstractTestWithRepo.REPO_FOLDER,))
         TestPackageManager_Http.process.start()
 
     @classmethod
@@ -59,7 +51,7 @@ class TestPackageManager_Http(TestPackageManager_File):
         print("Stopping http server ... done", file=sys.stderr)
 
     def getRemoteUrl(self):
-        return "http://localhost:%d/index.json" % TestPackageManager_Http.httpPort
+        return "http://localhost:%s/index.json" % HTTP_PORT
 
 
 if __name__ == "__main__":
