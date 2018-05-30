@@ -248,6 +248,16 @@ def mkTmpLeafRootDir():
     return Path(tempfile.mkdtemp(prefix="leaf-alt-root_"))
 
 
-def getAltEnvPath(value, default=None):
-    out = os.environ.get(value, default)
-    return Path(out) if out is not None else None
+def getAltEnvPath(envKey=None, defaultPath=None, mkdirIfNeeded=False):
+    '''
+    Returns 'defaultPath' unless 'envKey' exists in env, then returns 'envKey' 
+    as a Path
+    '''
+    out = defaultPath
+    if envKey is not None and envKey in os.environ:
+        out = Path(os.environ[envKey])
+    if defaultPath is None:
+        raise ValueError("Unknown path")
+    if mkdirIfNeeded and not out.is_dir():
+        out.mkdir(parents=True)
+    return out

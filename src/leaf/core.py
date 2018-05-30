@@ -101,7 +101,8 @@ class LeafApp(LeafRepository):
         self.configurationFile = getAltEnvPath(LeafConstants.ENV_CONFIG_FILE,
                                                LeafFiles.DEFAULT_CONFIG_FILE)
         cacheFolder = getAltEnvPath(LeafConstants.ENV_CACHE_FOLDER,
-                                    LeafFiles.DEFAULT_CACHE_FOLDER)
+                                    LeafFiles.DEFAULT_CACHE_FOLDER,
+                                    mkdirIfNeeded=True)
         self.remoteCacheFile = cacheFolder / LeafFiles.CACHE_REMOTES_FILENAME
         self.downloadCacheFolder = cacheFolder / LeafFiles.CACHE_DOWNLOAD_FOLDERNAME
         self.nonInteractive = nonInteractive

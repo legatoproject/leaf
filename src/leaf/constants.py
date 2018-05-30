@@ -42,7 +42,7 @@ class LeafFiles():
     USER_HOME = Path(os.path.expanduser("~"))
     DEFAULT_LEAF_ROOT = USER_HOME / 'leaf'
     DEFAULT_CONFIG_FILE = USER_HOME / '.leaf-config.json'
-    DEFAULT_CACHE_FOLDER = USER_HOME / '.cache'
+    DEFAULT_CACHE_FOLDER = USER_HOME / '.cache' / 'leaf'
     CACHE_DOWNLOAD_FOLDERNAME = "files"
     CACHE_REMOTES_FILENAME = 'remotes.json'
 
