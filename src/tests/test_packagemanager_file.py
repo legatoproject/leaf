@@ -124,17 +124,14 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.assertTrue(folder.is_dir())
         self.assertTrue((folder / "data1").is_file())
         self.assertTrue((folder / "folder").is_dir())
-        self.assertFalse((folder / "folder" / "data2").is_file())
+        self.assertTrue((folder / "folder" / "data2").is_file())
         self.assertTrue((folder / "folder" / "data1-symlink").is_symlink())
 
         self.assertFalse((self.getInstallFolder() / "uninstall.log").is_file())
         self.assertTrue((folder / "postinstall.log").is_file())
         self.assertTrue((folder / "targetFileFromEnv").is_file())
         self.assertTrue((folder / "dump.env").is_file())
-        self.assertTrue((folder / "downloadedFile").is_file())
         self.assertTrue((folder / "folder2").is_dir())
-        self.assertTrue((folder / "folder2" / "data2-symlink").is_symlink())
-        self.assertTrue((folder / "data2-copy").is_file())
         with open(str(folder / "targetFileFromEnv"), 'r') as fp:
             content = fp.read().splitlines()
             self.assertEqual(1, len(content))
@@ -193,17 +190,12 @@ class TestPackageManager_File(AbstractTestWithRepo):
 
     def testSilentFail(self):
         with self.assertRaises(Exception):
-            self.app.installFromRemotes(["failure-postinstall-download_1.0"])
-        self.checkContent(self.app.listInstalledPackages(), [])
-
-        with self.assertRaises(Exception):
             self.app.installFromRemotes(["failure-postinstall-exec_1.0"])
         self.checkContent(self.app.listInstalledPackages(), [])
 
-        self.app.installFromRemotes(["failure-postinstall-download-silent_1.0",
-                                     "failure-postinstall-exec-silent_1.0"])
-        self.checkContent(self.app.listInstalledPackages(), ["failure-postinstall-download-silent_1.0",
-                                                             "failure-postinstall-exec-silent_1.0"])
+        self.app.installFromRemotes(["failure-postinstall-exec-silent_1.0"])
+        self.checkContent(self.app.listInstalledPackages(),
+                          ["failure-postinstall-exec-silent_1.0"])
 
     def testResolveLastVersion(self):
         self.app.installFromRemotes(["container-A_2.0"])

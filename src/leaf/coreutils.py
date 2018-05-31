@@ -10,9 +10,7 @@ from collections import OrderedDict
 from leaf import __version__
 from leaf.constants import JsonConstants
 from leaf.model import Manifest, Environment
-from leaf.utils import downloadFile
 import os
-import shutil
 import subprocess
 
 
@@ -270,17 +268,7 @@ class StepExecutor():
         for step in steps:
             if JsonConstants.STEP_LABEL in step:
                 self.logger.printDefault(step[JsonConstants.STEP_LABEL])
-            stepType = step[JsonConstants.STEP_TYPE]
-            if stepType == JsonConstants.STEP_EXEC:
-                self.doExec(step)
-            elif stepType == JsonConstants.STEP_COPY:
-                self.doCopy(step)
-            elif stepType == JsonConstants.STEP_LINK:
-                self.doLink(step)
-            elif stepType == JsonConstants.STEP_DELETE:
-                self.doDelete(step)
-            elif stepType == JsonConstants.STEP_DOWNLOAD:
-                self.doDownload(step, ip)
+            self.doExec(step)
             worked += 1
             self.logger.progressWorked('Execute steps',
                                        worked=worked,
@@ -314,42 +302,6 @@ class StepExecutor():
                                          "but step ignores failure")
             else:
                 raise ValueError("Step exited with return code " + str(rc))
-
-    def doCopy(self, step):
-        src = self.resolve(
-            step[JsonConstants.STEP_COPY_SOURCE], prefixWithFolder=True)
-        dst = self.resolve(
-            step[JsonConstants.STEP_COPY_DESTINATION], prefixWithFolder=True)
-        self.logger.printVerbose("Copy:", src, "->", dst)
-        shutil.copy2(src, dst)
-
-    def doLink(self, step):
-        target = self.resolve(
-            step[JsonConstants.STEP_LINK_NAME], prefixWithFolder=True)
-        source = self.resolve(
-            step[JsonConstants.STEP_LINK_TARGET], prefixWithFolder=True)
-        self.logger.printVerbose("Link:", source, " -> ", target)
-        os.symlink(source, target)
-
-    def doDelete(self, step):
-        for file in step[JsonConstants.STEP_DELETE_FILES]:
-            resolvedFile = self.resolve(file, prefixWithFolder=True)
-            self.logger.printVerbose("Delete:", resolvedFile)
-            os.remove(resolvedFile)
-
-    def doDownload(self, step, ip):
-        try:
-            downloadFile(step[JsonConstants.STEP_DOWNLOAD_URL],
-                         self.targetFolder,
-                         self.logger,
-                         step.get(JsonConstants.STEP_DOWNLOAD_FILENAME),
-                         step.get(JsonConstants.STEP_DOWNLOAD_SHA1SUM))
-        except Exception as e:
-            if step.get(JsonConstants.STEP_IGNORE_FAIL, False):
-                self.logger.printVerbose(
-                    "Download failed, but step ignores failure")
-            else:
-                raise e
 
     def resolve(self, value, failOnUnknownVariable=True, prefixWithFolder=False):
         out = self.variableResolver.resolve(value,

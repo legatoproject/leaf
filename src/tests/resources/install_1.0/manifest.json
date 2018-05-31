@@ -5,14 +5,12 @@
   },
   "install": [
     {
-      "type": "exec",
       "command": [
         "touch",
         "postinstall.log"
       ]
     },
     {
-      "type": "exec",
       "command": [
         "sh",
         "-c",
@@ -23,7 +21,6 @@
       }
     },
     {
-      "type": "exec",
       "command": [
         "env"
       ],
@@ -32,35 +29,12 @@
       }
     },
     {
-      "type": "exec",
       "command": [
         "mkdir",
         "folder2"
       ]
     },
     {
-      "type": "link",
-      "target": "folder/data2",
-      "name": "folder2/data2-symlink"
-    },
-    {
-      "type": "copy",
-      "source": "@{DIR}/folder/data2",
-      "destination": "data2-copy"
-    },
-    {
-      "type": "download",
-      "url": "https://www.mozilla.org/media/MPL/2.0/index.txt",
-      "filename": "downloadedFile"
-    },
-    {
-      "type": "delete",
-      "files": [
-        "folder/data2"
-      ]
-    },
-    {
-      "type": "exec",
       "command": [
         "sh",
         "-c",
@@ -70,7 +44,6 @@
   ],
   "uninstall": [
     {
-      "type": "exec",
       "command": [
         "touch",
         "@{DIR}/../uninstall.log"
