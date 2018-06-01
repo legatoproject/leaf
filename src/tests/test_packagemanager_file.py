@@ -49,6 +49,7 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.assertEqual(0, len(self.app.getRemoteRepositories()))
         self.app.updateUserConfiguration(remoteAddList=[self.getRemoteUrl()])
         self.assertEqual(1, len(self.app.readConfiguration().getRemotes()))
+        self.app.fetchRemotes(True)
         self.assertEqual(2, len(self.app.getRemoteRepositories()))
 
     def testCompression(self):
@@ -214,25 +215,25 @@ class TestPackageManager_File(AbstractTestWithRepo):
             return self.app.remoteCacheFile.stat().st_mtime
 
         # Initial refresh
-        self.app.getRemoteRepositories(smartRefresh=True)
+        self.app.fetchRemotes(smartRefresh=True)
         previousMtime = getMtime()
 
         # Second refresh, same day, file should not be updated
         time.sleep(1)
-        self.app.getRemoteRepositories(smartRefresh=True)
+        self.app.fetchRemotes(smartRefresh=True)
         self.assertEqual(previousMtime, getMtime())
         os.remove(str(self.app.remoteCacheFile))
         self.assertFalse(self.app.remoteCacheFile.exists())
 
         # File has been deleted
         time.sleep(1)
-        self.app.getRemoteRepositories(smartRefresh=True)
+        self.app.fetchRemotes(smartRefresh=True)
         self.assertNotEqual(previousMtime, getMtime())
         previousMtime = getMtime()
 
         # Initial refresh
         time.sleep(1)
-        self.app.getRemoteRepositories(smartRefresh=True)
+        self.app.fetchRemotes(smartRefresh=True)
         self.assertEqual(previousMtime, getMtime())
 
         # New refresh, 23h ago, file should not be updated
@@ -243,7 +244,7 @@ class TestPackageManager_File(AbstractTestWithRepo):
                                                  int(almostyesterday.timestamp())))
         self.assertNotEqual(previousMtime, getMtime())
         previousMtime = getMtime()
-        self.app.getRemoteRepositories(smartRefresh=True)
+        self.app.fetchRemotes(smartRefresh=True)
         self.assertEqual(previousMtime, getMtime())
 
         # New refresh, 24h ago, file should be updated
@@ -253,7 +254,7 @@ class TestPackageManager_File(AbstractTestWithRepo):
                                                  int(yesterday.timestamp())))
         self.assertNotEqual(previousMtime, getMtime())
         previousMtime = getMtime()
-        self.app.getRemoteRepositories(smartRefresh=True)
+        self.app.fetchRemotes(smartRefresh=True)
         self.assertNotEqual(previousMtime, getMtime())
 
     def testConditionalInstall(self):

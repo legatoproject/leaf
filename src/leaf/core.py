@@ -167,25 +167,24 @@ class LeafApp(LeafRepository):
         return Environment("Exported by user config",
                            self.readConfiguration().getEnvMap())
 
-    def getRemoteRepositories(self, smartRefresh=True):
+    def getRemoteRepositories(self):
         '''
         List all remotes from configuration
         '''
+        out = OrderedDict()
+
+        for url in self.readConfiguration().getRemotes():
+            out[url] = RemoteRepository(url, True, None)
+
         if self.remoteCacheFile.exists():
-            if datetime.fromtimestamp(self.remoteCacheFile.stat().st_mtime) < datetime.now() - LeafConstants.CACHE_DELTA:
-                self.logger.printDefault("Cache file is outdated")
-                if smartRefresh:
-                    os.remove(str(self.remoteCacheFile))
+            cache = jsonLoadFile(self.remoteCacheFile)
+            for url, json in cache.items():
+                if url not in out:
+                    out[url] = RemoteRepository(url, False, json)
+                else:
+                    out[url].json = json
 
-        if not self.remoteCacheFile.exists():
-            self.fetchRemotes()
-
-        cache = jsonLoadFile(self.remoteCacheFile)
-        out = []
-        masterUrls = self.readConfiguration().getRemotes()
-        for url, data in cache.items():
-            out.append(RemoteRepository(url, url in masterUrls, data))
-        return out
+        return out.values()
 
     def resolveLatest(self, motifList, ipMap=None, apMap=None):
         '''
@@ -228,10 +227,12 @@ class LeafApp(LeafRepository):
         List all available package
         '''
         out = OrderedDict()
-        for rr in self.getRemoteRepositories(smartRefresh=smartRefresh):
+        self.fetchRemotes(smartRefresh=smartRefresh)
+
+        for rr in self.getRemoteRepositories():
             if rr.isFetched():
-                for jsonPayload in rr.getPackages():
-                    ap = AvailablePackage(jsonPayload, rr.url)
+                for pkgInfoJson in rr.getPackages():
+                    ap = AvailablePackage(pkgInfoJson, rr.url)
                     if ap.getIdentifier() not in out:
                         out[ap.getIdentifier()] = ap
         return out
@@ -255,24 +256,30 @@ class LeafApp(LeafRepository):
             except Exception as e:
                 self.logger.printError("Error fetching", remoteurl, ":", e)
 
-    def fetchRemotes(self):
+    def fetchRemotes(self, smartRefresh=True):
         '''
-        Fetch remotes
+        Refresh remotes content with smart refresh, ie auto refresh after X days
         '''
-        content = OrderedDict()
-        urls = self.readConfiguration().getRemotes()
-        self.logger.progressStart('Fetch remote(s)',
-                                  message="Refreshing available packages...",
-                                  total=len(urls))
-        worked = 0
-        for url in urls:
-            self.recursiveFetchUrl(url, content)
-            worked += 1
-            self.logger.progressWorked('Fetch remote(s)',
-                                       worked=worked,
-                                       total=len(urls))
-        jsonWriteFile(self.remoteCacheFile, content)
-        self.logger.progressDone('Fetch remote(s)')
+        if self.remoteCacheFile.exists():
+            if datetime.fromtimestamp(self.remoteCacheFile.stat().st_mtime) < datetime.now() - LeafConstants.CACHE_DELTA:
+                self.logger.printDefault("Cache file is outdated")
+                if smartRefresh:
+                    os.remove(str(self.remoteCacheFile))
+        if not self.remoteCacheFile.exists():
+            content = OrderedDict()
+            urls = self.readConfiguration().getRemotes()
+            self.logger.progressStart('Fetch remote(s)',
+                                      message="Refreshing available packages...",
+                                      total=len(urls))
+            worked = 0
+            for url in urls:
+                self.recursiveFetchUrl(url, content)
+                worked += 1
+                self.logger.progressWorked('Fetch remote(s)',
+                                           worked=worked,
+                                           total=len(urls))
+            jsonWriteFile(self.remoteCacheFile, content)
+            self.logger.progressDone('Fetch remote(s)')
 
     def listInstalledPackages(self):
         '''

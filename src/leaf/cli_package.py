@@ -26,7 +26,7 @@ class RemotesCommand(LeafCommand):
         logger = self.getLogger(args)
         app = self.getApp(args, logger=logger)
 
-        rrList = app.getRemoteRepositories(smartRefresh=False)
+        rrList = app.getRemoteRepositories()
         for rr in rrList:
             if rr.isRootRepository:
                 logger.displayItem(rr)
