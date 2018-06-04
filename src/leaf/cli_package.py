@@ -8,7 +8,7 @@ Leaf Package Manager
 '''
 import argparse
 from leaf.cliutils import LeafCommand, GenericCommand
-from leaf.coreutils import TagManager
+from leaf.coreutils import TagManager, DependencyType
 from leaf.filtering import MetaPackageFilter
 from leaf.model import Manifest
 from leaf.utils import mkTmpLeafRootDir
@@ -184,24 +184,40 @@ class PackageDependsSubCommand(LeafCommand):
 
     def initArgs(self, parser):
         super().initArgs(parser)
-        parser.add_argument("-r", "--reverse",
-                            dest="reverseOrder",
-                            action="store_true",
-                            help="reverse order")
-        parser.add_argument("-i", "--filter-installed",
-                            dest="filterInstalled",
-                            action="store_true",
-                            help="filter already installed packages")
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument("--installed",
+                           dest="dependencyType",
+                           action="store_const",
+                           const=DependencyType.INSTALLED,
+                           default=DependencyType.INSTALLED,
+                           help="build dependency list from installed packages")
+        group.add_argument("--available",
+                           dest="dependencyType",
+                           action="store_const",
+                           const=DependencyType.AVAILABLE,
+                           help="build dependency list from available packages")
+        group.add_argument("--install",
+                           dest="dependencyType",
+                           action="store_const",
+                           const=DependencyType.INSTALL,
+                           help="build dependency list to install")
+        group.add_argument("--uninstall",
+                           dest="dependencyType",
+                           action="store_const",
+                           const=DependencyType.UNINSTALL,
+                           help="build dependency list to uninstall")
+        group.add_argument("--prereq",
+                           dest="dependencyType",
+                           action="store_const",
+                           const=DependencyType.PREREQ,
+                           help="build dependency list for prereq install")
         parser.add_argument('packages',
                             nargs=argparse.REMAINDER)
 
     def execute(self, args):
         logger = self.getLogger(args)
         app = self.getApp(args, logger=logger)
-
-        items = app.listDependencies(args.packages,
-                                     reverse=args.reverseOrder,
-                                     filterInstalled=args.filterInstalled)
+        items = app.listDependencies(args.packages, args.dependencyType)
         for i in items:
             logger.displayItem(i)
 

@@ -9,6 +9,7 @@ Leaf Package Manager
 
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+from enum import IntEnum, unique
 import json
 from leaf.constants import JsonConstants, LeafConstants
 from leaf.core import Workspace
@@ -18,17 +19,23 @@ import os
 import sys
 
 
-def createLogger(verbose, quiet, nonInteractive):
+@unique
+class Verbosity(IntEnum):
+    QUIET = 0
+    DEFAULT = 1
+    VERBOSE = 2
+
+
+def createLogger(args, nonInteractive):
     '''
     Returns the correct ILogger
     '''
     if len(os.environ.get(LeafConstants.ENV_JSON_OUTPUT, "")) > 0:
         return JsonLogger()
-    if verbose:
-        return TextLogger(TextLogger.LEVEL_VERBOSE, nonInteractive)
-    if quiet:
-        return TextLogger(TextLogger.LEVEL_QUIET, nonInteractive)
-    return TextLogger(TextLogger.LEVEL_DEFAULT, nonInteractive)
+    verbosity = Verbosity.DEFAULT
+    if hasattr(args, 'verbosity'):
+        verbosity = getattr(args, 'verbosity')
+    return TextLogger(verbosity, nonInteractive)
 
 
 class ILogger(ABC):
@@ -36,11 +43,17 @@ class ILogger(ABC):
     Logger interface
     '''
 
+    def __init__(self, verbosity):
+        self.verbosity = verbosity
+
+    def getVerbosity(self):
+        return self.verbosity
+
     def isQuiet(self):
-        return False
+        return self.getVerbosity() == Verbosity.QUIET
 
     def isVerbose(self):
-        return False
+        return self.getVerbosity() == Verbosity.VERBOSE
 
     @abstractmethod
     def printQuiet(self, *message, **kwargs):
@@ -87,30 +100,21 @@ class TextLogger (ILogger):
     '''
     Prints a lot of information
     '''
-    LEVEL_QUIET = 0
-    LEVEL_DEFAULT = 1
-    LEVEL_VERBOSE = 2
 
-    def __init__(self, level, nonInteractive=True):
-        self.level = level
+    def __init__(self, verbosity, nonInteractive=True):
+        ILogger.__init__(self, verbosity)
         self.nonInteractive = nonInteractive
 
-    def isQuiet(self):
-        return self.level == TextLogger.LEVEL_QUIET
-
-    def isVerbose(self):
-        return self.level == TextLogger.LEVEL_VERBOSE
-
     def printQuiet(self, *message, **kwargs):
-        if self.level >= TextLogger.LEVEL_QUIET:
+        if self.verbosity >= Verbosity.QUIET:
             print(*message, **kwargs)
 
     def printDefault(self, *message, **kwargs):
-        if self.level >= TextLogger.LEVEL_DEFAULT:
+        if self.verbosity >= Verbosity.DEFAULT:
             print(*message, **kwargs)
 
     def printVerbose(self, *message, **kwargs):
-        if self.level >= TextLogger.LEVEL_VERBOSE:
+        if self.verbosity >= Verbosity.VERBOSE:
             print(*message, **kwargs)
 
     def printError(self, *message):
@@ -174,13 +178,13 @@ class TextLogger (ILogger):
                 content["Env"] = item.getEnvMap()
                 self.prettyprintContent(content)
         elif isinstance(item, LeafArtifact):
-            if self.level == TextLogger.LEVEL_QUIET:
+            if self.verbosity == Verbosity.QUIET:
                 print(item.path)
             else:
                 print(item.getIdentifier(), "->", item.path)
         elif isinstance(item, Manifest):
             itemLabel = str(item.getIdentifier())
-            if self.level == TextLogger.LEVEL_DEFAULT and len(item.getAllTags()) > 0:
+            if self.verbosity == Verbosity.DEFAULT and len(item.getAllTags()) > 0:
                 itemLabel += " (%s)" % ",".join(item.getAllTags())
             print(itemLabel)
             if self.isVerbose():
@@ -268,6 +272,9 @@ class JsonLogger(ILogger):
     '''
     Print information in a machine readable format (json)
     '''
+
+    def __init__(self):
+        ILogger.__init__(self, Verbosity.VERBOSE)
 
     def printJson(self, content):
         print(json.dumps(content, sort_keys=True, indent=None), flush=True)

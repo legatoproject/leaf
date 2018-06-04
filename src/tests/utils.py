@@ -5,7 +5,7 @@ Constants to tweak the tests
 from leaf.cli import LeafCli
 from leaf.constants import LeafConstants, LeafFiles
 from leaf.core import LeafRepository
-from leaf.logger import TextLogger
+from leaf.logger import TextLogger, Verbosity
 from leaf.model import Manifest, PackageIdentifier
 import os
 from pathlib import Path
@@ -54,7 +54,7 @@ class AbstractTestWithRepo(unittest.TestCase):
         assert RESOURCE_FOLDER.exists(), "Cannot find resources folder!"
         generateRepo(RESOURCE_FOLDER,
                      AbstractTestWithRepo.REPO_FOLDER,
-                     TextLogger(TextLogger.LEVEL_QUIET))
+                     TextLogger(Verbosity.DEFAULT))
 
     @classmethod
     def tearDownClass(cls):

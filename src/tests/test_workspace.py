@@ -3,24 +3,21 @@
 '''
 
 from collections import OrderedDict
-from leaf.constants import LeafConstants
 from leaf.core import Workspace, LeafApp
-from leaf.logger import createLogger
-import os
+from leaf.logger import TextLogger, Verbosity
 import platform
 import unittest
 
 from tests.utils import AbstractTestWithRepo
 
-
-VERBOSE = True
+VERBOSITY = Verbosity.VERBOSE
 
 
 class TestProfile(AbstractTestWithRepo):
 
     def __init__(self, methodName):
         AbstractTestWithRepo.__init__(self, methodName)
-        self.logger = createLogger(VERBOSE, False, True)
+        self.logger = TextLogger(VERBOSITY, True)
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)

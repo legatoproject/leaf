@@ -28,9 +28,11 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
         self.leafExec("search", "--all")
 
     def testDepends(self):
-        self.leafExec(["pkg", "install"], "container-A_1.0")
-        self.leafExec(["pkg", "dependencies"], "container-A_2.0")
-        self.leafExec(["pkg", "dependencies"], "-i", "container-A_2.0")
+        self.leafExec(["pkg", "deps"], "--available", "container-A_1.0")
+        self.leafExec(["pkg", "deps"], "--install", "container-A_1.0")
+        self.leafExec(["pkg", "deps"], "--installed", "container-A_1.0")
+        self.leafExec(["pkg", "deps"], "--uninstall", "container-A_1.0")
+        self.leafExec(["pkg", "deps"], "--prereq", "container-A_1.0")
 
     def testInstall(self):
         self.leafExec(["pkg", "install"], "container-A")

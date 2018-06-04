@@ -5,8 +5,10 @@
 from datetime import datetime, timedelta
 from leaf.constants import LeafConstants
 from leaf.core import LeafApp
-from leaf.logger import createLogger
-from leaf.model import PackageIdentifier, Environment
+from leaf.coreutils import DependencyType
+from leaf.logger import Verbosity, TextLogger
+from leaf.model import PackageIdentifier, Environment, Manifest,\
+    AvailablePackage, InstalledPackage
 from leaf.utils import isFolderIgnored
 import os
 import platform
@@ -17,7 +19,7 @@ import unittest
 from tests.utils import AbstractTestWithRepo, envFileToMap
 
 
-VERBOSE = True
+VERBOSITY = Verbosity.VERBOSE
 
 
 class TestPackageManager_File(AbstractTestWithRepo):
@@ -32,9 +34,8 @@ class TestPackageManager_File(AbstractTestWithRepo):
             self.getConfigurationFile())
         os.environ[LeafConstants.ENV_CACHE_FOLDER] = str(
             self.getCacheFolder())
-        self.app = LeafApp(
-            createLogger(VERBOSE, False, True),
-            nonInteractive=True)
+        self.app = LeafApp(TextLogger(VERBOSITY, True),
+                           nonInteractive=True)
 
         if "LEAF_TIMEOUT" not in os.environ:
             # Fix CI timeout
@@ -348,6 +349,88 @@ class TestPackageManager_File(AbstractTestWithRepo):
         env = envFileToMap(envDumpFile)
         self.assertEqual(env["LEAF_PREREQ_ROOT"],
                          str(self.getAltWorkspaceFolder()))
+
+    def testDependsAvailable(self):
+        self.assertDeps(self.app.listDependencies(
+            ["container-A_3.0"], DependencyType.AVAILABLE),
+            [],
+            AvailablePackage)
+
+        self.assertDeps(self.app.listDependencies(
+            ["container-A_1.0"], DependencyType.AVAILABLE),
+            ["container-E_1.0",
+             "container-B_1.0",
+             "container-C_1.0",
+             "container-A_1.0"],
+            AvailablePackage)
+
+    def testDependsInstall(self):
+        self.assertDeps(self.app.listDependencies(
+            ["container-A_1.0"], DependencyType.INSTALL),
+            ["container-E_1.0",
+             "container-B_1.0",
+             "container-C_1.0",
+             "container-A_1.0"],
+            AvailablePackage)
+
+        self.app.installFromRemotes(["container-A_1.0"])
+
+        self.assertDeps(self.app.listDependencies(
+            ["container-A_1.0"], DependencyType.INSTALL),
+            [],
+            AvailablePackage)
+
+        self.assertDeps(self.app.listDependencies(
+            ["container-A_2.0"], DependencyType.INSTALL),
+            ["container-D_1.0",
+             "container-A_2.0"],
+            AvailablePackage)
+
+    def testDependsInstalled(self):
+        self.assertDeps(self.app.listDependencies(
+            ["container-A_1.0"], DependencyType.INSTALLED),
+            [],
+            InstalledPackage)
+
+        self.app.installFromRemotes(["container-A_1.0"])
+
+        self.assertDeps(self.app.listDependencies(
+            ["container-A_1.0"], DependencyType.INSTALLED),
+            ["container-E_1.0",
+             "container-B_1.0",
+             "container-C_1.0",
+             "container-A_1.0"],
+            InstalledPackage)
+
+    def testDependsUninstall(self):
+        self.assertDeps(self.app.listDependencies(
+            ["container-A_1.0"], DependencyType.UNINSTALL),
+            [],
+            AvailablePackage)
+
+        self.app.installFromRemotes(["container-A_1.0"])
+
+        self.assertDeps(self.app.listDependencies(
+            ["container-A_1.0"], DependencyType.UNINSTALL),
+            ["container-A_1.0",
+             "container-C_1.0",
+             "container-B_1.0",
+             "container-E_1.0"],
+            InstalledPackage)
+
+    def testDependsPrereq(self):
+        self.assertDeps(self.app.listDependencies(
+            ["prereq-D_1.0"], DependencyType.PREREQ),
+            ["prereq-false_1.0",
+             "prereq-true_1.0"],
+            AvailablePackage)
+
+    def assertDeps(self, result, expected, itemType):
+        for item in result:
+            self.assertEqual(itemType, type(item))
+            self.assertTrue(isinstance(item, itemType))
+        deps = [str(mf.getIdentifier()) for mf in result]
+        self.assertEqual(expected, deps)
 
 
 if __name__ == "__main__":

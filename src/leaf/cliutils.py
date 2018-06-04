@@ -10,7 +10,7 @@ Leaf Package Manager
 from abc import abstractmethod, ABC
 from collections import OrderedDict
 from leaf.core import Workspace, LeafApp
-from leaf.logger import createLogger
+from leaf.logger import createLogger, Verbosity
 from leaf.utils import findWorkspaceRoot
 import os
 from pathlib import Path
@@ -72,6 +72,9 @@ class GenericCommand(ABC):
                                        aliases=self.cmdAliases)
         self.initArgs(parser)
 
+    def getLogger(self, args):
+        return createLogger(args, args.nonInteractive)
+
     @abstractmethod
     def initArgs(self, parser):
         pass
@@ -87,7 +90,10 @@ class GenericCommand(ABC):
         except Exception as e:
             if not catchException:
                 raise e
-            traceback.print_exc()
+            logger = self.getLogger(args)
+            logger.printError(e)
+            if logger.isVerbose():
+                traceback.print_exc()
             return 2
 
 
@@ -101,17 +107,18 @@ class LeafCommand(GenericCommand):
 
     def initArgs(self, parser):
         GenericCommand.initArgs(self, parser)
-        parser.add_argument("-v", "--verbose",
-                            dest="verbose",
-                            action='store_true',
-                            help="increase output verbosity")
-        parser.add_argument("-q", "--quiet",
-                            dest="quiet",
-                            action='store_true',
-                            help="decrease output verbosity")
-
-    def getLogger(self, args):
-        return createLogger(args.verbose, args.quiet, args.nonInteractive)
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument("-v", "--verbose",
+                           dest="verbosity",
+                           action='store_const',
+                           const=Verbosity.VERBOSE,
+                           default=Verbosity.DEFAULT,
+                           help="increase output verbosity")
+        group.add_argument("-q", "--quiet",
+                           dest="verbosity",
+                           action='store_const',
+                           const=Verbosity.QUIET,
+                           help="decrease output verbosity")
 
     def getApp(self, args, logger=None):
         if logger is None:
@@ -131,19 +138,6 @@ class LeafCommand(GenericCommand):
             app = self.getApp(args)
         return Workspace(wspath, app)
 
-    def doExecute(self, args, catchException=False):
-        try:
-            out = self.execute(args)
-            return 0 if out is None else out
-        except Exception as e:
-            if not catchException:
-                raise e
-            logger = self.getLogger(args)
-            logger.printError(e)
-            if logger.isVerbose():
-                traceback.print_exc()
-            return 2
-
 
 class LeafCommandGenerator():
 
@@ -158,9 +152,9 @@ class LeafCommandGenerator():
         if args.nonInteractive:
             self.preVerbArgs["--non-interactive"] = None
         # Verbose, Quiet
-        if args.verbose:
+        if args.verbosity == Verbosity.VERBOSE:
             self.postVerbArgs["--verbose"] = None
-        if args.quiet:
+        elif args.verbosity == Verbosity.QUIET:
             self.postVerbArgs["--quiet"] = None
 
     def genCommand(self, verb, arguments=None):

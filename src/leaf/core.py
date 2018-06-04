@@ -14,7 +14,7 @@ import json
 from leaf import __version__
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles
 from leaf.coreutils import StepExecutor, VariableResolver, \
-    DynamicDependencyManager
+    DependencyType, DependencyManager
 from leaf.model import Manifest, InstalledPackage, AvailablePackage, LeafArtifact, \
     PackageIdentifier, RemoteRepository, Profile, \
     WorkspaceConfiguration, Environment, UserConfiguration
@@ -295,36 +295,21 @@ class LeafApp(LeafRepository):
                     out[ip.getIdentifier()] = ip
         return out
 
-    def listDependencies(self, motifList, reverse=False, filterInstalled=False):
-        '''                                                                                                                                                             
-        List all dependencies for given packages                                                                                                                        
-        @return: PackageIdentifier list                                                                                                                                 
+    def listDependencies(self, motifList, depType):
+        '''
+        List all dependencies for given packages
+        @return: PackageIdentifier list
         '''
         installedPackages = self.listInstalledPackages()
         availablePackages = self.listAvailablePackages()
         piList = self.resolveLatest(motifList,
                                     ipMap=installedPackages,
                                     apMap=availablePackages)
-
-        mfMap = OrderedDict()
-        mfMap.update(installedPackages)
-        for pi, ap in availablePackages.items():
-            if pi not in installedPackages:
-                mfMap[pi] = ap
-
-        # Build the mf list
-        out = DynamicDependencyManager.computeDependencyTree(piList,
-                                                             mfMap,
-                                                             self.getLeafEnvironment(),
-                                                             reverse)
-
-        if filterInstalled:
-            out = [mf for mf in out if mf.getIdentifier() not in installedPackages]
-
-        # Keep only PI
-        out = list(map(Manifest.getIdentifier, out))
-
-        return out
+        return DependencyManager.compute(piList, depType,
+                                         apMap=availablePackages,
+                                         ipMap=installedPackages,
+                                         env=self.getLeafEnvironment(),
+                                         ignoreUnknown=True)
 
     def checkPackagesForInstall(self, mfList,
                                 bypassLeafMinVersion=False):
@@ -413,11 +398,11 @@ class LeafApp(LeafRepository):
         if availablePackages is None:
             availablePackages = self.listAvailablePackages()
 
-        piList = self.resolveLatest(motifList,
-                                    apMap=availablePackages)
+        piList = set(self.resolveLatest(motifList,
+                                        apMap=availablePackages))
 
-        apList = DynamicDependencyManager.computePrereqList(piList,
-                                                            availablePackages)
+        # Get packages to install
+        apList = [availablePackages[pi] for pi in piList]
 
         errorCount = 0
         if len(apList) > 0:
@@ -462,10 +447,11 @@ class LeafApp(LeafRepository):
             if env is None:
                 env = self.getLeafEnvironment()
 
-            apToInstall = DynamicDependencyManager.computeApToInstall(piList,
-                                                                      availablePackages,
-                                                                      installedPackages,
-                                                                      env)
+            apToInstall = DependencyManager.compute(piList,
+                                                    DependencyType.INSTALL,
+                                                    apMap=availablePackages,
+                                                    ipMap=installedPackages,
+                                                    env=env)
             out = []
 
             # Check nothing to do
@@ -491,13 +477,14 @@ class LeafApp(LeafRepository):
                     raise ValueError("Installation aborted")
 
                 # Install prereq
-                prereqIpsList = []
-                for ap in apToInstall:
-                    prereqIpsList += ap.getLeafRequires()
+                prereqApList = DependencyManager.compute(piList, DependencyType.PREREQ,
+                                                         apMap=availablePackages,
+                                                         ipMap=installedPackages,
+                                                         env=env)
 
-                if len(prereqIpsList) > 0:
+                if len(prereqApList) > 0:
                     prereqRootFolder = mkTmpLeafRootDir()
-                    self.installPrereqFromRemotes(prereqIpsList,
+                    self.installPrereqFromRemotes(map(Manifest.getIdentifier, prereqApList),
                                                   prereqRootFolder,
                                                   availablePackages=availablePackages,
                                                   env=env)
@@ -545,8 +532,9 @@ class LeafApp(LeafRepository):
         installedPackages = self.listInstalledPackages()
         piList = self.resolveLatest(motifList, ipMap=installedPackages)
 
-        ipToRemove = DynamicDependencyManager.computeIpToUninstall(piList,
-                                                                   installedPackages)
+        ipToRemove = DependencyManager.compute(piList,
+                                               DependencyType.UNINSTALL,
+                                               ipMap=installedPackages)
 
         if len(ipToRemove) == 0:
             self.logger.printDefault(
@@ -592,9 +580,10 @@ class LeafApp(LeafRepository):
         if env is None:
             env = self.getLeafEnvironment()
 
-        ipList = DynamicDependencyManager.computeDependencyTree(piList,
-                                                                installedPackages,
-                                                                env)
+        ipList = DependencyManager.compute(piList,
+                                           DependencyType.INSTALLED,
+                                           ipMap=installedPackages,
+                                           env=env)
 
         for ip in ipList:
             ipEnv = Environment("Exported by package %s" % ip.getIdentifier())
@@ -693,11 +682,11 @@ class Workspace():
             pf.getLinkedPackages()))
         neededPiList = list(map(
             Manifest.getIdentifier,
-            DynamicDependencyManager.computeDependencyTree(
-                pf.getPackageIdentifiers(),
-                installedPackages,
-                env=env,
-                ignoreUnknown=True)))
+            DependencyManager.compute(pf.getPackageIdentifiers(),
+                                      DependencyType.INSTALLED,
+                                      ipMap=installedPackages,
+                                      env=env,
+                                      ignoreUnknown=True)))
 
         missingPiList = [pi for pi in neededPiList if pi not in linkedPiList]
         extraPiList = [pi for pi in linkedPiList if pi not in neededPiList]
@@ -874,9 +863,10 @@ class Workspace():
             env = self.getSkelEnvironement(pf)
             self.app.installFromRemotes(pf.getPackages(), env=env)
             installedPackages = self.app.listInstalledPackages()
-            deps = DynamicDependencyManager.computeDependencyTree(pf.getPackageIdentifiers(),
-                                                                  installedPackages,
-                                                                  env)
+            deps = DependencyManager.compute(pf.getPackageIdentifiers(),
+                                             DependencyType.INSTALLED,
+                                             ipMap=installedPackages,
+                                             env=env)
             for ip in deps:
                 piFolder = pf.folder / ip.getIdentifier().name
                 if piFolder.exists():

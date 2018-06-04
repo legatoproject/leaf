@@ -4,7 +4,7 @@
 from leaf.constants import LeafConstants
 from leaf.core import LeafApp
 from leaf.filtering import MetaPackageFilter
-from leaf.logger import createLogger
+from leaf.logger import TextLogger, Verbosity
 import os
 
 from tests.utils import AbstractTestWithRepo
@@ -18,7 +18,7 @@ class FilteringTest(AbstractTestWithRepo):
             self.getConfigurationFile())
         os.environ[LeafConstants.ENV_CACHE_FOLDER] = str(
             self.getCacheFolder())
-        app = LeafApp(createLogger(False, True, True), True)
+        app = LeafApp(TextLogger(Verbosity.DEFAULT, True), True)
         app.updateUserConfiguration(remoteAddList=[self.getRemoteUrl()])
         app.fetchRemotes()
         self.content = app.listAvailablePackages().values()
