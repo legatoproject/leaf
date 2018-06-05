@@ -14,7 +14,8 @@ import json
 from leaf import __version__
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles
 from leaf.coreutils import StepExecutor, VariableResolver, \
-    DependencyType, DependencyManager
+    DependencyType, DependencyManager, DependencyStrategy,\
+    packageListToEnvironnement
 from leaf.model import Manifest, InstalledPackage, AvailablePackage, LeafArtifact, \
     PackageIdentifier, RemoteRepository, Profile, \
     WorkspaceConfiguration, Environment, UserConfiguration
@@ -575,8 +576,7 @@ class LeafApp(LeafRepository):
         '''
         installedPackages = self.listInstalledPackages()
         piList = self.resolveLatest(motifList,
-                                    ipMap=installedPackages,
-                                    apMap=None)
+                                    ipMap=installedPackages)
         if env is None:
             env = self.getLeafEnvironment()
 
@@ -584,15 +584,7 @@ class LeafApp(LeafRepository):
                                            DependencyType.INSTALLED,
                                            ipMap=installedPackages,
                                            env=env)
-
-        for ip in ipList:
-            ipEnv = Environment("Exported by package %s" % ip.getIdentifier())
-            env.addSubEnv(ipEnv)
-            vr = VariableResolver(ip, installedPackages.values())
-            for key, value in ip.getEnvMap().items():
-                ipEnv.env.append((key,
-                                  vr.resolve(value)))
-        return env
+        return packageListToEnvironnement(ipList, installedPackages, env)
 
 
 class Workspace():
@@ -672,37 +664,37 @@ class Workspace():
         '''
         Check if a profile contains all needed links to all contained packages
         '''
-        installedPackages = self.app.listInstalledPackages()
         env = self.app.getLeafEnvironment()
         env.addSubEnv(self.readConfiguration().getEnvironment())
         env.addSubEnv(pf.getEnvironment())
 
-        linkedPiList = list(map(
-            Manifest.getIdentifier,
-            pf.getLinkedPackages()))
-        neededPiList = list(map(
-            Manifest.getIdentifier,
-            DependencyManager.compute(pf.getPackageIdentifiers(),
-                                      DependencyType.INSTALLED,
-                                      ipMap=installedPackages,
-                                      env=env,
-                                      ignoreUnknown=True)))
+        try:
+            linkedPiList = list(map(
+                Manifest.getIdentifier,
+                pf.getLinkedPackages()))
+            neededPiList = list(map(
+                Manifest.getIdentifier,
+                self.getProfileDependencies(pf)))
 
-        missingPiList = [pi for pi in neededPiList if pi not in linkedPiList]
-        extraPiList = [pi for pi in linkedPiList if pi not in neededPiList]
+            missingPiList = [pi for pi in neededPiList
+                             if pi not in linkedPiList]
+            extraPiList = [pi for pi in linkedPiList
+                           if pi not in neededPiList]
 
-        if len(extraPiList) > 0 or len(missingPiList) > 0:
+            if len(extraPiList) > 0 or len(missingPiList) > 0:
+                if len(missingPiList) > 0:
+                    self.logger.printVerbose("Profile is missing package(s):",
+                                             ", ".join(map(str, missingPiList)))
+                if len(extraPiList) > 0:
+                    self.logger.printVerbose("Profile should not have package(s):",
+                                             ", ".join(map(str, extraPiList)))
+                raise ValueError("Profile not sync")
+        except:
             message = "Profile %s is out of sync, please run 'leaf sync'" % (
                 pf.name)
             if raiseIfNotSync:
                 raise ValueError(message)
             self.logger.printError(message)
-            if len(missingPiList) > 0:
-                self.logger.printVerbose("Profile is missing package(s):",
-                                         ", ".join(map(str, missingPiList)))
-            if len(extraPiList) > 0:
-                self.logger.printVerbose("Profile should not have package(s):",
-                                         ", ".join(map(str, extraPiList)))
             return False
         return True
 
@@ -858,26 +850,34 @@ class Workspace():
             shutil.rmtree(str(pf.folder))
         pf.folder.mkdir()
 
-        # Do nothing for empty profiles
-        if len(pf.getPackages()) > 0:
+        # Check if packages need to be installed
+        missingApList = DependencyManager.compute(pf.getPackageIdentifiers(),
+                                                  DependencyType.INSTALL,
+                                                  strategy=DependencyStrategy.LATEST_VERSION,
+                                                  apMap=self.app.listAvailablePackages(),
+                                                  ipMap=self.app.listInstalledPackages(),
+                                                  env=self.getSkelEnvironement(pf))
+
+        # Install needed package
+        if len(missingApList) > 0:
             env = self.getSkelEnvironement(pf)
-            self.app.installFromRemotes(pf.getPackages(), env=env)
-            installedPackages = self.app.listInstalledPackages()
-            deps = DependencyManager.compute(pf.getPackageIdentifiers(),
-                                             DependencyType.INSTALLED,
-                                             ipMap=installedPackages,
-                                             env=env)
-            for ip in deps:
-                piFolder = pf.folder / ip.getIdentifier().name
-                if piFolder.exists():
-                    piFolder = pf.folder / str(ip.getIdentifier())
-                piFolder.symlink_to(ip.folder)
+            self.app.installFromRemotes(list(map(Manifest.getIdentifier, missingApList)),
+                                        env=env)
+
+        # Do all needed links
+        profilesDependencyList = self.getProfileDependencies(pf)
+        for ip in profilesDependencyList:
+            piFolder = pf.folder / ip.getIdentifier().name
+            if piFolder.exists():
+                piFolder = pf.folder / str(ip.getIdentifier())
+            piFolder.symlink_to(ip.folder)
 
     def getProfileEnv(self, name):
         pf = self.retrieveProfile(name)
         self.checkProfile(pf)
-        return self.app.getPackageEnv(pf.getPackages(),
-                                      env=self.getSkelEnvironement(pf))
+        return packageListToEnvironnement(self.getProfileDependencies(pf),
+                                          self.app.listInstalledPackages(),
+                                          env=self.getSkelEnvironement(pf))
 
     def getSkelEnvironement(self, pf=None):
         out = self.app.getLeafEnvironment()
@@ -887,3 +887,13 @@ class Workspace():
             out.env.append(("LEAF_PROFILE", pf.name))
             out.addSubEnv(pf.getEnvironment())
         return out
+
+    def getProfileDependencies(self, pf):
+        '''
+        Returns all latest packages needed by a profile
+        '''
+        return DependencyManager.compute(pf.getPackageIdentifiers(),
+                                         DependencyType.INSTALLED,
+                                         strategy=DependencyStrategy.LATEST_VERSION,
+                                         ipMap=self.app.listInstalledPackages(),
+                                         env=self.getSkelEnvironement(pf))

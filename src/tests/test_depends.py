@@ -4,7 +4,7 @@
 
 from collections import OrderedDict
 from leaf.constants import LeafFiles
-from leaf.coreutils import DependencyManager, DependencyType
+from leaf.coreutils import DependencyManager, DependencyType, DependencyStrategy
 from leaf.model import Manifest, PackageIdentifier, Environment
 from pathlib import Path
 import unittest
@@ -263,6 +263,34 @@ class TestDepends(unittest.TestCase):
         self.assertEqual(["prereq-false_1.0",
                           "prereq-true_1.0"],
                          list(map(str, map(Manifest.getIdentifier, prereqs))))
+
+    def testLatest(self):
+        availablePackages = TestDepends.MANIFEST_MAP
+
+        deps = DependencyManager.compute(list(map(mkpi, ["container-A_1.0",
+                                                         "container-A_2.0"])),
+                                         depType=DependencyType.INSTALL,
+                                         strategy=DependencyStrategy.ALL_VERSIONS,
+                                         apMap=availablePackages,
+                                         ipMap={})
+        self.assertEqual(['container-E_1.0',
+                          'container-B_1.0',
+                          'container-C_1.0',
+                          'container-A_1.0',
+                          'container-D_1.0',
+                          'container-A_2.0'],
+                         list(map(str, map(Manifest.getIdentifier, deps))))
+
+        deps = DependencyManager.compute(list(map(mkpi, ["container-A_1.0",
+                                                         "container-A_2.0"])),
+                                         depType=DependencyType.INSTALL,
+                                         strategy=DependencyStrategy.LATEST_VERSION,
+                                         apMap=availablePackages,
+                                         ipMap={})
+        self.assertEqual(['container-C_1.0',
+                          'container-D_1.0',
+                          'container-A_2.0'],
+                         list(map(str, map(Manifest.getIdentifier, deps))))
 
 
 if __name__ == "__main__":

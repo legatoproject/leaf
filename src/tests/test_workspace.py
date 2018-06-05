@@ -5,10 +5,13 @@
 from collections import OrderedDict
 from leaf.core import Workspace, LeafApp
 from leaf.logger import TextLogger, Verbosity
+from leaf.model import Manifest
 import platform
 import unittest
 
+from tests.test_depends import mkpi
 from tests.utils import AbstractTestWithRepo
+
 
 VERBOSITY = Verbosity.VERBOSE
 
@@ -238,6 +241,45 @@ class TestProfile(AbstractTestWithRepo):
         self.assertEqual(["container-A_2.1",
                           "version_2.0"],
                          pf.getPackages())
+
+    def testPackageOverride(self):
+        self.ws.readConfiguration(True)
+        self.ws.createProfile("myprofile")
+        self.ws.updateProfile("myprofile",
+                              mpkgAddList=["container-A_1.0"])
+        self.ws.provisionProfile("myprofile")
+
+        self.checkInstalledPackages(["container-A_1.0",
+                                     "container-B_1.0",
+                                     "container-C_1.0",
+                                     "container-E_1.0"])
+        self.checkProfileContent("myprofile",
+                                 ["container-A",
+                                  "container-B",
+                                  "container-C",
+                                  "container-E"])
+
+        pf = self.ws.updateProfile("myprofile",
+                                   mpkgAddList=["container-E_1.1"])
+        self.ws.provisionProfile("myprofile")
+
+        self.checkInstalledPackages(["container-A_1.0",
+                                     "container-B_1.0",
+                                     "container-C_1.0",
+                                     "container-E_1.0",
+                                     "container-E_1.1"])
+        self.checkProfileContent("myprofile",
+                                 ["container-A",
+                                  "container-B",
+                                  "container-C",
+                                  "container-E"])
+        self.assertEqual(list(map(mkpi,
+                                  ["container-E_1.1",
+                                   "container-B_1.0",
+                                   "container-C_1.0",
+                                   "container-A_1.0"])),
+                         list(map(Manifest.getIdentifier,
+                                  self.ws.getProfileDependencies(pf))))
 
 
 if __name__ == "__main__":

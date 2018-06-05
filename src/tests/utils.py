@@ -1,7 +1,3 @@
-
-'''
-Constants to tweak the tests
-'''
 from leaf.cli import LeafCli
 from leaf.constants import LeafConstants, LeafFiles
 from leaf.core import LeafRepository
@@ -14,7 +10,6 @@ import subprocess
 from tempfile import mkdtemp
 import unittest
 from unittest.case import TestCase
-
 
 LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
 RESOURCE_FOLDER = Path("tests/resources/")

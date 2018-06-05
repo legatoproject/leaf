@@ -7,8 +7,8 @@ from leaf.constants import LeafConstants
 from leaf.core import LeafApp
 from leaf.coreutils import DependencyType
 from leaf.logger import Verbosity, TextLogger
-from leaf.model import PackageIdentifier, Environment, Manifest,\
-    AvailablePackage, InstalledPackage
+from leaf.model import PackageIdentifier, Environment, AvailablePackage,\
+    InstalledPackage
 from leaf.utils import isFolderIgnored
 import os
 import platform

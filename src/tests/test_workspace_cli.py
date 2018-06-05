@@ -458,6 +458,36 @@ class TestProfileCli_Default(LeafCliWrapper):
             self.assertTrue(key in keys, msg=key)
         print(keys)
 
+    def testPackageOverride(self):
+        self.leafExec("init")
+        self.leafExec("create", "myprofile")
+        self.leafExec("config:p", "-p", "container-A_1.0")
+        self.leafExec("sync")
+
+        self.checkInstalledPackages(["container-A_1.0",
+                                     "container-B_1.0",
+                                     "container-C_1.0",
+                                     "container-E_1.0"])
+        self.checkProfileContent("myprofile",
+                                 ["container-A",
+                                  "container-B",
+                                  "container-C",
+                                  "container-E"])
+
+        self.leafExec("config:p", "-p", "container-E_1.1")
+        self.leafExec("sync")
+
+        self.checkInstalledPackages(["container-A_1.0",
+                                     "container-B_1.0",
+                                     "container-C_1.0",
+                                     "container-E_1.0",
+                                     "container-E_1.1"])
+        self.checkProfileContent("myprofile",
+                                 ["container-A",
+                                  "container-B",
+                                  "container-C",
+                                  "container-E"])
+
 
 @unittest.skipUnless("VERBOSE" in LEAF_UT_LEVELS, "Test disabled")
 class TestProfileCli_Verbose(TestProfileCli_Default):
