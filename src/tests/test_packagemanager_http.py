@@ -11,7 +11,7 @@ from time import sleep
 import unittest
 
 from tests.test_packagemanager_file import TestPackageManager_File
-from tests.utils import AbstractTestWithRepo
+from tests.testutils import AbstractTestWithRepo
 
 
 # Needed for http server

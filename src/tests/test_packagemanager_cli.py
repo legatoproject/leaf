@@ -5,7 +5,7 @@
 import os
 import unittest
 
-from tests.utils import LeafCliWrapper, RESOURCE_FOLDER
+from tests.testutils import LeafCliWrapper, RESOURCE_FOLDER
 
 
 LEAF_UT_LEVELS = os.environ.get("LEAF_UT_LEVELS", "QUIET,VERBOSE,JSON")

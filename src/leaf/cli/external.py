@@ -7,11 +7,12 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 import argparse
-from leaf.cliutils import GenericCommand
 import os
 from os.path import pathsep
 from pathlib import Path
 import subprocess
+
+from leaf.cli.cliutils import GenericCommand
 
 
 class ExternalCommand(GenericCommand):

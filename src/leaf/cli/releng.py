@@ -8,8 +8,10 @@ Leaf Package Manager
 '''
 
 import argparse
-from leaf.cliutils import LeafCommand, GenericCommand
 from pathlib import Path
+
+from leaf.cli.cliutils import LeafCommand, GenericCommand
+from leaf.core.relengmanager import RelengManager
 
 
 class RepositoryCommand(GenericCommand):
@@ -61,8 +63,8 @@ class RepositoryPackSubCommand(LeafCommand):
                             help='the manifest file to package')
 
     def execute(self, args):
-        self.getApp(args).pack(args.manifest,
-                               args.pack_output)
+        RelengManager(self.getLogger(args)).pack(args.manifest,
+                                                 args.pack_output)
 
 
 class RepositoryIndexSubCommand(LeafCommand):
@@ -99,8 +101,8 @@ class RepositoryIndexSubCommand(LeafCommand):
                             help='leaf artifacts')
 
     def execute(self, args):
-        self.getApp(args).index(args.index_output,
-                                args.artifacts,
-                                args.index_name,
-                                args.index_description,
-                                args.index_composites)
+        RelengManager(self.getLogger(args)).index(args.index_output,
+                                                  args.artifacts,
+                                                  args.index_name,
+                                                  args.index_description,
+                                                  args.index_composites)

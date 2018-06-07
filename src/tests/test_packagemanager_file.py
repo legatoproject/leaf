@@ -3,20 +3,21 @@
 '''
 
 from datetime import datetime, timedelta
-from leaf.constants import LeafConstants
-from leaf.core import LeafApp
-from leaf.coreutils import DependencyType
-from leaf.logger import Verbosity, TextLogger
-from leaf.model import PackageIdentifier, Environment, AvailablePackage,\
-    InstalledPackage
-from leaf.utils import isFolderIgnored
 import os
 import platform
 import sys
 import time
 import unittest
 
-from tests.utils import AbstractTestWithRepo, envFileToMap
+from leaf.constants import LeafConstants
+from leaf.core.dependencies import DependencyType
+from leaf.core.logger import Verbosity, TextLogger
+from leaf.core.packagemanager import PackageManager
+from leaf.model.base import Environment
+from leaf.model.package import PackageIdentifier, AvailablePackage,\
+    InstalledPackage
+from leaf.utils import isFolderIgnored
+from tests.testutils import AbstractTestWithRepo, envFileToMap
 
 
 VERBOSITY = Verbosity.VERBOSE
@@ -34,8 +35,8 @@ class TestPackageManager_File(AbstractTestWithRepo):
             self.getConfigurationFile())
         os.environ[LeafConstants.ENV_CACHE_FOLDER] = str(
             self.getCacheFolder())
-        self.app = LeafApp(TextLogger(VERBOSITY, True),
-                           nonInteractive=True)
+        self.app = PackageManager(TextLogger(VERBOSITY, True),
+                                  nonInteractive=True)
 
         if "LEAF_TIMEOUT" not in os.environ:
             # Fix CI timeout

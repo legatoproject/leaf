@@ -7,11 +7,14 @@ from setuptools import setup
 setup(name='leaf',
       version=__version__,
       packages=[
-          'leaf'
+          'leaf',
+          'leaf.model',
+          'leaf.core',
+          'leaf.cli'
       ],
       entry_points={
           'console_scripts': [
-              'leaf = leaf.cli:main'
+              'leaf = leaf.cli.cli:main'
           ]
       },
       test_suite='nose.collector',

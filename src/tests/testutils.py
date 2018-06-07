@@ -1,8 +1,3 @@
-from leaf.cli import LeafCli
-from leaf.constants import LeafConstants, LeafFiles
-from leaf.core import LeafRepository
-from leaf.logger import TextLogger, Verbosity
-from leaf.model import Manifest, PackageIdentifier
 import os
 from pathlib import Path
 import shutil
@@ -10,6 +5,13 @@ import subprocess
 from tempfile import mkdtemp
 import unittest
 from unittest.case import TestCase
+
+from leaf.cli.cli import LeafCli
+from leaf.constants import LeafConstants, LeafFiles
+from leaf.core.logger import TextLogger, Verbosity
+from leaf.core.relengmanager import RelengManager
+from leaf.model.package import PackageIdentifier, Manifest
+
 
 LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
 RESOURCE_FOLDER = Path("tests/resources/")
@@ -187,7 +189,7 @@ def generateRepo(sourceFolder, outputFolder, logger):
     artifactsList = []
     artifactsListComposite = []
 
-    app = LeafRepository(logger)
+    app = RelengManager(logger)
     for packageFolder in sourceFolder.iterdir():
         if packageFolder.is_dir():
             manifestFile = packageFolder / LeafFiles.MANIFEST

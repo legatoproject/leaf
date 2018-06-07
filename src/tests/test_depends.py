@@ -3,12 +3,14 @@
 '''
 
 from collections import OrderedDict
-from leaf.constants import LeafFiles
-from leaf.coreutils import DependencyManager, DependencyType, DependencyStrategy
-from leaf.model import Manifest, PackageIdentifier, Environment
 from pathlib import Path
 import unittest
 from unittest.case import TestCase
+
+from leaf.constants import LeafFiles
+from leaf.core.dependencies import DependencyManager, DependencyType, DependencyStrategy
+from leaf.model.base import Environment
+from leaf.model.package import Manifest, PackageIdentifier
 
 
 def mkpi(pis):

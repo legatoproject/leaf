@@ -6,13 +6,14 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from leaf.cliutils import LeafCommand, initCommonArgs, LeafCommandGenerator
 from leaf.constants import LeafFiles
-from leaf.core import Workspace
-from leaf.model import Profile
 from leaf.utils import envListToMap, findWorkspaceRoot
 import os
 from pathlib import Path
+
+from leaf.cli.cliutils import LeafCommand, initCommonArgs, LeafCommandGenerator
+from leaf.core.workspacemanager import WorkspaceManager
+from leaf.model.workspace import Profile
 
 
 class UserConfigCommand(LeafCommand):
@@ -54,7 +55,7 @@ class StatusCommand(LeafCommand):
         wspath = findWorkspaceRoot(currentFolder=args.workspace,
                                    failIfNoWs=False)
         if wspath is not None:
-            ws = Workspace(wspath, self.getApp(args))
+            ws = WorkspaceManager(wspath, self.getApp(args))
             self.getLogger(args).displayItem(ws)
         else:
             self.getLogger(args).printDefault(
@@ -79,7 +80,7 @@ class SetupCommand(LeafCommand):
                                           arguments=arguments)
         if logger is not None:
             logger.printQuiet("  -> Execute command:", "leaf", *command)
-        from leaf.cli import LeafCli
+        from leaf.cli.cli import LeafCli
         return LeafCli().run(customArgs=command,
                              handleExceptions=False)
 

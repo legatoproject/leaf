@@ -7,12 +7,14 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 import argparse
-from leaf.cliutils import LeafCommand, GenericCommand
-from leaf.coreutils import TagManager, DependencyType
-from leaf.filtering import MetaPackageFilter
-from leaf.model import Manifest
-from leaf.utils import mkTmpLeafRootDir
 from pathlib import Path
+
+from leaf.cli.cliutils import LeafCommand, GenericCommand
+from leaf.core.dependencies import DependencyType
+from leaf.core.tags import TagManager
+from leaf.model.filtering import MetaPackageFilter
+from leaf.model.package import Manifest
+from leaf.utils import mkTmpLeafRootDir
 
 
 class RemotesCommand(LeafCommand):

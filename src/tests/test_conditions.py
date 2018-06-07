@@ -1,9 +1,10 @@
 '''
 @author: seb
 '''
-from leaf.model import ConditionalPackageIdentifier, PackageIdentifier,\
-    Environment
 import unittest
+
+from leaf.model.base import Environment
+from leaf.model.package import ConditionalPackageIdentifier, PackageIdentifier
 
 
 class ConditionsTest(unittest.TestCase):

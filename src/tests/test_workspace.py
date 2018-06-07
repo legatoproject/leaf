@@ -3,14 +3,15 @@
 '''
 
 from collections import OrderedDict
-from leaf.core import Workspace, LeafApp
-from leaf.logger import TextLogger, Verbosity
-from leaf.model import Manifest
 import platform
 import unittest
 
+from leaf.core.logger import TextLogger, Verbosity
+from leaf.core.packagemanager import PackageManager
+from leaf.core.workspacemanager import WorkspaceManager
+from leaf.model.package import Manifest
 from tests.test_depends import mkpi
-from tests.utils import AbstractTestWithRepo
+from tests.testutils import AbstractTestWithRepo
 
 
 VERBOSITY = Verbosity.VERBOSE
@@ -24,10 +25,10 @@ class TestProfile(AbstractTestWithRepo):
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
-        self.app = LeafApp(self.logger, nonInteractive=True)
+        self.app = PackageManager(self.logger, nonInteractive=True)
         self.app.updateUserConfiguration(rootFolder=self.getInstallFolder(),
                                          remoteAddList=[self.getRemoteUrl()])
-        self.ws = Workspace(self.getWorkspaceFolder(), self.app)
+        self.ws = WorkspaceManager(self.getWorkspaceFolder(), self.app)
 
     def testInit(self):
         with self.assertRaises(Exception):

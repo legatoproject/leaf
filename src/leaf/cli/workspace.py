@@ -6,12 +6,13 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from leaf.cliutils import LeafCommand, initCommonArgs
-from leaf.coreutils import genEnvScript, TagManager
-from leaf.filtering import MetaPackageFilter
-from leaf.model import Manifest
-from leaf.utils import envListToMap
 from pathlib import Path
+
+from leaf.cli.cliutils import LeafCommand, initCommonArgs
+from leaf.core.tags import TagManager
+from leaf.model.filtering import MetaPackageFilter
+from leaf.model.package import Manifest
+from leaf.utils import envListToMap
 
 
 class WorkspaceConfigCommand(LeafCommand):
@@ -230,7 +231,7 @@ class ProfileEnvCommand(LeafCommand):
                                   envUnsetList=args.unsetEnvList)
             env = pf.getEnvironment()
         logger.displayItem(env)
-        genEnvScript(env, args.activateScript, args.deactivateScript)
+        env.generateScripts(args.activateScript, args.deactivateScript)
 
 
 class ProfileSelectCommand(LeafCommand):

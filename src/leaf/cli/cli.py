@@ -10,24 +10,25 @@ Leaf Package Manager
 import argcomplete
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from leaf import __help_description__, __version__
-from leaf.cli_external import findLeafExternalCommands
-from leaf.cli_misc import StatusCommand, UserConfigCommand, SetupCommand
-from leaf.cli_package import PackageCommand, PackageSearchCommand,\
-    RemotesCommand
-from leaf.cli_releng import RepositoryCommand
-from leaf.cli_workspace import WorkspaceConfigCommand, ProfileConfigCommand,\
-    WorkspaceInitCommand, ProfileCreateCommand, ProfileSelectCommand,\
-    ProfileSyncCommand, ProfileRenameCommand, ProfileDeleteCommand,\
-    ProfileEnvCommand, ProfileUpdateCommand
 from leaf.utils import checkPythonVersion
 from pathlib import Path
 import sys
+
+from leaf.cli.external import findLeafExternalCommands
+from leaf.cli.misc import StatusCommand, UserConfigCommand, SetupCommand
+from leaf.cli.package import PackageCommand, PackageSearchCommand,\
+    RemotesCommand
+from leaf.cli.releng import RepositoryCommand
+from leaf.cli.workspace import WorkspaceConfigCommand, ProfileConfigCommand,\
+    WorkspaceInitCommand, ProfileCreateCommand, ProfileSelectCommand,\
+    ProfileSyncCommand, ProfileRenameCommand, ProfileDeleteCommand,\
+    ProfileEnvCommand, ProfileUpdateCommand
 
 
 def main():
     enabledExternalCommands = []
     # Add names in this array to enable external commands
-    #enabledExternalCommands.append('mycommand')
+    # enabledExternalCommands.append('mycommand')
     return LeafCli(externalCommands=enabledExternalCommands).run()
 
 

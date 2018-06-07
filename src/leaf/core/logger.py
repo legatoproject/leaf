@@ -12,11 +12,14 @@ from collections import OrderedDict
 from enum import IntEnum, unique
 import json
 from leaf.constants import JsonConstants, LeafConstants
-from leaf.core import Workspace
-from leaf.model import AvailablePackage, InstalledPackage, Manifest,\
-    RemoteRepository, LeafArtifact, Profile, Environment
 import os
 import sys
+
+from leaf.core.workspacemanager import WorkspaceManager
+from leaf.model.base import Environment
+from leaf.model.package import AvailablePackage, InstalledPackage, Manifest,\
+    RemoteRepository, LeafArtifact
+from leaf.model.workspace import Profile
 
 
 @unique
@@ -146,12 +149,12 @@ class TextLogger (ILogger):
 
             item.printEnv(kvConsumer=kvConsumer,
                           commentConsumer=None if self.isQuiet() else commentConsumer)
-        elif isinstance(item, Workspace):
-            print("Workspace %s" % item.rootFolder)
+        elif isinstance(item, WorkspaceManager):
+            print("WorkspaceManager %s" % item.rootFolder)
             if self.isVerbose():
                 wsc = item.readConfiguration()
                 content = OrderedDict()
-                content["Workspace env"] = wsc.getEnvMap()
+                content["WorkspaceManager env"] = wsc.getEnvMap()
                 content["Remotes"] = wsc.getRemotes()
                 self.prettyprintContent(content)
             for pf in item.getAllProfiles().values():
@@ -354,7 +357,7 @@ class JsonLogger(ILogger):
 
             item.printEnv(kvConsumer=kvConsumer,
                           commentConsumer=commentConsumer)
-        elif isinstance(item, Workspace):
+        elif isinstance(item, WorkspaceManager):
             itemType = "workspace"
             json = item.readConfiguration().json
             extraMap['folder'] = item.rootFolder

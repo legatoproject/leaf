@@ -2,11 +2,11 @@
 @author: seb
 '''
 
-from leaf.constants import LeafFiles
 import os
 import unittest
 
-from tests.utils import LeafCliWrapper
+from leaf.constants import LeafFiles
+from tests.testutils import LeafCliWrapper
 
 
 LEAF_UT_LEVELS = os.environ.get("LEAF_UT_LEVELS", "QUIET,VERBOSE,JSON")

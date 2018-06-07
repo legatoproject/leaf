@@ -9,12 +9,14 @@ Leaf Package Manager
 
 from abc import abstractmethod, ABC
 from collections import OrderedDict
-from leaf.core import Workspace, LeafApp
-from leaf.logger import createLogger, Verbosity
 from leaf.utils import findWorkspaceRoot
 import os
 from pathlib import Path
 import traceback
+
+from leaf.core.logger import createLogger, Verbosity
+from leaf.core.packagemanager import PackageManager
+from leaf.core.workspacemanager import WorkspaceManager
 
 
 def initCommonArgs(subparser, withEnv=False, withRemotes=False, withPackages=False, profileNargs=None):
@@ -123,7 +125,7 @@ class LeafCommand(GenericCommand):
     def getApp(self, args, logger=None):
         if logger is None:
             logger = self.getLogger(args)
-        return LeafApp(logger, nonInteractive=args.nonInteractive)
+        return PackageManager(logger, nonInteractive=args.nonInteractive)
 
     def getWorkspace(self, args, autoFindWorkspace=True, app=None):
         wspath = None
@@ -136,7 +138,7 @@ class LeafCommand(GenericCommand):
 
         if app is None:
             app = self.getApp(args)
-        return Workspace(wspath, app)
+        return WorkspaceManager(wspath, app)
 
 
 class LeafCommandGenerator():
