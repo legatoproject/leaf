@@ -11,12 +11,6 @@ from builtins import filter
 from collections import OrderedDict
 from datetime import datetime
 import json
-import os
-import platform
-import shutil
-from tarfile import TarFile
-import urllib.request
-
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles
 from leaf.core.coreutils import VariableResolver, StepExecutor,\
     packageListToEnvironnement
@@ -28,6 +22,11 @@ from leaf.model.package import RemoteRepository, PackageIdentifier,\
 from leaf.utils import getAltEnvPath, jsonLoadFile, jsonWriteFile, resolveUrl,\
     isFolderIgnored, getCachedArtifactName, markFolderAsIgnored,\
     mkTmpLeafRootDir, downloadFile
+import os
+import platform
+import shutil
+from tarfile import TarFile
+import urllib.request
 
 
 class PackageManager():
@@ -162,7 +161,8 @@ class PackageManager():
                     pass
             if pi is None:
                 raise ValueError("Cannot find package matching %s" % motif)
-            out.append(pi)
+            if pi not in out:
+                out.append(pi)
         return out
 
     def listAvailablePackages(self, smartRefresh=True):
@@ -341,8 +341,8 @@ class PackageManager():
         if availablePackages is None:
             availablePackages = self.listAvailablePackages()
 
-        piList = set(self.resolveLatest(motifList,
-                                        apMap=availablePackages))
+        piList = self.resolveLatest(motifList,
+                                    apMap=availablePackages)
 
         # Get packages to install
         apList = [availablePackages[pi] for pi in piList]
