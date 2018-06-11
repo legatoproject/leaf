@@ -31,19 +31,30 @@ _leaf_completions()
 {
 	local CURRENT_WORD="${COMP_WORDS[COMP_CWORD]}"
 	local PREVIOUS_WORD="${COMP_WORDS[COMP_CWORD-1]}"
-	case "$PREVIOUS_WORD" in
-		"search"|"install"|"-p"|"--package")
-			COMPREPLY+=($(leaf search -aq "$CURRENT_WORD"))
-			;;
-		"remove")
-			COMPREPLY+=($(leaf package list -aq "$CURRENT_WORD"))
-			;;
-		"select")
-			COMPREPLY+=($(leaf status | awk '/^- / {print $2}'))
-			;;
-		*)
-		  _python_argcomplete "$@"
-		  ;;
-	esac
+	local PREVIOUS_PREVIOUS_WORD="${COMP_WORDS[COMP_CWORD-2]}"
+
+	if test "$PREVIOUS_PREVIOUS_WORD" = "remote"; then
+		# Handle remotes
+		if test "$PREVIOUS_WORD" = "remove" -o \
+			"$PREVIOUS_WORD" = "enable" -o \
+			"$PREVIOUS_WORD" = "disable"; then
+			COMPREPLY+=($(leaf remote list -q))
+		fi
+	else
+		case "$PREVIOUS_WORD" in
+			"search"|"install"|"-p"|"--package")
+				COMPREPLY+=($(leaf search -aq "$CURRENT_WORD"))
+				;;
+			"remove")
+				COMPREPLY+=($(leaf package list -aq "$CURRENT_WORD"))
+				;;
+			"select")
+				COMPREPLY+=($(leaf status | awk '/^- / {print $2}'))
+				;;
+			*)
+			  _python_argcomplete "$@"
+			  ;;
+		esac
+	fi
 } 
 complete -o nospace -o default -F _leaf_completions "leaf"

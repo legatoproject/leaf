@@ -7,8 +7,6 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from collections import OrderedDict
-import shutil
-
 from leaf import __version__
 from leaf.constants import LeafFiles, JsonConstants
 from leaf.core.coreutils import packageListToEnvironnement
@@ -18,6 +16,7 @@ from leaf.model.config import WorkspaceConfiguration
 from leaf.model.package import Manifest, PackageIdentifier
 from leaf.model.workspace import Profile
 from leaf.utils import jsonLoadFile, checkSupportedLeaf, jsonWriteFile
+import shutil
 
 
 class WorkspaceManager():
@@ -42,8 +41,6 @@ class WorkspaceManager():
         wsc = WorkspaceConfiguration(jsonLoadFile(self.configFile))
         checkSupportedLeaf(wsc.jsonpath(JsonConstants.INFO_LEAF_MINVER),
                            exceptionMessage="Leaf has to be updated to work with this workspace")
-        # Configure app with ws configuration
-        self.app.updateUserConfiguration(remoteAddList=wsc.getRemotes())
         return wsc
 
     def writeConfiguration(self, wsc):
@@ -60,11 +57,9 @@ class WorkspaceManager():
         tmpFile.rename(self.configFile)
 
     def updateWorkspaceConfiguration(self,
-                                     envSetMap=None, envUnsetList=None,
-                                     remoteAddList=None, remoteRmList=None):
+                                     envSetMap=None, envUnsetList=None):
         wsc = self.readConfiguration()
         wsc.updateEnv(envSetMap, envUnsetList)
-        wsc.updateRemotes(remoteAddList, remoteRmList)
         self.writeConfiguration(wsc)
 
     def getAllProfiles(self, wsc=None):

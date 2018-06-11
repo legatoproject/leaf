@@ -7,39 +7,22 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 import argparse
-from pathlib import Path
-
-from leaf.cli.cliutils import LeafCommand, GenericCommand
+from leaf.cli.cliutils import LeafCommand, LeafMetaCommand
 from leaf.core.dependencies import DependencyType
 from leaf.core.tags import TagManager
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import Manifest
 from leaf.utils import mkTmpLeafRootDir, envListToMap
-
-
-class RemotesCommand(LeafCommand):
-
-    def __init__(self):
-        LeafCommand.__init__(self,
-                             "remotes",
-                             "display remotes information")
-
-    def execute(self, args):
-        logger = self.getLogger(args)
-        app = self.getApp(args, logger=logger)
-
-        rrList = app.getRemoteRepositories()
-        for rr in rrList:
-            if rr.isRootRepository:
-                logger.displayItem(rr)
+from pathlib import Path
 
 
 class PackageSearchCommand(LeafCommand):
 
     def __init__(self):
-        LeafCommand.__init__(self,
-                             "search",
-                             "search for available packages")
+        LeafCommand.__init__(
+            self,
+            "search",
+            "search for available packages")
 
     def initArgs(self, parser):
         super().initArgs(parser)
@@ -85,49 +68,21 @@ class PackageSearchCommand(LeafCommand):
                 logger.displayItem(mf)
 
 
-class PackageCommand(GenericCommand):
+class PackageMetaCommand(LeafMetaCommand):
 
     def __init__(self):
-        LeafCommand.__init__(self,
-                             "package",
-                             "core package manager commands",
-                             cmdAliases=["pkg"])
-        self.subCommands = [
-            PackageListSubCommand(),
-            PackageRefreshSubCommand(),
-            PackageInstallSubCommand(),
-            PackageRemoveSubCommand(),
-            PackageEnvSubCommand(),
-            PackageDependsSubCommand(),
-            PackagePrereqSubCommand()]
+        LeafMetaCommand.__init__(self,
+                                 "package",
+                                 "core package manager commands",
+                                 cmdAliases=["pkg"])
 
-    def initArgs(self, parser):
-        super().initArgs(parser)
-        subparsers = parser.add_subparsers(dest='subCommand',
-                                           description='supported subcommands',
-                                           metavar="SUBCOMMAND",
-                                           help='actions to execute')
-        subparsers.required = True
-        for subCommand in self.subCommands:
-            subCommand.create(subparsers)
-
-    def execute(self, args):
-        for subCommand in self.subCommands:
-            if subCommand.isHandled(args.subCommand):
-                return subCommand.execute(args)
-        raise ValueError("Cannot find subcommand for %s" % args.subcommand)
-
-
-class PackageRefreshSubCommand(LeafCommand):
-
-    def __init__(self):
-        LeafCommand.__init__(self,
-                             "refresh",
-                             "refresh remote repositories packages list",
-                             cmdAliases=["f"])
-
-    def execute(self, args):
-        self.getApp(args).fetchRemotes()
+    def getSubCommands(self):
+        return [PackageListSubCommand(),
+                PackageInstallSubCommand(),
+                PackageRemoveSubCommand(),
+                PackageEnvSubCommand(),
+                PackageDependsSubCommand(),
+                PackagePrereqSubCommand()]
 
 
 class PackageListSubCommand(LeafCommand):

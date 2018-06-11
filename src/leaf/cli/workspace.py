@@ -6,13 +6,12 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from pathlib import Path
-
 from leaf.cli.cliutils import LeafCommand, initCommonArgs
 from leaf.core.tags import TagManager
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import Manifest
 from leaf.utils import envListToMap
+from pathlib import Path
 
 
 class WorkspaceConfigCommand(LeafCommand):
@@ -26,15 +25,12 @@ class WorkspaceConfigCommand(LeafCommand):
     def initArgs(self, parser):
         super().initArgs(parser)
         initCommonArgs(parser,
-                       withEnv=True,
-                       withRemotes=True)
+                       withEnv=True)
 
     def execute(self, args):
         ws = self.getWorkspace(args)
         ws.updateWorkspaceConfiguration(envSetMap=envListToMap(args.setEnvList),
-                                        envUnsetList=args.unsetEnvList,
-                                        remoteAddList=args.addRemoteList,
-                                        remoteRmList=args.rmRemoteList)
+                                        envUnsetList=args.unsetEnvList)
 
 
 class ProfileConfigCommand(LeafCommand):

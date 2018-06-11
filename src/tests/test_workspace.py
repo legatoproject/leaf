@@ -3,13 +3,13 @@
 '''
 
 from collections import OrderedDict
-import platform
-import unittest
-
 from leaf.core.logger import TextLogger, Verbosity
 from leaf.core.packagemanager import PackageManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.model.package import Manifest
+import platform
+import unittest
+
 from tests.test_depends import mkpi
 from tests.testutils import AbstractTestWithRepo
 
@@ -26,8 +26,8 @@ class TestProfile(AbstractTestWithRepo):
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
         self.app = PackageManager(self.logger, nonInteractive=True)
-        self.app.updateUserConfiguration(rootFolder=self.getInstallFolder(),
-                                         remoteAddList=[self.getRemoteUrl()])
+        self.app.updateUserConfiguration(rootFolder=self.getInstallFolder())
+        self.app.addRemote("default", self.getRemoteUrl())
         self.ws = WorkspaceManager(self.getWorkspaceFolder(), self.app)
 
     def testInit(self):
@@ -204,26 +204,6 @@ class TestProfile(AbstractTestWithRepo):
                                          "container-B",
                                          "container-C",
                                          "container-E"])
-
-    def testRemoteInWorkspace(self):
-        self.app.updateUserConfiguration(
-            remoteRmList=self.app.readConfiguration().getRemotes())
-        self.assertEqual(0, len(self.app.readConfiguration().getRemotes()))
-        self.assertEqual(0, len(self.app.getRemoteRepositories()))
-        self.assertEqual(0, len(self.app.listAvailablePackages()))
-
-        self.ws.readConfiguration(True)
-        self.ws.updateWorkspaceConfiguration(
-            remoteAddList=[self.getRemoteUrl()])
-        self.ws.createProfile("foo")
-        self.ws.updateProfile("foo", mpkgAddList=["container-A"])
-        self.ws.switchProfile("foo")
-        self.ws.provisionProfile("foo")
-        self.checkProfileContent("foo", ["container-A",
-                                         "container-C",
-                                         "container-D"])
-        self.assertEqual(1, len(self.app.readConfiguration().getRemotes()))
-        self.assertEqual(2, len(self.app.getRemoteRepositories()))
 
     def testUpgrade(self):
         self.ws.readConfiguration(True)

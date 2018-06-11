@@ -9,17 +9,16 @@ Leaf Package Manager
 
 from abc import abstractmethod, ABC
 from collections import OrderedDict
+from leaf.core.logger import createLogger, Verbosity
+from leaf.core.packagemanager import PackageManager
+from leaf.core.workspacemanager import WorkspaceManager
 from leaf.utils import findWorkspaceRoot
 import os
 from pathlib import Path
 import traceback
 
-from leaf.core.logger import createLogger, Verbosity
-from leaf.core.packagemanager import PackageManager
-from leaf.core.workspacemanager import WorkspaceManager
 
-
-def initCommonArgs(subparser, withEnv=False, withRemotes=False, withPackages=False, profileNargs=None):
+def initCommonArgs(subparser, withEnv=False, withPackages=False, profileNargs=None):
     if withEnv:
         subparser.add_argument('--set',
                                dest='setEnvList',
@@ -31,17 +30,6 @@ def initCommonArgs(subparser, withEnv=False, withRemotes=False, withPackages=Fal
                                action='append',
                                metavar='KEY',
                                help='remote given environment variable')
-    if withRemotes:
-        subparser.add_argument('--add-remote',
-                               dest='addRemoteList',
-                               action='append',
-                               metavar='URL',
-                               help='add given remote url')
-        subparser.add_argument('--rm-remote',
-                               dest='rmRemoteList',
-                               action='append',
-                               metavar='URL',
-                               help='remove given remote url')
     if withPackages:
         subparser.add_argument('-p', '--package',
                                dest='motifList',
@@ -99,6 +87,53 @@ class GenericCommand(ABC):
             return 2
 
 
+class LeafMetaCommand(GenericCommand):
+    '''
+    Generic class to represent commands that have subcommands
+    '''
+
+    def __init__(self, cmdName, cmdHelp, cmdAliases=None):
+        GenericCommand.__init__(self, cmdName, cmdHelp,
+                                cmdAliases=cmdAliases)
+
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        subparsers = parser.add_subparsers(dest='subCommand',
+                                           description='supported subcommands',
+                                           metavar="SUBCOMMAND",
+                                           help='actions to execute')
+
+        self.subCommands = []
+        self.defaultSubCommand = self.getDefaultSubCommand()
+        if self.defaultSubCommand is None:
+            subparsers.required = True
+        else:
+            subparsers.required = False
+            self.subCommands.append(self.defaultSubCommand)
+
+        self.subCommands += self.getSubCommands()
+        for lc in self.subCommands:
+            lc.create(subparsers)
+
+    def execute(self, args):
+        if args.subCommand is None:
+            if self.defaultSubCommand is not None:
+                return self.defaultSubCommand.execute(args)
+        else:
+            for subCommand in self.subCommands:
+                if subCommand.isHandled(args.subCommand):
+                    return subCommand.execute(args)
+        # Should not happen, handled by argparse
+        raise ValueError()
+
+    @abstractmethod
+    def getSubCommands(self):
+        return []
+
+    def getDefaultSubCommand(self):
+        return None
+
+
 class LeafCommand(GenericCommand):
     '''
     Define a leaf commands which uses -v/-q to set the logger verbosity
@@ -108,7 +143,7 @@ class LeafCommand(GenericCommand):
         GenericCommand.__init__(self, cmdName, cmdHelp, cmdAliases)
 
     def initArgs(self, parser):
-        GenericCommand.initArgs(self, parser)
+        super().initArgs(parser)
         group = parser.add_mutually_exclusive_group()
         group.add_argument("-v", "--verbose",
                            dest="verbosity",

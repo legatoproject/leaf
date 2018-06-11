@@ -53,6 +53,8 @@ class JsonConstants(object):
     '''
     # Configuration
     CONFIG_REMOTES = 'remotes'
+    CONFIG_REMOTE_URL = 'url'
+    CONFIG_REMOTE_ENABLED = 'enabled'
     CONFIG_ENV = 'env'
     CONFIG_ROOT = 'rootfolder'
 

@@ -20,8 +20,18 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
         self.leafExec("config:user")
 
     def testRemote(self):
-        self.leafExec("config:user", "--add-remote", self.getRemoteUrl())
-        self.leafExec("config:u", "--rm-remote", self.getRemoteUrl())
+        self.leafExec(["remote", "add"], "alt", self.getRemoteUrl())
+        self.leafExec(["remote", "add"], "alt", self.getRemoteUrl(),
+                      expectedRc=2)
+
+        self.leafExec(["remote", "disable"], "alt")
+        self.leafExec(["remote", "enable"], "alt")
+
+        self.leafExec(["remote", "remove"], "alt")
+        self.leafExec(["remote", "remove"], "alt",
+                      expectedRc=2)
+        self.leafExec(["remote", "enable"], "alt",
+                      expectedRc=2)
 
     def testSearch(self):
         self.leafExec("search")
@@ -101,12 +111,6 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
 
         self.leafExec(["pkg", "remove"], "condition")
         self.checkInstalledPackages([])
-
-    def testRemotes(self):
-        self.leafExec("remotes")
-        self.leafExec("config:user", "--add-remote",
-                      "https://foo.tld/bar/index.json")
-        self.leafExec("remotes")
 
     def testPrereq(self):
         self.leafExec(["pkg", "prereq"], "prereq-true_1.0")

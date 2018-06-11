@@ -10,13 +10,12 @@ Leaf Package Manager
 from functools import total_ordering
 import io
 from leaf.constants import JsonConstants, LeafFiles
+from leaf.model.base import JsonObject
 from leaf.utils import resolveUrl, jsonLoad, jsonLoadFile, checkSupportedLeaf, \
     versionComparator_lt, stringToTuple
 from pathlib import Path
 import re
 from tarfile import TarFile
-
-from leaf.model.base import JsonObject
 
 
 @total_ordering
@@ -249,20 +248,3 @@ class InstalledPackage(Manifest):
 
     def getEnvMap(self):
         return self.jsonpath(JsonConstants.ENV, default={})
-
-
-class RemoteRepository(JsonObject):
-    '''
-    Represent a remote repository
-    '''
-
-    def __init__(self, url, isRootRepository, json=None):
-        JsonObject.__init__(self, json)
-        self.isRootRepository = isRootRepository
-        self.url = url
-
-    def isFetched(self):
-        return self.json is not None
-
-    def getPackages(self):
-        return self.jsonpath(JsonConstants.REMOTE_PACKAGES, default=[])

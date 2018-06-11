@@ -1,12 +1,12 @@
 '''
 @author: seb
 '''
-import os
-
 from leaf.constants import LeafConstants
 from leaf.core.logger import TextLogger, Verbosity
 from leaf.core.packagemanager import PackageManager
 from leaf.model.filtering import MetaPackageFilter
+import os
+
 from tests.testutils import AbstractTestWithRepo
 
 
@@ -19,7 +19,7 @@ class FilteringTest(AbstractTestWithRepo):
         os.environ[LeafConstants.ENV_CACHE_FOLDER] = str(
             self.getCacheFolder())
         app = PackageManager(TextLogger(Verbosity.DEFAULT, True), True)
-        app.updateUserConfiguration(remoteAddList=[self.getRemoteUrl()])
+        app.addRemote("default", self.getRemoteUrl())
         app.fetchRemotes()
         self.content = app.listAvailablePackages().values()
         self.assertTrue(len(self.content) > 0)

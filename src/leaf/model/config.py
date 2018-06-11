@@ -9,9 +9,8 @@ Leaf Package Manager
 
 from collections import OrderedDict
 from leaf.constants import JsonConstants, LeafFiles
-from pathlib import Path
-
 from leaf.model.base import JsonObject, Environment
+from pathlib import Path
 
 
 class UserConfiguration(JsonObject):
@@ -40,23 +39,7 @@ class UserConfiguration(JsonObject):
                            self.getEnvMap())
 
     def getRemotes(self):
-        return self.jsoninit(key=JsonConstants.CONFIG_REMOTES,
-                             value=[])
-
-    def updateRemotes(self, addList, rmList):
-        out = False
-        remoteList = self.getRemotes()
-        if addList is not None:
-            for r in addList:
-                if r not in remoteList:
-                    remoteList.append(r)
-                    out = True
-        if rmList is not None:
-            for r in rmList:
-                if r in remoteList:
-                    remoteList.remove(r)
-                    out = True
-        return out
+        return self.jsoninit(key=JsonConstants.CONFIG_REMOTES, value=OrderedDict())
 
     def getRootFolder(self):
         return Path(self.jsoninit(key=JsonConstants.CONFIG_ROOT,
@@ -92,21 +75,6 @@ class WorkspaceConfiguration(JsonObject):
     def getEnvironment(self):
         return Environment("Exported by workspace config",
                            self.getEnvMap())
-
-    def getRemotes(self):
-        return self.jsoninit(key=JsonConstants.WS_REMOTES,
-                             value=[])
-
-    def updateRemotes(self, addList, rmList):
-        remoteList = self.getRemotes()
-        if addList is not None:
-            for r in addList:
-                if r not in remoteList:
-                    remoteList.append(r)
-        if rmList is not None:
-            for r in rmList:
-                if r in remoteList:
-                    remoteList.remove(r)
 
     def getProfiles(self):
         return self.jsoninit(key=JsonConstants.WS_PROFILES,

@@ -8,39 +8,23 @@ Leaf Package Manager
 '''
 
 import argparse
+from leaf.cli.cliutils import LeafCommand, LeafMetaCommand
+from leaf.core.relengmanager import RelengManager
 from pathlib import Path
 
-from leaf.cli.cliutils import LeafCommand, GenericCommand
-from leaf.core.relengmanager import RelengManager
 
-
-class RepositoryCommand(GenericCommand):
+class RepositoryMetaCommand(LeafMetaCommand):
 
     def __init__(self):
-        LeafCommand.__init__(self,
-                             "repository",
-                             "commands to maintain a leaf repository",
-                             cmdAliases=["repo"])
-        self.subCommands = [
-            RepositoryPackSubCommand(),
-            RepositoryIndexSubCommand()
-        ]
+        LeafMetaCommand.__init__(
+            self,
+            "repository",
+            "commands to maintain a leaf repository",
+            cmdAliases=["repo"])
 
-    def initArgs(self, parser):
-        super().initArgs(parser)
-        subparsers = parser.add_subparsers(dest='subCommand',
-                                           description='supported subcommands',
-                                           metavar="SUBCOMMAND",
-                                           help='actions to execute')
-        subparsers.required = True
-        for subCommand in self.subCommands:
-            subCommand.create(subparsers)
-
-    def execute(self, args):
-        for subCommand in self.subCommands:
-            if subCommand.isHandled(args.subCommand):
-                return subCommand.execute(args)
-        raise ValueError("Cannot find subcommand for %s" % args.subcommand)
+    def getSubCommands(self):
+        return [RepositoryPackSubCommand(),
+                RepositoryIndexSubCommand()]
 
 
 class RepositoryPackSubCommand(LeafCommand):

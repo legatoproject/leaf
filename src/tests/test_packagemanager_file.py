@@ -3,12 +3,6 @@
 '''
 
 from datetime import datetime, timedelta
-import os
-import platform
-import sys
-import time
-import unittest
-
 from leaf.constants import LeafConstants
 from leaf.core.dependencies import DependencyType
 from leaf.core.logger import Verbosity, TextLogger
@@ -17,6 +11,12 @@ from leaf.model.base import Environment
 from leaf.model.package import PackageIdentifier, AvailablePackage,\
     InstalledPackage
 from leaf.utils import isFolderIgnored
+import os
+import platform
+import sys
+import time
+import unittest
+
 from tests.testutils import AbstractTestWithRepo, envFileToMap
 
 
@@ -48,11 +48,13 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.assertEqual(0, len(self.app.listAvailablePackages()))
         self.assertEqual(0, len(self.app.listInstalledPackages()))
         self.assertEqual(0, len(self.app.readConfiguration().getRemotes()))
-        self.assertEqual(0, len(self.app.getRemoteRepositories()))
-        self.app.updateUserConfiguration(remoteAddList=[self.getRemoteUrl()])
+        self.assertEqual(0, len(self.app.getRemotes()))
+        self.app.addRemote("default", self.getRemoteUrl())
         self.assertEqual(1, len(self.app.readConfiguration().getRemotes()))
         self.app.fetchRemotes(True)
-        self.assertEqual(2, len(self.app.getRemoteRepositories()))
+        self.assertEqual(1, len(self.app.getRemotes()))
+        self.assertTrue(self.app.getRemotes()[0].isFetched())
+        self.assertNotEqual(0, len(self.app.listAvailablePackages()))
 
     def testCompression(self):
         packs = ["compress-bz2_1.0",
@@ -61,6 +63,31 @@ class TestPackageManager_File(AbstractTestWithRepo):
                  "compress-xz_1.0"]
         self.app.installFromRemotes(packs)
         self.checkContent(self.app.listInstalledPackages(), packs)
+
+    def testEnableDisableRemote(self):
+        self.assertEqual(1, len(self.app.getRemotes(True)))
+        self.assertTrue(len(self.app.listAvailablePackages()) > 0)
+        apMap = self.app.listAvailablePackages()
+
+        self.app.updateRemote("default", False)
+        self.assertEqual(1, len(self.app.getRemotes(False)))
+        self.assertEqual(0, len(self.app.getRemotes(True)))
+        self.assertTrue(len(self.app.listAvailablePackages()) == 0)
+        self.app.fetchRemotes()
+        self.assertTrue(len(self.app.listAvailablePackages()) == 0)
+
+        self.app.updateRemote("default", True)
+        self.assertEqual(1, len(self.app.getRemotes(False)))
+        self.assertEqual(1, len(self.app.getRemotes(True)))
+        self.assertTrue(len(self.app.listAvailablePackages()) > 0)
+
+        self.app.addRemote("composite",
+                           self.getRemoteUrl().replace("index", "composite"))
+        self.assertEqual(len(apMap),
+                         len(self.app.listAvailablePackages(smartRefresh=False)))
+        self.app.updateRemote("default", enabled=False)
+        self.assertGreater(len(apMap),
+                           len(self.app.listAvailablePackages(smartRefresh=False)))
 
     def testComposite(self):
         packs = ["composite_1.0"]

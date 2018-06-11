@@ -1,3 +1,8 @@
+from leaf.cli.cli import LeafCli
+from leaf.constants import LeafConstants, LeafFiles
+from leaf.core.logger import TextLogger, Verbosity
+from leaf.core.relengmanager import RelengManager
+from leaf.model.package import PackageIdentifier, Manifest
 import os
 from pathlib import Path
 import shutil
@@ -5,12 +10,6 @@ import subprocess
 from tempfile import mkdtemp
 import unittest
 from unittest.case import TestCase
-
-from leaf.cli.cli import LeafCli
-from leaf.constants import LeafConstants, LeafFiles
-from leaf.core.logger import TextLogger, Verbosity
-from leaf.core.relengmanager import RelengManager
-from leaf.model.package import PackageIdentifier, Manifest
 
 
 LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
@@ -145,8 +144,7 @@ class LeafCliWrapper(AbstractTestWithRepo):
         AbstractTestWithRepo.setUp(self)
         self.leafExec("config:user",
                       "--root", self.getInstallFolder())
-        self.leafExec("config:user",
-                      "--add-remote", self.getRemoteUrl())
+        self.leafExec(["remote", "add"], "default", self.getRemoteUrl())
 
     def leafExec(self, verb, *args, altWorkspace=None, expectedRc=0):
         if altWorkspace is None:

@@ -6,22 +6,21 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-
 import argcomplete
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from argparse import RawDescriptionHelpFormatter, ArgumentParser
 from pathlib import Path
 import sys
 
 from leaf import __help_description__, __version__
 from leaf.cli.external import findLeafExternalCommands
-from leaf.cli.misc import StatusCommand, UserConfigCommand, SetupCommand
-from leaf.cli.package import PackageCommand, PackageSearchCommand,\
-    RemotesCommand
-from leaf.cli.releng import RepositoryCommand
+from leaf.cli.misc import StatusCommand, SetupCommand, UserConfigCommand
+from leaf.cli.package import PackageSearchCommand, PackageMetaCommand
+from leaf.cli.releng import RepositoryMetaCommand
+from leaf.cli.remote import RemoteMetaCommand
 from leaf.cli.workspace import WorkspaceConfigCommand, ProfileConfigCommand,\
-    WorkspaceInitCommand, ProfileCreateCommand, ProfileSelectCommand,\
-    ProfileSyncCommand, ProfileRenameCommand, ProfileDeleteCommand,\
-    ProfileEnvCommand, ProfileUpdateCommand
+    ProfileSelectCommand, ProfileSyncCommand, ProfileEnvCommand,\
+    ProfileUpdateCommand, WorkspaceInitCommand, ProfileCreateCommand,\
+    ProfileRenameCommand, ProfileDeleteCommand
 from leaf.utils import checkPythonVersion
 
 
@@ -54,9 +53,9 @@ class LeafCli():
             ProfileRenameCommand(),
             ProfileDeleteCommand(),
             # Other commands
-            PackageCommand(),
-            RemotesCommand(),
-            RepositoryCommand()
+            PackageMetaCommand(),
+            RemoteMetaCommand(),
+            RepositoryMetaCommand()
         ]
         self.commands += findLeafExternalCommands(
             blacklistCommands=[cmd.cmdName for cmd in self.commands])

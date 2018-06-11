@@ -11,14 +11,15 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 from enum import IntEnum, unique
 import json
-from leaf.constants import JsonConstants, LeafConstants
 import os
 import sys
 
+from leaf.constants import LeafConstants
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.model.base import Environment
 from leaf.model.package import AvailablePackage, InstalledPackage, Manifest,\
-    RemoteRepository, LeafArtifact
+    LeafArtifact
+from leaf.model.remote import Remote
 from leaf.model.workspace import Profile
 
 
@@ -150,12 +151,11 @@ class TextLogger (ILogger):
             item.printEnv(kvConsumer=kvConsumer,
                           commentConsumer=None if self.isQuiet() else commentConsumer)
         elif isinstance(item, WorkspaceManager):
-            print("WorkspaceManager %s" % item.rootFolder)
+            print("Workspace %s" % item.rootFolder)
             if self.isVerbose():
                 wsc = item.readConfiguration()
                 content = OrderedDict()
-                content["WorkspaceManager env"] = wsc.getEnvMap()
-                content["Remotes"] = wsc.getRemotes()
+                content["Workspace env"] = wsc.getEnvMap()
                 self.prettyprintContent(content)
             for pf in item.getAllProfiles().values():
                 print("-",
@@ -202,21 +202,24 @@ class TextLogger (ILogger):
                 content["Requires"] = item.getLeafRequires()
                 content["Tags"] = item.getAllTags()
                 self.prettyprintContent(content)
-        elif isinstance(item, RemoteRepository):
-            print(item.url)
-            if self.isVerbose():
+        elif isinstance(item, Remote):
+            if self.isQuiet():
+                print(item.alias)
+            elif self.isVerbose():
+                print(item.alias)
                 content = OrderedDict()
-                content["Root repository"] = item.isRootRepository
-                if not item.isFetched():
-                    content["Status"] = "not fetched yet"
-                else:
-                    content["Name"] = item.jsonpath(JsonConstants.INFO,
-                                                    JsonConstants.REMOTE_NAME)
-                    content["Description"] = item.jsonpath(JsonConstants.INFO,
-                                                           JsonConstants.REMOTE_DESCRIPTION)
-                    content["Last update"] = item.jsonpath(JsonConstants.INFO,
-                                                           JsonConstants.REMOTE_DATE)
+                content["Url"] = item.getUrl()
+                if item.isFetched():
+                    content["Name"] = item.getInfoName()
+                    content["Description"] = item.getInfoDescription()
+                    content["Last update"] = item.getInfoDate()
+                content["Enabled"] = item.isEnabled()
                 self.prettyprintContent(content)
+            else:
+                label = "%s [%s]" % (item.alias, item.getUrl())
+                if not item.isEnabled():
+                    label += " (disabled)"
+                print(label)
         elif isinstance(item, tuple) and len(item) == 2:
             print('export %s="%s"; ' % item)
         elif item is not None:
@@ -340,7 +343,7 @@ class JsonLogger(ILogger):
         if extraMap is not None:
             for k, v in extraMap.items():
                 if k not in content:
-                    content[k] = str(v)
+                    content[k] = None if v is None else str(v)
         self.printJson(content)
         pass
 
@@ -381,11 +384,14 @@ class JsonLogger(ILogger):
                 extraMap['folder'] = item.folder
             elif isinstance(item, LeafArtifact):
                 extraMap['path'] = item.path
-        elif isinstance(item, RemoteRepository):
+        elif isinstance(item, Remote):
             itemType = "remote"
             json = item.json
-            extraMap = {'url': item.url,
-                        'isRootRepository': item.isRootRepository}
+            extraMap = {'alias': item.alias}
+            if item.isFetched():
+                extraMap["name"] = item.getInfoName()
+                extraMap["description"] = item.getInfoDescription()
+                extraMap["date"] = item.getInfoDate()
         elif isinstance(item, tuple) and len(item) == 2:
             itemType = "env"
             extraMap = {'key': item[0],
@@ -393,7 +399,6 @@ class JsonLogger(ILogger):
         else:
             itemType = "string"
             extraMap = {'value': str(item)}
-
         if itemType is not None:
             self.displayJsonItem(itemType, json, extraMap)
 

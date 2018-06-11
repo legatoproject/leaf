@@ -27,8 +27,7 @@ class UserConfigCommand(LeafCommand):
     def initArgs(self, parser):
         super().initArgs(parser)
         initCommonArgs(parser,
-                       withEnv=True,
-                       withRemotes=True)
+                       withEnv=True)
         parser.add_argument('--root',
                             dest='rootFolder',
                             type=Path,
@@ -36,12 +35,10 @@ class UserConfigCommand(LeafCommand):
                             help="set the root folder, default: %s" % LeafFiles.DEFAULT_LEAF_ROOT)
 
     def execute(self, args):
-        self.getApp(args).updateUserConfiguration(args.rootFolder,
-                                                  envListToMap(
-                                                      args.setEnvList),
-                                                  args.unsetEnvList,
-                                                  args.addRemoteList,
-                                                  args.rmRemoteList)
+        self.getApp(args).updateUserConfiguration(
+            rootFolder=args.rootFolder,
+            envSetMap=envListToMap(args.setEnvList),
+            envUnsetList=args.unsetEnvList)
 
 
 class StatusCommand(LeafCommand):
