@@ -11,6 +11,13 @@ from builtins import filter
 from collections import OrderedDict
 from datetime import datetime
 import json
+import os
+import platform
+import shutil
+from tarfile import TarFile
+import urllib.request
+
+from leaf import __version__
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles
 from leaf.core.coreutils import VariableResolver, StepExecutor,\
     packageListToEnvironnement
@@ -22,11 +29,6 @@ from leaf.model.package import RemoteRepository, PackageIdentifier,\
 from leaf.utils import getAltEnvPath, jsonLoadFile, jsonWriteFile, resolveUrl,\
     isFolderIgnored, getCachedArtifactName, markFolderAsIgnored,\
     mkTmpLeafRootDir, downloadFile
-import os
-import platform
-import shutil
-from tarfile import TarFile
-import urllib.request
 
 
 class PackageManager():
@@ -97,6 +99,7 @@ class PackageManager():
 
     def getLeafEnvironment(self):
         out = Environment("Leaf variables")
+        out.env.append(("LEAF_VERSION", str(__version__)))
         out.env.append(("LEAF_PLATFORM_SYSTEM", platform.system()))
         out.env.append(("LEAF_PLATFORM_MACHINE", platform.machine()))
         out.env.append(("LEAF_PLATFORM_RELEASE", platform.release()))

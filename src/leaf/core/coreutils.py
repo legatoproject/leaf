@@ -2,7 +2,6 @@
 import os
 import subprocess
 
-from leaf import __version__
 from leaf.constants import JsonConstants
 from leaf.model.base import Environment
 
@@ -93,7 +92,6 @@ class StepExecutor():
             env[k] = v
         if self.env is not None:
             env.update(self.env.toMap())
-        env["LEAF_VERSION"] = str(__version__)
         stdout = subprocess.DEVNULL
         if self.logger.isVerbose() or step.get(JsonConstants.STEP_EXEC_VERBOSE,
                                                False):

@@ -178,8 +178,9 @@ class TestPackageManager_File(AbstractTestWithRepo):
                            "env-B_1.0"])
 
         env = self.app.getPackageEnv(["env-A_1.0"])
-        self.assertEqual(8, len(env.toList()))
+        self.assertEqual(9, len(env.toList()))
         self.assertEqual([
+            ("LEAF_VERSION", "0.0.0"),
             ("LEAF_PLATFORM_SYSTEM", platform.system()),
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),

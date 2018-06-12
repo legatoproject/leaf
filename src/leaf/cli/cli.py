@@ -9,11 +9,10 @@ Leaf Package Manager
 
 import argcomplete
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
-from leaf import __help_description__, __version__
-from leaf.utils import checkPythonVersion
 from pathlib import Path
 import sys
 
+from leaf import __help_description__, __version__
 from leaf.cli.external import findLeafExternalCommands
 from leaf.cli.misc import StatusCommand, UserConfigCommand, SetupCommand
 from leaf.cli.package import PackageCommand, PackageSearchCommand,\
@@ -23,6 +22,7 @@ from leaf.cli.workspace import WorkspaceConfigCommand, ProfileConfigCommand,\
     WorkspaceInitCommand, ProfileCreateCommand, ProfileSelectCommand,\
     ProfileSyncCommand, ProfileRenameCommand, ProfileDeleteCommand,\
     ProfileEnvCommand, ProfileUpdateCommand
+from leaf.utils import checkPythonVersion
 
 
 def main():

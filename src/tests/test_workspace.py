@@ -144,8 +144,10 @@ class TestProfile(AbstractTestWithRepo):
         self.ws.switchProfile("myenv")
         self.ws.provisionProfile("myenv")
         env = self.ws.getProfileEnv("myenv")
-        self.assertEqual(12, len(env.toList()))
+        list(map(print, env.toList()))
+        self.assertEqual(13, len(env.toList()))
         self.assertEqual([
+            ("LEAF_VERSION", "0.0.0"),
             ("LEAF_PLATFORM_SYSTEM", platform.system()),
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),
@@ -163,8 +165,9 @@ class TestProfile(AbstractTestWithRepo):
 
         self.ws.updateWorkspaceConfiguration(envSetMap={"HELLO": "world"})
         env = self.ws.getProfileEnv("myenv")
-        self.assertEqual(13, len(env.toList()))
+        self.assertEqual(14, len(env.toList()))
         self.assertEqual([
+            ("LEAF_VERSION", "0.0.0"),
             ("LEAF_PLATFORM_SYSTEM", platform.system()),
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),
