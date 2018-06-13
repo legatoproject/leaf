@@ -26,15 +26,12 @@ from leaf.utils import checkPythonVersion
 
 
 def main():
-    enabledExternalCommands = []
-    # Add names in this array to enable external commands
-    # enabledExternalCommands.append('mycommand')
-    return LeafCli(externalCommands=enabledExternalCommands).run()
+    return LeafCli().run()
 
 
 class LeafCli():
 
-    def __init__(self, externalCommands=None):
+    def __init__(self):
         checkPythonVersion()
 
         self.commands = [
@@ -62,7 +59,6 @@ class LeafCli():
             RepositoryCommand()
         ]
         self.commands += findLeafExternalCommands(
-            whitelistCommands=externalCommands,
             blacklistCommands=[cmd.cmdName for cmd in self.commands])
 
         # Setup argument parser

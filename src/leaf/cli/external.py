@@ -7,6 +7,7 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 import argparse
+from collections import OrderedDict
 import os
 from os.path import pathsep
 from pathlib import Path
@@ -25,11 +26,11 @@ class ExternalCommand(GenericCommand):
     @staticmethod
     def tryExternalCommand(name, executable):
         '''
-        Try to run --help and use the first line as help to build a new
+        Try to run --description and use the first line as help to build a new
         ExternalCommand
         '''
         try:
-            desc = subprocess.check_output((str(executable), "--help"),
+            desc = subprocess.check_output((str(executable), "--description"),
                                            timeout=1)
             return ExternalCommand(name,
                                    desc.decode().splitlines()[0],
@@ -70,29 +71,28 @@ class ExternalCommand(GenericCommand):
                                env=env)
 
 
-def findLeafExternalCommands(whitelistCommands=None, blacklistCommands=None):
+def findLeafExternalCommands(blacklistCommands=None):
     '''
     Find leaf-XXX binaries in $PATH to build external commands
-    @param whitelistCommands: only use commands with name in list
     @param blacklistCommands: do not use commands with name in list
     @return: ExternalCommands list
     '''
-    out = []
+    out = OrderedDict()
     pathFolderList = os.environ["PATH"].split(pathsep)
     for pathFolder in map(Path, pathFolderList):
         if pathFolder.is_dir():
             for candidate in pathFolder.iterdir():
-                if candidate.is_file() and candidate.name.startswith("leaf-"):
-                    if os.access(str(candidate), os.X_OK):
-                        name = candidate.stem[5:]
-                        if blacklistCommands is not None and name in blacklistCommands:
-                            # Command is blacklisted
-                            continue
-                        if whitelistCommands is not None and name not in whitelistCommands:
-                            # Command is not in whitelist
-                            continue
-                        ec = ExternalCommand.tryExternalCommand(name,
-                                                                candidate)
-                        if ec is not None:
-                            out.append(ec)
-    return out
+                if candidate.is_file() \
+                        and candidate.name.startswith("leaf-") \
+                        and os.access(str(candidate), os.X_OK):
+                    name = candidate.name[5:]
+                    if name in out:
+                        # Command already found
+                        continue
+                    if blacklistCommands is not None and name in blacklistCommands:
+                        # Command is blacklisted
+                        continue
+                    ec = ExternalCommand.tryExternalCommand(name, candidate)
+                    if ec is not None:
+                        out[name] = ec
+    return out.values()

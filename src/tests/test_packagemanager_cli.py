@@ -118,14 +118,14 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
         self.assertTrue(
             (self.getAltWorkspaceFolder() / "prereq-true_1.0").is_dir())
 
-    def DISABLED_testExternalCommand(self):
+    def testExternalCommand(self):
         with self.assertRaises(SystemExit):
-            self.leafExec("foo")
+            self.leafExec("foo.sh")
         oldPath = os.environ['PATH']
         try:
             self.assertTrue(RESOURCE_FOLDER.is_dir())
             os.environ['PATH'] = oldPath + ":" + str(RESOURCE_FOLDER)
-            self.leafExec("foo")
+            self.leafExec("foo.sh")
         finally:
             os.environ['PATH'] = oldPath
 
