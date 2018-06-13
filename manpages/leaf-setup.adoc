@@ -1,0 +1,74 @@
+= leaf-setup(1)
+
+== NAME
+
+leaf-setup - setup a leaf profile
+
+== SYNOPSIS
+
+*leaf* *setup* [_PROFILE_NAME_] *-p* _PACKAGE_ [*--set* _KEY_[=_VALUE_]]
+
+== DESCRIPTION
+
+*leaf setup* command is an high level command, allowing to prepare a *leaf* profile in one operation.
+
+== OPTIONS
+
+_PROFILE_NAME_::
+
+Name to be given to the profile.
+This argument is optional; if not specified, a profile name will be automatically generated
+by concatenating + upper casing the _NAME_ specified in *-p* options (see below).
+Profile names are unique in a given workspace; if the chosen or generated _PROFILE_NAME_ is already
+used in the current workspace, the command will fail.
+
+*-p* _PACKAGE_::
+
+Package ID to be added to the created profile.
+Note that the *-p* option can be used several times, and must be specified at least one time.
+The *leaf search* command can be used to display the available packages.
+The package ID can have two formats:
+* NAME: the latest available version with this package _NAME_ will be added to the profile
+* NAME_VERSION: the specified version will be added to the profile
+
+*--set* _KEY_[=_VALUE_]::
+
+Variable to add to the profile definition (see *leaf help env*).
+
+== EXAMPLES
+
+=== Create a new workspace and profile, using the latest version
+
+Assuming that you're in a new empty directory:
+
+*leaf setup -p mysdk*
+
+=== Add a profile to an existing workspace, with another version
+
+Assuming that you're in a directory that already contains a workspace:
+
+*leaf setup MYSDK2 -p mysdk_version2*
+
+== BEHAVIOR
+
+*leaf setup* can be used either to create your first profile (initializing your workspace), or
+to add another profile in an existing workspace. As an high level command, using *leaf setup*
+is equivalent to chaining the following steps:
+
+*leaf init*::
+
+If the current directory is not already into a workspace tree (i.e. the workspace root itself or a sub-directory),
+the workspace will be created here (after confirmation).
+
+*leaf create _PROFILE_NAME_*::
+
+A new profile will then be created in the current workspace, using _PROFILE_NAME_ as a name (user provided or generated).
+The new profile is then selected to be the current profile.
+
+*leaf config:p -p _PACKAGE_*::
+
+For each specified *-p* option, the required package will be added to the current profile.
+
+*leaf sync*::
+
+Finally, the profile provisioning will be triggered to install the required packages (if necessary) and refresh the *leaf-data* structure.

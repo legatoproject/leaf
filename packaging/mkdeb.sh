@@ -7,7 +7,6 @@ set -u
 ROOT="$(dirname "$0")/.."
 TARGET="$ROOT/target"
 WORKING_DIR="$TARGET/src"
-VERSION=$(git describe --tags)
 
 # Clean target folder
 rm -fr "$TARGET"
@@ -32,12 +31,6 @@ tar -czf "$TARGET/leaf_$VERSION.tar.gz" -C "$WORKING_DIR" .
 # Copy debian skel
 rsync -Pra \
 	"$ROOT/packaging/extrafiles/" \
-	"$WORKING_DIR/"
-
-# Copy external commands
-rsync -Pra \
-	--exclude 'README.txt' \
-	"$ROOT/extensions/" \
 	"$WORKING_DIR/"
 
 # Create deb

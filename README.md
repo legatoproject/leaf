@@ -7,11 +7,6 @@ Leaf is package management software written in Python 3, that manages downloadin
 
 Python 3.4 or a newer version.
 
-Install dependencies:
-```shell
-$ sudo apt-get install python3 python3-requests python3-argcomplete
-```
-
 ## Install
 
 ### Using Sierra Wireless Released Version
@@ -26,10 +21,24 @@ $ sudo apt-get install leaf
 
 ### Alternative Setup Using Python setup.py and Leaf sources
 
+Install dependencies:
+
+```shell
+$ sudo apt-get install --no-install-recommends \
+                       python3 python3-requests python3-argcomplete \
+                       python3-setuptools python3-all python3-nose \
+                       asciidoc-base docbook docbook-xml xsltproc xmlto
+```
+
+Build the man pages:
+
+```shell
+$ make manpages
+```
+
 Install *leaf* on your system: using python standard *setup.py*
 
 ```shell
-$ sudo apt-get install python3-setuptools
 $ cd src/
 $ sudo python3 setup.py
 ```
@@ -37,17 +46,21 @@ $ sudo python3 setup.py
 To install *leaf* only for your user:
 
 ```shell
-$ sudo apt-get install python3-setuptools
 $ cd src/
-$ python3 setup.py --user
+$ python3 setup.py install --user
+$ python3 setup.py install_data --install-dir=$HOME/.local/
 ```
 
 ### Building Debian Package
 
-Install tools to build Debian package:
+Install dependencies:
 
 ```shell
-$ sudo apt-get install debhelper dh-python devscripts build-essential fakeroot python3-all python3-requests python3-setuptools
+$ sudo apt-get install --no-install-recommends \
+                       python3 python3-requests python3-argcomplete \
+                       python3-setuptools python3-all python3-nose \
+                       debhelper dh-python devscripts build-essential fakeroot \
+                       asciidoc-base docbook docbook-xml xsltproc xmlto
 ```
 
 Debian packages need to be signed and *leaf* package needs to be signed by *developerstudio@sierrawireless.com*.
@@ -55,6 +68,12 @@ To build your *leaf* package, generate a custom *gpg key* for *developerstudio@s
 
 ```shell
 $ make gpg
+```
+
+Build the man pages:
+
+```shell
+$ make manpages
 ```
 
 Build the package:
@@ -78,7 +97,7 @@ $ sudo apt-get -f install
 You can run unit tests using your default *python3* version using *nose*:
 
 ```shell
-$ sudo apt-get install python3-nose
+$ sudo apt-get install python3-nose python3-coverage
 $ make test
 # or
 $ cd src/ && python3 -m nose
@@ -111,4 +130,15 @@ $ make docker-test
 
 ## Usage
 
-See `leaf --help` for more details.
+See `leaf --help` of `leaf help` for more details.
+
+
+## Extending leaf
+
+How to add an external command to leaf
+- Add an executable into 'src/extensions/' folder
+- The executable file name must start with 'leaf-'
+  for example 'leaf-mycommand', 'mycommand' being the command name, runnable with 'leaf mycommand'
+- The executable must handle '--description' argument to display some documentation 
+  only the first line will be displayed in 'leaf --help'
+  full documentation will be displayed with 'leaf mycommand --help' if implemented in your script

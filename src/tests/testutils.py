@@ -14,6 +14,8 @@ from unittest.case import TestCase
 
 LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
 RESOURCE_FOLDER = Path("tests/resources/")
+EXTENSIONS_FOLDER = Path("extensions/").resolve()
+
 
 SEPARATOR = "--------------------"
 ALT_FILENAMES = {
@@ -50,7 +52,7 @@ class AbstractTestWithRepo(unittest.TestCase):
         assert RESOURCE_FOLDER.exists(), "Cannot find resources folder!"
         generateRepo(RESOURCE_FOLDER,
                      AbstractTestWithRepo.REPO_FOLDER,
-                     TextLogger(Verbosity.DEFAULT))
+                     TextLogger(Verbosity.QUIET))
 
     @classmethod
     def tearDownClass(cls):
@@ -139,6 +141,20 @@ class LeafCliWrapper(AbstractTestWithRepo):
         self.preVerbArgs = []
         self.postVerbArgs = []
         self.jsonEnvValue = ""
+
+    @classmethod
+    def setUpClass(cls):
+        AbstractTestWithRepo.setUpClass()
+        LeafCliWrapper.OLD_PATH = os.environ['PATH']
+        assert EXTENSIONS_FOLDER.is_dir()
+        os.environ['PATH'] = "%s:%s" % (EXTENSIONS_FOLDER,
+                                        LeafCliWrapper.OLD_PATH)
+        print("Update PATH:", os.environ['PATH'])
+
+    @classmethod
+    def tearDownClass(cls):
+        AbstractTestWithRepo.setUpClass()
+        os.environ['PATH'] = LeafCliWrapper.OLD_PATH
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)

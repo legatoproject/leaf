@@ -1,0 +1,52 @@
+#!/bin/sh
+set -e
+
+
+while test -n "$1"; do
+	case "$1" in
+
+		# Support for leaf --help
+		--description|--help) 
+			echo "help pages for leaf commands"
+			exit 0
+			;;
+
+		# Listing all supported pages
+		--list) 
+			# Main dir where leaf man pages are stored
+			LEAFMANDIR=`dirname $(man -w leaf)`
+			find "$LEAFMANDIR" -name "leaf-*" | sed -e "s|/.*/leaf-\(.*\).1|\1|g"
+			exit 0
+			;;
+
+		# Default: requested help page
+		*)
+			if test -z "$LEAFHELPTOPIC"; then 
+				LEAFHELPTOPIC="-$1"; 
+			else 
+				echo "Unknown option: $1"
+				exit 2
+			fi
+			;;
+
+	esac
+	shift
+done
+
+# Page exist?
+LEAFMANPAGE=leaf$LEAFHELPTOPIC
+LEAFMANFILE=$(man -w $LEAFMANPAGE 2>//dev/null || true)
+if test -z "$LEAFMANFILE" -o ! -f "$LEAFMANFILE"; then
+	echo "No leaf help page found for $LEAFMANPAGE"
+	exit 3
+fi
+
+# Handle non-interactive mode (test purpose)
+if test -n "$LEAF_NON_INTERACTIVE"; then
+	# Just dump
+	exec man -P cat $LEAFMANPAGE
+else
+	# Simply go with man
+	exec man $LEAFMANPAGE
+fi
+

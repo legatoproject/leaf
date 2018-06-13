@@ -31,7 +31,8 @@ class ExternalCommand(GenericCommand):
         '''
         try:
             desc = subprocess.check_output((str(executable), "--description"),
-                                           timeout=1)
+                                           timeout=1,
+                                           stderr=None)
             return ExternalCommand(name,
                                    desc.decode().splitlines()[0],
                                    executable)

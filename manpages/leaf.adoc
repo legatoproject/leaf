@@ -1,0 +1,76 @@
+= leaf(1)
+
+== NAME
+
+leaf - development workspace manager
+
+== SYNOPSIS
+
+*leaf* [*--non-interactive*] [*-w* _WORKSPACE_] *_COMMAND_* [*-v*|*-q*] [options...]
+
+*leaf* *-V|--version* # Display version
+
+*leaf* [*_COMMAND_*] *-h|--help* # Display help
+
+== DESCRIPTION
+
+*leaf* is a workspace management tool, allowing to setup and configure a development environment
+based on packages.
+
+== COMMANDS
+
+The different actions that can be performed with *leaf* are available through commands.
+Use *leaf help _COMMAND_* to get documentation for a specific action.
+
+=== High level commands
+
+*search*::
+
+Search for available packages
+
+*setup*::
+
+All in one command to setup a workspace, and configure a profile inside
+
+*select*::
+
+Change to a different active profile in the current workspace
+*shell*::
+
+Spawn a shell with the development environment loaded in the current workspace
+
+*update*::
+
+Update the current profile packages configuration
+
+=== Low level commands
+
+etc...
+
+== OPTIONS
+
+These options are generic for all *leaf* commands
+
+*-v*::
+
+Toggle output to verbose mode (more details)
+
+*-q*::
+
+Toggle output to quiet mode (less details)
+
+*-V|--version*::
+
+Display *leaf* current version and exit
+
+*-h|--help*::
+
+Display command help and exit
+
+*--non-interactive*::
+
+Answer the default choice to every asked question
+
+*-w _WORKSPACE_*::
+
+Use specified workspace path instead of looking in the current directory structure

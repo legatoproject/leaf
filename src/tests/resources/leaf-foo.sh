@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if test "$1" = "--help"; then
+if test "$1" = "--description"; then
 	echo "Test command"
 fi
 

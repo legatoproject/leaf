@@ -7,6 +7,7 @@ RUN apt-get update \
 		python3-all python3-requests python3-argcomplete python3-pip python3-setuptools python3-nose python3-coverage tox \
 		debhelper dh-python devscripts build-essential fakeroot bash-completion \
 		file git rsync \
+		asciidoc-base docbook docbook-xml xsltproc xmlto \
 	&& apt-get clean
 
 WORKDIR /tmp

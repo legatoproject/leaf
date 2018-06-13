@@ -4,13 +4,14 @@
 OUTPUT:=$(PWD)/output
 TARGET:=$(PWD)/target
 SRC:=$(PWD)/src
+VERSION:=$(shell git describe --tags)
 
 #.SILENT:
-.PHONY: ci docker-build docker-test clean test test-tox gpg deb install archive
+.PHONY: ci docker-build docker-test clean test test-tox gpg deb install archive manpages
 
-all: deb 
+all: manpages deb
 
-ci: clean test-tox deb archive
+ci: clean manpages test-tox deb archive
 
 docker-build:
 	docker build -t "leaf-test:latest" docker/
@@ -24,6 +25,7 @@ docker-test:
 
 clean:
 	rm -rf \
+		$(SRC)/man \
 		$(SRC)/nosetests-*.xml \
 		$(SRC)/.coverage $(SRC)/cover-*/ $(SRC)/coverage-*.xml \
 		$(TARGET) \
@@ -35,21 +37,25 @@ test:
 			--cover-xml --cover-xml-file=coverage-current.xml \
 			--cover-html --cover-html-dir=cover-current \
 		--with-xunit \
-			--xunit-file=nosetests-current.xml
+			--xunit-file=nosetests-current.xml \
+		$(NOSE_TEST_CLASS)
 
 test-tox:
-	cd $(SRC) && tox 
+	cd $(SRC) && tox
 
 gpg:
 	gpg --batch --gen-key $(PWD)/packaging/gpg-script
 
 deb:
-	$(PWD)/packaging/mkdeb.sh
+	export VERSION=$(VERSION) && $(PWD)/packaging/mkdeb.sh
 
 install:
 	sudo dpkg -i $(TARGET)/leaf_latest.deb
 
-archive: 
+uninstall:
+	sudo dpkg -r leaf
+
+archive:
 	mkdir -p $(OUTPUT)
 	cp -a \
 		$(SRC)/nosetests-*.xml \
@@ -58,3 +64,5 @@ archive:
 		$(TARGET)/* \
 		$(OUTPUT)/
 
+manpages:
+	export VERSION=$(VERSION) && $(PWD)/manpages/mkman.sh

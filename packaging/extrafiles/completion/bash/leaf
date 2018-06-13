@@ -20,9 +20,15 @@ _python_argcomplete() {
     fi
 }
 
+_process_leaf_completion() {
+	local LEAF_SUGGESTIONS="$(eval $1 2> /dev/null)"
+	local CURRENT_WORD="${COMP_WORDS[COMP_CWORD]}"
+	compopt +o nospace
+	COMPREPLY+=($(compgen -W "${LEAF_SUGGESTIONS}" -- "${CURRENT_WORD}"))
+}
+
 _leaf_completions()
 {
-	local CURRENT_WORD="${COMP_WORDS[COMP_CWORD]}"
 	local PREVIOUS_WORD="${COMP_WORDS[COMP_CWORD-1]}"
 	local PREVIOUS_PREVIOUS_WORD="${COMP_WORDS[COMP_CWORD-2]}"
 
@@ -31,22 +37,21 @@ _leaf_completions()
 		if test "$PREVIOUS_WORD" = "remove" -o \
 			"$PREVIOUS_WORD" = "enable" -o \
 			"$PREVIOUS_WORD" = "disable"; then
-			compopt +o nospace
-			COMPREPLY+=($(compgen -W "$(leaf remote list -q 2>/dev/null)" -- "${CURRENT_WORD}"))
+			_process_leaf_completion "leaf remote list -q"
 		fi
 	else
 		case "$PREVIOUS_WORD" in
 			"search"|"install"|"-p"|"--package")
-				compopt +o nospace
-				COMPREPLY=($(compgen -W "$(leaf search -aq "$CURRENT_WORD" 2>/dev/null)" -- "${CURRENT_WORD}"))
+				_process_leaf_completion "leaf search -aq"
 				;;
 			"remove")
-				compopt +o nospace
-				COMPREPLY=($(compgen -W "$(leaf package list -aq "$CURRENT_WORD" 2>/dev/null)" -- "${CURRENT_WORD}"))
+				_process_leaf_completion "leaf package list -aq"
 				;;
 			"select")
-				compopt +o nospace
-				COMPREPLY=($(compgen -W "$(leaf status 2>/dev/null | awk '/^- / {print $2}')" -- "${CURRENT_WORD}"))
+				_process_leaf_completion "leaf status 2>/dev/null | awk '/^- / {print \$2}'"
+				;;
+			"help")
+				_process_leaf_completion "leaf help --list"
 				;;
 			*)
 			  _python_argcomplete "$@"
