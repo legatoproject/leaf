@@ -366,6 +366,37 @@ class TestPackageManager_File(AbstractTestWithRepo):
              "container-A_1.0"],
             AvailablePackage)
 
+    def testDependsWithCustomEnv(self):
+        self.assertDeps(self.app.listDependencies(
+            ["condition_1.0"], DependencyType.INSTALL, envMap={}),
+            ["condition-B_1.0",
+             "condition-D_1.0",
+             "condition-F_1.0",
+             "condition-H_1.0",
+             "condition_1.0"
+             ],
+            AvailablePackage)
+
+        self.app.updateUserConfiguration(envSetMap={'FOO': 'HELLO'})
+        self.assertDeps(self.app.listDependencies(
+            ["condition_1.0"], DependencyType.INSTALL, envMap={}),
+            ["condition-A_1.0",
+             "condition-D_1.0",
+             "condition-F_1.0",
+             "condition-H_1.0",
+             "condition_1.0"
+             ],
+            AvailablePackage)
+
+        self.assertDeps(self.app.listDependencies(
+            ["condition_1.0"], DependencyType.INSTALL, envMap={'FOO': 'BAR'}),
+            ["condition-A_1.0",
+             "condition-C_1.0",
+             "condition-F_1.0",
+             "condition_1.0"
+             ],
+            AvailablePackage)
+
     def testDependsInstall(self):
         self.assertDeps(self.app.listDependencies(
             ["container-A_1.0"], DependencyType.INSTALL),

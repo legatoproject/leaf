@@ -14,7 +14,7 @@ from leaf.core.dependencies import DependencyType
 from leaf.core.tags import TagManager
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import Manifest
-from leaf.utils import mkTmpLeafRootDir
+from leaf.utils import mkTmpLeafRootDir, envListToMap
 
 
 class RemotesCommand(LeafCommand):
@@ -213,13 +213,20 @@ class PackageDependsSubCommand(LeafCommand):
                            action="store_const",
                            const=DependencyType.PREREQ,
                            help="build dependency list for prereq install")
+        parser.add_argument('--env',
+                            dest='customEnvList',
+                            action='append',
+                            metavar='KEY=VALUE',
+                            help='add given environment variable')
         parser.add_argument('packages',
                             nargs=argparse.REMAINDER)
 
     def execute(self, args):
         logger = self.getLogger(args)
         app = self.getApp(args, logger=logger)
-        items = app.listDependencies(args.packages, args.dependencyType)
+        items = app.listDependencies(args.packages,
+                                     args.dependencyType,
+                                     envMap=envListToMap(args.customEnvList))
         for i in items:
             logger.displayItem(i)
 

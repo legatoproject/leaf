@@ -241,7 +241,7 @@ class PackageManager():
                     out[ip.getIdentifier()] = ip
         return out
 
-    def listDependencies(self, motifList, depType):
+    def listDependencies(self, motifList, depType, envMap=None):
         '''
         List all dependencies for given packages
         @return: PackageIdentifier list
@@ -251,10 +251,12 @@ class PackageManager():
         piList = self.resolveLatest(motifList,
                                     ipMap=installedPackages,
                                     apMap=availablePackages)
+        env = self.getLeafEnvironment()
+        env.addSubEnv(Environment("Custom env", envMap))
         return DependencyManager.compute(piList, depType,
                                          apMap=availablePackages,
                                          ipMap=installedPackages,
-                                         env=self.getLeafEnvironment(),
+                                         env=env,
                                          ignoreUnknown=True)
 
     def checkPackagesForInstall(self, mfList,
