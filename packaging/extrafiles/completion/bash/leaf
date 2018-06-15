@@ -8,22 +8,15 @@ fi
 
 _python_argcomplete() {
     local IFS=$'\013'
-    local SUPPRESS_SPACE=0
-    if compopt +o nospace 2> /dev/null; then
-        SUPPRESS_SPACE=1
-    fi
     COMPREPLY=( $(IFS="$IFS" \
                   COMP_LINE="$COMP_LINE" \
                   COMP_POINT="$COMP_POINT" \
                   COMP_TYPE="$COMP_TYPE" \
                   _ARGCOMPLETE_COMP_WORDBREAKS="$COMP_WORDBREAKS" \
                   _ARGCOMPLETE=1 \
-                  _ARGCOMPLETE_SUPPRESS_SPACE=$SUPPRESS_SPACE \
                   "$1" 8>&1 9>&2 1>/dev/null 2>/dev/null) )
     if [[ $? != 0 ]]; then
         unset COMPREPLY
-    elif [[ $SUPPRESS_SPACE == 1 ]] && [[ "$COMPREPLY" =~ [=/:]$ ]]; then
-        compopt -o nospace
     fi
 }
 
@@ -38,23 +31,28 @@ _leaf_completions()
 		if test "$PREVIOUS_WORD" = "remove" -o \
 			"$PREVIOUS_WORD" = "enable" -o \
 			"$PREVIOUS_WORD" = "disable"; then
-			COMPREPLY+=($(leaf remote list -q))
+			compopt +o nospace
+			COMPREPLY+=($(compgen -W "$(leaf remote list -q 2>/dev/null)" -- "${CURRENT_WORD}"))
 		fi
 	else
 		case "$PREVIOUS_WORD" in
 			"search"|"install"|"-p"|"--package")
-				COMPREPLY+=($(leaf search -aq "$CURRENT_WORD"))
+				compopt +o nospace
+				COMPREPLY=($(compgen -W "$(leaf search -aq "$CURRENT_WORD" 2>/dev/null)" -- "${CURRENT_WORD}"))
 				;;
 			"remove")
-				COMPREPLY+=($(leaf package list -aq "$CURRENT_WORD"))
+				compopt +o nospace
+				COMPREPLY=($(compgen -W "$(leaf package list -aq "$CURRENT_WORD" 2>/dev/null)" -- "${CURRENT_WORD}"))
 				;;
 			"select")
-				COMPREPLY+=($(leaf status | awk '/^- / {print $2}'))
+				compopt +o nospace
+				COMPREPLY=($(compgen -W "$(leaf status 2>/dev/null | awk '/^- / {print $2}')" -- "${CURRENT_WORD}"))
 				;;
 			*)
 			  _python_argcomplete "$@"
 			  ;;
 		esac
 	fi
-} 
+}
+
 complete -o nospace -o default -F _leaf_completions "leaf"
