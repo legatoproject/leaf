@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "Fake source sync script running in $LEAF_WORKSPACE"
+touch $LEAF_WORKSPACE/fake-test-src
+exit 0

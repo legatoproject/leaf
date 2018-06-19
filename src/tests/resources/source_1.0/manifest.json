@@ -1,0 +1,9 @@
+{
+  "info": {
+    "name": "source",
+    "version": "1.0"
+  },
+  "env": {
+    "PATH": "@{DIR}:$PATH"
+  }
+}

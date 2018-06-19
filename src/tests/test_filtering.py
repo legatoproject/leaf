@@ -28,7 +28,7 @@ class FilteringTest(AbstractTestWithRepo):
         f = MetaPackageFilter()
         f.onlyMasterPackages()
         print("Filter:", f)
-        self.assertEqual(3, len(list(filter(f.matches, self.content))))
+        self.assertEqual(4, len(list(filter(f.matches, self.content))))
 
     def testKeyword(self):
         f = MetaPackageFilter()

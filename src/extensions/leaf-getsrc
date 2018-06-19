@@ -1,0 +1,91 @@
+#!/bin/sh
+set -e
+
+getsrcHelp() {
+	cat << END
+usage: leaf getsrc [-h] [-v | -q] [--user | --workspace | --profile] [--disable] [SRCMODULE]
+
+positional arguments:
+  SRCMODULE      the module from which to trigger source sync
+                 if not specified, list available modules
+
+optional arguments:
+  -h, --help     show this help message and exit
+  -v, --verbose  increase output verbosity
+  -q, --quiet    decrease output verbosity
+  --user         use user configuration environment
+  --workspace    use workspace environment
+  --profile      use profile environment
+  --disable      disable source mode and get back to binary mode
+END
+	exit 0
+}
+
+# Parsing options
+while test -n "$1"; do
+	case "$1" in
+		--description)	# Support for leaf --description
+						echo "source code mode toggling"
+						exit 0;;
+		--help)	# Simple help page
+				getsrcHelp;;
+		--disable)	# Toggling source mode off
+					DISABLE_MODE="1";;
+		*)	# Default: requested source module
+			if test -z "$LEAFSRCMODULE"; then 
+				LEAFSRCMODULE="$1"; 
+			else 
+				# Preserve other options for leaf feature call
+				FTR_OPTIONS="$FTR_OPTIONS $1"
+			fi;;
+	esac
+	shift
+done
+
+leafCall() {
+	if test -n "$LEAF_NON_INTERACTIVE"; then
+		local ARGS="--non-interactive"
+	fi
+	if test -n "$LEAF_WORKSPACE"; then
+		local ARGS="$ARGS -w $LEAF_WORKSPACE"
+	fi
+	python3 -m leaf $ARGS "$@"
+}
+
+if test -z "$LEAFSRCMODULE"; then
+	# No source module required, just list all available ones
+	leafCall feature list -q | grep -e '-src$' | sed -e 's/-src$//g'
+else
+	# Check current status
+	CURRENT_STATE=$(leafCall feature query ${LEAFSRCMODULE}-src -q 2> /dev/null)
+	if test -z "$CURRENT_STATE"; then
+		echo "Unknown source module: ${LEAFSRCMODULE}"
+		exit 2
+	fi
+	
+	if test -n "$DISABLE_MODE" -a "$CURRENT_STATE" != binary; then
+		FTR_TOGGLE=binary	# Only switch back feature to binary if currently set to something else
+	elif test -z "$DISABLE_MODE" -a "$CURRENT_STATE" = binary; then
+		FTR_TOGGLE=source	# Only switch feature to source, if still set to binary
+	fi
+	
+	# Need to toggle?
+	if test -n "$FTR_TOGGLE"; then
+		leafCall feature toggle ${LEAFSRCMODULE}-src $FTR_TOGGLE $FTR_OPTIONS
+		leafCall profile sync $FTR_OPTIONS
+	fi
+	
+	# Sync?
+	if test -z "$DISABLE_MODE"; then
+		# Trigger source synchronization for module
+		SYNCCMD=${LEAFSRCMODULE}-src-sync
+		( \
+			eval "$(leafCall env)"; \
+			if ! which $SYNCCMD > /dev/null; then \
+				echo "Source synchronization command not found ($SYNCCMD)"; \
+				exit 10; \
+			fi; \
+			exec $SYNCCMD
+		)
+	fi
+fi

@@ -512,7 +512,7 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.assertEqual(4, len(pkg.getFeatures()))
         self.assertEqual(4, len(pkg.getFeaturesMap()))
         fm = FeatureManager(self.pm)
-        self.assertEqual(4, len(fm.features))
+        self.assertEqual(6, len(fm.features))
         fm.getFeature("myFeatureFoo").check()
         fm.getFeature("myFeatureHello").check()
         fm.getFeature("featureWithDups").check()

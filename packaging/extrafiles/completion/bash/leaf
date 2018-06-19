@@ -59,6 +59,9 @@ _leaf_completions()
 			"toggle"|"query")
 				_process_leaf_completion "leaf feature list -q"
 				;;
+			"getsrc")
+				_process_leaf_completion "leaf-getsrc"
+				;;
 			*)
 			  _python_argcomplete "$@"
 			  ;;
