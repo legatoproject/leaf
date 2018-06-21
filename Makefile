@@ -50,7 +50,7 @@ deb:
 	export VERSION=$(VERSION) && $(PWD)/packaging/mkdeb.sh
 
 install:
-	sudo dpkg -i $(TARGET)/leaf_latest.deb
+	sudo apt install $(TARGET)/leaf_latest.deb
 
 uninstall:
 	sudo dpkg -r leaf

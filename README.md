@@ -48,7 +48,7 @@ To install *leaf* only for your user:
 ```shell
 $ cd src/
 $ python3 setup.py install --user
-$ python3 setup.py install_data --install-dir=$HOME/.local/
+$ python3 setup.py install_data -d $HOME/.local/
 ```
 
 ### Building Debian Package
@@ -89,6 +89,16 @@ $ sudo apt-get -f install
 ```
 
 
+### Troubleshooting
+
+#### Missing "argcomplete" library
+
+On some old distributions (e.g. Ubuntu 14.04), the "python3-argcomplete" library doesn't exist.
+As an alternative, it can be installed in user land:
+```shell
+$ sudo apt install python3-pip
+$ pip3 install argcomplete --user
+```
 
 ## Running tests
 
