@@ -91,13 +91,15 @@ $ sudo apt-get -f install
 
 ### Troubleshooting
 
-#### Missing "argcomplete" library
+#### Ubuntu 14.04 LTS support
 
-On some old distributions (e.g. Ubuntu 14.04), the "python3-argcomplete" library doesn't exist.
-As an alternative, it can be installed in user land:
+On Ubuntu 14.04 LTS, some library dependencies are not available at the correct version in the system
+install. This will make leaf crashing on this distribution.
+As an alternative, these libraries can be installed in user land:
 ```shell
 $ sudo apt install python3-pip
 $ pip3 install argcomplete --user
+$ pip3 install setuptools --user --upgrade
 ```
 
 ## Running tests
