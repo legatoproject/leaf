@@ -18,29 +18,43 @@ from pathlib import Path
 import traceback
 
 
-def initCommonArgs(subparser, withEnv=False, withPackages=False, profileNargs=None):
-    if withEnv:
-        subparser.add_argument('--set',
-                               dest='setEnvList',
-                               action='append',
-                               metavar='KEY=VALUE',
-                               help='add given environment variable')
-        subparser.add_argument('--unset',
-                               dest='unsetEnvList',
-                               action='append',
-                               metavar='KEY',
-                               help='remote given environment variable')
-    if withPackages:
-        subparser.add_argument('-p', '--package',
-                               dest='motifList',
-                               action='append',
-                               metavar='PACKAGE',
-                               help="add given packages to the current profile")
-    if profileNargs is not None:
-        subparser.add_argument('profiles',
-                               metavar='PROFILE_NAME',
-                               nargs=profileNargs,
-                               help='the profile name')
+def initCommonArgs(parser,
+                   addRemoveEnv=False,
+                   withEnvScripts=False,
+                   addRemovePackages=False):
+    if addRemoveEnv:
+        parser.add_argument('--set',
+                            dest='envAddList',
+                            action='append',
+                            metavar='KEY=VALUE',
+                            help='add given environment variable')
+        parser.add_argument('--unset',
+                            dest='envRmList',
+                            action='append',
+                            metavar='KEY',
+                            help='remote given environment variable')
+    if withEnvScripts:
+        parser.add_argument('--activate-script',
+                            dest='activateScript',
+                            metavar='FILE',
+                            type=Path,
+                            help="create a script to activate the env variables")
+        parser.add_argument('--deactivate-script',
+                            dest='deactivateScript',
+                            metavar='FILE',
+                            type=Path,
+                            help="create a script to deactivate the env variables")
+    if addRemovePackages:
+        parser.add_argument('-p', '--add-package',
+                            dest='pkgAddList',
+                            action='append',
+                            metavar='PKGNAME',
+                            help="add given package")
+        parser.add_argument('--rm-package',
+                            dest='pkgRmList',
+                            action='append',
+                            metavar='PKGNAME',
+                            help="remove given package")
 
 
 class GenericCommand(ABC):
@@ -48,18 +62,16 @@ class GenericCommand(ABC):
     Generic command used by leaf
     '''
 
-    def __init__(self, cmdName, cmdHelp, cmdAliases=None):
+    def __init__(self, cmdName, cmdHelp):
         self.cmdName = cmdName
         self.cmdHelp = cmdHelp
-        self.cmdAliases = [] if cmdAliases is None else cmdAliases
 
     def isHandled(self, cmd):
-        return cmd == self.cmdName or cmd in self.cmdAliases
+        return cmd == self.cmdName
 
     def create(self, subparsers):
         parser = subparsers.add_parser(self.cmdName,
-                                       help=self.cmdHelp,
-                                       aliases=self.cmdAliases)
+                                       help=self.cmdHelp)
         self.initArgs(parser)
 
     def getLogger(self, args):
@@ -92,9 +104,8 @@ class LeafMetaCommand(GenericCommand):
     Generic class to represent commands that have subcommands
     '''
 
-    def __init__(self, cmdName, cmdHelp, cmdAliases=None):
-        GenericCommand.__init__(self, cmdName, cmdHelp,
-                                cmdAliases=cmdAliases)
+    def __init__(self, cmdName, cmdHelp):
+        GenericCommand.__init__(self, cmdName, cmdHelp)
 
     def initArgs(self, parser):
         super().initArgs(parser)
@@ -139,8 +150,8 @@ class LeafCommand(GenericCommand):
     Define a leaf commands which uses -v/-q to set the logger verbosity
     '''
 
-    def __init__(self, cmdName, cmdHelp, cmdAliases=None):
-        GenericCommand.__init__(self, cmdName, cmdHelp, cmdAliases)
+    def __init__(self, cmdName, cmdHelp):
+        GenericCommand.__init__(self, cmdName, cmdHelp)
 
     def initArgs(self, parser):
         super().initArgs(parser)
@@ -203,7 +214,7 @@ class LeafCommandGenerator():
             else:
                 command += [k, str(v)]
 
-        if isinstance(verb, list):
+        if isinstance(verb, (list, tuple)):
             command += verb
         else:
             command.append(verb)

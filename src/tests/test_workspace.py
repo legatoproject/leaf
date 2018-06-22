@@ -115,7 +115,7 @@ class TestProfile(AbstractTestWithRepo):
         self.checkProfileContent("bar", ["container-A",
                                          "container-C",
                                          "container-D"])
-        self.ws.getProfileEnv("bar")
+        self.ws.getProfileEnvironment("bar")
 
         self.ws.updateProfile("bar", newName="bar")
         self.assertEqual("bar", self.ws.getCurrentProfileName())
@@ -143,7 +143,7 @@ class TestProfile(AbstractTestWithRepo):
                                                      ("FOO2", "BAR2")]))
         self.ws.switchProfile("myenv")
         self.ws.provisionProfile("myenv")
-        env = self.ws.getProfileEnv("myenv")
+        env = self.ws.getFullEnvironment("myenv")
         list(map(print, env.toList()))
         self.assertEqual(13, len(env.toList()))
         self.assertEqual([
@@ -152,10 +152,10 @@ class TestProfile(AbstractTestWithRepo):
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),
             ("LEAF_NON_INTERACTIVE", "1"),
-            ('LEAF_WORKSPACE', self.getWorkspaceFolder()),
-            ('LEAF_PROFILE', 'myenv'),
+            ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
             ('FOO', 'BAR'),
             ('FOO2', 'BAR2'),
+            ('LEAF_PROFILE', 'myenv'),
             ('LEAF_ENV_B', 'BAR'),
             ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
             ('LEAF_ENV_A', 'FOO'),
@@ -164,7 +164,7 @@ class TestProfile(AbstractTestWithRepo):
             env.toList())
 
         self.ws.updateWorkspaceConfiguration(envSetMap={"HELLO": "world"})
-        env = self.ws.getProfileEnv("myenv")
+        env = self.ws.getFullEnvironment("myenv")
         self.assertEqual(14, len(env.toList()))
         self.assertEqual([
             ("LEAF_VERSION", "0.0.0"),
@@ -172,11 +172,11 @@ class TestProfile(AbstractTestWithRepo):
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),
             ("LEAF_NON_INTERACTIVE", "1"),
-            ('LEAF_WORKSPACE', self.getWorkspaceFolder()),
-            ('LEAF_PROFILE', 'myenv'),
             ('HELLO', 'world'),
+            ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
             ('FOO', 'BAR'),
             ('FOO2', 'BAR2'),
+            ('LEAF_PROFILE', 'myenv'),
             ('LEAF_ENV_B', 'BAR'),
             ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
             ('LEAF_ENV_A', 'FOO'),

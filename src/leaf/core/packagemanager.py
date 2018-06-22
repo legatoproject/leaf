@@ -11,16 +11,9 @@ from builtins import filter
 from collections import OrderedDict
 from datetime import datetime
 import json
-import os
-import platform
-import shutil
-from tarfile import TarFile
-import urllib.request
-
 from leaf import __version__
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles
-from leaf.core.coreutils import VariableResolver, StepExecutor,\
-    packageListToEnvironnement
+from leaf.core.coreutils import VariableResolver, StepExecutor
 from leaf.core.dependencies import DependencyManager, DependencyType
 from leaf.model.base import Environment, JsonObject
 from leaf.model.config import UserConfiguration
@@ -30,6 +23,11 @@ from leaf.model.remote import Remote
 from leaf.utils import getAltEnvPath, jsonLoadFile, jsonWriteFile, resolveUrl,\
     isFolderIgnored, getCachedArtifactName, markFolderAsIgnored,\
     mkTmpLeafRootDir, downloadFile
+import os
+import platform
+import shutil
+from tarfile import TarFile
+import urllib.request
 
 
 class PackageManager():
@@ -139,15 +137,14 @@ class PackageManager():
         # Save and clean cache
         self.writeConfiguration(usrc)
 
-    def getLeafEnvironment(self):
-        out = Environment("Leaf variables")
+    def getLeafEnvironment(self, workspace=None, profileName=None):
+        out = Environment("Leaf built-in variables")
         out.env.append(("LEAF_VERSION", str(__version__)))
         out.env.append(("LEAF_PLATFORM_SYSTEM", platform.system()))
         out.env.append(("LEAF_PLATFORM_MACHINE", platform.machine()))
         out.env.append(("LEAF_PLATFORM_RELEASE", platform.release()))
         if self.nonInteractive:
             out.env.append(("LEAF_NON_INTERACTIVE", "1"))
-        out.addSubEnv(self.getUserEnvironment())
         return out
 
     def getUserEnvironment(self):
@@ -279,8 +276,9 @@ class PackageManager():
         piList = self.resolveLatest(motifList,
                                     ipMap=installedPackages,
                                     apMap=availablePackages)
-        env = self.getLeafEnvironment()
-        env.addSubEnv(Environment("Custom env", envMap))
+        env = Environment.build(self.getLeafEnvironment(),
+                                self.getUserEnvironment(),
+                                Environment("Custom env", envMap))
         return DependencyManager.compute(piList, depType,
                                          apMap=availablePackages,
                                          ipMap=installedPackages,
@@ -385,7 +383,8 @@ class PackageManager():
             self.logger.printVerbose("Installing %d pre-required package(s) in %s" %
                                      (len(apList), tmpRootFolder))
             if env is None:
-                env = self.getLeafEnvironment()
+                env = Environment.build(self.getLeafEnvironment(),
+                                        self.getUserEnvironment())
             env.addSubEnv(Environment("Prereq",
                                       {"LEAF_PREREQ_ROOT": tmpRootFolder}))
             for prereqAp in apList:
@@ -421,7 +420,8 @@ class PackageManager():
         try:
             # Build env to resolve dynamic dependencies
             if env is None:
-                env = self.getLeafEnvironment()
+                env = Environment.build(self.getLeafEnvironment(),
+                                        self.getUserEnvironment())
 
             apToInstall = DependencyManager.compute(piList,
                                                     DependencyType.INSTALL,
@@ -526,14 +526,13 @@ class PackageManager():
             worked = 0
             self.logger.progressStart('Uninstall package(s)',
                                       total=total)
+            env = Environment.build(self.getLeafEnvironment(),
+                                    self.getUserEnvironment())
             for ip in ipToRemove:
                 self.logger.printDefault("Removing", ip.getIdentifier())
                 vr = VariableResolver(ip,
                                       self.listInstalledPackages().values())
-                stepExec = StepExecutor(self.logger,
-                                        ip,
-                                        vr,
-                                        env=self.getLeafEnvironment())
+                stepExec = StepExecutor(self.logger, ip, vr, env=env)
                 stepExec.preUninstall()
                 self.logger.printVerbose("Remove folder:", ip.folder)
                 shutil.rmtree(str(ip.folder))
@@ -545,18 +544,26 @@ class PackageManager():
             self.logger.progressDone('Uninstall package(s)',
                                      message="%d package(s) removed" % (len(ipToRemove)))
 
-    def getPackageEnv(self, motifList, env=None):
+    def getPackagesEnvironment(self, itemList):
         '''
-        Get the env vars declared by given packages and their dependencies
+        Get the env vars declared by given packages 
+        @param itemList: a list of InstalledPackage or PackageIdentifier 
         '''
         installedPackages = self.listInstalledPackages()
-        piList = self.resolveLatest(motifList,
-                                    ipMap=installedPackages)
-        if env is None:
-            env = self.getLeafEnvironment()
-
-        ipList = DependencyManager.compute(piList,
-                                           DependencyType.INSTALLED,
-                                           ipMap=installedPackages,
-                                           env=env)
-        return packageListToEnvironnement(ipList, installedPackages, env)
+        out = Environment()
+        for item in itemList:
+            ip = None
+            if isinstance(item, InstalledPackage):
+                ip = item
+            elif isinstance(item, PackageIdentifier):
+                if item not in installedPackages:
+                    raise ValueError("Cannot find package %s" % item)
+                ip = installedPackages[item]
+            else:
+                raise ValueError("Invalid package %s" % item)
+            ipEnv = Environment("Exported by package %s" % ip.getIdentifier())
+            out.addSubEnv(ipEnv)
+            vr = VariableResolver(ip, installedPackages.values())
+            for key, value in ip.getEnvMap().items():
+                ipEnv.env.append((key, vr.resolve(value)))
+        return out

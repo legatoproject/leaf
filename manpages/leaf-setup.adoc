@@ -60,15 +60,19 @@ is equivalent to chaining the following steps:
 If the current directory is not already into a workspace tree (i.e. the workspace root itself or a sub-directory),
 the workspace will be created here (after confirmation).
 
-*leaf create _PROFILE_NAME_*::
+*leaf profile create _PROFILE_NAME_*::
 
 A new profile will then be created in the current workspace, using _PROFILE_NAME_ as a name (user provided or generated).
 The new profile is then selected to be the current profile.
 
-*leaf config:p -p _PACKAGE_*::
+*leaf profile config -p _PACKAGE_*::
 
 For each specified *-p* option, the required package will be added to the current profile.
 
-*leaf sync*::
+*leaf profile sync*::
 
 Finally, the profile provisioning will be triggered to install the required packages (if necessary) and refresh the *leaf-data* structure.
+
+== SEE ALSO
+
+*leaf init*, *leaf profile*, *leaf select*

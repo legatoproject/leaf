@@ -50,8 +50,10 @@ class RemoteAddCommand(LeafCommand):
 
     def initArgs(self, parser):
         LeafCommand.initArgs(self, parser)
-        parser.add_argument('alias', nargs=1)
-        parser.add_argument('url', nargs=1)
+        parser.add_argument('alias', metavar='ALIAS', nargs=1,
+                            help='the alias of the new remote')
+        parser.add_argument('url', metavar='URL', nargs=1,
+                            help='the remote URL (supported url schemes: http(s)://, file://)')
 
     def execute(self, args):
         logger = self.getLogger(args)
@@ -67,7 +69,8 @@ class RemoteRemoveCommand(LeafCommand):
 
     def initArgs(self, parser):
         LeafCommand.initArgs(self, parser)
-        parser.add_argument('alias', nargs=1)
+        parser.add_argument('alias', metavar='ALIAS', nargs=1,
+                            help='the alias of the remote to remove')
 
     def execute(self, args):
         logger = self.getLogger(args)
@@ -83,7 +86,8 @@ class RemoteEnableCommand(LeafCommand):
 
     def initArgs(self, parser):
         LeafCommand.initArgs(self, parser)
-        parser.add_argument('alias', nargs=1)
+        parser.add_argument('alias', metavar='ALIAS', nargs=1,
+                            help='the alias of the remote to enable')
 
     def execute(self, args):
         logger = self.getLogger(args)
@@ -99,7 +103,8 @@ class RemoteDisableCommand(LeafCommand):
 
     def initArgs(self, parser):
         LeafCommand.initArgs(self, parser)
-        parser.add_argument('alias', nargs=1)
+        parser.add_argument('alias', metavar='ALIAS', nargs=1,
+                            help='the alias of the remote to disable')
 
     def execute(self, args):
         logger = self.getLogger(args)

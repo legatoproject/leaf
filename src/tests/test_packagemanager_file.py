@@ -204,14 +204,20 @@ class TestPackageManager_File(AbstractTestWithRepo):
                           ["env-A_1.0",
                            "env-B_1.0"])
 
-        env = self.app.getPackageEnv(["env-A_1.0"])
-        self.assertEqual(9, len(env.toList()))
+        env = self.app.getPackagesEnvironment(list(map(PackageIdentifier.fromString,
+                                                       ["env-A_1.0"])))
+        self.assertEqual(2, len(env.toList()))
         self.assertEqual([
-            ("LEAF_VERSION", "0.0.0"),
-            ("LEAF_PLATFORM_SYSTEM", platform.system()),
-            ("LEAF_PLATFORM_MACHINE", platform.machine()),
-            ("LEAF_PLATFORM_RELEASE", platform.release()),
-            ("LEAF_NON_INTERACTIVE", "1"),
+            ('LEAF_ENV_A', 'FOO'),
+            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
+                            (self.getInstallFolder(), self.getInstallFolder()))],
+            env.toList())
+
+        env = self.app.getPackagesEnvironment(list(map(PackageIdentifier.fromString,
+                                                       ["env-B_1.0",
+                                                        "env-A_1.0"])))
+        self.assertEqual(4, len(env.toList()))
+        self.assertEqual([
             ('LEAF_ENV_B', 'BAR'),
             ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
             ('LEAF_ENV_A', 'FOO'),
@@ -311,8 +317,9 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.app.updateUserConfiguration(envSetMap={"FOO2": "BAR2",
                                                     "HELLO": "WoRld"})
 
-        env = self.app.getLeafEnvironment()
-        env.addSubEnv(Environment("test", {"FOO": "BAR"}))
+        env = Environment.build(self.app.getLeafEnvironment(),
+                                self.app.getUserEnvironment(),
+                                Environment("test", {"FOO": "BAR"}))
         self.app.installFromRemotes(["condition_1.0"],
                                     env=env)
         self.checkContent(self.app.listInstalledPackages(),

@@ -2,15 +2,15 @@
 @author: seb
 '''
 
+from leaf.constants import LeafFiles
 import os
 import shutil
 import unittest
 
-from leaf.constants import LeafFiles
 from tests.testutils import LeafCliWrapper, envFileToMap
 
 
-LEAF_UT_LEVELS = os.environ.get("LEAF_UT_LEVELS", "QUIET,VERBOSE,JSON")
+LEAF_UT_SKIP = os.environ.get("LEAF_UT_SKIP", "")
 
 
 class TestProfileCli_Default(LeafCliWrapper):
@@ -21,59 +21,65 @@ class TestProfileCli_Default(LeafCliWrapper):
     def testInitWithoutProfile(self):
         self.leafExec("init")
         self.leafExec("status")
-        self.leafExec("env", expectedRc=2)
+        self.leafExec(("env", "profile"), expectedRc=2)
+        self.leafExec(("env", "print"), expectedRc=2)
 
     def testCreateProfile(self):
         self.leafExec("init")
-        self.leafExec("create", "foo")
-        self.leafExec("config:profile", "-p", "container-A_1.0")
-        self.leafExec("config:profile", "--set", "FOO=BAR")
-        self.leafExec("status")
+        self.leafExec(('profile', 'create'), "foo")
+        self.leafExec(("profile", "config"), "-p", "container-A_1.0")
         self.checkProfileContent("foo", [])
-        self.leafExec("sync")
-        self.leafExec("env")
+        self.leafExec(("profile", "sync"))
+        self.checkProfileContent("foo", ["container-A",
+                                         "container-B",
+                                         "container-C",
+                                         "container-E"])
+        self.leafExec(("env", "profile"), "--set", "FOO=BAR")
+        self.leafExec("status")
+        self.leafExec(("profile", "sync"))
+        self.leafExec(("env", "print"))
 
     def testWorkspaceNotInit(self):
-        self.leafExec("sync", expectedRc=2)
+        self.leafExec(("profile", "sync"), expectedRc=2)
         self.leafExec("status")
 
     def testConfigurePackages(self):
         self.leafExec("init")
-        self.leafExec("create", "foo")
-        self.leafExec("config:profile",
+        self.leafExec(('profile', 'create'), "foo")
+        self.leafExec(("profile", "config"),
                       "-p", "container-A_1.0",
-                      "--package", "install_1.0")
-        self.leafExec("config:profile",
+                      "--add-package", "install_1.0")
+        self.leafExec(("env", "profile"),
                       "--set", "FOO=BAR",
                       "--set", "FOO2=BAR2")
         self.checkProfileContent("foo", [])
-        self.leafExec("sync")
+        self.leafExec(("profile", "sync"))
         self.checkProfileContent("foo", ["container-A",
                                          "container-B",
                                          "container-C",
                                          "container-E",
                                          "install"])
 
-        self.leafExec("create", "foo", expectedRc=2)
+        self.leafExec(('profile', 'create'), "foo", expectedRc=2)
 
     def testDelete(self):
         self.leafExec("init")
-        self.leafExec("create", "foo")
+        self.leafExec(('profile', 'create'), "foo")
         self.checkProfileContent("foo", [])
-        self.leafExec("create", "foo2")
+        self.leafExec(('profile', 'create'), "foo2")
         self.checkProfileContent("foo2", [])
         self.leafExec("status")
-        self.leafExec("delete", "foo2")
+        self.leafExec(("profile", "delete"), "foo2")
         self.checkProfileContent("foo", [])
         self.checkProfileContent("foo2", None)
         self.leafExec("status")
 
     def testReservedName(self):
         self.leafExec("init")
-        self.leafExec("create", "current", expectedRc=2)
-        self.leafExec("create", "", expectedRc=2)
-        self.leafExec("create", "foo")
-        self.leafExec("create", "foo", expectedRc=2)
+        self.leafExec(('profile', 'create'), "current", expectedRc=2)
+        self.leafExec(('profile', 'create'), "", expectedRc=2)
+        self.leafExec(('profile', 'create'), "foo")
+        self.leafExec(('profile', 'create'), "foo", expectedRc=2)
 
     def testAutoFindWorkspace(self):
         profileConfigFile = self.getWorkspaceFolder() / LeafFiles.WS_CONFIG_FILENAME
@@ -81,7 +87,7 @@ class TestProfileCli_Default(LeafCliWrapper):
 
         self.leafExec("init")
         self.assertTrue(profileConfigFile.exists())
-        self.leafExec("create", "foo")
+        self.leafExec(('profile', 'create'), "foo")
         self.leafExec("select", "foo")
 
         self.leafExec("status")
@@ -104,24 +110,24 @@ class TestProfileCli_Default(LeafCliWrapper):
 
     def testWithoutVersion(self):
         self.leafExec("init")
-        self.leafExec("create", "foo")
-        self.leafExec("config:profile", "-p", "container-A")
+        self.leafExec(("profile", "create"), "foo")
+        self.leafExec(("profile", "config"), "-p", "container-A")
         self.leafExec("status")
-        self.leafExec("sync")
+        self.leafExec(("profile", "sync"))
         self.checkProfileContent("foo", ["container-A",
                                          "container-C",
                                          "container-D"])
 
     def testBootstrapWorkspace(self):
         self.leafExec("init")
-        self.leafExec("create", "foo")
-        self.leafExec("config:p", "-p", "container-A")
-        self.leafExec("sync")
+        self.leafExec(("profile", "create"), "foo")
+        self.leafExec(("profile", "config"), "-p", "container-A")
+        self.leafExec(("profile", "sync"))
         self.checkCurrentProfile("foo")
-        self.leafExec("create", "bar")
+        self.leafExec(("profile", "create"), "bar")
         self.checkCurrentProfile("bar")
         self.leafExec("status")
-        self.leafExec("env")
+        self.leafExec(("env", "print"))
         self.checkProfileContent("foo", ["container-A",
                                          "container-C",
                                          "container-D"])
@@ -131,69 +137,40 @@ class TestProfileCli_Default(LeafCliWrapper):
         self.assertFalse(dataFolder.exists())
 
         self.leafExec("status")
-        self.leafExec("env", expectedRc=2)
-        self.leafExec("select", "foo")
+        self.leafExec(("env", "print"), expectedRc=2)
+        self.leafExec(("profile", "switch"), "foo")
         self.checkCurrentProfile("foo")
-        self.leafExec("env", expectedRc=2)
-        self.leafExec("sync")
-        self.leafExec("env")
+        self.leafExec(("env", "print"), expectedRc=2)
+        self.leafExec(("profile", "sync"))
+        self.leafExec(("env", "print"))
         self.checkProfileContent("foo", ["container-A",
                                          "container-C",
                                          "container-D"])
 
     def testRenameProfile(self):
         self.leafExec("init")
-        self.leafExec("create", "foo")
-        self.leafExec("config:p", "-p", "container-A")
-        self.leafExec("sync")
-        self.leafExec("env")
+        self.leafExec(("profile", "create"), "foo")
+        self.leafExec(("profile", "config"), "-p", "container-A")
+        self.leafExec(("profile", "sync"))
+        self.leafExec(("env", "print"))
 
-        self.leafExec("rename", "bar")
-        self.leafExec("env")
-        self.leafExec("env", "bar")
-        self.leafExec("env", "foo", expectedRc=2)
+        self.leafExec(("profile", "rename"), "bar")
+        self.leafExec(("env", "profile"))
+        self.leafExec(("env", "profile"), "bar")
+        self.leafExec(("env", "profile"), "foo", expectedRc=2)
 
-        self.leafExec("rename", "foo")
-        self.leafExec("env")
-        self.leafExec("env", "foo")
-
-    def testUpdate(self):
-        self.leafExec("init")
-        self.leafExec("create", "foo")
-        self.leafExec("config:profile",
-                      "-p", "version_1.0",
-                      "-p", "container-A_1.0")
-        self.leafExec("sync")
-        self.checkCurrentProfile("foo")
-        self.checkProfileContent("foo", ["container-A",
-                                         "container-B",
-                                         "container-C",
-                                         "container-E",
-                                         "version"])
-
-        self.leafExec("update", "--list")
-        self.leafExec("sync")
-        self.checkProfileContent("foo", ["container-A",
-                                         "container-B",
-                                         "container-C",
-                                         "container-E",
-                                         "version"])
-
-        self.leafExec("update")
-        self.leafExec("sync")
-        self.checkProfileContent("foo", ["container-A",
-                                         "container-C",
-                                         "container-D",
-                                         "version"])
+        self.leafExec(("profile", "rename"), "foo")
+        self.leafExec(("env", "profile"))
+        self.leafExec(("env", "profile"), "foo")
 
     def testEnv(self):
         self.leafExec("init")
-        self.leafExec("create", "ENV-A")
-        self.leafExec("config:profile", "-p", "env-A")
-        self.leafExec("sync")
-        self.leafExec("env", "ENV-A")
-        self.leafExec("env")
-        self.leafExec("env",
+        self.leafExec(("profile", "create"), "ENV-A")
+        self.leafExec(("profile", "config"), "-p", "env-A")
+        self.leafExec(("profile", "sync"))
+        self.leafExec(("env", "profile"), "ENV-A")
+        self.leafExec(("env", "profile"))
+        self.leafExec(("env", "profile"),
                       "--activate-script",
                       str(self.getWorkspaceFolder() / "in.env"),
                       "--deactivate-script",
@@ -203,10 +180,10 @@ class TestProfileCli_Default(LeafCliWrapper):
 
     def testConditionalInstall_user(self):
         self.leafExec("init")
-        self.leafExec("create", "foo")
-        self.leafExec("config:profile", "-p" "condition")
+        self.leafExec(("profile", "create"), "foo")
+        self.leafExec(("profile", "config"), "-p" "condition")
 
-        self.leafExec("sync")
+        self.leafExec(("profile", "sync"))
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-B_1.0",
                                      "condition-D_1.0",
@@ -218,8 +195,8 @@ class TestProfileCli_Default(LeafCliWrapper):
                                          "condition-H",
                                          "condition"])
 
-        self.leafExec("config:profile", "--set", "FOO=BAR")
-        self.leafExec("sync")
+        self.leafExec(("env", "profile"), "--set", "FOO=BAR")
+        self.leafExec(("profile", "sync"))
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-A_1.0",
                                      "condition-B_1.0",
@@ -232,8 +209,8 @@ class TestProfileCli_Default(LeafCliWrapper):
                                          "condition-F",
                                          "condition"])
 
-        self.leafExec("config:profile", "--set", "HELLO=PLOP")
-        self.leafExec("sync")
+        self.leafExec(("env", "profile"), "--set", "HELLO=PLOP")
+        self.leafExec(("profile", "sync"))
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-A_1.0",
                                      "condition-B_1.0",
@@ -246,10 +223,10 @@ class TestProfileCli_Default(LeafCliWrapper):
                                          "condition-F",
                                          "condition"])
 
-        self.leafExec("config:profile",
+        self.leafExec(("env", "profile"),
                       "--set", "FOO2=BAR2",
                       "--set", "HELLO=wOrlD")
-        self.leafExec("sync")
+        self.leafExec(("profile", "sync"))
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-A_1.0",
                                      "condition-B_1.0",
@@ -267,10 +244,10 @@ class TestProfileCli_Default(LeafCliWrapper):
 
     def testConditionalInstall_ws(self):
         self.leafExec("init")
-        self.leafExec("create", "foo")
-        self.leafExec("config:profile", "-p" "condition")
+        self.leafExec(("profile", "create"), "foo")
+        self.leafExec(("profile", "config"), "-p" "condition")
 
-        self.leafExec("sync")
+        self.leafExec(("profile", "sync"))
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-B_1.0",
                                      "condition-D_1.0",
@@ -282,8 +259,8 @@ class TestProfileCli_Default(LeafCliWrapper):
                                          "condition-H",
                                          "condition"])
 
-        self.leafExec("config:workspace", "--set", "FOO=BAR")
-        self.leafExec("sync")
+        self.leafExec(("env", "workspace"), "--set", "FOO=BAR")
+        self.leafExec(("profile", "sync"))
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-A_1.0",
                                      "condition-B_1.0",
@@ -296,8 +273,8 @@ class TestProfileCli_Default(LeafCliWrapper):
                                          "condition-F",
                                          "condition"])
 
-        self.leafExec("config:workspace", "--set", "HELLO=PLOP")
-        self.leafExec("sync")
+        self.leafExec(("env", "workspace"), "--set", "HELLO=PLOP")
+        self.leafExec(("profile", "sync"))
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-A_1.0",
                                      "condition-B_1.0",
@@ -310,10 +287,10 @@ class TestProfileCli_Default(LeafCliWrapper):
                                          "condition-F",
                                          "condition"])
 
-        self.leafExec("config:workspace",
+        self.leafExec(("env", "workspace"),
                       "--set", "FOO2=BAR2",
                       "--set", "HELLO=wOrlD")
-        self.leafExec("sync")
+        self.leafExec(("profile", "sync"))
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-A_1.0",
                                      "condition-B_1.0",
@@ -331,10 +308,10 @@ class TestProfileCli_Default(LeafCliWrapper):
 
     def testConditionalInstall_pf(self):
         self.leafExec("init")
-        self.leafExec("create", "foo")
-        self.leafExec("config:profile", "-p" "condition")
+        self.leafExec(("profile", "create"), "foo")
+        self.leafExec(("profile", "config"), "-p" "condition")
 
-        self.leafExec("sync")
+        self.leafExec(("profile", "sync"))
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-B_1.0",
                                      "condition-D_1.0",
@@ -346,8 +323,8 @@ class TestProfileCli_Default(LeafCliWrapper):
                                          "condition-H",
                                          "condition"])
 
-        self.leafExec("config:profile", "--set", "FOO=BAR")
-        self.leafExec("sync")
+        self.leafExec(("env", "profile"), "--set", "FOO=BAR")
+        self.leafExec(("profile", "sync"))
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-A_1.0",
                                      "condition-B_1.0",
@@ -360,8 +337,8 @@ class TestProfileCli_Default(LeafCliWrapper):
                                          "condition-F",
                                          "condition"])
 
-        self.leafExec("config:profile", "--set", "HELLO=PLOP")
-        self.leafExec("sync")
+        self.leafExec(("env", "profile"), "--set", "HELLO=PLOP")
+        self.leafExec(("profile", "sync"))
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-A_1.0",
                                      "condition-B_1.0",
@@ -374,10 +351,10 @@ class TestProfileCli_Default(LeafCliWrapper):
                                          "condition-F",
                                          "condition"])
 
-        self.leafExec("config:profile",
+        self.leafExec(("env", "profile"),
                       "--set", "FOO2=BAR2",
                       "--set", "HELLO=wOrlD")
-        self.leafExec("sync")
+        self.leafExec(("profile", "sync"))
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-A_1.0",
                                      "condition-B_1.0",
@@ -393,33 +370,33 @@ class TestProfileCli_Default(LeafCliWrapper):
                                          "condition-G",
                                          "condition"])
 
-    def testEnvSetUnsetGenScrips(self):
+    def testEnvSetUnsetGenScripts(self):
 
-        self.leafExec("env:user")
-        self.leafExec("env:workspace", expectedRc=2)
-        self.leafExec("env:profile", expectedRc=2)
+        self.leafExec(("env", "user"))
+        self.leafExec(("env", "workspace"), expectedRc=2)
+        self.leafExec(("env", "profile"), expectedRc=2)
         self.leafExec("init")
-        self.leafExec("env:user")
-        self.leafExec("env:workspace")
-        self.leafExec("env:profile", expectedRc=2)
-        self.leafExec("create", "foo")
-        self.leafExec("env:user")
-        self.leafExec("env:workspace")
-        self.leafExec("env:profile")
+        self.leafExec(("env", "user"))
+        self.leafExec(("env", "workspace"))
+        self.leafExec(("env", "profile"), expectedRc=2)
+        self.leafExec(("profile", "create"), "foo")
+        self.leafExec(("env", "user"))
+        self.leafExec(("env", "workspace"))
+        self.leafExec(("env", "profile"))
 
-        for scope in ["user", "workspace", "profile", "u", "w", "p"]:
-            verb = "env:%s" % scope
+        for scope in ["user", "workspace", "profile"]:
+            verb = ("env", scope)
             self.leafExec(verb, "--set", "FOO=BAR")
             self.leafExec(verb, "--set", "HELLO=World")
             self.leafExec(verb, "--unset", "HELLO")
             self.leafExec(verb, "--set", "FOO=bar")
             self.leafExec(verb)
 
-        self.leafExec("env", "--set FOO=BAR", expectedRc=2)
-        self.leafExec("env")
+        self.leafExec(("env", "profile"), "--set FOO=BAR", expectedRc=2)
+        self.leafExec(("env", "profile"))
         inScript = self.getWorkspaceFolder() / "in.env"
         outScript = self.getWorkspaceFolder() / "out.env"
-        self.leafExec("env",
+        self.leafExec(("env", "print"),
                       "--activate-script", inScript,
                       "--deactivate-script", outScript)
         self.assertTrue(inScript.exists())
@@ -441,9 +418,9 @@ class TestProfileCli_Default(LeafCliWrapper):
 
     def testInstallFromWorkspace(self):
         self.leafExec("init")
-        self.leafExec("create", "foo")
-        self.leafExec("config:p", "-p", "install_1.0")
-        self.leafExec("sync")
+        self.leafExec(("profile", "create"), "foo")
+        self.leafExec(("profile", "config"), "-p", "install_1.0")
+        self.leafExec(("profile", "sync"))
 
         envDumpFile = self.getInstallFolder() / "install_1.0" / "dump.env"
         keys = [k for k in envFileToMap(envDumpFile).keys()
@@ -460,9 +437,9 @@ class TestProfileCli_Default(LeafCliWrapper):
 
     def testPackageOverride(self):
         self.leafExec("init")
-        self.leafExec("create", "myprofile")
-        self.leafExec("config:p", "-p", "container-A_1.0")
-        self.leafExec("sync")
+        self.leafExec(("profile", "create"), "myprofile")
+        self.leafExec(("profile", "config"), "-p", "container-A_1.0")
+        self.leafExec(("profile", "sync"))
 
         self.checkInstalledPackages(["container-A_1.0",
                                      "container-B_1.0",
@@ -474,8 +451,8 @@ class TestProfileCli_Default(LeafCliWrapper):
                                   "container-C",
                                   "container-E"])
 
-        self.leafExec("config:p", "-p", "container-E_1.1")
-        self.leafExec("sync")
+        self.leafExec(("profile", "config"), "-p", "container-E_1.1")
+        self.leafExec(("profile", "sync"))
 
         self.checkInstalledPackages(["container-A_1.0",
                                      "container-B_1.0",
@@ -489,21 +466,21 @@ class TestProfileCli_Default(LeafCliWrapper):
                                   "container-E"])
 
 
-@unittest.skipUnless("VERBOSE" in LEAF_UT_LEVELS, "Test disabled")
+@unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
 class TestProfileCli_Verbose(TestProfileCli_Default):
     def __init__(self, methodName):
         TestProfileCli_Default.__init__(self, methodName)
         self.postVerbArgs.append("--verbose")
 
 
-@unittest.skipUnless("QUIET" in LEAF_UT_LEVELS, "Test disabled")
+@unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
 class TestProfileCli_Quiet(TestProfileCli_Default):
     def __init__(self, methodName):
         TestProfileCli_Default.__init__(self, methodName)
         self.postVerbArgs.append("--quiet")
 
 
-@unittest.skipUnless("JSON" in LEAF_UT_LEVELS, "Test disabled")
+@unittest.skipIf("JSON" in LEAF_UT_SKIP, "Test disabled")
 class TestProfileCli_Json(TestProfileCli_Default):
     def __init__(self, methodName):
         TestProfileCli_Default.__init__(self, methodName)

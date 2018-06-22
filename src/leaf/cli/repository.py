@@ -19,8 +19,7 @@ class RepositoryMetaCommand(LeafMetaCommand):
         LeafMetaCommand.__init__(
             self,
             "repository",
-            "commands to maintain a leaf repository",
-            cmdAliases=["repo"])
+            "commands to maintain a leaf repository")
 
     def getSubCommands(self):
         return [RepositoryPackSubCommand(),

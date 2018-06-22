@@ -35,7 +35,7 @@ class UserConfiguration(JsonObject):
                     del envMap[k]
 
     def getEnvironment(self):
-        return Environment("Exported by user config",
+        return Environment("Exported by user configuration",
                            self.getEnvMap())
 
     def getRemotes(self):
@@ -73,7 +73,7 @@ class WorkspaceConfiguration(JsonObject):
                     del envMap[k]
 
     def getEnvironment(self):
-        return Environment("Exported by workspace config",
+        return Environment("Exported by workspace",
                            self.getEnvMap())
 
     def getProfiles(self):

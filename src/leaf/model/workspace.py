@@ -60,8 +60,10 @@ class Profile(JsonObject):
                     del envMap[k]
 
     def getEnvironment(self):
-        return Environment("Exported by profile %s" % self.name,
-                           self.getEnvMap())
+        out = Environment("Exported by profile %s" % self.name,
+                          self.getEnvMap())
+        out.env.append(('LEAF_PROFILE', self.name))
+        return out
 
     def getPackages(self):
         return self.jsoninit(key=JsonConstants.WS_PROFILE_PACKAGES,

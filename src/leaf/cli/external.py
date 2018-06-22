@@ -8,14 +8,13 @@ Leaf Package Manager
 '''
 import argparse
 from collections import OrderedDict
+from leaf.cli.cliutils import GenericCommand
+from leaf.core.logger import TextLogger, Verbosity
+from leaf.core.packagemanager import PackageManager
 import os
 from os.path import pathsep
 from pathlib import Path
 import subprocess
-
-from leaf.cli.cliutils import GenericCommand
-from leaf.core.logger import TextLogger, Verbosity
-from leaf.core.packagemanager import PackageManager
 
 
 class ExternalCommand(GenericCommand):
@@ -49,7 +48,6 @@ class ExternalCommand(GenericCommand):
     def create(self, subparsers):
         parser = subparsers.add_parser(self.cmdName,
                                        help=self.cmdHelp,
-                                       aliases=self.cmdAliases,
                                        prefix_chars='+',
                                        add_help=False)
         self.initArgs(parser)

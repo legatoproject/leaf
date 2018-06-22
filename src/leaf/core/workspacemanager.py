@@ -12,6 +12,7 @@ from leaf.constants import LeafFiles, JsonConstants
 from leaf.core.coreutils import packageListToEnvironnement
 from leaf.core.dependencies import DependencyManager, DependencyType,\
     DependencyStrategy
+from leaf.model.base import Environment
 from leaf.model.config import WorkspaceConfiguration
 from leaf.model.package import Manifest, PackageIdentifier
 from leaf.model.workspace import Profile
@@ -88,38 +89,36 @@ class WorkspaceManager():
             raise ValueError("Cannot find profile %s" % name)
         return pfMap.get(name)
 
+    def isProfileSync(self, pf, raiseIfNotSync=False):
+        '''
+        Check if a profile contains all needed links to all contained packages
+        '''
+        try:
+            linkedPiList = [ip.getIdentifier()
+                            for ip in pf.getLinkedPackages()]
+            neededPiList = [ip.getIdentifier()
+                            for ip in self.getProfileDependencies(pf)]
+            for pi in neededPiList:
+                if pi not in linkedPiList:
+                    raise ValueError("Missing package: %s" % pi)
+            for pi in linkedPiList:
+                if pi not in neededPiList:
+                    raise ValueError("Package should not be linked: %s" % pi)
+        except Exception as e:
+            if raiseIfNotSync:
+                raise e
+            return False
+        return True
+
     def checkProfile(self, pf, raiseIfNotSync=True):
         '''
         Check if a profile contains all needed links to all contained packages
         '''
-        env = self.app.getLeafEnvironment()
-        env.addSubEnv(self.readConfiguration().getEnvironment())
-        env.addSubEnv(pf.getEnvironment())
-
         try:
-            linkedPiList = list(map(
-                Manifest.getIdentifier,
-                pf.getLinkedPackages()))
-            neededPiList = list(map(
-                Manifest.getIdentifier,
-                self.getProfileDependencies(pf)))
-
-            missingPiList = [pi for pi in neededPiList
-                             if pi not in linkedPiList]
-            extraPiList = [pi for pi in linkedPiList
-                           if pi not in neededPiList]
-
-            if len(extraPiList) > 0 or len(missingPiList) > 0:
-                if len(missingPiList) > 0:
-                    self.logger.printVerbose("Profile is missing package(s):",
-                                             ", ".join(map(str, missingPiList)))
-                if len(extraPiList) > 0:
-                    self.logger.printVerbose("Profile should not have package(s):",
-                                             ", ".join(map(str, extraPiList)))
-                raise ValueError("Profile not sync")
+            self.isProfileSync(pf, raiseIfNotSync=raiseIfNotSync)
         except:
-            message = "Profile %s is out of sync, please run 'leaf sync'" % (
-                pf.name)
+            message = "Profile %s is out of sync, please run 'leaf profile sync %s'" % (
+                pf.name, pf.name)
             if raiseIfNotSync:
                 raise ValueError(message)
             self.logger.printError(message)
@@ -162,7 +161,6 @@ class WorkspaceManager():
             raise ValueError("Profile %s already exists" % name)
 
         # Create & update profile
-        self.logger.printDefault("Create profile %s" % name)
         pf = Profile.emptyProfile(name, self.dataFolder / name)
 
         # Update & save configuration
@@ -182,7 +180,6 @@ class WorkspaceManager():
         # Retrieve profile
         wsc = self.readConfiguration()
         pf = self.retrieveProfile(name)
-
         # Check new name is valid in case of rename
         if newName is not None:
             newName = Profile.checkValidName(newName)
@@ -247,7 +244,6 @@ class WorkspaceManager():
         # Update & save configuration
         wsc.getProfiles()[pf.name] = pf.json
         self.writeConfiguration(wsc)
-        self.checkProfile(pf, raiseIfNotSync=False)
         return pf
 
     def switchProfile(self, name):
@@ -277,6 +273,7 @@ class WorkspaceManager():
         elif pf.folder.is_dir():
             shutil.rmtree(str(pf.folder))
         pf.folder.mkdir()
+        env = self._getSkelEnvironement(pf)
 
         # Check if packages need to be installed
         missingApList = DependencyManager.compute(pf.getPackageIdentifiers(),
@@ -284,11 +281,10 @@ class WorkspaceManager():
                                                   strategy=DependencyStrategy.LATEST_VERSION,
                                                   apMap=self.app.listAvailablePackages(),
                                                   ipMap=self.app.listInstalledPackages(),
-                                                  env=self.getSkelEnvironement(pf))
+                                                  env=env)
 
         # Install needed package
         if len(missingApList) > 0:
-            env = self.getSkelEnvironement(pf)
             self.app.installFromRemotes(list(map(Manifest.getIdentifier, missingApList)),
                                         env=env)
 
@@ -300,21 +296,29 @@ class WorkspaceManager():
                 piFolder = pf.folder / str(ip.getIdentifier())
             piFolder.symlink_to(ip.folder)
 
-    def getProfileEnv(self, name):
+    def getWorkspaceEnvironment(self):
+        out = self.readConfiguration().getEnvironment()
+        out.env.append(('LEAF_WORKSPACE', str(self.rootFolder)))
+        return out
+
+    def getProfileEnvironment(self, name):
+        pf = self.retrieveProfile(name)
+        return pf.getEnvironment()
+
+    def getFullEnvironment(self, name):
         pf = self.retrieveProfile(name)
         self.checkProfile(pf)
-        return packageListToEnvironnement(self.getProfileDependencies(pf),
-                                          self.app.listInstalledPackages(),
-                                          env=self.getSkelEnvironement(pf))
-
-    def getSkelEnvironement(self, pf=None):
-        out = self.app.getLeafEnvironment()
-        out.env.append(("LEAF_WORKSPACE", self.rootFolder))
-        out.addSubEnv(self.readConfiguration().getEnvironment())
-        if pf is not None:
-            out.env.append(("LEAF_PROFILE", pf.name))
-            out.addSubEnv(pf.getEnvironment())
+        out = self._getSkelEnvironement(pf)
+        out.addSubEnv(self.app.getPackagesEnvironment(
+            self.getProfileDependencies(pf)))
         return out
+
+    def _getSkelEnvironement(self, pf):
+        return Environment.build(self.app.getLeafEnvironment(workspace=self.rootFolder,
+                                                             profileName=pf.name),
+                                 self.app.getUserEnvironment(),
+                                 self.getWorkspaceEnvironment(),
+                                 pf.getEnvironment())
 
     def getProfileDependencies(self, pf):
         '''
@@ -324,4 +328,4 @@ class WorkspaceManager():
                                          DependencyType.INSTALLED,
                                          strategy=DependencyStrategy.LATEST_VERSION,
                                          ipMap=self.app.listInstalledPackages(),
-                                         env=self.getSkelEnvironement(pf))
+                                         env=self._getSkelEnvironement(pf))

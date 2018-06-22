@@ -48,7 +48,7 @@ _leaf_completions()
 				_process_leaf_completion "leaf package list -aq"
 				;;
 			"select")
-				_process_leaf_completion "leaf status 2>/dev/null | awk '/^- / {print \$2}'"
+				_process_leaf_completion "leaf profile list -q"
 				;;
 			"help")
 				_process_leaf_completion "leaf help --list"

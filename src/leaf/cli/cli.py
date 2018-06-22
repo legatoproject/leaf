@@ -8,20 +8,23 @@ Leaf Package Manager
 '''
 import argcomplete
 from argparse import RawDescriptionHelpFormatter, ArgumentParser
+from leaf import __help_description__, __version__
+from leaf.cli.external import findLeafExternalCommands
+from leaf.cli.package import PackageMetaCommand
+from leaf.cli.remote import RemoteMetaCommand
+from leaf.cli.workspace import WorkspaceInitCommand
+from leaf.utils import checkPythonVersion
 from pathlib import Path
 import sys
 
-from leaf import __help_description__, __version__
-from leaf.cli.external import findLeafExternalCommands
-from leaf.cli.misc import StatusCommand, SetupCommand, UserConfigCommand
-from leaf.cli.package import PackageSearchCommand, PackageMetaCommand
-from leaf.cli.releng import RepositoryMetaCommand
-from leaf.cli.remote import RemoteMetaCommand
-from leaf.cli.workspace import WorkspaceConfigCommand, ProfileConfigCommand,\
-    ProfileSelectCommand, ProfileSyncCommand, ProfileEnvCommand,\
-    ProfileUpdateCommand, WorkspaceInitCommand, ProfileCreateCommand,\
-    ProfileRenameCommand, ProfileDeleteCommand
-from leaf.utils import checkPythonVersion
+from leaf.cli.config import ConfigCommand
+from leaf.cli.env import EnvMetaCommand
+from leaf.cli.profile import ProfileMetaCommand
+from leaf.cli.repository import RepositoryMetaCommand
+from leaf.cli.search import SearchCommand
+from leaf.cli.select import SelectCommand
+from leaf.cli.setup import SetupCommand
+from leaf.cli.status import StatusCommand
 
 
 class LeafCli():
@@ -32,25 +35,20 @@ class LeafCli():
         self.commands = [
             # Common commands
             StatusCommand(),
-            PackageSearchCommand(),
+            SearchCommand(),
             SetupCommand(),
-            # Config
-            UserConfigCommand(),
-            WorkspaceConfigCommand(),
-            ProfileConfigCommand(),
+            SelectCommand(),
+            # Env
+            EnvMetaCommand(),
             # Workspace common operations
-            ProfileSelectCommand(),
-            ProfileSyncCommand(),
-            ProfileEnvCommand(),
-            ProfileUpdateCommand(),
-            # Workspace other operations
             WorkspaceInitCommand(),
-            ProfileCreateCommand(),
-            ProfileRenameCommand(),
-            ProfileDeleteCommand(),
-            # Other commands
-            PackageMetaCommand(),
+            ProfileMetaCommand(),
+            # Config & remotes
+            ConfigCommand(),
             RemoteMetaCommand(),
+            # Packages
+            PackageMetaCommand(),
+            # Releng
             RepositoryMetaCommand()
         ]
         self.commands += findLeafExternalCommands(
@@ -86,10 +84,8 @@ class LeafCli():
             command.create(subparsers)
         argcomplete.autocomplete(self.parser)
 
-    def run(self, customArgs=None, handleExceptions=True):
-        args = self.parser.parse_args(sys.argv[1:]
-                                      if customArgs is None
-                                      else customArgs)
+    def run(self, argv, handleExceptions=True):
+        args = self.parser.parse_args(argv)
         for cmd in self.commands:
             if cmd.isHandled(args.command):
                 return cmd.doExecute(args, catchException=handleExceptions)

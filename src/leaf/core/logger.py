@@ -8,13 +8,14 @@ Leaf Package Manager
 '''
 
 from abc import ABC, abstractmethod
+from cProfile import label
 from collections import OrderedDict
 from enum import IntEnum, unique
 import json
+from leaf.constants import LeafConstants
 import os
 import sys
 
-from leaf.constants import LeafConstants
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.model.base import Environment
 from leaf.model.package import AvailablePackage, InstalledPackage, Manifest,\
@@ -157,24 +158,24 @@ class TextLogger (ILogger):
                 content = OrderedDict()
                 content["Workspace env"] = wsc.getEnvMap()
                 self.prettyprintContent(content)
-            for pf in item.getAllProfiles().values():
-                print("-",
-                      pf.name,
-                      "[current]" if pf.isCurrentProfile else "")
-                if self.isVerbose():
+            if not self.isQuiet():
+                for pf in item.getAllProfiles().values():
+                    label = pf.name
+                    if pf.isCurrentProfile:
+                        label += " [current]"
+                    print(" - " + label)
                     content = OrderedDict()
                     content["Packages"] = pf.getPackages()
-                    content["Env"] = pf.getEnvMap()
-                    isSync = True
-                    try:
-                        item.checkProfile(pf)
-                    except:
-                        isSync = False
-                    content["Sync"] = isSync
+                    if self.isVerbose():
+                        content["Env"] = pf.getEnvMap()
+                        content["Sync"] = item.isProfileSync(pf)
+                        content["Packages"] = pf.getPackages()
                     self.prettyprintContent(content)
         elif isinstance(item, Profile):
-            print(item.name,
-                  "[current]" if item.isCurrentProfile else "")
+            text = item.name
+            if item.isCurrentProfile and not self.isQuiet():
+                text += " [current]"
+            print(text)
             if self.isVerbose():
                 content = OrderedDict()
                 content["Packages"] = item.getPackages()

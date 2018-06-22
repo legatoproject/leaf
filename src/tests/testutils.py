@@ -158,8 +158,7 @@ class LeafCliWrapper(AbstractTestWithRepo):
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
-        self.leafExec("config:user",
-                      "--root", self.getInstallFolder())
+        self.leafExec("config", "--root", self.getInstallFolder())
         self.leafExec(["remote", "add"], "default", self.getRemoteUrl())
 
     def leafExec(self, verb, *args, altWorkspace=None, expectedRc=0):
@@ -177,7 +176,7 @@ class LeafCliWrapper(AbstractTestWithRepo):
         if preArgs is not None:
             command += preArgs
         if verb is not None:
-            if isinstance(verb, list):
+            if isinstance(verb, (list, tuple)):
                 command += verb
             else:
                 command.append(verb)

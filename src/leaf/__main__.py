@@ -7,10 +7,10 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from leaf.cli.cli import LeafCli
-
+import sys
 
 def main():
-    return LeafCli().run()
+    return LeafCli().run(sys.argv[1:])
 
 
 if __name__ == '__main__':

@@ -9,63 +9,10 @@ Leaf Package Manager
 import argparse
 from leaf.cli.cliutils import LeafCommand, LeafMetaCommand
 from leaf.core.dependencies import DependencyType
-from leaf.core.tags import TagManager
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import Manifest
 from leaf.utils import mkTmpLeafRootDir, envListToMap
 from pathlib import Path
-
-
-class PackageSearchCommand(LeafCommand):
-
-    def __init__(self):
-        LeafCommand.__init__(
-            self,
-            "search",
-            "search for available packages")
-
-    def initArgs(self, parser):
-        super().initArgs(parser)
-        parser.add_argument("-a", "--all",
-                            dest="allPackages",
-                            action="store_true",
-                            help="display all packages, not only master packages")
-        parser.add_argument("-t", "--tag",
-                            dest="tags",
-                            action="append",
-                            metavar="TAG",
-                            help="filter search results matching with given tag")
-        parser.add_argument('keywords',
-                            nargs=argparse.ZERO_OR_MORE)
-
-    def execute(self, args):
-        logger = self.getLogger(args)
-        app = self.getApp(args, logger=logger)
-
-        pkgFilter = MetaPackageFilter()
-        if not args.allPackages:
-            pkgFilter.onlyMasterPackages()
-
-        if args.tags is not None:
-            for t in args.tags:
-                pkgFilter.withTag(t)
-
-        if args.keywords is not None and len(args.keywords) > 0:
-            for kw in args.keywords:
-                pkgFilter.withKeyword(kw)
-
-        # Pkg list
-        mfList = sorted(app.listAvailablePackages().values(),
-                        key=Manifest.getIdentifier)
-        # manage tags
-        TagManager().tagLatest(mfList)
-        TagManager().tagInstalled(mfList, app.listInstalledPackages().keys())
-
-        # Print filtered packages
-        logger.printDefault("Filter:", pkgFilter)
-        for mf in mfList:
-            if pkgFilter.matches(mf):
-                logger.displayItem(mf)
 
 
 class PackageMetaCommand(LeafMetaCommand):
@@ -73,25 +20,24 @@ class PackageMetaCommand(LeafMetaCommand):
     def __init__(self):
         LeafMetaCommand.__init__(self,
                                  "package",
-                                 "core package manager commands",
-                                 cmdAliases=["pkg"])
+                                 "core package manager commands")
+
+    def getDefaultSubCommand(self):
+        return PackageListCommand()
 
     def getSubCommands(self):
-        return [PackageListSubCommand(),
-                PackageInstallSubCommand(),
-                PackageRemoveSubCommand(),
-                PackageEnvSubCommand(),
-                PackageDependsSubCommand(),
-                PackagePrereqSubCommand()]
+        return [PackageInstallCommand(),
+                PackageUninstallCommand(),
+                PackageDepsCommand(),
+                PackagePrereqCommand()]
 
 
-class PackageListSubCommand(LeafCommand):
+class PackageListCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
                              "list",
-                             "list installed packages",
-                             cmdAliases=["ls"])
+                             "list installed packages")
 
     def initArgs(self, parser):
         super().initArgs(parser)
@@ -100,26 +46,26 @@ class PackageListSubCommand(LeafCommand):
                             action="store_true",
                             help="display all packages, not only master packages")
         parser.add_argument("-t", "--tag",
-                            dest="tags",
+                            dest="tags", metavar="TAG",
                             action="append",
-                            metavar="tag",
                             help="filter search results matching with given tag")
-        parser.add_argument('keywords',
-                            nargs=argparse.ZERO_OR_MORE)
+        parser.add_argument('keywords', metavar="KEYWORD",
+                            nargs=argparse.ZERO_OR_MORE,
+                            help="filter with given keywords")
 
     def execute(self, args):
         logger = self.getLogger(args)
         app = self.getApp(args, logger=logger)
 
         pkgFilter = MetaPackageFilter()
-        if not args.allPackages:
+        if 'allPackages' not in vars(args) or not args.allPackages:
             pkgFilter.onlyMasterPackages()
 
-        if args.tags is not None:
+        if 'tags' in vars(args) and args.tags is not None:
             for t in args.tags:
                 pkgFilter.withTag(t)
 
-        if args.keywords is not None and len(args.keywords) > 0:
+        if 'keywords' in vars(args) and args.keywords is not None and len(args.keywords) > 0:
             for kw in args.keywords:
                 pkgFilter.withKeyword(kw)
 
@@ -131,13 +77,12 @@ class PackageListSubCommand(LeafCommand):
                 logger.displayItem(mf)
 
 
-class PackageDependsSubCommand(LeafCommand):
+class PackageDepsCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
-                             "dependencies",
-                             "Build the dependency chain",
-                             cmdAliases=["deps"])
+                             "deps",
+                             "Build the dependency chain")
 
     def initArgs(self, parser):
         super().initArgs(parser)
@@ -173,8 +118,9 @@ class PackageDependsSubCommand(LeafCommand):
                             action='append',
                             metavar='KEY=VALUE',
                             help='add given environment variable')
-        parser.add_argument('packages',
-                            nargs=argparse.REMAINDER)
+        parser.add_argument('packages', metavar='PKGNAME',
+                            nargs=argparse.ONE_OR_MORE,
+                            help='package name')
 
     def execute(self, args):
         logger = self.getLogger(args)
@@ -186,13 +132,12 @@ class PackageDependsSubCommand(LeafCommand):
             logger.displayItem(i)
 
 
-class PackageInstallSubCommand(LeafCommand):
+class PackageInstallCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
                              "install",
-                             "install packages (download + extract)",
-                             cmdAliases=["i"])
+                             "install packages (download + extract)")
 
     @staticmethod
     def initInstallArguments(subparser):
@@ -203,9 +148,10 @@ class PackageInstallSubCommand(LeafCommand):
 
     def initArgs(self, parser):
         super().initArgs(parser)
-        PackageInstallSubCommand.initInstallArguments(parser)
-        parser.add_argument('packages',
-                            nargs=argparse.REMAINDER)
+        PackageInstallCommand.initInstallArguments(parser)
+        parser.add_argument('packages', metavar='PKGNAME',
+                            nargs=argparse.ONE_OR_MORE,
+                            help='name of packages to install')
 
     def execute(self, args):
         logger = self.getLogger(args)
@@ -218,7 +164,7 @@ class PackageInstallSubCommand(LeafCommand):
                               ' '.join([str(p.getIdentifier()) for p in items]))
 
 
-class PackagePrereqSubCommand(LeafCommand):
+class PackagePrereqCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
@@ -231,8 +177,9 @@ class PackagePrereqSubCommand(LeafCommand):
                             dest="prereqRootFolder",
                             type=Path,
                             help="a alternative root folder for required packages installation")
-        parser.add_argument('packages',
-                            nargs=argparse.REMAINDER)
+        parser.add_argument('packages', metavar='PKGNAME',
+                            nargs=argparse.ONE_OR_MORE,
+                            help='package name')
 
     def execute(self, args):
         logger = self.getLogger(args)
@@ -249,39 +196,21 @@ class PackagePrereqSubCommand(LeafCommand):
         return errorCount
 
 
-class PackageRemoveSubCommand(LeafCommand):
+class PackageUninstallCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
-                             "remove",
-                             "remove packages",
-                             cmdAliases=["rm"])
+                             "uninstall",
+                             "remove packages")
 
     def initArgs(self, parser):
         super().initArgs(parser)
-        parser.add_argument('packages', nargs=argparse.REMAINDER)
+        parser.add_argument('packages', metavar='PKGNAME',
+                            nargs=argparse.ONE_OR_MORE,
+                            help='name of package to uninstall')
 
     def execute(self, args):
         logger = self.getLogger(args)
         app = self.getApp(args, logger=logger)
 
         app.uninstallPackages(args.packages)
-
-
-class PackageEnvSubCommand(LeafCommand):
-
-    def __init__(self):
-        LeafCommand.__init__(self,
-                             "env",
-                             "display environment variables exported by packages")
-
-    def initArgs(self, parser):
-        super().initArgs(parser)
-        parser.add_argument('packages', nargs=argparse.REMAINDER)
-
-    def execute(self, args):
-        logger = self.getLogger(args)
-        app = self.getApp(args, logger=logger)
-
-        env = app.getPackageEnv(args.packages)
-        logger.displayItem(env)

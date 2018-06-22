@@ -55,6 +55,16 @@ class Environment():
     def unsetCommand(key):
         return "unset %s;" % (key)
 
+    @staticmethod
+    def build(*envList):
+        out = Environment()
+        for env in envList:
+            if env is not None:
+                if not isinstance(env, Environment):
+                    raise ValueError()
+                out.addSubEnv(env)
+        return out
+
     def __init__(self, comment=None, content=None):
         self.comment = comment
         self.env = []
