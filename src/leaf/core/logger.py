@@ -19,8 +19,8 @@ import sys
 
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.model.environment import Environment
-from leaf.model.package import AvailablePackage, InstalledPackage, Manifest,\
-    LeafArtifact, Feature
+from leaf.model.package import AvailablePackage, InstalledPackage, Manifest, \
+    LeafArtifact, Feature, ConditionalPackageIdentifier
 from leaf.model.remote import Remote
 from leaf.model.workspace import Profile
 
@@ -186,21 +186,33 @@ class TextLogger (ILogger):
                 print(item.getIdentifier(), "->", item.path)
         elif isinstance(item, Manifest):
             itemLabel = str(item.getIdentifier())
+            if item.getDescription() is not None:
+                itemLabel += ": %s" % item.getDescription()
             if self.verbosity == Verbosity.DEFAULT and len(item.getAllTags()) > 0:
-                itemLabel += " (%s)" % ",".join(item.getAllTags())
+                itemLabel += " [%s]" % ",".join(item.getAllTags())
             print(itemLabel)
             if self.isVerbose():
                 content = OrderedDict()
-                content["Description"] = item.getDescription()
+                content["Tags"] = item.getAllTags()
                 if isinstance(item, AvailablePackage):
-                    content["Size"] = (item.getSize(), 'bytes')
-                    content["Source"] = item.getUrl()
+                    content["Size"] = str(item.getSize()) + ' bytes'
                 elif isinstance(item, InstalledPackage):
                     content["Folder"] = item.folder
-                content["Depends"] = item.getLeafDepends()
-                content["Requires"] = item.getLeafRequires()
-                content["Tags"] = item.getAllTags()
                 self.prettyprintContent(content)
+
+                # Included Packages
+                cpisList = item.getLeafDepends()
+                if len(cpisList) > 0:
+                    def cpisToName(cpis):
+                        try:
+                            return str(ConditionalPackageIdentifier.fromString(cpis))
+                        except ValueError:
+                            return cpis
+
+                    content = {'Included Packages': [
+                        cpisToName(cpis) for cpis in cpisList]}
+                    self.prettyprintContent(content, joinvalues=False)
+
         elif isinstance(item, Remote):
             if self.isQuiet():
                 print(item.alias)
@@ -239,7 +251,7 @@ class TextLogger (ILogger):
         elif item is not None:
             print(str(item))
 
-    def prettyprintContent(self, content, indent=4, separator=':', ralign=False):
+    def prettyprintContent(self, content, indent=4, separator=':', ralign=False, joinvalues=True):
         '''
         Display formatted content
         '''
@@ -248,17 +260,32 @@ class TextLogger (ILogger):
             for key, value in content.items():
                 if isinstance(value, (list, tuple)):
                     if len(value) > 0:
-                        text = ', '.join(map(str, value))
-                        print(indentString,
-                              key + separator,
-                              text)
+                        if joinvalues:
+                            text = ', '.join(map(str, value))
+                            print(indentString,
+                                  key + separator,
+                                  text)
+                        else:
+                            print(indentString,
+                                  key + separator)
+                            for item in value:
+                                print(indentString + ' ' * indent,
+                                      item)
                 elif isinstance(value, dict):
                     if len(value) > 0:
-                        text = ', '.join(["%s=%s" % (k, v)
-                                          for (k, v) in value.items()])
-                        print(indentString,
-                              key + separator,
-                              text)
+                        if joinvalues:
+                            text = ', '.join(["%s=%s" % (k, v)
+                                              for (k, v) in value.items()])
+                            print(indentString,
+                                  key + separator,
+                                  text)
+                        else:
+                            print(indentString,
+                                  key + separator)
+                            for (k, v) in value.items():
+                                print(indentString + ' ' * indent,
+                                      "%s=%s" % (k, v))
+
                 elif value is not None:
                     text = str(value)
                     print(indentString,
