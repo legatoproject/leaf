@@ -7,7 +7,6 @@ from leaf import __version__
 
 SETUP_FOLDER = Path(__file__).parent
 MANPAGE_FOLDER = SETUP_FOLDER / 'man' / 'man1'
-print (MANPAGE_FOLDER.resolve())
 EXTENSIONS_FOLDER = SETUP_FOLDER / 'extensions'
 assert MANPAGE_FOLDER.exists()
 assert EXTENSIONS_FOLDER.exists()
@@ -31,7 +30,7 @@ setup(name='leaf',
       include_package_data=True,
       entry_points={
           'console_scripts': [
-              'leaf = leaf.cli.cli:main'
+              'leaf = leaf.__main__:main'
           ]
       },
       test_suite='nose.collector',

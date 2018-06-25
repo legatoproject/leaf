@@ -24,10 +24,6 @@ from leaf.cli.workspace import WorkspaceConfigCommand, ProfileConfigCommand,\
 from leaf.utils import checkPythonVersion
 
 
-def main():
-    return LeafCli().run()
-
-
 class LeafCli():
 
     def __init__(self):
