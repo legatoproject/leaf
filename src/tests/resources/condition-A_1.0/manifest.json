@@ -1,6 +1,37 @@
 {
   "info": {
     "name": "condition-A",
-    "version": "1.0"
+    "version": "1.0",
+    "features": {
+      "myFeatureFoo": {
+        "description": "Some description here",
+        "key": "FOO",
+        "values": {
+          "bar": "BAR",
+          "notbar": "OTHER_VALUE"
+        }
+      },
+      "myFeatureHello": {
+        "description": "Some description here",
+        "key": "HELLO",
+        "values": {
+          "default": null,
+          "world": "WoRlD"
+        }
+      },
+      "featureWithDups": {
+        "key": "featureWithDups",
+        "values": {
+          "enum1": "VALUE1",
+          "enum2": "VALUE3"
+        }
+      },
+      "featureWithMultipleKeys": {
+        "key": "featureWithMultipleKeys2",
+        "values": {
+          "enum1": "VALUE1"
+        }
+      }
+    }
   }
 }

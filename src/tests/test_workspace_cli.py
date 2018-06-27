@@ -465,6 +465,32 @@ class TestProfileCli_Default(LeafCliWrapper):
                                   "container-C",
                                   "container-E"])
 
+    def testFeatures(self):
+        self.leafExec(("feature", "list"))
+        self.leafExec(("feature", "query"), "featureWithDups")
+        self.leafExec(("feature", "toggle"),
+                      "--user", "featureWithDups", "enum1")
+        self.leafExec(("feature", "toggle"),
+                      "--workspace", "featureWithDups", "enum1", expectedRc=2)
+        self.leafExec(("feature", "toggle"),
+                      "--profile", "featureWithDups", "enum1", expectedRc=2)
+
+        self.leafExec(("init"))
+        self.leafExec(("feature", "toggle"),
+                      "--user", "featureWithDups", "enum1")
+        self.leafExec(("feature", "toggle"),
+                      "--workspace", "featureWithDups", "enum1")
+        self.leafExec(("feature", "toggle"),
+                      "--profile", "featureWithDups", "enum1", expectedRc=2)
+
+        self.leafExec(("profile", "create"), "foo")
+        self.leafExec(("feature", "toggle"),
+                      "--user", "featureWithDups", "enum1")
+        self.leafExec(("feature", "toggle"),
+                      "--workspace", "featureWithDups", "enum1")
+        self.leafExec(("feature", "toggle"),
+                      "--profile", "featureWithDups", "enum1")
+
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
 class TestProfileCli_Verbose(TestProfileCli_Default):

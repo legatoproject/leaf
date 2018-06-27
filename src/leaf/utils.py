@@ -238,7 +238,7 @@ def findWorkspaceRoot(currentFolder=None, failIfNoWs=True):
         currentFolder = Path(os.getcwd())
     if isWorkspaceRoot(currentFolder):
         return currentFolder
-    for parent in currentFolder.parents:
+    for parent in currentFolder.resolve().parents:
         if isWorkspaceRoot(parent):
             return parent
     if failIfNoWs:

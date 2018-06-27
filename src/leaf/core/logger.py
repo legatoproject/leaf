@@ -8,6 +8,7 @@ Leaf Package Manager
 '''
 
 from abc import ABC, abstractmethod
+from asyncio.log import logger
 from cProfile import label
 from collections import OrderedDict
 from enum import IntEnum, unique
@@ -19,7 +20,7 @@ import sys
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.model.environment import Environment
 from leaf.model.package import AvailablePackage, InstalledPackage, Manifest,\
-    LeafArtifact
+    LeafArtifact, Feature
 from leaf.model.remote import Remote
 from leaf.model.workspace import Profile
 
@@ -218,6 +219,21 @@ class TextLogger (ILogger):
                 if not item.isEnabled():
                     label += " (disabled)"
                 print(label)
+        elif isinstance(item, Feature):
+            if self.isQuiet():
+                print(item.name)
+            elif self.isVerbose():
+                print(item.name)
+                content = OrderedDict()
+                content["Description"] = item.getDescription()
+                content["Key"] = item.getKey()
+                content["Values"] = ", ".join(
+                    ["%s(%s)" % (k, "" if v is None else v) for k, v in item.getValues().items()])
+                self.prettyprintContent(content)
+            else:
+                print("%s: %s (%s)" % (item.name,
+                                       item.getDescription(),
+                                       "|".join(item.getValues().keys())))
         elif isinstance(item, tuple) and len(item) == 2:
             print('export %s="%s"; ' % item)
         elif item is not None:

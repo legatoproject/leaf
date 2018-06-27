@@ -10,6 +10,7 @@ import time
 import unittest
 
 from leaf.core.dependencies import DependencyType
+from leaf.core.features import FeatureManager
 from leaf.core.logger import Verbosity, TextLogger
 from leaf.core.packagemanager import PackageManager
 from leaf.model.environment import Environment
@@ -504,6 +505,19 @@ class TestPackageManager_File(AbstractTestWithRepo):
             self.assertTrue(isinstance(item, itemType))
         deps = [str(mf.getIdentifier()) for mf in result]
         self.assertEqual(expected, deps)
+
+    def testFeatures(self):
+        apMap = self.pm.listAvailablePackages()
+        pkg = apMap.get(PackageIdentifier.fromString("condition_1.0"))
+        self.assertEqual(4, len(pkg.getFeatures()))
+        self.assertEqual(4, len(pkg.getFeaturesMap()))
+        fm = FeatureManager(self.pm)
+        self.assertEqual(4, len(fm.features))
+        fm.getFeature("myFeatureFoo").check()
+        fm.getFeature("myFeatureHello").check()
+        fm.getFeature("featureWithDups").check()
+        with self.assertRaises(ValueError):
+            fm.getFeature("featureWithMultipleKeys").check()
 
 
 if __name__ == "__main__":

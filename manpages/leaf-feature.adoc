@@ -1,0 +1,97 @@
+= leaf-feature(1)
+
+== NAME
+
+leaf-feature - toggle features for packages
+
+== SYNOPSIS
+
+*leaf* *feature* *list*
+
+*leaf* *feature* *toggle* _FEATURE_ _VALUE_ [*--user*|*--workspace*|*--profile*]
+
+*leaf* *feature* *query* _FEATURE_
+
+== DESCRIPTION
+
+*leaf feature* command allows to query and toggle feature values. A *leaf* feature is a configurable
+value provided by packages, that allows to tune a package behavior and installed content. A typical
+example is when a library distributed through a *leaf* package can be used either in binary mode
+(pre-compiled) or in source mode (if one want to make some customization and rebuild). Another
+example could be when a package provides support for several implementation languages; a *leaf* feature
+can be used to toggle support for additional languages.
+
+A feature value is stored as an environment variable, so it means that the feature system has the 
+flexibility to be configured either in the user, in the workspace or in the profile scope (see 
+*leaf env* command).
+
+== SUB-COMMANDS
+
+*list*::
+
+This command lists the available features coming from the available and installed packages.
+For each feature, following information is provided: the _FEATURE_ id (to be used with other commands),
+some description text explaining the purpose of it, and a list of possible _VALUE_ items.
+
+*query*::
+
+This command checks the current status of the required _FEATURE_. It will display the current _VALUE_
+of it, according to the current user/workspace/profile configuration.
+
+*toggle*::
+
+This command changes the required _FEATURE_ to required _VALUE_. By default, the toggled value will 
+be stored in the current profile. Options can be used to use another scope if necessary.
+
+== OPTIONS
+
+_FEATURE_::
+
+A feature identifier. List of available _FEATURE_ items is returned by *list* command.
+
+_VALUE_::
+
+A feature value. List of available _VALUE_ items for a given _FEATURE_ is returned by *list* command.
+
+*--user|--workspace|--profile*::
+
+Modified scope option. Used in *toggle* command, this option allows to specify which scope needs
+to be configured for the required feature. This allows to enable a feature across all workspaces
+(if *--user* is used), across all profiles of a given workspace (if *--workspace* is used), or
+specifically to the current profile (if *--profile* is used; default if not specified).
+
+== EXAMPLES
+
+=== Get features list
+
+Valid wherever you are:
+
+*leaf feature list*
+
+=== Get feature status
+
+Check if asked feature is enabled in current context:
+
+*leaf feature query someFeature*
+
+=== Set feature value for current profile
+
+Assuming you're in an existing workspace:
+
+*leaf feature toggle someFeature someValue*
+
+=== Set feature value for all workspaces
+
+Valid wherever your are:
+
+*leaf feature toggle someFeature someValue --user*
+
+== BEHAVIOR
+
+*leaf feature toggle* is an atomic command that will just set environment variable matching with
+the required feature and value. If this variable is used to modify package dependencies, the profile
+will have to be provisioned (see *leaf profile sync*).
+
+== SEE ALSO
+
+*leaf env*, *leaf profile*

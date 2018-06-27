@@ -39,6 +39,9 @@ _leaf_completions()
 			"$PREVIOUS_WORD" = "disable"; then
 			_process_leaf_completion "leaf remote list -q"
 		fi
+	elif test "$PREVIOUS_PREVIOUS_WORD" = "toggle"; then
+		# Handle values for features
+		_process_leaf_completion "leaf feature list | grep ${PREVIOUS_WORD}: | sed -e 's/^.*(\(.*\))$/\1/;s/|/\n/g'"
 	else
 		case "$PREVIOUS_WORD" in
 			"search"|"install"|"-p"|"--package")
@@ -52,6 +55,9 @@ _leaf_completions()
 				;;
 			"help")
 				_process_leaf_completion "leaf help --list"
+				;;
+			"toggle"|"query")
+				_process_leaf_completion "leaf feature list -q"
 				;;
 			*)
 			  _python_argcomplete "$@"

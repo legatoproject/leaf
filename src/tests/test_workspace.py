@@ -6,10 +6,11 @@ from collections import OrderedDict
 import platform
 import unittest
 
+from leaf.core.features import FeatureManager
 from leaf.core.logger import TextLogger, Verbosity
 from leaf.core.packagemanager import PackageManager
 from leaf.core.workspacemanager import WorkspaceManager
-from leaf.model.package import Manifest, PackageIdentifier
+from leaf.model.package import PackageIdentifier, Manifest
 from tests.test_depends import mkpi
 from tests.testutils import AbstractTestWithRepo
 
@@ -332,6 +333,52 @@ class TestProfile(AbstractTestWithRepo):
                                    "container-A_1.0"])),
                          list(map(Manifest.getIdentifier,
                                   self.ws.getProfileDependencies(profile))))
+
+    def testFeatures(self):
+        fm = FeatureManager(self.pm)
+
+        feature = fm.getFeature("myFeatureFoo")
+        self.assertIsNotNone(feature)
+
+        self.assertEqual("FOO",
+                         feature.getKey())
+        self.assertEqual({"bar": "BAR",
+                          "notbar": "OTHER_VALUE"},
+                         feature.getValues())
+
+        self.assertEqual(None,
+                         self.pm.getUserEnvironment().findValue("FOO"))
+        fm.toggleUserFeature("myFeatureFoo", "bar", self.pm)
+        self.assertEqual("BAR",
+                         self.pm.getUserEnvironment().findValue("FOO"))
+
+        self.ws.inittialize()
+        self.assertEqual(None,
+                         self.ws.getWorkspaceEnvironment().findValue("FOO"))
+        fm.toggleWorkspaceFeature("myFeatureFoo", "bar", self.ws)
+        self.assertEqual("BAR",
+                         self.ws.getWorkspaceEnvironment().findValue("FOO"))
+
+        profile = self.ws.createProfile("myprofile")
+        self.ws.switchProfile(profile)
+        self.assertEqual(None,
+                         self.ws.getProfile("myprofile").getEnvironment().findValue("FOO"))
+        fm.toggleProfileFeature("myFeatureFoo", "bar", self.ws)
+        self.assertEqual("BAR",
+                         self.ws.getProfile("myprofile").getEnvironment().findValue("FOO"))
+
+        with self.assertRaises(ValueError):
+            fm.toggleUserFeature("unknwonFeature", "unknownValue", self.pm)
+
+        with self.assertRaises(ValueError):
+            fm.toggleUserFeature("myFeatureFoo", "unknownValue", self.pm)
+
+        # Error cases
+        fm.toggleUserFeature("featureWithDups", "enum1", self.pm)
+        with self.assertRaises(ValueError):
+            fm.toggleUserFeature("featureWithDups", "enum2", self.pm)
+        with self.assertRaises(ValueError):
+            fm.toggleUserFeature("featureWithMultipleKeys", "enum1", self.pm)
 
 
 if __name__ == "__main__":

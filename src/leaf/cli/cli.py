@@ -8,23 +8,24 @@ Leaf Package Manager
 '''
 import argcomplete
 from argparse import RawDescriptionHelpFormatter, ArgumentParser
-from leaf import __help_description__, __version__
-from leaf.cli.external import findLeafExternalCommands
-from leaf.cli.package import PackageMetaCommand
-from leaf.cli.remote import RemoteMetaCommand
-from leaf.cli.workspace import WorkspaceInitCommand
-from leaf.utils import checkPythonVersion
 from pathlib import Path
 import sys
 
+from leaf import __help_description__, __version__
 from leaf.cli.config import ConfigCommand
 from leaf.cli.env import EnvMetaCommand
+from leaf.cli.external import findLeafExternalCommands
+from leaf.cli.feature import FeatureMetaCommand
+from leaf.cli.package import PackageMetaCommand
 from leaf.cli.profile import ProfileMetaCommand
+from leaf.cli.remote import RemoteMetaCommand
 from leaf.cli.repository import RepositoryMetaCommand
 from leaf.cli.search import SearchCommand
 from leaf.cli.select import SelectCommand
 from leaf.cli.setup import SetupCommand
 from leaf.cli.status import StatusCommand
+from leaf.cli.workspace import WorkspaceInitCommand
+from leaf.utils import checkPythonVersion
 
 
 class LeafCli():
@@ -40,6 +41,8 @@ class LeafCli():
             SelectCommand(),
             # Env
             EnvMetaCommand(),
+            # Features
+            FeatureMetaCommand(),
             # Workspace common operations
             WorkspaceInitCommand(),
             ProfileMetaCommand(),

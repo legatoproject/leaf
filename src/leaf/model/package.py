@@ -192,6 +192,15 @@ class Manifest(JsonObject):
     def getAllTags(self):
         return self.customTags + self.getTags()
 
+    def getFeatures(self):
+        return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_FEATURES], default={})
+
+    def getFeaturesMap(self):
+        out = OrderedDict()
+        for name, json in self.getFeatures().items():
+            out[name] = Feature(name, json)
+        return out
+
 
 class LeafArtifact(Manifest):
     '''
@@ -250,3 +259,83 @@ class InstalledPackage(Manifest):
 
     def getEnvMap(self):
         return self.jsonget(JsonConstants.ENV, OrderedDict())
+
+
+class Feature(JsonObject):
+    '''
+    Reprensent a leaf feature, ie constants for a given env var
+    '''
+
+    def __init__(self, name, json):
+        JsonObject.__init__(self, json)
+        self.name = name
+        self.aliases = []
+
+    def addAlias(self, other):
+        if not isinstance(other, Feature):
+            raise ValueError()
+        if self.name != other.name:
+            raise ValueError("Cannot alias feature with different name")
+        if self != other and other not in self.aliases:
+            self.aliases.append(other)
+
+    def getValue(self, enum):
+        self.check()
+        values = []
+
+        def visit(f):
+            if enum in f.getValues():
+                value = f.getValues().get(enum)
+                if value not in values:
+                    values.append(value)
+            for alias in f.aliases:
+                visit(alias)
+
+        visit(self)
+        if len(values) == 0:
+            raise ValueError("Cannot find %s in feature %s" %
+                             (enum, self.name))
+        if len(values) > 1:
+            raise ValueError("Multiple definition for %s in feature %s" %
+                             (enum, self.name))
+        return values[0]
+
+    def retrieveEnumsForValue(self, value):
+        self.check()
+        out = []
+
+        def visit(f):
+            for k, v in f.getValues().items():
+                if v == value and k not in out:
+                    out.append(k)
+            for alias in f.aliases:
+                visit(alias)
+        visit(self)
+        return out
+
+    def check(self):
+        expectedKey = self.getKey()
+
+        def visit(f):
+            if f.getKey() != expectedKey:
+                raise ValueError("Invalid feature %s" % (self.name))
+            for alias in f.aliases:
+                visit(alias)
+        visit(self)
+
+    def getDescription(self):
+        # Can be None
+        return self.json.get(JsonConstants.INFO_FEATURE_DESCRIPTION)
+
+    def getKey(self):
+        return self.json[JsonConstants.INFO_FEATURE_KEY]
+
+    def getValues(self):
+        return self.json.get(JsonConstants.INFO_FEATURE_VALUES, {})
+
+    def __eq__(self, other):
+        return isinstance(other, Feature) and \
+            self.name == other.name and \
+            self.getKey() == other.getKey() and \
+            self.getValues() == other.getValues() and \
+            self.getDescription() == other.getDescription()

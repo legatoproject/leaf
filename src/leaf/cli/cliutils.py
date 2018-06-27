@@ -16,13 +16,15 @@ import traceback
 from leaf.core.logger import createLogger, Verbosity
 from leaf.core.packagemanager import PackageManager
 from leaf.core.workspacemanager import WorkspaceManager
+from leaf.model.base import Scope
 from leaf.utils import findWorkspaceRoot
 
 
 def initCommonArgs(parser,
                    addRemoveEnv=False,
                    withEnvScripts=False,
-                   addRemovePackages=False):
+                   addRemovePackages=False,
+                   withScope=False):
     if addRemoveEnv:
         parser.add_argument('--set',
                             dest='envAddList',
@@ -56,6 +58,24 @@ def initCommonArgs(parser,
                             action='append',
                             metavar='PKGNAME',
                             help="remove given package")
+    if withScope:
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument("--user",
+                           dest="envScope",
+                           action="store_const",
+                           const=Scope.USER,
+                           default=Scope.PROFILE,
+                           help="use user configuration environment")
+        group.add_argument("--workspace",
+                           dest="envScope",
+                           action="store_const",
+                           const=Scope.WORKSPACE,
+                           help="use workspace environment")
+        group.add_argument("--profile",
+                           dest="envScope",
+                           action="store_const",
+                           const=Scope.PROFILE,
+                           help="use profile environment")
 
 
 class GenericCommand(ABC):
