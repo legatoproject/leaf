@@ -176,7 +176,7 @@ class TextLogger (ILogger):
                 print(item.getIdentifier(), "->", item.path)
         elif isinstance(item, Manifest):
             itemLabel = str(item.getIdentifier())
-            if item.getDescription() is not None:
+            if self.verbosity >= Verbosity.DEFAULT and item.getDescription() is not None:
                 itemLabel += ": %s" % item.getDescription()
             if self.verbosity == Verbosity.DEFAULT and len(item.getAllTags()) > 0:
                 itemLabel += " [%s]" % ",".join(item.getAllTags())
