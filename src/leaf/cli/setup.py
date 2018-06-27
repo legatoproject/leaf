@@ -7,11 +7,12 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 import argparse
+import os
+from pathlib import Path
+
 from leaf.cli.cliutils import LeafCommand, initCommonArgs, LeafCommandGenerator
 from leaf.model.workspace import Profile
 from leaf.utils import findWorkspaceRoot
-import os
-from pathlib import Path
 
 
 class SetupCommand(LeafCommand):
@@ -39,7 +40,7 @@ class SetupCommand(LeafCommand):
     def execute(self, args):
 
         logger = self.getLogger(args)
-        app = self.getApp(args, logger=logger)
+        app = self.getPackageManager(args)
 
         cmdGenerator = LeafCommandGenerator()
         cmdGenerator.initCommonArgs(args)

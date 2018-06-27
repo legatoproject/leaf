@@ -8,6 +8,7 @@ Leaf Package Manager
 '''
 import argparse
 from leaf.cli.cliutils import LeafCommand, initCommonArgs, LeafMetaCommand
+from leaf.core.coreutils import retrievePackageIdentifier
 
 
 class ProfileMetaCommand(LeafMetaCommand):
@@ -37,10 +38,12 @@ class AbstractProfileCommand(LeafCommand):
 
     def getProfileName(self, args, defaultProvider=None):
         out = None
-        if self.profileRequired == True:
-            out = args.profiles[0]
-        elif self.profileRequired == False:
-            out = args.profiles
+        if hasattr(args, 'profiles'):
+            if self.profileRequired == True:
+                out = args.profiles[0]
+            elif self.profileRequired == False:
+                out = args.profiles
+
         if out is None and defaultProvider is not None:
             out = defaultProvider()
         return out
@@ -66,10 +69,12 @@ class ProfileListCommand(AbstractProfileCommand):
     def execute(self, args):
         logger = self.getLogger(args)
         workspace = self.getWorkspace(args)
-        filterName = self.getProfileName(args)
-        for profile in workspace.getAllProfiles().values():
-            if filterName is None or filterName == profile.name:
+        name = self.getProfileName(args)
+        if name is None:
+            for profile in workspace.listProfiles().values():
                 logger.displayItem(profile)
+        else:
+            logger.displayItem(workspace.getProfile(name))
 
 
 class ProfileCreateCommand(AbstractProfileCommand):
@@ -82,9 +87,10 @@ class ProfileCreateCommand(AbstractProfileCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        ws = self.getWorkspace(args)
-        pf = ws.createProfile(self.getProfileName(args))
-        logger.printDefault("Profile %s created" % pf.name)
+        workspace = self.getWorkspace(args)
+        profile = workspace.createProfile(self.getProfileName(args))
+        workspace.switchProfile(profile)
+        logger.printDefault("Profile %s created" % profile.name)
 
 
 class ProfileRenameCommand(AbstractProfileCommand):
@@ -102,12 +108,12 @@ class ProfileRenameCommand(AbstractProfileCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        ws = self.getWorkspace(args)
+        workspace = self.getWorkspace(args)
 
-        oldName = ws.getCurrentProfileName()
-        pf = ws.updateProfile(name=oldName,
-                              newName=args.profiles[0])
-        logger.printDefault("Profile %s renamed to %s" % (oldName, pf.name))
+        oldName = workspace.getCurrentProfileName()
+        profile = workspace.renameProfile(oldName, args.profiles[0])
+        logger.printDefault("Profile %s renamed to %s" %
+                            (oldName, profile.name))
 
 
 class ProfileDeleteCommand(AbstractProfileCommand):
@@ -120,11 +126,10 @@ class ProfileDeleteCommand(AbstractProfileCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        ws = self.getWorkspace(args)
-        pf = ws.deleteProfile(self.getProfileName(
-            args, ws.getCurrentProfileName))
-        if pf is not None:
-            logger.printDefault("Profile %s deleted" % pf.name)
+        workspace = self.getWorkspace(args)
+        pfname = self.getProfileName(args, workspace.getCurrentProfileName)
+        workspace.deleteProfile(pfname)
+        logger.printDefault("Profile %s deleted" % pfname)
 
 
 class ProfileSwitchCommand(AbstractProfileCommand):
@@ -137,9 +142,10 @@ class ProfileSwitchCommand(AbstractProfileCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        ws = self.getWorkspace(args)
-        pf = ws.switchProfile(self.getProfileName(args))
-        logger.printVerbose("Profile package folder:", pf.folder)
+        workspace = self.getWorkspace(args)
+        profile = workspace.getProfile(self.getProfileName(args))
+        workspace.switchProfile(profile)
+        logger.printVerbose("Profile package folder:", profile.folder)
 
 
 class ProfileSyncCommand(AbstractProfileCommand):
@@ -151,9 +157,10 @@ class ProfileSyncCommand(AbstractProfileCommand):
             profileRequired=False)
 
     def execute(self, args):
-        ws = self.getWorkspace(args)
-        ws.provisionProfile(self.getProfileName(
-            args, ws.getCurrentProfileName))
+        workspace = self.getWorkspace(args)
+        pfname = self.getProfileName(args, workspace.getCurrentProfileName)
+        profile = workspace.getProfile(pfname)
+        workspace.provisionProfile(profile)
 
 
 class ProfileConfigCommand(AbstractProfileCommand):
@@ -170,7 +177,20 @@ class ProfileConfigCommand(AbstractProfileCommand):
                        addRemovePackages=True)
 
     def execute(self, args):
-        ws = self.getWorkspace(args)
-        ws.updateProfile(self.getProfileName(args, ws.getCurrentProfileName),
-                         mpkgAddList=args.pkgAddList,
-                         mpkgRmList=args.pkgRmList)
+        packageManager = self.getPackageManager(args)
+        workspace = self.getWorkspace(args)
+
+        pfname = self.getProfileName(args, workspace.getCurrentProfileName)
+        profile = workspace.getProfile(pfname)
+
+        if args.pkgAddList is not None:
+            validPiList = list(packageManager.listAvailablePackages().keys()) + \
+                list(packageManager.listInstalledPackages().keys())
+            profile.addPackages([retrievePackageIdentifier(
+                motif, validPiList) for motif in args.pkgAddList])
+        if args.pkgRmList is not None:
+            validPiList = profile.getPackagesMap().values()
+            profile.removePackages([retrievePackageIdentifier(
+                motif, validPiList) for motif in args.pkgRmList])
+
+        workspace.updateProfile(profile)

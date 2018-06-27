@@ -9,13 +9,14 @@ Leaf Package Manager
 
 from abc import abstractmethod, ABC
 from collections import OrderedDict
+import os
+from pathlib import Path
+import traceback
+
 from leaf.core.logger import createLogger, Verbosity
 from leaf.core.packagemanager import PackageManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.utils import findWorkspaceRoot
-import os
-from pathlib import Path
-import traceback
 
 
 def initCommonArgs(parser,
@@ -74,8 +75,35 @@ class GenericCommand(ABC):
                                        help=self.cmdHelp)
         self.initArgs(parser)
 
+    def getLoggerAttr(self, args):
+        nonInteractive = False
+        verbosity = Verbosity.DEFAULT
+        if hasattr(args, 'verbosity'):
+            verbosity = getattr(args, 'verbosity')
+        if hasattr(args, 'nonInteractive'):
+            nonInteractive = getattr(args, 'nonInteractive')
+        return (verbosity, nonInteractive)
+
     def getLogger(self, args):
-        return createLogger(args, args.nonInteractive)
+        loggerAttr = self.getLoggerAttr(args)
+        return createLogger(loggerAttr[0], loggerAttr[1])
+
+    def getPackageManager(self, args):
+        loggerAttr = self.getLoggerAttr(args)
+        return PackageManager(self.getLogger(args), loggerAttr[1])
+
+    def getWorkspace(self, args, autoFindWorkspace=True, checkInitialized=True):
+        wspath = None
+        if args is not None and args.workspace is not None:
+            wspath = args.workspace
+        elif autoFindWorkspace:
+            wspath = findWorkspaceRoot(failIfNoWs=checkInitialized)
+        if wspath is None:
+            wspath = Path(os.getcwd())
+        out = WorkspaceManager(wspath, self.getPackageManager(args))
+        if checkInitialized and not out.isInitialized():
+            raise ValueError("Workspace is not initialized")
+        return out
 
     @abstractmethod
     def initArgs(self, parser):
@@ -167,24 +195,6 @@ class LeafCommand(GenericCommand):
                            action='store_const',
                            const=Verbosity.QUIET,
                            help="decrease output verbosity")
-
-    def getApp(self, args, logger=None):
-        if logger is None:
-            logger = self.getLogger(args)
-        return PackageManager(logger, nonInteractive=args.nonInteractive)
-
-    def getWorkspace(self, args, autoFindWorkspace=True, app=None):
-        wspath = None
-        if args is not None and args.workspace is not None:
-            wspath = args.workspace
-        elif autoFindWorkspace:
-            wspath = findWorkspaceRoot()
-        else:
-            wspath = Path(os.getcwd())
-
-        if app is None:
-            app = self.getApp(args)
-        return WorkspaceManager(wspath, app)
 
 
 class LeafCommandGenerator():

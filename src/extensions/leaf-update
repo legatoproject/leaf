@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+'''
+Leaf Package Manager
+
+@author:    Sébastien MB <smassot@sierrawireless.com>
+@copyright: 2018 Sierra Wireless. All rights reserved.
+@contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
+@license:   https://www.mozilla.org/en-US/MPL/2.0/
+'''
+
+import argcomplete
+from argparse import ArgumentParser
+import argparse
+from leaf.constants import LeafConstants
+import os
+from pathlib import Path
+import sys
+import traceback
+
+from leaf.core.logger import TextLogger, Verbosity
+from leaf.core.packagemanager import PackageManager
+from leaf.core.workspacemanager import WorkspaceManager
+from leaf.model.package import PackageIdentifier
+from leaf.utils import findWorkspaceRoot
+
+
+def getLatestAvailablePackage(motif, piList):
+    if PackageIdentifier.isValidIdentifier(motif):
+        pi = PackageIdentifier.fromString(motif)
+        return pi if pi in piList else None
+    out = None
+    for pi in piList:
+        if pi.name == motif:
+            if out is None or pi > out:
+                out = pi
+    return out
+
+
+if __name__ == '__main__':
+    parser = ArgumentParser(description='update packages from current profile')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-v", "--verbose",
+                       dest="verbosity",
+                       action='store_const',
+                       const=Verbosity.VERBOSE,
+                       default=Verbosity.DEFAULT,
+                       help="increase output verbosity")
+    group.add_argument("-q", "--quiet",
+                       dest="verbosity",
+                       action='store_const',
+                       const=Verbosity.QUIET,
+                       help="decrease output verbosity")
+    parser.add_argument('--description',
+                        dest='showDescription',
+                        action='store_true',
+                        help=argparse.SUPPRESS)
+    parser.add_argument('-p', '--add-package',
+                        dest='packages',
+                        action='append',
+                        metavar='PKG_NAME',
+                        help="specific packages to update")
+    argcomplete.autocomplete(parser)
+    args = parser.parse_args()
+
+    if args.showDescription:
+        print("Update current profile packages")
+        exit(0)
+
+    try:
+        nonInteractive = os.environ.get("LEAF_NON_INTERACTIVE") is not None
+        logger = TextLogger(args.verbosity, nonInteractive)
+        packageManager = PackageManager(logger, nonInteractive)
+        workspaceManager = WorkspaceManager(
+            findWorkspaceRoot(currentFolder=Path(os.environ["LEAF_WORKSPACE"])
+                              if "LEAF_WORKSPACE" in os.environ
+                              else None), packageManager)
+        profileName = workspaceManager.getCurrentProfileName()
+        profile = workspaceManager.getProfile(profileName)
+
+        profilePackageMap = profile.getPackagesMap()
+        allPiList = list(packageManager.listInstalledPackages()) + \
+            list(packageManager.listAvailablePackages())
+
+        updatePiList = []
+
+        motifList = args.packages if args.packages is not None else profilePackageMap.keys()
+        for pin in motifList:
+            pi = getLatestAvailablePackage(pin, allPiList)
+            if pi is None:
+                logger.printError("Cannot find package for %s" % pin)
+            else:
+                previousPi = profilePackageMap.get(pi.name)
+                if previousPi is None:
+                    if logger.confirm(question="Do you want to add package %s?" % pi):
+                        updatePiList.append(pi)
+                elif previousPi != pi:
+                    if logger.confirm(
+                            question="Do you want to update package %s from %s to %s?" % (
+                                pi.name, previousPi.version, pi.version)):
+                        updatePiList.append(pi)
+
+        if len(updatePiList) == 0:
+            logger.printDefault("Nothing to do")
+        else:
+            profile.addPackages(updatePiList)
+            workspaceManager.updateProfile(profile)
+            workspaceManager.provisionProfile(profile)
+    except Exception as e:
+        logger.printError(e)
+        if logger.isVerbose():
+            traceback.print_exc()
+        exit(1)

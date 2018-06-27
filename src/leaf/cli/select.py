@@ -23,5 +23,6 @@ class SelectCommand(LeafCommand):
     def execute(self, args):
         ws = self.getWorkspace(args)
         name = args.profiles[0]
-        ws.switchProfile(name)
-        ws.provisionProfile(name)
+        profile = ws.getProfile(name)
+        ws.switchProfile(profile)
+        ws.provisionProfile(profile)

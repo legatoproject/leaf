@@ -37,7 +37,7 @@ class RemoteListCommand(LeafCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        for remote in self.getApp(args, logger).getRemotes():
+        for remote in self.getPackageManager(args).listRemotes().values():
             logger.displayItem(remote)
 
 
@@ -56,8 +56,7 @@ class RemoteAddCommand(LeafCommand):
                             help='the remote URL (supported url schemes: http(s)://, file://)')
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        self.getApp(args, logger).addRemote(args.alias[0], args.url[0])
+        self.getPackageManager(args).createRemote(args.alias[0], args.url[0])
 
 
 class RemoteRemoveCommand(LeafCommand):
@@ -73,8 +72,7 @@ class RemoteRemoveCommand(LeafCommand):
                             help='the alias of the remote to remove')
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        self.getApp(args, logger).removeRemote(args.alias[0])
+        self.getPackageManager(args).deleteRemote(args.alias[0])
 
 
 class RemoteEnableCommand(LeafCommand):
@@ -90,8 +88,12 @@ class RemoteEnableCommand(LeafCommand):
                             help='the alias of the remote to enable')
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        self.getApp(args, logger).updateRemote(args.alias[0], enabled=True)
+        pm = self.getPackageManager(args)
+        remote = pm.listRemotes().get(args.alias[0])
+        if remote is None:
+            raise ValueError("Cannot find remote %s" % args.alias[0])
+        remote.setEnabled(True)
+        pm.updateRemote(remote)
 
 
 class RemoteDisableCommand(LeafCommand):
@@ -107,8 +109,12 @@ class RemoteDisableCommand(LeafCommand):
                             help='the alias of the remote to disable')
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        self.getApp(args, logger).updateRemote(args.alias[0], enabled=False)
+        pm = self.getPackageManager(args)
+        remote = pm.listRemotes().get(args.alias[0])
+        if remote is None:
+            raise ValueError("Cannot find remote %s" % args.alias[0])
+        remote.setEnabled(False)
+        pm.updateRemote(remote)
 
 
 class RemoteFetchCommand(LeafCommand):
@@ -119,4 +125,4 @@ class RemoteFetchCommand(LeafCommand):
                              "fetch content from enabled remotes")
 
     def execute(self, args):
-        self.getApp(args).fetchRemotes(smartRefresh=False)
+        self.getPackageManager(args).fetchRemotes(smartRefresh=False)

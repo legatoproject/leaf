@@ -1,8 +1,4 @@
-from leaf.cli.cli import LeafCli
 from leaf.constants import LeafConstants, LeafFiles
-from leaf.core.logger import TextLogger, Verbosity
-from leaf.core.relengmanager import RelengManager
-from leaf.model.package import PackageIdentifier, Manifest
 import os
 from pathlib import Path
 import shutil
@@ -10,6 +6,11 @@ import subprocess
 from tempfile import mkdtemp
 import unittest
 from unittest.case import TestCase
+
+from leaf.cli.cli import LeafCli
+from leaf.core.logger import TextLogger, Verbosity
+from leaf.core.relengmanager import RelengManager
+from leaf.model.package import PackageIdentifier, Manifest
 
 
 LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
@@ -52,7 +53,7 @@ class AbstractTestWithRepo(unittest.TestCase):
         assert RESOURCE_FOLDER.exists(), "Cannot find resources folder!"
         generateRepo(RESOURCE_FOLDER,
                      AbstractTestWithRepo.REPO_FOLDER,
-                     TextLogger(Verbosity.QUIET))
+                     TextLogger(Verbosity.QUIET, nonInteractive=True))
 
     @classmethod
     def tearDownClass(cls):
@@ -153,7 +154,7 @@ class LeafCliWrapper(AbstractTestWithRepo):
 
     @classmethod
     def tearDownClass(cls):
-        AbstractTestWithRepo.setUpClass()
+        AbstractTestWithRepo.tearDownClass()
         os.environ['PATH'] = LeafCliWrapper.OLD_PATH
 
     def setUp(self):

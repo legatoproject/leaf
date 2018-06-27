@@ -17,14 +17,14 @@ class Remote(JsonObject):
         self.alias = alias
         self.content = content
 
-    def enable(self, enabled):
+    def isEnabled(self):
+        return self.jsonget(JsonConstants.CONFIG_REMOTE_ENABLED, True)
+
+    def setEnabled(self, enabled):
         self.json[JsonConstants.CONFIG_REMOTE_ENABLED] = enabled
 
-    def isEnabled(self):
-        return self.json.get(JsonConstants.CONFIG_REMOTE_ENABLED, True)
-
     def getUrl(self):
-        return self.json[JsonConstants.CONFIG_REMOTE_URL]
+        return self.jsonget(JsonConstants.CONFIG_REMOTE_URL, mandatory=True)
 
     def isFetched(self):
         return self.content is not None
@@ -32,13 +32,13 @@ class Remote(JsonObject):
     def getInfo(self):
         if not self.isFetched():
             raise ValueError("Remote is not fetched")
-        return JsonObject(self.content).jsonpath(JsonConstants.INFO, default={})
+        return JsonObject(self.content).jsonget(JsonConstants.INFO, default={})
 
     def getInfoName(self):
-        return self.getInfo().get(JsonConstants.REMOTE_NAME)
+        return self.getInfo().jsonget(JsonConstants.REMOTE_NAME)
 
     def getInfoDescription(self):
-        return self.getInfo().get(JsonConstants.REMOTE_DESCRIPTION)
+        return self.getInfo().jsonget(JsonConstants.REMOTE_DESCRIPTION)
 
     def getInfoDate(self):
-        return self.getInfo().get(JsonConstants.REMOTE_DATE)
+        return self.getInfo().jsonget(JsonConstants.REMOTE_DATE)

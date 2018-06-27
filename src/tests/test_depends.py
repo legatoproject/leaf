@@ -3,13 +3,13 @@
 '''
 
 from collections import OrderedDict
+from leaf.constants import LeafFiles
 from pathlib import Path
 import unittest
 from unittest.case import TestCase
 
-from leaf.constants import LeafFiles
 from leaf.core.dependencies import DependencyManager, DependencyType, DependencyStrategy
-from leaf.model.base import Environment
+from leaf.model.environment import Environment
 from leaf.model.package import Manifest, PackageIdentifier
 
 

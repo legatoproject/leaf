@@ -7,12 +7,13 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 import argparse
+from pathlib import Path
+
 from leaf.cli.cliutils import LeafCommand, LeafMetaCommand
 from leaf.core.dependencies import DependencyType
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import Manifest
 from leaf.utils import mkTmpLeafRootDir, envListToMap
-from pathlib import Path
 
 
 class PackageMetaCommand(LeafMetaCommand):
@@ -55,7 +56,7 @@ class PackageListCommand(LeafCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        app = self.getApp(args, logger=logger)
+        pm = self.getPackageManager(args)
 
         pkgFilter = MetaPackageFilter()
         if 'allPackages' not in vars(args) or not args.allPackages:
@@ -71,7 +72,7 @@ class PackageListCommand(LeafCommand):
 
         # Print filtered packages
         logger.printDefault("Filter:", pkgFilter)
-        for mf in sorted(app.listInstalledPackages().values(),
+        for mf in sorted(pm.listInstalledPackages().values(),
                          key=Manifest.getIdentifier):
             if pkgFilter.matches(mf):
                 logger.displayItem(mf)
@@ -124,7 +125,7 @@ class PackageDepsCommand(LeafCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        app = self.getApp(args, logger=logger)
+        app = self.getPackageManager(args)
         items = app.listDependencies(args.packages,
                                      args.dependencyType,
                                      envMap=envListToMap(args.customEnvList))
@@ -155,7 +156,7 @@ class PackageInstallCommand(LeafCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        app = self.getApp(args, logger=logger)
+        app = self.getPackageManager(args)
 
         items = app.installFromRemotes(args.packages,
                                        keepFolderOnError=args.keepOnError)
@@ -183,7 +184,7 @@ class PackagePrereqCommand(LeafCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        app = self.getApp(args, logger=logger)
+        app = self.getPackageManager(args)
 
         tmpRootFolder = args.prereqRootFolder
         if tmpRootFolder is None:
@@ -210,7 +211,6 @@ class PackageUninstallCommand(LeafCommand):
                             help='name of package to uninstall')
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        app = self.getApp(args, logger=logger)
+        app = self.getPackageManager(args)
 
         app.uninstallPackages(args.packages)

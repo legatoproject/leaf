@@ -17,7 +17,8 @@ class WorkspaceInitCommand(LeafCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        ws = self.getWorkspace(args, autoFindWorkspace=False)
+        ws = self.getWorkspace(
+            args, autoFindWorkspace=False, checkInitialized=False)
 
         if ws.configFile.exists():
             raise ValueError("File %s already exist" % str(ws.configFile))

@@ -8,13 +8,12 @@ Leaf Package Manager
 '''
 import argparse
 from collections import OrderedDict
-from leaf.cli.cliutils import GenericCommand
-from leaf.core.logger import TextLogger, Verbosity
-from leaf.core.packagemanager import PackageManager
 import os
 from os.path import pathsep
 from pathlib import Path
 import subprocess
+
+from leaf.cli.cliutils import GenericCommand
 
 
 class ExternalCommand(GenericCommand):
@@ -59,15 +58,20 @@ class ExternalCommand(GenericCommand):
 
     def execute(self, args):
         # Create a package manager to get env
-        logger = TextLogger(Verbosity.QUIET, True)
-        app = PackageManager(logger, nonInteractive=args.nonInteractive)
+        packageManager = self.getPackageManager(args)
+        workspace = self.getWorkspace(args, checkInitialized=False)
+
         env = dict(os.environ)
-        env.update(app.getLeafEnvironment().toMap())
+        env.update(packageManager.getLeafEnvironment().toMap())
+        env.update(packageManager.getUserEnvironment().toMap())
+        if workspace.isInitialized():
+            env.update(workspace.getWorkspaceEnvironment().toMap())
+
         # Use args to run the external command
         command = [str(self.executable)]
         command += args.ARGS
-        return subprocess.call(command,
-                               env=env)
+
+        return subprocess.call(command, env=env)
 
 
 def findLeafExternalCommands(blacklistCommands=None):

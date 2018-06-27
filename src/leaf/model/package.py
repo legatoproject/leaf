@@ -7,15 +7,17 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
+from collections import OrderedDict
 from functools import total_ordering
 import io
 from leaf.constants import JsonConstants, LeafFiles
-from leaf.model.base import JsonObject
-from leaf.utils import resolveUrl, jsonLoad, jsonLoadFile, checkSupportedLeaf, \
-    versionComparator_lt, stringToTuple
 from pathlib import Path
 import re
 from tarfile import TarFile
+
+from leaf.model.base import JsonObject
+from leaf.utils import resolveUrl, jsonLoad, jsonLoadFile, checkSupportedLeaf, \
+    versionComparator_lt, stringToTuple
 
 
 @total_ordering
@@ -147,28 +149,28 @@ class Manifest(JsonObject):
         return str(self.getIdentifier())
 
     def getNodeInfo(self):
-        return self.jsonpath(JsonConstants.INFO)
+        return self.jsonget(JsonConstants.INFO, mandatory=True)
 
     def getName(self):
-        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_NAME)
+        return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_NAME], mandatory=True)
 
     def getVersion(self):
-        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_VERSION)
+        return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_VERSION], mandatory=True)
 
     def getIdentifier(self):
         return PackageIdentifier(self.getName(), self.getVersion())
 
     def getDescription(self):
-        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_DESCRIPTION)
+        return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_DESCRIPTION])
 
     def isMaster(self):
-        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_MASTER, default=False)
+        return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_MASTER], default=False)
 
     def getLeafDepends(self):
-        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_DEPENDS, default=[])
+        return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_DEPENDS], default=[])
 
     def getLeafRequires(self):
-        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_REQUIRES, default=[])
+        return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_REQUIRES], default=[])
 
     def getLeafDependsFromEnv(self, env):
         out = []
@@ -179,13 +181,13 @@ class Manifest(JsonObject):
         return out
 
     def getSupportedLeafVersion(self):
-        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_LEAF_MINVER)
+        return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_LEAF_MINVER])
 
     def isSupportedByCurrentLeafVersion(self):
         return checkSupportedLeaf(self.getSupportedLeafVersion())
 
     def getTags(self):
-        return self.jsonpath(JsonConstants.INFO, JsonConstants.INFO_TAGS, default=[])
+        return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_TAGS], default=[])
 
     def getAllTags(self):
         return self.customTags + self.getTags()
@@ -199,8 +201,8 @@ class LeafArtifact(Manifest):
     def __init__(self, path):
         self.path = path
         with TarFile.open(str(self.path), 'r') as tarfile:
-            Manifest.__init__(self,
-                              jsonLoad(io.TextIOWrapper(tarfile.extractfile(LeafFiles.MANIFEST))))
+            Manifest.__init__(self, jsonLoad(io.TextIOWrapper(
+                tarfile.extractfile(LeafFiles.MANIFEST))))
 
 
 class AvailablePackage(Manifest):
@@ -219,16 +221,16 @@ class AvailablePackage(Manifest):
             size=self.getSize())
 
     def getSize(self):
-        return self.jsonpath(JsonConstants.REMOTE_PACKAGE_SIZE)
+        return self.jsonget(JsonConstants.REMOTE_PACKAGE_SIZE)
 
     def getFilename(self):
         return Path(self.getSubPath()).name
 
     def getSha1sum(self):
-        return self.jsonpath(JsonConstants.REMOTE_PACKAGE_SHA1SUM)
+        return self.jsonget(JsonConstants.REMOTE_PACKAGE_SHA1SUM)
 
     def getSubPath(self):
-        return self.jsonpath(JsonConstants.REMOTE_PACKAGE_FILE)
+        return self.jsonget(JsonConstants.REMOTE_PACKAGE_FILE, mandatory=True)
 
     def getUrl(self):
         return resolveUrl(self.remoteUrl, self.getSubPath())
@@ -247,4 +249,4 @@ class InstalledPackage(Manifest):
         return "{pi} [{path}]".format(pi=self.getIdentifier(), path=str(self.folder))
 
     def getEnvMap(self):
-        return self.jsonpath(JsonConstants.ENV, default={})
+        return self.jsonget(JsonConstants.ENV, OrderedDict())

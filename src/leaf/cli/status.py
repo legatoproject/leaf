@@ -21,7 +21,7 @@ class StatusCommand(LeafCommand):
         wspath = findWorkspaceRoot(currentFolder=args.workspace,
                                    failIfNoWs=False)
         if wspath is not None:
-            ws = WorkspaceManager(wspath, self.getApp(args))
+            ws = WorkspaceManager(wspath, self.getPackageManager(args))
             self.getLogger(args).displayItem(ws)
         else:
             self.getLogger(args).printDefault(

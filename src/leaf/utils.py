@@ -10,7 +10,6 @@ Leaf Package Manager
 from collections import OrderedDict
 import hashlib
 import json
-from leaf import __version__
 from leaf.constants import LeafConstants, LeafFiles
 import os
 from pathlib import Path
@@ -24,6 +23,8 @@ import tempfile
 import time
 import urllib
 from urllib.parse import urlparse, urlunparse
+
+from leaf import __version__
 
 
 _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')

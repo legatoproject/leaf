@@ -10,11 +10,12 @@ Leaf Package Manager
 from collections import OrderedDict
 from leaf.constants import JsonConstants, LeafFiles, LeafConstants
 
-from leaf.model.base import JsonObject, Environment
+from leaf.model.base import JsonObject
+from leaf.model.environment import IEnvObject
 from leaf.model.package import InstalledPackage, PackageIdentifier
 
 
-class Profile(JsonObject):
+class Profile(JsonObject, IEnvObject):
     '''
     Represent a profile inside a workspace
     '''
@@ -34,55 +35,55 @@ class Profile(JsonObject):
         return name
 
     @staticmethod
-    def emptyProfile(name, folder):
-        out = Profile(Profile.checkValidName(name), folder, OrderedDict())
+    def emptyProfile(name, dataFolder):
+        out = Profile(Profile.checkValidName(name),
+                      dataFolder / name, OrderedDict())
         out.getPackages()
         out.getEnvMap()
         return out
 
     def __init__(self, name, folder, json):
         JsonObject.__init__(self, json)
+        IEnvObject.__init__(self, "profile %s " % name)
         self.name = name
         self.folder = folder
         self.isCurrentProfile = False
 
     def getEnvMap(self):
-        return self.jsoninit(key=JsonConstants.WS_PROFILE_ENV,
-                             value=OrderedDict())
-
-    def updateEnv(self, setMap=None, unsetList=None):
-        envMap = self.getEnvMap()
-        if setMap is not None:
-            envMap.update(setMap)
-        if unsetList is not None:
-            for k in unsetList:
-                if k in envMap:
-                    del envMap[k]
+        if JsonConstants.WS_PROFILE_ENV not in self.json:
+            self.json[JsonConstants.WS_PROFILE_ENV] = OrderedDict()
+        return self.json[JsonConstants.WS_PROFILE_ENV]
 
     def getEnvironment(self):
-        out = Environment("Exported by profile %s" % self.name,
-                          self.getEnvMap())
+        out = super().getEnvironment()
         out.env.append(('LEAF_PROFILE', self.name))
         return out
 
     def getPackages(self):
-        return self.jsoninit(key=JsonConstants.WS_PROFILE_PACKAGES,
-                             value=[])
+        if JsonConstants.WS_PROFILE_PACKAGES not in self.json:
+            self.json[JsonConstants.WS_PROFILE_PACKAGES] = []
+        return self.json[JsonConstants.WS_PROFILE_PACKAGES]
 
-    def getPackageIdentifiers(self):
-        return list(map(PackageIdentifier.fromString,
-                        self.getPackages()))
+    def addPackages(self, piList):
+        pkgMap = self.getPackagesMap()
+        for pi in piList:
+            pkgMap[pi.name] = pi
+        self.json[JsonConstants.WS_PROFILE_PACKAGES] = [
+            str(pi) for pi in pkgMap.values()]
 
-    def getPackageMap(self):
+    def removePackages(self, piList):
+        pkgList = [pi for pi in self.getPackagesMap().values()
+                   if pi not in piList]
+        self.json[JsonConstants.WS_PROFILE_PACKAGES] = [
+            str(pi) for pi in pkgList]
+
+    def getPackagesMap(self):
         out = OrderedDict()
-        for pi in self.getPackageIdentifiers():
+        for pis in self.getPackages():
+            pi = PackageIdentifier.fromString(pis)
             if pi.name not in out:
                 out[pi.name] = pi
         return out
-
-    def setPackages(self, piList):
-        self.json[JsonConstants.WS_PROFILE_PACKAGES] = [str(pi)
-                                                        for pi in piList]
 
     def getLinkedPackages(self):
         '''

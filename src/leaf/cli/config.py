@@ -6,9 +6,10 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from leaf.cli.cliutils import LeafCommand
 from leaf.constants import LeafFiles
 from pathlib import Path
+
+from leaf.cli.cliutils import LeafCommand
 
 
 class ConfigCommand(LeafCommand):
@@ -28,6 +29,7 @@ class ConfigCommand(LeafCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        app = self.getApp(args, logger)
-        app.updateUserConfiguration(rootFolder=args.rootFolder)
+        app = self.getPackageManager(args)
+        if args.rootFolder is not None:
+            app.setInstallFolder(args.rootFolder)
         logger.printDefault("Configuration file: %s" % app.configurationFile)

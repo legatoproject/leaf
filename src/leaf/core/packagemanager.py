@@ -11,44 +11,40 @@ from builtins import filter
 from collections import OrderedDict
 from datetime import datetime
 import json
-from leaf import __version__
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles
-from leaf.core.coreutils import VariableResolver, StepExecutor
-from leaf.core.dependencies import DependencyManager, DependencyType
-from leaf.model.base import Environment, JsonObject
-from leaf.model.config import UserConfiguration
-from leaf.model.package import PackageIdentifier, AvailablePackage, \
-    InstalledPackage, LeafArtifact, Manifest
-from leaf.model.remote import Remote
-from leaf.utils import getAltEnvPath, jsonLoadFile, jsonWriteFile, resolveUrl,\
-    isFolderIgnored, getCachedArtifactName, markFolderAsIgnored,\
-    mkTmpLeafRootDir, downloadFile
 import os
 import platform
 import shutil
 from tarfile import TarFile
 import urllib.request
 
+from leaf import __version__
+from leaf.core.coreutils import VariableResolver, StepExecutor
+from leaf.core.dependencies import DependencyManager, DependencyType
+from leaf.model.base import JsonObject
+from leaf.model.config import UserConfiguration
+from leaf.model.environment import Environment
+from leaf.model.package import PackageIdentifier, AvailablePackage, \
+    InstalledPackage, LeafArtifact, Manifest
+from leaf.model.remote import Remote
+from leaf.utils import getAltEnvPath, jsonLoadFile, jsonWriteFile, resolveUrl,\
+    isFolderIgnored, getCachedArtifactName, markFolderAsIgnored,\
+    mkTmpLeafRootDir, downloadFile
 
-class PackageManager():
-    '''
-    Main API for using Leaf
-    '''
 
-    def __init__(self, logger,
-                 nonInteractive=False):
+class RemoteManager():
+
+    def __init__(self, logger):
         '''
         Constructor
         '''
         self.logger = logger
         self.configurationFile = getAltEnvPath(LeafConstants.ENV_CONFIG_FILE,
                                                LeafFiles.DEFAULT_CONFIG_FILE)
-        cacheFolder = getAltEnvPath(LeafConstants.ENV_CACHE_FOLDER,
-                                    LeafFiles.DEFAULT_CACHE_FOLDER,
-                                    mkdirIfNeeded=True)
-        self.remoteCacheFile = cacheFolder / LeafFiles.CACHE_REMOTES_FILENAME
-        self.downloadCacheFolder = cacheFolder / LeafFiles.CACHE_DOWNLOAD_FOLDERNAME
-        self.nonInteractive = nonInteractive
+        self.cacheFolder = getAltEnvPath(LeafConstants.ENV_CACHE_FOLDER,
+                                         LeafFiles.DEFAULT_CACHE_FOLDER,
+                                         mkdirIfNeeded=True)
+        self.remoteCacheFile = self.cacheFolder / LeafFiles.CACHE_REMOTES_FILENAME
 
     def readConfiguration(self):
         '''
@@ -72,72 +68,133 @@ class PackageManager():
         if self.remoteCacheFile.exists():
             os.remove(str(self.remoteCacheFile))
 
+    def listRemotes(self, onlyEnabled=False):
+        out = OrderedDict()
+        for alias, json in self.readConfiguration().getRemotesMap().items():
+            remote = Remote(alias, json)
+            if remote.isEnabled() or not onlyEnabled:
+                out[alias] = remote
+        if self.remoteCacheFile.exists():
+            cache = jsonLoadFile(self.remoteCacheFile)
+            for remote in out.values():
+                if remote.getUrl() in cache and remote.isEnabled():
+                    remote.content = cache[remote.getUrl()]
+        return out
+
+    def createRemote(self, alias, url, enabled=True):
+        usrc = self.readConfiguration()
+        remotes = usrc.getRemotesMap()
+        if alias in remotes:
+            raise ValueError("Remote %s already exists" % alias)
+        remotes[alias] = {JsonConstants.CONFIG_REMOTE_URL: str(url),
+                          JsonConstants.CONFIG_REMOTE_ENABLED: enabled}
+        # Save and clean cache
+        self.writeConfiguration(usrc)
+        self.cleanRemotesCacheFile()
+
+    def renameRemote(self, oldalias, newalias):
+        usrc = self.readConfiguration()
+        remotes = usrc.getRemotesMap()
+        if oldalias not in remotes:
+            raise ValueError("Cannot find remote %s" % oldalias)
+        if newalias in remotes:
+            raise ValueError("Remote %s already exists" % newalias)
+        remotes[newalias] = remotes[oldalias]
+        del remotes[oldalias]
+        self.writeConfiguration(usrc)
+        self.cleanRemotesCacheFile()
+
+    def updateRemote(self, remote):
+        usrc = self.readConfiguration()
+        remotes = usrc.getRemotesMap()
+        if remote.alias not in remotes:
+            raise ValueError("Cannot find remote %s" % remote.alias)
+        remotes[remote.alias] = remote.json
+        self.writeConfiguration(usrc)
+        self.cleanRemotesCacheFile()
+
+    def deleteRemote(self, alias):
+        usrc = self.readConfiguration()
+        remotes = usrc.getRemotesMap()
+        if alias not in remotes:
+            raise ValueError("Cannot find remote %s" % alias)
+        del remotes[alias]
+        self.writeConfiguration(usrc)
+        self.cleanRemotesCacheFile()
+
+    def recursiveFetchUrl(self, remoteurl, content):
+        '''
+        Fetch an URL content and keep it in the given dict
+        '''
+        if remoteurl not in content:
+            try:
+                with urllib.request.urlopen(remoteurl, timeout=LeafConstants.DOWNLOAD_TIMEOUT) as url:
+                    data = json.loads(url.read().decode())
+                    self.logger.printVerbose("Fetched", remoteurl)
+                    content[remoteurl] = data
+                    composites = data.get(JsonConstants.REMOTE_COMPOSITE)
+                    if composites is not None:
+                        for composite in composites:
+                            self.recursiveFetchUrl(resolveUrl(
+                                remoteurl, composite), content)
+            except Exception as e:
+                self.logger.printError("Error fetching", remoteurl, ":", e)
+
+    def fetchRemotes(self, smartRefresh=True):
+        '''
+        Refresh remotes content with smart refresh, ie auto refresh after X days
+        '''
+        if self.remoteCacheFile.exists():
+            if not smartRefresh:
+                os.remove(str(self.remoteCacheFile))
+            elif datetime.fromtimestamp(self.remoteCacheFile.stat().st_mtime) < datetime.now() - LeafConstants.CACHE_DELTA:
+                self.logger.printDefault("Cache file is outdated")
+                os.remove(str(self.remoteCacheFile))
+        if not self.remoteCacheFile.exists():
+            content = OrderedDict()
+            activeRemotes = self.listRemotes(onlyEnabled=True).values()
+
+            self.logger.progressStart('Fetch remote(s)',
+                                      message="Refreshing available packages...",
+                                      total=len(activeRemotes))
+            worked = 0
+            for remote in activeRemotes:
+                self.recursiveFetchUrl(remote.getUrl(), content)
+                worked += 1
+                self.logger.progressWorked('Fetch remote(s)',
+                                           worked=worked,
+                                           total=len(activeRemotes))
+            jsonWriteFile(self.remoteCacheFile, content)
+            self.logger.progressDone('Fetch remote(s)')
+
+
+class PackageManager(RemoteManager):
+    '''
+    Main API for using Leaf package manager
+    '''
+
+    def __init__(self, logger, nonInteractive):
+        '''
+        Constructor
+        '''
+        RemoteManager.__init__(self, logger)
+        self.logger = logger
+        self.downloadCacheFolder = self.cacheFolder / \
+            LeafFiles.CACHE_DOWNLOAD_FOLDERNAME
+        self.nonInteractive = nonInteractive
+
     def getInstallFolder(self):
         out = self.readConfiguration().getRootFolder()
         if not out.exists():
             out.mkdir()
         return out
 
-    def getRemotes(self, onlyEnabled=False):
-        out = []
-        for alias, json in self.readConfiguration().getRemotes().items():
-            remote = Remote(alias, json)
-            if remote.isEnabled() or not onlyEnabled:
-                out.append(remote)
-        if self.remoteCacheFile.exists():
-            cache = jsonLoadFile(self.remoteCacheFile)
-            for remote in out:
-                if remote.getUrl() in cache and remote.isEnabled():
-                    remote.content = cache[remote.getUrl()]
-        return out
-
-    def updateRemote(self, alias, enabled=None):
+    def setInstallFolder(self, folder):
         usrc = self.readConfiguration()
-        remotes = usrc.getRemotes()
-        if alias not in remotes:
-            raise ValueError("Cannot find remote %s" % alias)
-        if enabled is not None:
-            remotes[alias][JsonConstants.CONFIG_REMOTE_ENABLED] = enabled
-        self.writeConfiguration(usrc)
-        self.cleanRemotesCacheFile()
-
-    def addRemote(self, alias, url):
-        usrc = self.readConfiguration()
-        remotes = usrc.getRemotes()
-        if alias in remotes:
-            raise ValueError("Remote %s already exists" % alias)
-        remotes[alias] = {JsonConstants.CONFIG_REMOTE_URL: url}
-        # Save and clean cache
-        self.writeConfiguration(usrc)
-        self.cleanRemotesCacheFile()
-
-    def removeRemote(self, alias):
-        usrc = self.readConfiguration()
-        remotes = usrc.getRemotes()
-        if alias not in remotes:
-            raise ValueError("Cannot find remote %s" % alias)
-        del remotes[alias]
-        # Save and clean cache
-        self.writeConfiguration(usrc)
-        self.cleanRemotesCacheFile()
-
-    def updateUserConfiguration(self,
-                                rootFolder=None,
-                                envSetMap=None, envUnsetList=None):
-        '''
-        Update the configuration file
-        '''
-        usrc = self.readConfiguration()
-        if rootFolder is not None:
-            usrc.setRootFolder(rootFolder)
-
-        # Update env
-        usrc.updateEnv(envSetMap, envUnsetList)
-
-        # Save and clean cache
+        usrc.setRootFolder(folder)
         self.writeConfiguration(usrc)
 
-    def getLeafEnvironment(self, workspace=None, profileName=None):
+    def getLeafEnvironment(self):
         out = Environment("Leaf built-in variables")
         out.env.append(("LEAF_VERSION", str(__version__)))
         out.env.append(("LEAF_PLATFORM_SYSTEM", platform.system()))
@@ -148,8 +205,12 @@ class PackageManager():
         return out
 
     def getUserEnvironment(self):
-        return Environment("Exported by user config",
-                           self.readConfiguration().getEnvMap())
+        return self.readConfiguration().getEnvironment()
+
+    def updateUserEnv(self, setMap=None, unsetList=None):
+        usrc = self.readConfiguration()
+        usrc.updateEnv(setMap, unsetList)
+        self.writeConfiguration(usrc)
 
     def resolveLatest(self, motifList, ipMap=None, apMap=None):
         '''
@@ -198,59 +259,11 @@ class PackageManager():
         if self.remoteCacheFile.exists():
             cache = jsonLoadFile(self.remoteCacheFile)
             for url, json in cache.items():
-                for pkgInfoJson in JsonObject(json).jsonpath(
-                        JsonConstants.REMOTE_PACKAGES,
-                        default=[]):
+                for pkgInfoJson in JsonObject(json).jsonget(JsonConstants.REMOTE_PACKAGES, []):
                     ap = AvailablePackage(pkgInfoJson, url)
                     if ap.getIdentifier() not in out:
                         out[ap.getIdentifier()] = ap
         return out
-
-    def recursiveFetchUrl(self, remoteurl, content):
-        '''
-        Fetch an URL content and keep it in the given dict
-        '''
-        if remoteurl not in content:
-            try:
-                with urllib.request.urlopen(remoteurl, timeout=LeafConstants.DOWNLOAD_TIMEOUT) as url:
-                    data = json.loads(url.read().decode())
-                    self.logger.printVerbose("Fetched", remoteurl)
-                    content[remoteurl] = data
-                    composites = data.get(JsonConstants.REMOTE_COMPOSITE)
-                    if composites is not None:
-                        for composite in composites:
-                            self.recursiveFetchUrl(resolveUrl(remoteurl,
-                                                              composite),
-                                                   content)
-            except Exception as e:
-                self.logger.printError("Error fetching", remoteurl, ":", e)
-
-    def fetchRemotes(self, smartRefresh=True):
-        '''
-        Refresh remotes content with smart refresh, ie auto refresh after X days
-        '''
-        if self.remoteCacheFile.exists():
-            if not smartRefresh:
-                os.remove(str(self.remoteCacheFile))
-            elif datetime.fromtimestamp(self.remoteCacheFile.stat().st_mtime) < datetime.now() - LeafConstants.CACHE_DELTA:
-                self.logger.printDefault("Cache file is outdated")
-                os.remove(str(self.remoteCacheFile))
-        if not self.remoteCacheFile.exists():
-            content = OrderedDict()
-            activeRemotes = self.getRemotes(onlyEnabled=True)
-
-            self.logger.progressStart('Fetch remote(s)',
-                                      message="Refreshing available packages...",
-                                      total=len(activeRemotes))
-            worked = 0
-            for remote in activeRemotes:
-                self.recursiveFetchUrl(remote.getUrl(), content)
-                worked += 1
-                self.logger.progressWorked('Fetch remote(s)',
-                                           worked=worked,
-                                           total=len(activeRemotes))
-            jsonWriteFile(self.remoteCacheFile, content)
-            self.logger.progressDone('Fetch remote(s)')
 
     def listInstalledPackages(self):
         '''

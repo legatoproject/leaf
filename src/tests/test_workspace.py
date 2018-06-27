@@ -3,13 +3,13 @@
 '''
 
 from collections import OrderedDict
-from leaf.core.logger import TextLogger, Verbosity
-from leaf.core.packagemanager import PackageManager
-from leaf.core.workspacemanager import WorkspaceManager
-from leaf.model.package import Manifest
 import platform
 import unittest
 
+from leaf.core.logger import TextLogger, Verbosity
+from leaf.core.packagemanager import PackageManager
+from leaf.core.workspacemanager import WorkspaceManager
+from leaf.model.package import Manifest, PackageIdentifier
 from tests.test_depends import mkpi
 from tests.testutils import AbstractTestWithRepo
 
@@ -25,127 +25,142 @@ class TestProfile(AbstractTestWithRepo):
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
-        self.app = PackageManager(self.logger, nonInteractive=True)
-        self.app.updateUserConfiguration(rootFolder=self.getInstallFolder())
-        self.app.addRemote("default", self.getRemoteUrl())
-        self.ws = WorkspaceManager(self.getWorkspaceFolder(), self.app)
+        self.pm = PackageManager(self.logger, nonInteractive=True)
+        self.pm.setInstallFolder(self.getInstallFolder())
+        self.pm.createRemote("default", self.getRemoteUrl())
+        self.ws = WorkspaceManager(self.getWorkspaceFolder(), self.pm)
 
     def testInit(self):
         with self.assertRaises(Exception):
             self.ws.createProfile()
-        self.ws.readConfiguration(True)
-        self.ws.createProfile("foo")
+        self.ws.inittialize()
+        profile = self.ws.createProfile("foo")
+        self.assertIsNotNone(profile)
+        self.assertEqual("foo", profile.name)
 
     def testAddDeleteProfile(self):
-        self.ws.readConfiguration(True)
+        self.ws.inittialize()
         self.ws.createProfile("foo")
-        self.assertEqual(1, len(self.ws.getAllProfiles()))
+        self.assertEqual(1, len(self.ws.listProfiles()))
 
         with self.assertRaises(Exception):
             self.ws.createProfile("foo")
 
         self.ws.createProfile("bar")
-        self.assertEqual(2, len(self.ws.getAllProfiles()))
+        self.assertEqual(2, len(self.ws.listProfiles()))
 
         with self.assertRaises(Exception):
             self.ws.createProfile("bar")
 
         self.ws.deleteProfile("foo")
-        self.assertEqual(1, len(self.ws.getAllProfiles()))
+        self.assertEqual(1, len(self.ws.listProfiles()))
 
         with self.assertRaises(Exception):
             self.ws.deleteProfile("foo")
-        self.assertEqual(1, len(self.ws.getAllProfiles()))
+        self.assertEqual(1, len(self.ws.listProfiles()))
 
     def testUpdatetProfile(self):
-        self.ws.readConfiguration(True)
-        pf = self.ws.createProfile("foo")
-        self.assertEqual([], pf.getPackages())
-        self.assertEqual(OrderedDict(), pf.getEnvMap())
+        self.ws.inittialize()
+        profile = self.ws.createProfile("foo")
+        self.assertEqual([], profile.getPackages())
+        self.assertEqual(OrderedDict(), profile.getEnvMap())
 
-        self.ws.updateProfile("foo",
-                              mpkgAddList=["container-A_1.0"],
-                              envSetMap=OrderedDict([("FOO", "BAR"),
-                                                     ("FOO2", "BAR2")]))
-        pf = self.ws.retrieveProfile("foo")
+        profile.addPackages(
+            PackageIdentifier.fromStringList(["container-A_1.0"]))
+        profile.updateEnv(OrderedDict([("FOO", "BAR"),
+                                       ("FOO2", "BAR2")]))
+        profile = self.ws.updateProfile(profile)
+
         self.assertEqual(["container-A_1.0"],
-                         pf.getPackages())
+                         profile.getPackages())
         self.assertEqual(OrderedDict([("FOO", "BAR"),
                                       ("FOO2", "BAR2")]),
-                         pf.getEnvMap())
+                         profile.getEnvMap())
 
-        self.ws.updateProfile("foo",
-                              mpkgAddList=["container-A"])
-        pf = self.ws.retrieveProfile("foo")
+        profile.addPackages(
+            PackageIdentifier.fromStringList(["container-A_2.1"]))
+        profile = self.ws.updateProfile(profile)
         self.assertEqual(["container-A_2.1"],
-                         pf.getPackages())
+                         profile.getPackages())
 
-        self.ws.updateProfile("foo",
-                              mpkgAddList=["env-A_1.0"])
-        pf = self.ws.retrieveProfile("foo")
+        profile.addPackages(
+            PackageIdentifier.fromStringList(["env-A_1.0"]))
+        profile = self.ws.updateProfile(profile)
         self.assertEqual(["container-A_2.1",
                           "env-A_1.0"],
-                         pf.getPackages())
+                         profile.getPackages())
+
+        profile.removePackages(
+            PackageIdentifier.fromStringList(["container-A_2.1"]))
+        profile = self.ws.updateProfile(profile)
+        self.assertEqual(["env-A_1.0"],
+                         profile.getPackages())
 
         with self.assertRaises(Exception):
-            self.ws.updateProfile("fooooooooo",
-                                  mpkgAddList=["container-A_1.0",
-                                               "container-A_2.0"],
-                                  envSetMap={"FOO": "BAR",
-                                             "FOO2": "BAR2"})
+            profile.name = "fooooooo"
+            self.ws.updateProfile(profile)
 
     def testRenameProfile(self):
-        self.ws.readConfiguration(True)
+        self.ws.inittialize()
         self.ws.createProfile("foo")
-        self.ws.updateProfile("foo",
-                              mpkgAddList=["container-A"],
-                              envSetMap={"FOO": "BAR"})
-        self.ws.provisionProfile("foo")
+
+        with self.assertRaises(ValueError):
+            self.ws.getCurrentProfileName()
+        profile = self.ws.getProfile("foo")
+        self.ws.switchProfile(profile)
         self.assertEqual("foo",
                          self.ws.getCurrentProfileName())
+
+        profile.addPackages(
+            PackageIdentifier.fromStringList(["container-A_2.1"]))
+        profile.updateEnv({"FOO": "BAR"})
+        profile = self.ws.updateProfile(profile)
+
+        self.ws.provisionProfile(profile)
+        self.assertEqual("foo",
+                         self.ws.getCurrentProfileName())
+
         self.checkProfileContent("foo",
                                  ["container-A",
                                   "container-C",
                                   "container-D"])
 
-        self.ws.updateProfile("foo", newName="bar")
-        self.assertEqual(1, len(self.ws.getAllProfiles()))
-        self.assertEqual("bar", self.ws.retrieveProfile("bar").name)
+        profile = self.ws.renameProfile("foo", "bar")
+        self.assertEqual(1, len(self.ws.listProfiles()))
+        self.assertEqual("bar", profile.name)
+        self.assertEqual("bar", self.ws.getProfile("bar").name)
         self.assertEqual("bar", self.ws.getCurrentProfileName())
         self.checkProfileContent("bar", ["container-A",
                                          "container-C",
                                          "container-D"])
-        self.ws.getProfileEnvironment("bar")
-
-        self.ws.updateProfile("bar", newName="bar")
-        self.assertEqual("bar", self.ws.getCurrentProfileName())
-        self.assertEqual("bar", self.ws.retrieveProfile("bar").name)
+        self.ws.getFullEnvironment(profile)
+        with self.assertRaises(ValueError):
+            self.ws.renameProfile("bar", "bar")
+        with self.assertRaises(ValueError):
+            self.ws.renameProfile("foo", "bar")
 
     def testSwitchProfile(self):
-        self.ws.readConfiguration(True)
-        self.ws.createProfile("foo")
-        self.ws.switchProfile("foo")
+        self.ws.inittialize()
+        profile = self.ws.createProfile("foo")
+        self.ws.switchProfile(profile)
         self.assertEqual("foo",
                          self.ws.getCurrentProfileName())
 
-        self.ws.createProfile("bar")
-        self.ws.switchProfile("bar")
+        profile2 = self.ws.createProfile("bar")
+        self.ws.switchProfile(profile2)
         self.assertEqual("bar",
                          self.ws.getCurrentProfileName())
 
     def testEnv(self):
-        self.ws.readConfiguration(True)
-        self.ws.createProfile("myenv")
-        self.ws.updateProfile("myenv",
-                              mpkgAddList=["env-A_1.0",
-                                           "env-B_1.0"],
-                              envSetMap=OrderedDict([("FOO", "BAR"),
-                                                     ("FOO2", "BAR2")]))
-        self.ws.switchProfile("myenv")
-        self.ws.provisionProfile("myenv")
-        env = self.ws.getFullEnvironment("myenv")
-        list(map(print, env.toList()))
-        self.assertEqual(13, len(env.toList()))
+        self.ws.inittialize()
+        profile = self.ws.createProfile("myenv")
+        profile.addPackages([PackageIdentifier.fromString(pis)
+                             for pis in ["env-A_1.0", "env-A_1.0"]])
+        profile = self.ws.updateProfile(profile)
+
+        self.ws.switchProfile(profile)
+        self.ws.provisionProfile(profile)
+
         self.assertEqual([
             ("LEAF_VERSION", "0.0.0"),
             ("LEAF_PLATFORM_SYSTEM", platform.system()),
@@ -153,85 +168,137 @@ class TestProfile(AbstractTestWithRepo):
             ("LEAF_PLATFORM_RELEASE", platform.release()),
             ("LEAF_NON_INTERACTIVE", "1"),
             ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
-            ('FOO', 'BAR'),
-            ('FOO2', 'BAR2'),
             ('LEAF_PROFILE', 'myenv'),
             ('LEAF_ENV_B', 'BAR'),
             ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
             ('LEAF_ENV_A', 'FOO'),
             ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
              (self.getInstallFolder(), self.getInstallFolder()))],
-            env.toList())
+            self.ws.getFullEnvironment(profile).toList())
 
-        self.ws.updateWorkspaceConfiguration(envSetMap={"HELLO": "world"})
-        env = self.ws.getFullEnvironment("myenv")
-        self.assertEqual(14, len(env.toList()))
+        self.pm.updateUserEnv(setMap=OrderedDict(
+            (("scope", "user"), ("HELLO", "world"))))
         self.assertEqual([
             ("LEAF_VERSION", "0.0.0"),
             ("LEAF_PLATFORM_SYSTEM", platform.system()),
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),
             ("LEAF_NON_INTERACTIVE", "1"),
+            ('scope', 'user'),
             ('HELLO', 'world'),
             ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
-            ('FOO', 'BAR'),
-            ('FOO2', 'BAR2'),
             ('LEAF_PROFILE', 'myenv'),
             ('LEAF_ENV_B', 'BAR'),
             ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
             ('LEAF_ENV_A', 'FOO'),
             ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
              (self.getInstallFolder(), self.getInstallFolder()))],
-            env.toList())
+            self.ws.getFullEnvironment(profile).toList())
 
-    def testWithoutVersion(self):
-        self.app.fetchRemotes()
-        self.ws.readConfiguration(True)
-        self.ws.createProfile("foo")
-        pf = self.ws.updateProfile("foo",
-                                   mpkgAddList=["container-A"],
-                                   envSetMap={"FOO": "BAR"})
-        self.assertEqual(["container-A_2.1"],
-                         pf.getPackages())
-        self.ws.provisionProfile("foo")
-        self.checkProfileContent("foo", ["container-A",
-                                         "container-C",
-                                         "container-D"])
-        self.ws.updateProfile("foo",
-                              mpkgAddList=["container-A_1.0"])
-        self.ws.provisionProfile("foo")
-        self.checkProfileContent("foo", ["container-A",
-                                         "container-B",
-                                         "container-C",
-                                         "container-E"])
+        self.pm.updateUserEnv(unsetList=["HELLO"])
+        self.assertEqual([
+            ("LEAF_VERSION", "0.0.0"),
+            ("LEAF_PLATFORM_SYSTEM", platform.system()),
+            ("LEAF_PLATFORM_MACHINE", platform.machine()),
+            ("LEAF_PLATFORM_RELEASE", platform.release()),
+            ("LEAF_NON_INTERACTIVE", "1"),
+            ('scope', 'user'),
+            ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
+            ('LEAF_PROFILE', 'myenv'),
+            ('LEAF_ENV_B', 'BAR'),
+            ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
+            ('LEAF_ENV_A', 'FOO'),
+            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
+             (self.getInstallFolder(), self.getInstallFolder()))],
+            self.ws.getFullEnvironment(profile).toList())
 
-    def testUpgrade(self):
-        self.ws.readConfiguration(True)
-        pf = self.ws.createProfile("foo")
-        self.assertEqual([], pf.getPackages())
-        self.assertEqual(OrderedDict(), pf.getEnvMap())
+        self.ws.updateWorkspaceEnv(setMap=OrderedDict(
+            (("scope", "workspace"), ("HELLO", "world"))))
+        self.assertEqual([
+            ("LEAF_VERSION", "0.0.0"),
+            ("LEAF_PLATFORM_SYSTEM", platform.system()),
+            ("LEAF_PLATFORM_MACHINE", platform.machine()),
+            ("LEAF_PLATFORM_RELEASE", platform.release()),
+            ("LEAF_NON_INTERACTIVE", "1"),
+            ('scope', 'user'),
+            ('scope', 'workspace'),
+            ('HELLO', 'world'),
+            ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
+            ('LEAF_PROFILE', 'myenv'),
+            ('LEAF_ENV_B', 'BAR'),
+            ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
+            ('LEAF_ENV_A', 'FOO'),
+            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
+             (self.getInstallFolder(), self.getInstallFolder()))],
+            self.ws.getFullEnvironment(profile).toList())
 
-        self.ws.updateProfile("foo",
-                              mpkgAddList=["container-A_1.0",
-                                           "version_1.0"])
-        pf = self.ws.retrieveProfile("foo")
-        self.assertEqual(["container-A_1.0",
-                          "version_1.0"],
-                         pf.getPackages())
+        self.ws.updateWorkspaceEnv(unsetList=["HELLO"])
+        self.assertEqual([
+            ("LEAF_VERSION", "0.0.0"),
+            ("LEAF_PLATFORM_SYSTEM", platform.system()),
+            ("LEAF_PLATFORM_MACHINE", platform.machine()),
+            ("LEAF_PLATFORM_RELEASE", platform.release()),
+            ("LEAF_NON_INTERACTIVE", "1"),
+            ('scope', 'user'),
+            ('scope', 'workspace'),
+            ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
+            ('LEAF_PROFILE', 'myenv'),
+            ('LEAF_ENV_B', 'BAR'),
+            ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
+            ('LEAF_ENV_A', 'FOO'),
+            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
+             (self.getInstallFolder(), self.getInstallFolder()))],
+            self.ws.getFullEnvironment(profile).toList())
 
-        self.ws.updateProfile("foo",
-                              mpkgAddList=pf.getPackageMap().keys())
-        pf = self.ws.retrieveProfile("foo")
-        self.assertEqual(["container-A_2.1",
-                          "version_2.0"],
-                         pf.getPackages())
+        profile.updateEnv(setMap=OrderedDict(
+            (("scope", "profile"), ("HELLO", "world"))))
+        profile = self.ws.updateProfile(profile)
+        self.assertEqual([
+            ("LEAF_VERSION", "0.0.0"),
+            ("LEAF_PLATFORM_SYSTEM", platform.system()),
+            ("LEAF_PLATFORM_MACHINE", platform.machine()),
+            ("LEAF_PLATFORM_RELEASE", platform.release()),
+            ("LEAF_NON_INTERACTIVE", "1"),
+            ('scope', 'user'),
+            ('scope', 'workspace'),
+            ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
+            ('scope', 'profile'),
+            ('HELLO', 'world'),
+            ('LEAF_PROFILE', 'myenv'),
+            ('LEAF_ENV_B', 'BAR'),
+            ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
+            ('LEAF_ENV_A', 'FOO'),
+            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
+             (self.getInstallFolder(), self.getInstallFolder()))],
+            self.ws.getFullEnvironment(profile).toList())
+
+        profile.updateEnv(unsetList=["HELLO"])
+        profile = self.ws.updateProfile(profile)
+        self.assertEqual([
+            ("LEAF_VERSION", "0.0.0"),
+            ("LEAF_PLATFORM_SYSTEM", platform.system()),
+            ("LEAF_PLATFORM_MACHINE", platform.machine()),
+            ("LEAF_PLATFORM_RELEASE", platform.release()),
+            ("LEAF_NON_INTERACTIVE", "1"),
+            ('scope', 'user'),
+            ('scope', 'workspace'),
+            ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
+            ('scope', 'profile'),
+            ('LEAF_PROFILE', 'myenv'),
+            ('LEAF_ENV_B', 'BAR'),
+            ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
+            ('LEAF_ENV_A', 'FOO'),
+            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
+             (self.getInstallFolder(), self.getInstallFolder()))],
+            self.ws.getFullEnvironment(profile).toList())
 
     def testPackageOverride(self):
-        self.ws.readConfiguration(True)
-        self.ws.createProfile("myprofile")
-        self.ws.updateProfile("myprofile",
-                              mpkgAddList=["container-A_1.0"])
-        self.ws.provisionProfile("myprofile")
+        self.ws.inittialize()
+        profile = self.ws.createProfile("myprofile")
+        profile.addPackages(
+            PackageIdentifier.fromStringList(["container-A_1.0"]))
+        profile = self.ws.updateProfile(profile)
+        self.ws.provisionProfile(profile)
 
         self.checkInstalledPackages(["container-A_1.0",
                                      "container-B_1.0",
@@ -243,9 +310,10 @@ class TestProfile(AbstractTestWithRepo):
                                   "container-C",
                                   "container-E"])
 
-        pf = self.ws.updateProfile("myprofile",
-                                   mpkgAddList=["container-E_1.1"])
-        self.ws.provisionProfile("myprofile")
+        profile.addPackages(
+            PackageIdentifier.fromStringList(["container-E_1.1"]))
+        profile = self.ws.updateProfile(profile)
+        self.ws.provisionProfile(profile)
 
         self.checkInstalledPackages(["container-A_1.0",
                                      "container-B_1.0",
@@ -263,7 +331,7 @@ class TestProfile(AbstractTestWithRepo):
                                    "container-C_1.0",
                                    "container-A_1.0"])),
                          list(map(Manifest.getIdentifier,
-                                  self.ws.getProfileDependencies(pf))))
+                                  self.ws.getProfileDependencies(profile))))
 
 
 if __name__ == "__main__":

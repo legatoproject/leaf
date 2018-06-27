@@ -17,7 +17,7 @@ import os
 import sys
 
 from leaf.core.workspacemanager import WorkspaceManager
-from leaf.model.base import Environment
+from leaf.model.environment import Environment
 from leaf.model.package import AvailablePackage, InstalledPackage, Manifest,\
     LeafArtifact
 from leaf.model.remote import Remote
@@ -31,15 +31,12 @@ class Verbosity(IntEnum):
     VERBOSE = 2
 
 
-def createLogger(args, nonInteractive):
+def createLogger(verbosity, nonInteractive):
     '''
     Returns the correct ILogger
     '''
     if len(os.environ.get(LeafConstants.ENV_JSON_OUTPUT, "")) > 0:
         return JsonLogger()
-    verbosity = Verbosity.DEFAULT
-    if hasattr(args, 'verbosity'):
-        verbosity = getattr(args, 'verbosity')
     return TextLogger(verbosity, nonInteractive)
 
 
@@ -159,7 +156,7 @@ class TextLogger (ILogger):
                 content["Workspace env"] = wsc.getEnvMap()
                 self.prettyprintContent(content)
             if not self.isQuiet():
-                for pf in item.getAllProfiles().values():
+                for pf in item.listProfiles().values():
                     label = pf.name
                     if pf.isCurrentProfile:
                         label += " [current]"

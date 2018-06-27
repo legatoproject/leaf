@@ -51,11 +51,11 @@ etc...
 
 These options are generic for all *leaf* commands
 
-*-v*::
+*-v|--verbose*::
 
 Toggle output to verbose mode (more details)
 
-*-q*::
+*-q|--quiet*::
 
 Toggle output to quiet mode (less details)
 

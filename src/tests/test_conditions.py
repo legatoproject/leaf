@@ -3,7 +3,7 @@
 '''
 import unittest
 
-from leaf.model.base import Environment
+from leaf.model.environment import Environment
 from leaf.model.package import ConditionalPackageIdentifier, PackageIdentifier
 
 

@@ -37,7 +37,7 @@ class SearchCommand(LeafCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        app = self.getApp(args, logger=logger)
+        pm = self.getPackageManager(args)
 
         pkgFilter = MetaPackageFilter()
         if not args.allPackages:
@@ -52,11 +52,11 @@ class SearchCommand(LeafCommand):
                 pkgFilter.withKeyword(kw)
 
         # Pkg list
-        mfList = sorted(app.listAvailablePackages().values(),
+        mfList = sorted(pm.listAvailablePackages().values(),
                         key=Manifest.getIdentifier)
         # manage tags
         TagManager().tagLatest(mfList)
-        TagManager().tagInstalled(mfList, app.listInstalledPackages().keys())
+        TagManager().tagInstalled(mfList, pm.listInstalledPackages().keys())
 
         # Print filtered packages
         logger.printDefault("Filter:", pkgFilter)

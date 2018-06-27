@@ -36,6 +36,12 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
     def testSearch(self):
         self.leafExec("search")
         self.leafExec("search", "--all")
+        self.leafExec("search", "--tag", "tag1")
+        self.leafExec("search", "--tag", "tag1", "-t", "tag2")
+        self.leafExec("search", "--tag", "tag1,tag2")
+        self.leafExec("search", "--tag", "tag1,tag2" "keyword1")
+        self.leafExec("search", "--tag", "tag1,tag2" "keyword1", "keyword2")
+        self.leafExec("search", "--tag", "tag1,tag2" "keyword1,keyword2")
 
     def testDepends(self):
         self.leafExec(["package", "deps"], "--available", "container-A_1.0")

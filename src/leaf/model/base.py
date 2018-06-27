@@ -6,8 +6,6 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from collections import OrderedDict
-import os
 
 
 class JsonObject():
@@ -18,138 +16,28 @@ class JsonObject():
     def __init__(self, json):
         self.json = json
 
-    def jsoninit(self, *path, key=None, value=None, force=False):
-        if key is None:
-            raise ValueError("Cannot init json")
-        parent = self.jsonpath(*path)
-        if not isinstance(parent, dict):
-            raise ValueError("Cannot init json")
-        if force or key not in parent:
-            parent[key] = value
-        return parent[key]
-
-    def jsonpath(self, *path, default=None):
+    def jsonget(self, key, default=None, mandatory=False):
         '''
         Utility to browse json and reduce None testing
         '''
-        currentNode = self.json
-        for p in path:
-            if isinstance(currentNode, dict) and p in currentNode:
-                currentNode = currentNode.get(p, default)
-            else:
-                return default
-        return currentNode
+        if key not in self.json:
+            if mandatory:
+                raise ValueError("Missing mandatory json field %s" % key)
+            if default is not None:
+                self.json[key] = default
+        return self.json.get(key)
 
-
-class Environment():
-
-    @staticmethod
-    def comment(line):
-        return "# %s" % line
-
-    @staticmethod
-    def exportCommand(key, value):
-        return "export %s=\"%s\";" % (key, value)
-
-    @staticmethod
-    def unsetCommand(key):
-        return "unset %s;" % (key)
-
-    @staticmethod
-    def build(*envList):
-        out = Environment()
-        for env in envList:
-            if env is not None:
-                if not isinstance(env, Environment):
-                    raise ValueError()
-                out.addSubEnv(env)
-        return out
-
-    def __init__(self, comment=None, content=None):
-        self.comment = comment
-        self.env = []
-        self.children = []
-        if isinstance(content, dict):
-            self.env += content.items()
-        elif isinstance(content, list):
-            self.env += content
-
-    def addSubEnv(self, child):
-        if child is not None:
-            if not isinstance(child, Environment):
-                raise ValueError()
-            self.children.append(child)
-
-    def printEnv(self, kvConsumer=None, commentConsumer=None):
-        if len(self.env) > 0:
-            if self.comment is not None and commentConsumer is not None:
-                commentConsumer(self.comment)
-            if kvConsumer is not None:
-                for k, v in self.env:
-                    kvConsumer(k, v)
-        for e in self.children:
-            e.printEnv(kvConsumer, commentConsumer)
-
-    def toList(self, acc=None):
-        if acc is None:
-            acc = []
-        acc += self.env
-        for e in self.children:
-            e.toList(acc=acc)
-        return acc
-
-    def toMap(self):
-        out = OrderedDict()
-        for k in self.keys():
-            out[k] = self.findValue(k)
-        return out
-
-    def keys(self):
-        out = set()
-        for k, _ in self.toList():
-            out.add(k)
-        return out
-
-    def findValue(self, key):
-        out = None
-        for k, v in self.env:
-            if k == key:
-                out = str(v)
-        for c in self.children:
-            out2 = c.findValue(key)
-            if out2 is not None:
-                out = out2
-        return out
-
-    def unset(self, key):
-        if key in self.env:
-            del self.env[key]
-        for c in self.children:
-            c.unset(key)
-
-    def generateScripts(self, activateFile=None, deactivateFile=None):
+    def jsonpath(self, path, default=None, mandatory=False):
         '''
-        Generates environment script to activate and desactivate a profile
+        Utility to browse json and reduce None testing
         '''
-        if deactivateFile is not None:
-            resetMap = OrderedDict()
-            for k in self.keys():
-                resetMap[k] = os.environ.get(k)
-            with open(str(deactivateFile), "w") as fp:
-                for k, v in resetMap.items():
-                    # If the value was not present in env before, reset it
-                    if v is None:
-                        fp.write(Environment.unsetCommand(k) + "\n")
-                    else:
-                        fp.write(Environment.exportCommand(k, v) + "\n")
-        if activateFile is not None:
-            with open(str(activateFile), "w") as fp:
-
-                def commentConsumer(c):
-                    fp.write(Environment.comment(c) + "\n")
-
-                def kvConsumer(k, v):
-                    fp.write(Environment.exportCommand(k, v) + "\n")
-
-                self.printEnv(kvConsumer=kvConsumer,
-                              commentConsumer=commentConsumer)
+        if not isinstance(path, (list, tuple)):
+            raise ValueError(type(path))
+        if len(path) == 0:
+            raise ValueError()
+        if len(path) == 1:
+            return self.jsonget(path[0], default=default, mandatory=mandatory)
+        child = self.jsonget(path[0], mandatory=mandatory)
+        if not isinstance(child, dict):
+            raise ValueError()
+        return JsonObject(child).jsonpath(path[1:], default)

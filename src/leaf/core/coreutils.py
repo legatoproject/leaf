@@ -1,9 +1,27 @@
 
+from leaf.constants import JsonConstants
 import os
 import subprocess
 
-from leaf.constants import JsonConstants
-from leaf.model.base import Environment
+from leaf.model.environment import Environment
+from leaf.model.package import PackageIdentifier
+
+
+def retrievePackageIdentifier(motif, validPiList):
+    '''
+    If only package name is given retrieve the latest package in given list with same package name
+    '''
+    if PackageIdentifier.isValidIdentifier(motif):
+        return PackageIdentifier.fromString(motif)
+    out = None
+    if validPiList is not None:
+        for pi in validPiList:
+            if pi.name == motif:
+                if out is None or pi > out:
+                    out = pi
+    if out is None:
+        raise ValueError("Cannot find any package with name %s" % motif)
+    return out
 
 
 def packageListToEnvironnement(ipList, ipMap, env=None):
@@ -60,12 +78,12 @@ class StepExecutor():
         self.variableResolver = variableResolver
 
     def postInstall(self,):
-        steps = self.package.jsonpath(JsonConstants.INSTALL, default=[])
+        steps = self.package.jsonget(JsonConstants.INSTALL, default=[])
         if len(steps) > 0:
             self.runSteps(steps, self.package, label="Post-install")
 
     def preUninstall(self):
-        steps = self.package.jsonpath(JsonConstants.UNINSTALL, default=[])
+        steps = self.package.jsonget(JsonConstants.UNINSTALL, default=[])
         if len(steps) > 0:
             self.runSteps(steps, self.package, label="Pre-uninstall")
 

@@ -2,11 +2,11 @@
 @author: seb
 '''
 
-from leaf.utils import checkSupportedLeaf, jsonWriteFile, jsonLoadFile
 from tempfile import mktemp
 import unittest
 
 from leaf.model.base import JsonObject
+from leaf.utils import checkSupportedLeaf, jsonWriteFile, jsonLoadFile
 
 
 class TestMisc(unittest.TestCase):
@@ -22,32 +22,33 @@ class TestMisc(unittest.TestCase):
 
     def testJo(self):
         jo = JsonObject({})
-        self.assertTrue(jo.jsonpath("foo") is None)
-        self.assertTrue(jo.jsonpath("foo", "bar") is None)
-        self.assertEqual("hello", jo.jsonpath("foo", "bar2", default="hello"))
-        newMap = jo.jsoninit(key="foo", value={})
-        jo.jsoninit("foo", key="bar", value="hello")
-        newMap["bar2"] = "hello2"
-        self.assertFalse(jo.jsonpath("foo") is None)
-        self.assertFalse(jo.jsonpath("foo", "bar") is None)
-        self.assertEqual("hello", jo.jsonpath("foo", "bar"))
-        self.assertEqual("hello2", jo.jsonpath("foo", "bar2"))
+        self.assertIsNone(jo.jsonpath(["a"]))
+        self.assertIsNotNone(jo.jsonpath(["a"], {}))
+        self.assertIsNotNone(jo.jsonpath(["a"]))
+
+        self.assertIsNone(jo.jsonpath(["a", "b"]))
+        self.assertIsNotNone(jo.jsonpath(["a", "b"], {}))
+        self.assertIsNotNone(jo.jsonpath(["a", "b"]))
+
+        self.assertIsNone(jo.jsonpath(["a", "b", "c"]))
+        self.assertEqual("hello", jo.jsonpath(["a", "b", "c"], "hello"))
+        self.assertEqual("hello", jo.jsonpath(["a", "b", "c"], "world"))
+        self.assertEqual("hello", jo.jsonpath(["a", "b", "c"]))
 
         tmpFile = mktemp(".json", "leaf-ut")
         jsonWriteFile(tmpFile, jo.json, pp=True)
         jo = JsonObject(jsonLoadFile(tmpFile))
-        self.assertFalse(jo.jsonpath("foo") is None)
-        self.assertFalse(jo.jsonpath("foo", "bar") is None)
-        self.assertEqual("hello", jo.jsonpath("foo", "bar"))
-        self.assertEqual("hello2", jo.jsonpath("foo", "bar2"))
 
-        self.assertEqual("hello2", jo.jsoninit("foo",
-                                               key="bar2",
-                                               value="barbar"))
-        self.assertEqual("barbar", jo.jsoninit("foo",
-                                               key="bar2",
-                                               value="barbar",
-                                               force=True))
+        self.assertEqual("hello", jo.jsonpath(["a", "b", "c"], "hello"))
+        self.assertEqual("hello", jo.jsonpath(["a", "b", "c"], "world"))
+        self.assertEqual("hello", jo.jsonpath(["a", "b", "c"]))
+
+        with self.assertRaises(ValueError):
+            jo.jsonget("z", mandatory=True)
+        with self.assertRaises(ValueError):
+            jo.jsonpath(["a", "b", "c", "d"])
+        with self.assertRaises(ValueError):
+            jo.jsonpath(["a", "d", "e"])
 
 
 if __name__ == "__main__":

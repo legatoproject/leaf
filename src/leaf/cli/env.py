@@ -7,7 +7,9 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 import argparse
+
 from leaf.cli.cliutils import LeafMetaCommand, LeafCommand, initCommonArgs
+from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
 from leaf.utils import envListToMap
 
@@ -47,13 +49,23 @@ class EnvPrintCommand(LeafCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        ws = self.getWorkspace(args)
+        workspace = self.getWorkspace(args, checkInitialized=False)
 
-        # Get profile name, key could not exist if command is default command
-        name = args.profiles if "profiles" in vars(
-            args) and args.profiles is not None else ws.getCurrentProfileName()
-
-        env = ws.getFullEnvironment(name)
+        env = None
+        if not workspace.isInitialized():
+            env = Environment.build(
+                self.getPackageManager(args).getLeafEnvironment(),
+                self.getPackageManager(args).getUserEnvironment())
+        else:
+            # Get profile name, key could not exist if command is default
+            # command
+            name = args.profiles if "profiles" in vars(
+                args) and args.profiles is not None else workspace.getCurrentProfileName()
+            profile = workspace.getProfile(name)
+            if not workspace.isProfileSync(profile):
+                raise ValueError(
+                    "Profile %s is out of sync, please run 'leaf profile sync %s'" % (name, name))
+            env = workspace.getFullEnvironment(profile)
         logger.displayItem(env)
         if 'activateScript' in vars(args):
             env.generateScripts(args.activateScript, args.deactivateScript)
@@ -72,9 +84,9 @@ class EnvBuiltinCommand(LeafCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        app = self.getApp(args, logger=logger)
+        packageManager = self.getPackageManager(args)
 
-        env = app.getLeafEnvironment()
+        env = packageManager.getLeafEnvironment()
         logger.displayItem(env)
         env.generateScripts(args.activateScript, args.deactivateScript)
 
@@ -93,12 +105,13 @@ class EnvUserCommand(LeafCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        app = self.getApp(args, logger)
+        packageManager = self.getPackageManager(args)
 
-        app.updateUserConfiguration(
-            envSetMap=envListToMap(args.envAddList),
-            envUnsetList=args.envRmList)
-        env = app.getUserEnvironment()
+        if args.envAddList is not None or args.envRmList is not None:
+            packageManager.updateUserEnv(setMap=envListToMap(args.envAddList),
+                                         unsetList=args.envRmList)
+
+        env = packageManager.getUserEnvironment()
         logger.displayItem(env)
         env.generateScripts(args.activateScript, args.deactivateScript)
 
@@ -117,11 +130,13 @@ class EnvWorkspaceCommand(LeafCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
+        workspace = self.getWorkspace(args)
 
-        ws = self.getWorkspace(args)
-        ws.updateWorkspaceConfiguration(envSetMap=envListToMap(args.envAddList),
-                                        envUnsetList=args.envRmList)
-        env = ws.getWorkspaceEnvironment()
+        if args.envAddList is not None or args.envRmList is not None:
+            workspace.updateWorkspaceEnv(setMap=envListToMap(args.envAddList),
+                                         unsetList=args.envRmList)
+
+        env = workspace.getWorkspaceEnvironment()
         logger.displayItem(env)
         env.generateScripts(args.activateScript, args.deactivateScript)
 
@@ -142,13 +157,16 @@ class EnvProfileCommand(LeafCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
+        workspace = self.getWorkspace(args)
+        name = args.profiles if args.profiles is not None else workspace.getCurrentProfileName()
+        profile = workspace.getProfile(name)
 
-        ws = self.getWorkspace(args)
-        name = args.profiles if args.profiles is not None else ws.getCurrentProfileName()
-        ws.updateProfile(name,
-                         envSetMap=envListToMap(args.envAddList),
-                         envUnsetList=args.envRmList)
-        env = ws.getProfileEnvironment(name)
+        if args.envAddList is not None or args.envRmList is not None:
+            profile.updateEnv(setMap=envListToMap(args.envAddList),
+                              unsetList=args.envRmList)
+            profile = workspace.updateProfile(profile)
+
+        env = profile.getEnvironment()
         logger.displayItem(env)
         env.generateScripts(args.activateScript, args.deactivateScript)
 
@@ -170,7 +188,7 @@ class EnvPackageCommand(LeafCommand):
 
     def execute(self, args):
         logger = self.getLogger(args)
-        app = self.getApp(args, logger=logger)
+        app = self.getPackageManager(args)
         env = app.getPackagesEnvironment(
             [PackageIdentifier.fromString(pis) for pis in args.pisList])
         logger.displayItem(env)
