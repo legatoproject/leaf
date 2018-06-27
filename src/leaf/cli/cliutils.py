@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 import traceback
 
-from leaf.core.logger import createLogger, Verbosity
+from leaf.core.logger import Verbosity, TextLogger
 from leaf.core.packagemanager import PackageManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.model.base import Scope
@@ -106,7 +106,7 @@ class GenericCommand(ABC):
 
     def getLogger(self, args):
         loggerAttr = self.getLoggerAttr(args)
-        return createLogger(loggerAttr[0], loggerAttr[1])
+        return TextLogger(loggerAttr[0], loggerAttr[1])
 
     def getPackageManager(self, args):
         loggerAttr = self.getLoggerAttr(args)

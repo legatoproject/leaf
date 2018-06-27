@@ -2,14 +2,10 @@
 @author: seb
 '''
 
-import os
+from leaf.constants import LeafFiles
 import unittest
 
-from leaf.constants import LeafFiles
-from tests.testutils import LeafCliWrapper
-
-
-LEAF_UT_LEVELS = os.environ.get("LEAF_UT_LEVELS", "QUIET,VERBOSE,JSON")
+from tests.testutils import LeafCliWrapper, LEAF_UT_SKIP
 
 
 class TestSetupCli_Default(LeafCliWrapper):
@@ -73,25 +69,18 @@ class TestSetupCli_Default(LeafCliWrapper):
                                           "install"])
 
 
-@unittest.skipUnless("VERBOSE" in LEAF_UT_LEVELS, "Test disabled")
+@unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
 class TestProfileCli_Verbose(TestSetupCli_Default):
     def __init__(self, methodName):
         TestSetupCli_Default.__init__(self, methodName)
         self.postVerbArgs.append("--verbose")
 
 
-@unittest.skipUnless("QUIET" in LEAF_UT_LEVELS, "Test disabled")
+@unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
 class TestProfileCli_Quiet(TestSetupCli_Default):
     def __init__(self, methodName):
         TestSetupCli_Default.__init__(self, methodName)
         self.postVerbArgs.append("--quiet")
-
-
-@unittest.skipUnless("JSON" in LEAF_UT_LEVELS, "Test disabled")
-class TestProfileCli_Json(TestSetupCli_Default):
-    def __init__(self, methodName):
-        TestSetupCli_Default.__init__(self, methodName)
-        self.jsonEnvValue = "1"
 
 
 if __name__ == "__main__":

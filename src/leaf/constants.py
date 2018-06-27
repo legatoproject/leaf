@@ -26,7 +26,6 @@ class LeafConstants():
                         '.gz':   'gz'}
     DEFAULT_PROFILE = "default"
     CACHE_DELTA = timedelta(days=1)
-    ENV_JSON_OUTPUT = "LEAF_JSON_OUTPUT"
     ENV_CONFIG_FILE = "LEAF_CONFIG_FILE"
     ENV_CACHE_FOLDER = "LEAF_CACHE_FOLDER"
 

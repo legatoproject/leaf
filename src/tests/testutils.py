@@ -14,6 +14,7 @@ from leaf.model.package import PackageIdentifier, Manifest
 
 
 LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
+LEAF_UT_SKIP = os.environ.get("LEAF_UT_SKIP", "")
 RESOURCE_FOLDER = Path("tests/resources/")
 EXTENSIONS_FOLDER = Path("extensions/").resolve()
 
@@ -141,7 +142,6 @@ class LeafCliWrapper(AbstractTestWithRepo):
         AbstractTestWithRepo.__init__(self, methodName)
         self.preVerbArgs = []
         self.postVerbArgs = []
-        self.jsonEnvValue = ""
 
     @classmethod
     def setUpClass(cls):
@@ -189,7 +189,6 @@ class LeafCliWrapper(AbstractTestWithRepo):
         print(SEPARATOR,
               '[%s] leaf %s' % (type(self).__name__,
                                 " ".join(command)))
-        os.environ[LeafConstants.ENV_JSON_OUTPUT] = self.jsonEnvValue
         out = LeafCli().run(command)
         print(SEPARATOR + SEPARATOR + SEPARATOR)
         if expectedRc is not None:

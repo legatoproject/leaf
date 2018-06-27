@@ -5,10 +5,7 @@
 import os
 import unittest
 
-from tests.testutils import LeafCliWrapper, RESOURCE_FOLDER
-
-
-LEAF_UT_SKIP = os.environ.get("LEAF_UT_SKIP", "")
+from tests.testutils import LeafCliWrapper, RESOURCE_FOLDER, LEAF_UT_SKIP
 
 
 class TestPackageManagerCli_Default(LeafCliWrapper):
@@ -152,13 +149,6 @@ class TestPackageManagerCli_Quiet(TestPackageManagerCli_Default):
     def __init__(self, methodName):
         TestPackageManagerCli_Default.__init__(self, methodName)
         self.postVerbArgs.append("--quiet")
-
-
-@unittest.skipIf("JSON" in LEAF_UT_SKIP, "Test disabled")
-class TestPackageManagerCli_Json(TestPackageManagerCli_Default):
-    def __init__(self, methodName):
-        TestPackageManagerCli_Default.__init__(self, methodName)
-        self.jsonEnvValue = "1"
 
 
 if __name__ == "__main__":

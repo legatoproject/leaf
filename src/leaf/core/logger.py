@@ -12,7 +12,6 @@ from asyncio.log import logger
 from cProfile import label
 from collections import OrderedDict
 from enum import IntEnum, unique
-import json
 from leaf.constants import LeafConstants
 import os
 import sys
@@ -30,15 +29,6 @@ class Verbosity(IntEnum):
     QUIET = 0
     DEFAULT = 1
     VERBOSE = 2
-
-
-def createLogger(verbosity, nonInteractive):
-    '''
-    Returns the correct ILogger
-    '''
-    if len(os.environ.get(LeafConstants.ENV_JSON_OUTPUT, "")) > 0:
-        return JsonLogger()
-    return TextLogger(verbosity, nonInteractive)
 
 
 class ILogger(ABC):
@@ -313,143 +303,3 @@ class TextLogger (ILogger):
                 if failOnDecline:
                     raise ValueError("Operation aborted")
                 return False
-
-
-class JsonLogger(ILogger):
-    '''
-    Print information in a machine readable format (json)
-    '''
-
-    def __init__(self):
-        ILogger.__init__(self, Verbosity.VERBOSE)
-
-    def printJson(self, content):
-        print(json.dumps(content, sort_keys=True, indent=None), flush=True)
-
-    def progressStart(self, task, message=None, total=-1):
-        self.printJson({
-            'event': "progressStart",
-            'task': task,
-            'message': message,
-            'total': total
-        })
-
-    def progressWorked(self, task, message=None, worked=0, total=100, sameLine=False):
-        self.printJson({
-            'event': "progressWorked",
-            'task': task,
-            'message': message,
-            'worked': worked,
-            'total': total
-        })
-
-    def progressDone(self, task, message=None):
-        self.printJson({
-            'event': "progressDone",
-            'task': task,
-            'message': message
-        })
-
-    def printQuiet(self, *message, **kwargs):
-        self.printJson({
-            'event': "message",
-            'message': " ".join(map(str, message)),
-        })
-
-    def printDefault(self, *message, **kwargs):
-        self.printJson({
-            'event': "message",
-            'message': " ".join(map(str, message)),
-        })
-
-    def printVerbose(self, *message, **kwargs):
-        self.printJson({
-            'event': "detail",
-            'message': " ".join(map(str, message)),
-        })
-
-    def printError(self, *message):
-        self.printJson({
-            'event': "error",
-            'message': " ".join(map(str, message)),
-        })
-
-    def displayJsonItem(self, itemType, json=None, extraMap=None):
-        content = {
-            'event': "item",
-            'type': itemType,
-        }
-        if json is not None:
-            content['data'] = json
-        if extraMap is not None:
-            for k, v in extraMap.items():
-                if k not in content:
-                    content[k] = None if v is None else str(v)
-        self.printJson(content)
-        pass
-
-    def displayItem(self, item):
-        itemType = None
-        json = None
-        extraMap = {}
-        if isinstance(item, Environment):
-            def commentConsumer(c):
-                self.displayJsonItem("comment", extraMap={"comment": c})
-
-            def kvConsumer(k, v):
-                self.displayJsonItem("env", extraMap={"key": k, "value": v})
-
-            item.printEnv(kvConsumer=kvConsumer,
-                          commentConsumer=commentConsumer)
-        elif isinstance(item, WorkspaceManager):
-            itemType = "workspace"
-            json = item.readConfiguration().json
-            extraMap['folder'] = item.rootFolder
-            try:
-                extraMap['currentProfile'] = item.getCurrentProfileName()
-            except:
-                pass
-        elif isinstance(item, Profile):
-            itemType = "profile"
-            json = item.json
-            extraMap['name'] = item.name
-            extraMap['folder'] = item.folder
-            extraMap['isCurrentProfile'] = item.isCurrentProfile
-        elif isinstance(item, Manifest):
-            itemType = "package"
-            json = item.json
-            extraMap['customTags'] = ",".join(item.customTags)
-            if isinstance(item, AvailablePackage):
-                extraMap['url'] = item.getUrl()
-            elif isinstance(item, InstalledPackage):
-                extraMap['folder'] = item.folder
-            elif isinstance(item, LeafArtifact):
-                extraMap['path'] = item.path
-        elif isinstance(item, Remote):
-            itemType = "remote"
-            json = item.json
-            extraMap = {'alias': item.alias}
-            if item.isFetched():
-                extraMap["name"] = item.getInfoName()
-                extraMap["description"] = item.getInfoDescription()
-                extraMap["date"] = item.getInfoDate()
-        elif isinstance(item, tuple) and len(item) == 2:
-            itemType = "env"
-            extraMap = {'key': item[0],
-                        'value': item[1]}
-        else:
-            itemType = "string"
-            extraMap = {'value': str(item)}
-        if itemType is not None:
-            self.displayJsonItem(itemType, json, extraMap)
-
-    def confirm(self,
-                question=None,
-                yes=None,
-                no=None,
-                failOnDecline=False):
-        self.printJson({
-            'event': "confirm",
-            'question': question
-        })
-        return True
