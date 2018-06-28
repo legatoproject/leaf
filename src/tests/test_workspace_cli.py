@@ -462,6 +462,40 @@ class TestProfileCli_Default(LeafCliWrapper):
                                   "container-C",
                                   "container-E"])
 
+    def testOverideKeepDepends(self):
+        self.leafExec("init")
+        self.leafExec(("profile", "create"), "foo")
+        self.leafExec(("profile", "config"), "-p", "condition_1.0")
+        self.leafExec(("profile", "sync"))
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-B_1.0",
+                                     "condition-D_1.0",
+                                     "condition-F_1.0",
+                                     "condition-H_1.0"])
+        self.checkProfileContent("foo",
+                                 ["condition",
+                                  "condition-B",
+                                  "condition-D",
+                                  "condition-F",
+                                  "condition-H"])
+
+        self.leafExec(("profile", "config"), "-p", "condition-A_2.0")
+        self.leafExec(("env", "profile"), "--set", "FOO=BAR")
+        self.leafExec(("profile", "sync"))
+        self.checkInstalledPackages(["condition_1.0",
+                                     "condition-A_1.0",
+                                     "condition-A_2.0",
+                                     "condition-B_1.0",
+                                     "condition-C_1.0",
+                                     "condition-D_1.0",
+                                     "condition-F_1.0",
+                                     "condition-H_1.0"])
+        self.checkProfileContent("foo",
+                                 ["condition",
+                                  "condition-A",
+                                  "condition-C",
+                                  "condition-F"])
+
     def testFeatures(self):
         self.leafExec(("feature", "list"))
         self.leafExec(("feature", "query"), "featureWithDups")

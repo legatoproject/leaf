@@ -224,7 +224,6 @@ class WorkspaceManager():
         missingApList = DependencyManager.compute(
             profile.getPackagesMap().values(),
             DependencyType.INSTALL,
-            strategy=DependencyStrategy.LATEST_VERSION,
             apMap=self.packageManager.listAvailablePackages(),
             ipMap=self.packageManager.listInstalledPackages(),
             env=env)
