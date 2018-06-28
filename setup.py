@@ -45,9 +45,10 @@ setup(name='leaf',
       package_dir={'': 'src'},
       packages=[
           'leaf',
-          'leaf.model',
+          'leaf.cli',
           'leaf.core',
-          'leaf.cli'
+          'leaf.format',
+          'leaf.model'
       ],
       entry_points={
           'console_scripts': [

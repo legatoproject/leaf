@@ -4,7 +4,7 @@
 from leaf.constants import LeafConstants
 import os
 
-from leaf.core.logger import TextLogger, Verbosity
+from leaf.format.logger import TextLogger, Verbosity
 from leaf.core.packagemanager import PackageManager
 from leaf.model.filtering import MetaPackageFilter
 from tests.testutils import AbstractTestWithRepo

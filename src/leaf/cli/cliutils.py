@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 import traceback
 
-from leaf.core.logger import Verbosity, TextLogger
+from leaf.format.logger import Verbosity, TextLogger
 from leaf.core.packagemanager import PackageManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.model.base import Scope

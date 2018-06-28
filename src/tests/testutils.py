@@ -8,7 +8,7 @@ import unittest
 from unittest.case import TestCase
 
 from leaf.cli.cli import LeafCli
-from leaf.core.logger import TextLogger, Verbosity
+from leaf.format.logger import TextLogger, Verbosity
 from leaf.core.relengmanager import RelengManager
 from leaf.model.package import PackageIdentifier, Manifest
 

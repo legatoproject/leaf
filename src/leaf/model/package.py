@@ -223,12 +223,6 @@ class AvailablePackage(Manifest):
         Manifest.__init__(self, jsonPayload)
         self.remoteUrl = remoteUrl
 
-    def __str__(self, *args, **kwargs):
-        return "{pi} [{path}] ({size} bytes)".format(
-            pi=str(self.getIdentifier()),
-            path=self.getSubPath(),
-            size=self.getSize())
-
     def getSize(self):
         return self.jsonget(JsonConstants.REMOTE_PACKAGE_SIZE)
 
@@ -253,9 +247,6 @@ class InstalledPackage(Manifest):
     def __init__(self, manifestFile):
         Manifest.__init__(self, jsonLoadFile(manifestFile))
         self.folder = manifestFile.parent
-
-    def __str__(self):
-        return "{pi} [{path}]".format(pi=self.getIdentifier(), path=str(self.folder))
 
     def getEnvMap(self):
         return self.jsonget(JsonConstants.ENV, OrderedDict())

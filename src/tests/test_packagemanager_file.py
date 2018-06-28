@@ -11,7 +11,7 @@ import unittest
 
 from leaf.core.dependencies import DependencyType
 from leaf.core.features import FeatureManager
-from leaf.core.logger import Verbosity, TextLogger
+from leaf.format.logger import Verbosity, TextLogger
 from leaf.core.packagemanager import PackageManager
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier, AvailablePackage,\

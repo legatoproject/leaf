@@ -8,12 +8,8 @@ Leaf Package Manager
 '''
 
 from abc import ABC, abstractmethod
-from asyncio.log import logger
-from cProfile import label
 from collections import OrderedDict
 from enum import IntEnum, unique
-from leaf.constants import LeafConstants
-import os
 import sys
 
 from leaf.core.workspacemanager import WorkspaceManager
@@ -303,3 +299,7 @@ class TextLogger (ILogger):
                 if failOnDecline:
                     raise ValueError("Operation aborted")
                 return False
+
+    def printRenderer(self, renderer):
+        renderer.verbosity = self.getVerbosity()
+        print(renderer)
