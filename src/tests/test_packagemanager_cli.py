@@ -56,6 +56,10 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
                                      'container-D_1.0'])
 
     def testEnv(self):
+        self.leafExec(("env", "user"), "--unset", "UNKNWONVAR")
+        self.leafExec(("env", "user"), "--set", "UNKNWONVAR=TOTO")
+        self.leafExec(("env", "user"), "--unset", "UNKNWONVAR")
+
         self.leafExec(["package", "install"], "env-A_1.0")
         self.leafExec(["env", "package"], "env-A_1.0")
 

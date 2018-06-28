@@ -30,7 +30,8 @@ class IEnvObject(ABC):
                 envMap[k] = str(v)
         if unsetList is not None:
             for k in unsetList:
-                del envMap[k]
+                if k in envMap:
+                    del envMap[k]
 
 
 class Environment():
