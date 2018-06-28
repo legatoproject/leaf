@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# LEAF_DESCRIPTION update current profile packages
 '''
 Leaf Package Manager
 
@@ -50,10 +51,6 @@ if __name__ == '__main__':
                        action='store_const',
                        const=Verbosity.QUIET,
                        help="decrease output verbosity")
-    parser.add_argument('--description',
-                        dest='showDescription',
-                        action='store_true',
-                        help=argparse.SUPPRESS)
     parser.add_argument('-p', '--add-package',
                         dest='packages',
                         action='append',
@@ -61,10 +58,6 @@ if __name__ == '__main__':
                         help="specific packages to update")
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
-
-    if args.showDescription:
-        print("update current profile packages")
-        exit(0)
 
     try:
         nonInteractive = os.environ.get("LEAF_NON_INTERACTIVE") is not None

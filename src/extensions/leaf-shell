@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+# LEAF_DESCRIPTION run a sub-shell that tracks the environment for your Leaf workspace
 # --------------------------------------------------------------------------------------------------
 # External command for invoking a shell from Leaf.
 #
@@ -13,16 +13,16 @@
 
 import os
 import sys
+
+import argcomplete as ac
 import argparse as ap
 import pathlib as pl
-import argcomplete as ac
-
 
 
 def ProcessArguments():
     # Register and process the command line arguments.
-    initArgs = { 'prog': 'leaf shell',
-                 'description': 'Run a new shell in the Leaf Profile environment.' }
+    initArgs = {'prog': 'leaf shell',
+                'description': 'Run a new shell in the Leaf Profile environment.'}
 
     if sys.version_info > (3, 5):
         # This feature isn't avaliable on all versions of Python we support, so check if it's
@@ -31,51 +31,49 @@ def ProcessArguments():
 
     parser = ap.ArgumentParser(**initArgs)
 
-    parser.add_argument('--description',
-                        dest = 'showDescription',
-                        action = 'store_true',
-                        help = ap.SUPPRESS)
-
     parser.add_argument('-n', '--name',
-                        dest = 'shell',
-                        help = 'run the named shell instead of the default')
+                        dest='shell',
+                        help='run the named shell instead of the default')
 
     parser.add_argument('-c', '--command',
-                        dest = 'command',
-                        nargs = ap.REMAINDER,
-                        default = [],
-                        help = 'run a command in the given shell and exit')
+                        dest='command',
+                        nargs=ap.REMAINDER,
+                        default=[],
+                        help='run a command in the given shell and exit')
 
     ac.autocomplete(parser)
 
     return parser.parse_args()
 
 
-
-def TryExecShell(scriptDir, shellName, command, raiseException = False):
-    # Try to execute the given shell.  If successful, this function will not return.
-    scriptName = 'leafsh.' + shellName + '.sh'  # Name of the support script to run.
+def TryExecShell(scriptDir, shellName, command, raiseException=False):
+    # Try to execute the given shell.  If successful, this function will not
+    # return.
+    # Name of the support script to run.
+    scriptName = 'leafsh.' + shellName + '.sh'
     scriptPath = scriptDir / scriptName         # Path to this support script.
 
     # If the support script exists, run it now.
     if scriptPath.is_file():
-        os.execv(str(scriptPath), [ str(scriptPath), str(scriptDir) ] + command)
+        os.execv(str(scriptPath), [str(scriptPath), str(scriptDir)] + command)
 
-    # Looks like we failed to run the shell, so if requeststed, throw an exception here.
+    # Looks like we failed to run the shell, so if requeststed, throw an
+    # exception here.
     if raiseException:
-        raise RuntimeError('Shell startup script, ' + str(scriptPath) + ' was not found.')
-
+        raise RuntimeError('Shell startup script, ' +
+                           str(scriptPath) + ' was not found.')
 
 
 def RunSubshell(scriptPath, shellName, command):
-    # Try to fire up a support script.  If TryExecShell is successful it will not return.
+    # Try to fire up a support script.  If TryExecShell is successful it will
+    # not return.
     TryExecShell(scriptPath, shellName, command)
 
-    # Looks like the shell they were looking for was not found.  Try again with a default.
+    # Looks like the shell they were looking for was not found.  Try again
+    # with a default.
     print('The shell ' + shellName + ' is not supported, defaulting to Bash.')
 
-    TryExecShell(scriptPath, 'bash', command, raiseException = True)
-
+    TryExecShell(scriptPath, 'bash', command, raiseException=True)
 
 
 if __name__ == "__main__":
@@ -87,13 +85,9 @@ if __name__ == "__main__":
         # TODO: Get the Leaf configuration directory path and search there for user contributed
         #       shell extensions as well.
 
-        # Get the command line arguments and figure out the name of the shell to try.
+        # Get the command line arguments and figure out the name of the shell
+        # to try.
         args = ProcessArguments()
-
-        # If we were asked for our description, then dump it now.
-        if args.showDescription:
-            print('run a sub-shell that tracks the environment for your Leaf workspace')
-            exit(0)
 
         shellName = None
 
@@ -113,7 +107,8 @@ if __name__ == "__main__":
 
     except RuntimeError as error:
         # There was a failure trying to run the shell, let the user know.
-        print(error, file = sys.stderr)
+        print(error, file=sys.stderr)
 
-    # If we got here, it's because the shell failed to run.  So report failure to the caller.
+    # If we got here, it's because the shell failed to run.  So report failure
+    # to the caller.
     exit(1)

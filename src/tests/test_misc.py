@@ -6,12 +6,30 @@ from leaf.constants import JsonConstants
 from tempfile import mktemp
 import unittest
 
+from leaf.cli.external import grepDescription
 from leaf.model.base import JsonObject
 from leaf.model.package import Feature
 from leaf.utils import checkSupportedLeaf, jsonWriteFile, jsonLoadFile
+from tests.testutils import RESOURCE_FOLDER, EXTENSIONS_FOLDER
 
 
 class TestMisc(unittest.TestCase):
+
+    def testGrepDescription(self):
+        file = RESOURCE_FOLDER / "leaf-foo.sh"
+        self.assertTrue(file.exists())
+        description = grepDescription(file)
+        self.assertEqual("The description of my command", description)
+
+        file = RESOURCE_FOLDER / "install_1.0" / "manifest.json"
+        self.assertTrue(file.exists())
+        description = grepDescription(file)
+        self.assertIsNone(description)
+
+        for extension in EXTENSIONS_FOLDER.iterdir():
+            description = grepDescription(extension)
+            print(extension, description)
+            self.assertIsNotNone(description)
 
     def testLeafMinVersion(self):
         self.assertTrue(checkSupportedLeaf(None))

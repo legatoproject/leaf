@@ -15,27 +15,14 @@ import subprocess
 
 from leaf.cli.cliutils import GenericCommand
 
+MOTIF = 'LEAF_DESCRIPTION'
+HEADER_SIZE = 2048
+
 
 class ExternalCommand(GenericCommand):
     '''
     Wrapper to run external binaries as leaf subcommand.
     '''
-
-    @staticmethod
-    def tryExternalCommand(name, executable):
-        '''
-        Try to run --description and use the first line as help to build a new
-        ExternalCommand
-        '''
-        try:
-            desc = subprocess.check_output((str(executable), "--description"),
-                                           timeout=1,
-                                           stderr=None)
-            return ExternalCommand(name,
-                                   desc.decode().splitlines()[0],
-                                   executable)
-        except Exception:
-            pass
 
     def __init__(self, name, description, executable):
         GenericCommand.__init__(self,
@@ -74,6 +61,18 @@ class ExternalCommand(GenericCommand):
         return subprocess.call(command, env=env)
 
 
+def grepDescription(file):
+    try:
+        with open(str(file), 'rb') as fp:
+            header = fp.read(HEADER_SIZE)
+            if MOTIF.encode() in header:
+                for line in header.decode().splitlines():
+                    if MOTIF in line:
+                        return line.split(MOTIF, 1)[1].strip()
+    except:
+        pass
+
+
 def findLeafExternalCommands(blacklistCommands=None):
     '''
     Find leaf-XXX binaries in $PATH to build external commands
@@ -95,7 +94,8 @@ def findLeafExternalCommands(blacklistCommands=None):
                     if blacklistCommands is not None and name in blacklistCommands:
                         # Command is blacklisted
                         continue
-                    ec = ExternalCommand.tryExternalCommand(name, candidate)
-                    if ec is not None:
-                        out[name] = ec
+                    description = grepDescription(candidate)
+                    if description is not None:
+                        out[name] = ExternalCommand(
+                            name, description, candidate)
     return out.values()

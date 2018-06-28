@@ -1,4 +1,5 @@
 #!/bin/sh
+# LEAF_DESCRIPTION source code mode toggling
 set -e
 
 getsrcHelp() {
@@ -24,9 +25,6 @@ END
 # Parsing options
 while test -n "$1"; do
 	case "$1" in
-		--description)	# Support for leaf --description
-						echo "source code mode toggling"
-						exit 0;;
 		--help)	# Simple help page
 				getsrcHelp;;
 		--disable)	# Toggling source mode off

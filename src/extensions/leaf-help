@@ -1,4 +1,5 @@
 #!/bin/sh
+# LEAF_DESCRIPTION help pages for leaf commands
 set -e
 
 
@@ -6,7 +7,7 @@ while test -n "$1"; do
 	case "$1" in
 
 		# Support for leaf --help
-		--description|--help) 
+		--help) 
 			echo "help pages for leaf commands"
 			exit 0
 			;;
