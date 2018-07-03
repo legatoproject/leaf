@@ -215,7 +215,7 @@ def generateRepo(sourceFolder, outputFolder, logger):
                 filename = ALT_FILENAMES.get(str(manifest.getIdentifier()),
                                              str(manifest.getIdentifier()) + ".leaf")
                 outputFile = outputFolder / filename
-                app.pack(manifestFile, outputFile)
+                app.pack(manifestFile, outputFile, updateDate=False)
                 checkArchiveFormat(str(outputFile))
                 if manifest.getName().startswith("composite"):
                     artifactsListComposite.append(outputFile)

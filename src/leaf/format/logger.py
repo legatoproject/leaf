@@ -182,6 +182,7 @@ class TextLogger (ILogger):
                 content["Tags"] = item.getAllTags()
                 if isinstance(item, AvailablePackage):
                     content["Size"] = str(item.getSize()) + ' bytes'
+                    content["Source"] = [r.alias for r in item.sourceRemotes]
                 elif isinstance(item, InstalledPackage):
                     content["Folder"] = item.folder
                 self.prettyprintContent(content)

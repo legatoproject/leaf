@@ -154,6 +154,9 @@ class Manifest(JsonObject):
     def getName(self):
         return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_NAME], mandatory=True)
 
+    def getDate(self):
+        return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_DATE])
+
     def getVersion(self):
         return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_VERSION], mandatory=True)
 
@@ -222,6 +225,7 @@ class AvailablePackage(Manifest):
     def __init__(self, jsonPayload, remoteUrl):
         Manifest.__init__(self, jsonPayload)
         self.remoteUrl = remoteUrl
+        self.sourceRemotes = []
 
     def getSize(self):
         return self.jsonget(JsonConstants.REMOTE_PACKAGE_SIZE)

@@ -1,5 +1,5 @@
 '''
-Renderer for search command
+Renderer for search and package list commands
 
 @author:    Nicolas Lambert <nlambert@sierrawireless.com>
 @copyright: 2018 Sierra Wireless. All rights reserved.
@@ -12,9 +12,9 @@ from leaf.format.renderers import Renderer
 from leaf.format.alignment import HAlign
 
 
-class SearchRenderer(Renderer):
+class ManifestListRenderer(Renderer):
     '''
-    Renderer for search command
+    Renderer for search and package list commands
     '''
 
     def __init__(self, pkgFilter=None):
@@ -74,12 +74,14 @@ class SearchRenderer(Renderer):
         ├─────────────────────────────────────┬──────────────────────────────────────────┤
         │              Identifier             │                Properties                │
         ╞═════════════════════════════════════╪══════════════════════════════════════════╡
-        │                                     │       Description: None                  │
+        │ condition_1.0                       │       Description: None                  │
         │                                     │              Tags: latest                │
         │                                     │              Size: 528 bytes             │
+        │                                     │      Release date: 29/12/2015            │
+        │                                     │            Source: remote2               │
         │                                     │ Included Packages: condition-A_1.0       │
         │                                     │                    condition-B_1.0       │
-        │ condition_1.0                       │                    condition-C_1.0       │
+        │                                     │                    condition-C_1.0       │
         │                                     │                    condition-D_1.0       │
         │                                     │                    condition-E_1.0       │
         │                                     │                    condition-F_1.0       │
@@ -105,8 +107,8 @@ class SearchRenderer(Renderer):
 
                 # Create table row
                 table.newRow().newSep().newCell(inputElt.getIdentifier()).newSep() \
-                    .newCell("\n".join(labels), HAlign.RIGHT) \
-                    .newCell("\n".join(values)).newSep()
+                    .newCell("\n".join(map(str, labels)), HAlign.RIGHT) \
+                    .newCell("\n".join(map(str, values))).newSep()
 
                 # Footer for each manifest
                 table.newRow().newSep(nbElements)
@@ -128,11 +130,29 @@ class SearchRenderer(Renderer):
             labels.append("Tags:" if tagCount > 1 else "Tag:")
             values.append(",".join(inputElt.getAllTags()))
 
+        # Release date
+        relDate = inputElt.getDate()
+        if relDate is not None:
+            labels.append("Release date:")
+            values.append(relDate)
+
+        # Count included packages
         depCount = len(inputElt.getLeafDepends())
-        if isinstance(inputElt, AvailablePackage) and depCount == 0:
-            # Size
-            labels.append("Size:")
-            values.append(str(inputElt.getSize()) + ' bytes')
+
+        # For Availables Packages
+        if isinstance(inputElt, AvailablePackage):
+            # Sources
+            remoteCount = len(inputElt.sourceRemotes)
+            if remoteCount > 0:
+                labels.append("Source:" if remoteCount <= 1 else "Sources:")
+                values.append(",".join(remote.alias
+                                       for remote in inputElt.sourceRemotes))
+
+            if depCount == 0:
+                # Size
+                labels.append("Size:")
+                values.append(str(inputElt.getSize()) + ' bytes')
+        # For Installed Packages
         elif isinstance(inputElt, InstalledPackage):
             #Folder
             labels.append("Folder:")

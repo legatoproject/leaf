@@ -9,11 +9,11 @@ Leaf Package Manager
 from collections import OrderedDict
 from datetime import datetime
 from leaf.constants import JsonConstants
-from leaf.utils import jsonLoadFile, openOutputTarFile, computeSha1sum,\
-    jsonWriteFile
 from pathlib import Path
 
 from leaf.model.package import Manifest, LeafArtifact
+from leaf.utils import jsonLoadFile, openOutputTarFile, computeSha1sum,\
+    jsonWriteFile
 
 
 class RelengManager():
@@ -24,13 +24,29 @@ class RelengManager():
     def __init__(self, logger):
         self.logger = logger
 
-    def pack(self, manifestFile, outputFile):
+    def _getNowDate(self):
+        return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+
+    def _updateManifest(self, manifestFile, updateDate=None):
+        model = Manifest(jsonLoadFile(manifestFile))
+        modelUpdated = False
+        if updateDate is True or (updateDate is None and model.getDate() is None):
+            self.logger.printDefault("Update date for %s" % manifestFile)
+            model.getNodeInfo()[JsonConstants.INFO_DATE] = self._getNowDate()
+            modelUpdated = True
+
+        if modelUpdated:
+            jsonWriteFile(manifestFile, model.json, pp=True)
+        return model
+
+    def pack(self, manifestFile, outputFile, updateDate=None):
         '''
         Create a leaf artifact from given the manifest.
         if the output file ands with .json, a *manifest only* package will be generated.
         Output file can ends with tar.[gz,xz,bz2] of json
         '''
-        manifest = Manifest(jsonLoadFile(manifestFile))
+        manifest = self._updateManifest(manifestFile, updateDate)
+
         self.logger.printDefault("Found:", manifest.getIdentifier())
         self.logger.printDefault(
             "Create tar:", manifestFile, "-->", outputFile)
@@ -48,7 +64,7 @@ class RelengManager():
             infoNode[JsonConstants.REMOTE_NAME] = name
         if description is not None:
             infoNode[JsonConstants.REMOTE_DESCRIPTION] = description
-        infoNode[JsonConstants.REMOTE_DATE] = str(datetime.utcnow())
+        infoNode[JsonConstants.REMOTE_DATE] = self._getNowDate()
 
         rootNode = OrderedDict()
         rootNode[JsonConstants.INFO] = infoNode

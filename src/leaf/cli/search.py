@@ -11,7 +11,7 @@ from leaf.cli.cliutils import LeafCommand
 from leaf.core.tags import TagManager
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import Manifest
-from leaf.format.searchrenderer import SearchRenderer
+from leaf.format.manifestlistrenderer import ManifestListRenderer
 
 
 class SearchCommand(LeafCommand):
@@ -60,6 +60,6 @@ class SearchCommand(LeafCommand):
         TagManager().tagInstalled(mfList, pm.listInstalledPackages().keys())
 
         # Print filtered packages
-        rend = SearchRenderer(pkgFilter)
+        rend = ManifestListRenderer(pkgFilter)
         rend.extend(mf for mf in mfList if pkgFilter.matches(mf))
         logger.printRenderer(rend)

@@ -11,7 +11,6 @@ from builtins import filter
 from collections import OrderedDict
 from datetime import datetime
 import json
-from leaf.constants import JsonConstants, LeafConstants, LeafFiles
 import os
 import platform
 import shutil
@@ -19,6 +18,7 @@ from tarfile import TarFile
 import urllib.request
 
 from leaf import __version__
+from leaf.constants import JsonConstants, LeafConstants, LeafFiles
 from leaf.core.coreutils import VariableResolver, StepExecutor
 from leaf.core.dependencies import DependencyManager, DependencyType
 from leaf.model.base import JsonObject
@@ -159,6 +159,7 @@ class RemoteManager():
                                       total=len(activeRemotes))
             worked = 0
             for remote in activeRemotes:
+                self.logger.printDefault("Fetching remote %s" % remote.alias)
                 self.recursiveFetchUrl(remote.getUrl(), content)
                 worked += 1
                 self.logger.progressWorked('Fetch remote(s)',
@@ -257,12 +258,41 @@ class PackageManager(RemoteManager):
         self.fetchRemotes(smartRefresh=smartRefresh)
 
         if self.remoteCacheFile.exists():
-            cache = jsonLoadFile(self.remoteCacheFile)
-            for url, json in cache.items():
-                for pkgInfoJson in JsonObject(json).jsonget(JsonConstants.REMOTE_PACKAGES, []):
-                    ap = AvailablePackage(pkgInfoJson, url)
+            userRemotes = self.listRemotes(True).values()
+
+            remotesMap = OrderedDict()
+            for remoteUrl, remoteJson in jsonLoadFile(self.remoteCacheFile).items():
+                remotesMap[remoteUrl] = JsonObject(remoteJson)
+
+            # Build the links between remote and parent remotes
+            parentsTree = {}
+            for remoteUrl, remoteModel in remotesMap.items():
+                for subPath in remoteModel.jsonget(JsonConstants.REMOTE_COMPOSITE, []):
+                    compositeUrl = resolveUrl(remoteUrl, subPath)
+                    if compositeUrl not in parentsTree:
+                        parentsTree[compositeUrl] = []
+                    if remoteUrl not in parentsTree[compositeUrl]:
+                        parentsTree[compositeUrl].append(remoteUrl)
+
+            def retrieveSourceRemotes(remoteUrl, acc):
+                # Check is URL is a user remote
+                for remote in userRemotes:
+                    if remote.getUrl() == remoteUrl and remote not in acc:
+                        acc.append(remote)
+                # Visit all
+                if remoteUrl in parentsTree:
+                    for parentUrl in parentsTree[remoteUrl]:
+                        retrieveSourceRemotes(parentUrl, acc)
+
+            for remoteUrl, remoteModel in remotesMap.items():
+                for pkgInfoJson in remoteModel.jsonget(JsonConstants.REMOTE_PACKAGES, []):
+                    ap = AvailablePackage(pkgInfoJson, remoteUrl)
                     if ap.getIdentifier() not in out:
                         out[ap.getIdentifier()] = ap
+                    else:
+                        ap = out[ap.getIdentifier()]
+                    retrieveSourceRemotes(remoteUrl, ap.sourceRemotes)
+
         return out
 
     def listInstalledPackages(self):
@@ -316,7 +346,7 @@ class PackageManager(RemoteManager):
     def downloadAvailablePackage(self, ap):
         '''
         Download given available package and returns the files in cache folder
-        @return LeafArtifact 
+        @return LeafArtifact
         '''
         filename = getCachedArtifactName(ap.getFilename(),
                                          ap.getSha1sum())
@@ -421,7 +451,7 @@ class PackageManager(RemoteManager):
                            env=None,
                            keepFolderOnError=False):
         '''
-        Compute dependency tree, check compatibility, download from remotes and extract needed packages 
+        Compute dependency tree, check compatibility, download from remotes and extract needed packages
         @return: InstalledPackage list
         '''
         prereqRootFolder = None
@@ -559,8 +589,8 @@ class PackageManager(RemoteManager):
 
     def getPackagesEnvironment(self, itemList):
         '''
-        Get the env vars declared by given packages 
-        @param itemList: a list of InstalledPackage or PackageIdentifier 
+        Get the env vars declared by given packages
+        @param itemList: a list of InstalledPackage or PackageIdentifier
         '''
         installedPackages = self.listInstalledPackages()
         out = Environment()

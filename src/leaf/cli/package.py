@@ -14,6 +14,7 @@ from leaf.core.dependencies import DependencyType
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import Manifest
 from leaf.utils import mkTmpLeafRootDir, envListToMap
+from leaf.format.manifestlistrenderer import ManifestListRenderer
 
 
 class PackageMetaCommand(LeafMetaCommand):
@@ -71,11 +72,11 @@ class PackageListCommand(LeafCommand):
                 pkgFilter.withKeyword(kw)
 
         # Print filtered packages
-        logger.printDefault("Filter:", pkgFilter)
-        for mf in sorted(pm.listInstalledPackages().values(),
-                         key=Manifest.getIdentifier):
-            if pkgFilter.matches(mf):
-                logger.displayItem(mf)
+        rend = ManifestListRenderer(pkgFilter)
+        mfList = sorted(pm.listInstalledPackages().values(),
+                        key=Manifest.getIdentifier)
+        rend.extend(mf for mf in mfList if pkgFilter.matches(mf))
+        logger.printRenderer(rend)
 
 
 class PackageDepsCommand(LeafCommand):

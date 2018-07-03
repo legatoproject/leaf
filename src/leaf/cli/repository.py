@@ -8,9 +8,10 @@ Leaf Package Manager
 '''
 
 import argparse
+from pathlib import Path
+
 from leaf.cli.cliutils import LeafCommand, LeafMetaCommand
 from leaf.core.relengmanager import RelengManager
-from pathlib import Path
 
 
 class RepositoryMetaCommand(LeafMetaCommand):
@@ -41,13 +42,29 @@ class RepositoryPackSubCommand(LeafCommand):
                             type=Path,
                             dest='pack_output',
                             help='output file')
+
+        dateGroup = parser.add_mutually_exclusive_group()
+
+        dateGroup.add_argument("--date",
+                               dest="updateDate",
+                               action="store_const",
+                               const=True,
+                               default=None,
+                               help="update the date in the manifest info node")
+        dateGroup.add_argument("--nodate",
+                               dest="updateDate",
+                               action="store_const",
+                               const=False,
+                               help="do not update the date in the manifest info node")
+
         parser.add_argument('manifest',
                             type=Path,
                             help='the manifest file to package')
 
     def execute(self, args):
         RelengManager(self.getLogger(args)).pack(args.manifest,
-                                                 args.pack_output)
+                                                 args.pack_output,
+                                                 args.updateDate)
 
 
 class RepositoryIndexSubCommand(LeafCommand):
