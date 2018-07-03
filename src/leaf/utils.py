@@ -33,7 +33,7 @@ _VERSION_SEPARATOR = re.compile("[-_.~]")
 
 def checkSupportedLeaf(minVersion, currentVersion=__version__, exceptionMessage=None):
     # Handle dev version
-    if minVersion is not None and not currentVersion == '0.0.0':
+    if minVersion is not None:
         if versionComparator_lt(currentVersion, minVersion):
             if exceptionMessage is not None:
                 raise ValueError(exceptionMessage)

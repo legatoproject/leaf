@@ -3,11 +3,11 @@
 '''
 
 import os
-from pathlib import Path
 import traceback
 import unittest
+from unittest.case import skip
 
-from tests.testutils import LeafCliWrapper
+from tests.testutils import LeafCliWrapper, ROOT_FOLDER
 
 
 class TestExtensionsCli(LeafCliWrapper):
@@ -18,7 +18,7 @@ class TestExtensionsCli(LeafCliWrapper):
     def setUp(self):
         LeafCliWrapper.setUp(self)
         TestExtensionsCli.OLD_MANPATH = os.environ.get("MANPATH")
-        manDir = Path("man/")
+        manDir = ROOT_FOLDER / "resources" / "man"
         self.assertTrue(manDir.is_dir())
         if TestExtensionsCli.OLD_MANPATH is None:
             os.environ['MANPATH'] = "%s" % (manDir.resolve())
@@ -34,12 +34,26 @@ class TestExtensionsCli(LeafCliWrapper):
             os.environ['MANPATH'] = TestExtensionsCli.OLD_MANPATH
         LeafCliWrapper.tearDown(self)
 
-#    def testShell(self):
-#        self.leafExec("setup", "-p", "env-A")
-#
-#        self.leafExec("shell", "-c", "echo \$LEGATO_ROOT")
-#        self.leafExec("shell", "-n", "zsh", "-c", "echo \$LEGATO_ROOT")
-#        self.leafExec("shell", "-n", "bash", "-c", "echo \$LEGATO_ROOT")
+    # FIXME @chloe: first leaf shell call:
+    # > does not exit when using eclipse launch configuration
+    # > fails when run by tox
+    # > passes when run by nosetest locally
+    @skip
+    def testShell(self):
+        pwd = os.getcwd()
+        try:
+            os.chdir(str(self.getWorkspaceFolder()))
+            self.leafExec("setup", "-p", "env-A")
+
+            self.leafExec("shell", "-c", "true")
+            self.leafExec("shell", "-n", "bash",
+                          "-c", "test $LEAF_PROFILE = 'ENV-A'")
+            self.leafExec("shell",
+                          "-c", "test $LEAF_PROFILE = 'ENV-A'")
+            self.leafExec("shell", "-n", "zsh",
+                          "-c", "test $LEAF_PROFILE = 'ENV-A'")
+        finally:
+            os.chdir(str(pwd))
 
     def testHelp(self):
         try:
@@ -123,32 +137,38 @@ class TestExtensionsCli(LeafCliWrapper):
     def testGetsrc(self):
         try:
             # Setup profile without source features
-            self.leafExec("setup", "FEATURE-TEST", "-p", "featured-with-source")
+            self.leafExec("setup", "FEATURE-TEST",
+                          "-p", "featured-with-source")
             self.checkCurrentProfile("FEATURE-TEST")
-            self.checkProfileContent("FEATURE-TEST", ["featured-with-source", "condition-A"])
-            
+            self.checkProfileContent(
+                "FEATURE-TEST", ["featured-with-source", "condition-A"])
+
             # Verify source list + check unknown source module
             self.leafExec("getsrc")
             self.leafExec("getsrc", "unknown", expectedRc=2)
-            
+
             # Trigger source mode for test
             fakeSrcFile = self.getWorkspaceFolder() / "fake-test-src"
             self.assertFalse(fakeSrcFile.is_file())
             self.leafExec("getsrc", "test")
             self.assertTrue(fakeSrcFile.is_file())
-            self.checkProfileContent("FEATURE-TEST", ["featured-with-source", "source"])
-            
+            self.checkProfileContent(
+                "FEATURE-TEST", ["featured-with-source", "source"])
+
             # Disable source mode
             self.leafExec("getsrc", "test", "--disable")
             self.assertTrue(fakeSrcFile.is_file())
-            self.checkProfileContent("FEATURE-TEST", ["featured-with-source", "condition-A"])
-            
+            self.checkProfileContent(
+                "FEATURE-TEST", ["featured-with-source", "condition-A"])
+
             # Check with badly built package without sync script
             self.leafExec("getsrc", "broken", expectedRc=10)
-            self.checkProfileContent("FEATURE-TEST", ["featured-with-source", "source-broken"])
+            self.checkProfileContent(
+                "FEATURE-TEST", ["featured-with-source", "source-broken"])
         except SystemExit:
             traceback.print_exc()
             self.fail("System exit caught")
+
 
 if __name__ == "__main__":
     unittest.main()

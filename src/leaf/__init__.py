@@ -6,9 +6,10 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
+from pkg_resources import get_distribution
 
 __title__ = 'leaf'
-__version__ = '0.0.0'
+__version__ = get_distribution(__title__).version
 __short_version__ = '.'.join(__version__.split('.')[:2])
 __author__ = 'Sierra Wireless'
 __license__ = 'Mozilla Public License Version 2.0'

@@ -4,13 +4,13 @@
 
 from collections import OrderedDict
 from leaf.constants import LeafFiles
-from pathlib import Path
 import unittest
 from unittest.case import TestCase
 
 from leaf.core.dependencies import DependencyManager, DependencyType, DependencyStrategy
 from leaf.model.environment import Environment
 from leaf.model.package import Manifest, PackageIdentifier
+from tests.testutils import RESOURCE_FOLDER
 
 
 def mkpi(pis):
@@ -30,7 +30,7 @@ class TestDepends(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        for f in Path("tests/resources/").iterdir():
+        for f in RESOURCE_FOLDER.iterdir():
             manifestFile = f / LeafFiles.MANIFEST
             if manifestFile.exists():
                 try:

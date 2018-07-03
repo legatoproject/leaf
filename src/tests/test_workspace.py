@@ -6,6 +6,7 @@ from collections import OrderedDict
 import platform
 import unittest
 
+import leaf
 from leaf.core.features import FeatureManager
 from leaf.core.logger import TextLogger, Verbosity
 from leaf.core.packagemanager import PackageManager
@@ -163,7 +164,7 @@ class TestProfile(AbstractTestWithRepo):
         self.ws.provisionProfile(profile)
 
         self.assertEqual([
-            ("LEAF_VERSION", "0.0.0"),
+            ("LEAF_VERSION", leaf.__version__),
             ("LEAF_PLATFORM_SYSTEM", platform.system()),
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),
@@ -180,7 +181,7 @@ class TestProfile(AbstractTestWithRepo):
         self.pm.updateUserEnv(setMap=OrderedDict(
             (("scope", "user"), ("HELLO", "world"))))
         self.assertEqual([
-            ("LEAF_VERSION", "0.0.0"),
+            ("LEAF_VERSION", leaf.__version__),
             ("LEAF_PLATFORM_SYSTEM", platform.system()),
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),
@@ -198,7 +199,7 @@ class TestProfile(AbstractTestWithRepo):
 
         self.pm.updateUserEnv(unsetList=["HELLO"])
         self.assertEqual([
-            ("LEAF_VERSION", "0.0.0"),
+            ("LEAF_VERSION", leaf.__version__),
             ("LEAF_PLATFORM_SYSTEM", platform.system()),
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),
@@ -216,7 +217,7 @@ class TestProfile(AbstractTestWithRepo):
         self.ws.updateWorkspaceEnv(setMap=OrderedDict(
             (("scope", "workspace"), ("HELLO", "world"))))
         self.assertEqual([
-            ("LEAF_VERSION", "0.0.0"),
+            ("LEAF_VERSION", leaf.__version__),
             ("LEAF_PLATFORM_SYSTEM", platform.system()),
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),
@@ -235,7 +236,7 @@ class TestProfile(AbstractTestWithRepo):
 
         self.ws.updateWorkspaceEnv(unsetList=["HELLO"])
         self.assertEqual([
-            ("LEAF_VERSION", "0.0.0"),
+            ("LEAF_VERSION", leaf.__version__),
             ("LEAF_PLATFORM_SYSTEM", platform.system()),
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),
@@ -255,7 +256,7 @@ class TestProfile(AbstractTestWithRepo):
             (("scope", "profile"), ("HELLO", "world"))))
         profile = self.ws.updateProfile(profile)
         self.assertEqual([
-            ("LEAF_VERSION", "0.0.0"),
+            ("LEAF_VERSION", leaf.__version__),
             ("LEAF_PLATFORM_SYSTEM", platform.system()),
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),
@@ -276,7 +277,7 @@ class TestProfile(AbstractTestWithRepo):
         profile.updateEnv(unsetList=["HELLO"])
         profile = self.ws.updateProfile(profile)
         self.assertEqual([
-            ("LEAF_VERSION", "0.0.0"),
+            ("LEAF_VERSION", leaf.__version__),
             ("LEAF_PLATFORM_SYSTEM", platform.system()),
             ("LEAF_PLATFORM_MACHINE", platform.machine()),
             ("LEAF_PLATFORM_RELEASE", platform.release()),

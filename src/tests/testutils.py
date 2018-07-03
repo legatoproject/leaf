@@ -15,9 +15,10 @@ from leaf.model.package import PackageIdentifier, Manifest
 
 LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
 LEAF_UT_SKIP = os.environ.get("LEAF_UT_SKIP", "")
-RESOURCE_FOLDER = Path("tests/resources/")
-EXTENSIONS_FOLDER = Path("extensions/").resolve()
 
+ROOT_FOLDER = Path(__file__).parent / '..' / '..'
+RESOURCE_FOLDER = ROOT_FOLDER / "src" / "tests" / "resources/"
+EXTENSIONS_FOLDER = ROOT_FOLDER / "resources" / "bin"
 
 SEPARATOR = "--------------------"
 ALT_FILENAMES = {

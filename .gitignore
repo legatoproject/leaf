@@ -11,16 +11,18 @@
 # Python
 __pycache__
 *.pyc
-/src/.tox/
-/src/.coverage
-/src/coverage-*.xml
-/src/cover-*/
-/src/nosetests-*.xml
+/venv/
 
 # setuptools
-/src/dist/
-/src/build/
+/dist/
+/build/
 /src/leaf.egg-info/
+/.eggs/
 
 # Generated files
-/src/man/
+/resources/man/
+/.coverage
+/coverage-report*
+/nosetests*.xml
+/flake-report*
+/.tox/

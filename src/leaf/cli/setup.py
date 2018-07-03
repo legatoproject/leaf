@@ -56,7 +56,7 @@ class SetupCommand(LeafCommand):
             wspath = args.workspace
             if wspath is None:
                 wspath = Path(os.getcwd())
-            logger.confirm(question="Cannot find workspace, initialize one in %s" % wspath,
+            logger.confirm(question="Cannot find workspace, initialize one in %s?" % wspath,
                            failOnDecline=True)
             self.leafExec(cmdGenerator, "init",
                           logger=logger)

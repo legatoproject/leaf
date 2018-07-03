@@ -33,7 +33,6 @@ class TestMisc(unittest.TestCase):
 
     def testLeafMinVersion(self):
         self.assertTrue(checkSupportedLeaf(None))
-        self.assertTrue(checkSupportedLeaf("2.0"))
         self.assertTrue(checkSupportedLeaf("2.0", "2.0"))
         self.assertFalse(checkSupportedLeaf("2.1", "2.0"))
         with self.assertRaises(ValueError):

@@ -19,14 +19,14 @@ $ sudo apt-get update
 $ sudo apt-get install leaf
 ```
 
-### Alternative Setup Using Python setup.py and Leaf sources
+### Alternative install from sources
 
 Install dependencies:
 
 ```shell
 $ sudo apt-get install --no-install-recommends \
-                       python3 python3-requests python3-argcomplete \
-                       python3-setuptools python3-all python3-nose \
+                       python3 python3-all python3-requests python3-argcomplete \
+                       python3-setuptools python3-setuptools-scm python3-nose \
                        asciidoc-base docbook docbook-xml xsltproc xmlto
 ```
 
@@ -39,17 +39,44 @@ $ make manpages
 Install *leaf* on your system: using python standard *setup.py*
 
 ```shell
-$ cd src/
-$ sudo python3 setup.py
+$ sudo python3 setup.py install
+$ sudo python3 setup.py install_data
 ```
 
 To install *leaf* only for your user:
 
 ```shell
-$ cd src/
 $ python3 setup.py install --user
 $ python3 setup.py install_data -d $HOME/.local/
 ```
+
+### Alternative install in a *virtual env*
+
+If you are not familiar with python virtualenv, see http://docs.python-guide.org/en/latest/dev/virtualenvs/
+
+First if you don't have * virtualenv* installed:
+
+```shell
+$ sudo apt-get install python3-virtualenv
+```
+
+Then, create a virtualenv and install required packages:
+
+```shell
+$ make venv
+# or
+$ python3 -m virtualenv -p python3 venv --no-site-packages
+$ source venv/bin/activate
+$ pip install -r requirements.txt
+```
+
+Finally, install leaf in your virtualenv:
+
+```shell
+$ ./setup.py install
+$ ./setup.py install_data
+```
+
 
 ### Building Debian Package
 
@@ -58,7 +85,7 @@ Install dependencies:
 ```shell
 $ sudo apt-get install --no-install-recommends \
                        python3 python3-requests python3-argcomplete \
-                       python3-setuptools python3-all python3-nose \
+                       python3-setuptools python3-setuptools-scm python3-all python3-nose \
                        debhelper dh-python devscripts build-essential fakeroot \
                        asciidoc-base docbook docbook-xml xsltproc xmlto
 ```
@@ -106,13 +133,16 @@ $ pip3 install setuptools --user --upgrade
 
 ### Using Nose
 
-You can run unit tests using your default *python3* version using *nose*:
+If you setup your virtualenv with the requirements, you can use nose to run tests directly:
 
 ```shell
-$ sudo apt-get install python3-nose python3-coverage
-$ make test
-# or
-$ cd src/ && python3 -m nose
+# First, install leaf in the venv
+$ ./setup.py install
+$ ./setup.py install_data
+# Run all tests
+$ nosetests src/
+# or a single class
+$ nosetests src/tests/test_misc.py
 ```
 
 ### Using Tox
@@ -121,12 +151,15 @@ Tox can automatically run unit tests with supported python versions (3.4, 3.5 & 
 If you have all supported python versions installed on your system, you can use tox to run unit tests:
 
 ```shell
+# Install nose inside a virtualenv
+$ pip install tox
+# or install nose on your system
 $ sudo apt-get install tox
-$ make test-tox
-# or
-$ cd src/ && tox
+# then run tests
+$ tox
+# or a single python version
+$ tox -e py35
 ```
-
 
 ### Using Docker
 
@@ -134,10 +167,14 @@ You can also run all tests using Tox inside a Docker container. if you have dock
 
 ```shell
 # build the docker image
-$ make docker-build
+$ make docker-image
 # run tests
 $ make docker-test
 ```
+
+You can tweak the tests with:
+ - *LEAF_TEST_CLASS* to execute a single test class, for exemple `export LEAF_TEST_CLASS=src/tests/test_depends.py`
+ - *LEAF_TEST_TOX_ARGS* to tweak tox execution to select a specific python version, for example `export LEAF_TEST_TOX_ARGS="-e py35"`
 
 
 ## Usage
@@ -151,6 +188,6 @@ How to add an external command to leaf
 - Add an executable into 'src/extensions/' folder
 - The executable file name must start with 'leaf-'
   for example 'leaf-mycommand', 'mycommand' being the command name, runnable with 'leaf mycommand'
-- The executable must handle '--description' argument to display some documentation 
+- The executable must handle '--description' argument to display some documentation
   only the first line will be displayed in 'leaf --help'
   full documentation will be displayed with 'leaf mycommand --help' if implemented in your script

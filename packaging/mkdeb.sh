@@ -1,49 +1,56 @@
 #!/bin/sh
-set -x
 set -e
 set -u
 
-# Init
-ROOT="$(dirname "$0")/.."
-TARGET="$ROOT/target"
-WORKING_DIR="$TARGET/src"
+__usage () {
+	echo "Usage: $0 <LEAF_SDIST_FILE> <TARGET_FOLDER>"
+	echo "LEAF_SDIST_FILE: source archive generated with ./setup.py sdist"
+	echo "TARGET_FOLDER: whare deb will be generated"
+}
 
-# Clean target folder
-rm -fr "$TARGET"
-mkdir "$TARGET"
+if ! test $# -eq 2; then
+	__usage
+	exit 1
+fi
 
-# Build source distribution
-(
-	cd "$ROOT/src/" \
-	&& python3 setup.py sdist
-)
-DIST_FILE="$ROOT/src/dist/leaf-0.0.0.tar.gz"
-test -f "$DIST_FILE"
+SDIST_FILE="$1"
+TARGET_FOLDER="$2"
+echo "Using Leaf sdist file: $SDIST_FILE"
+echo "Target folder: $TARGET_FOLDER"
+
+ROOT_FOLDER=$(dirname "$0")
+SKEL_FOLDER="$ROOT_FOLDER/skel"
+test -d "$SKEL_FOLDER"
+
+test -f "$SDIST_FILE"
+mkdir -p "$TARGET_FOLDER"
 
 # Extract source
-mkdir "$WORKING_DIR"
-tar -xzf "$DIST_FILE" -C "$WORKING_DIR" --strip-components=1
+WORKING_FOLDER="$TARGET_FOLDER/leaf"
+if test -d "$WORKING_FOLDER"; then
+	rm -rf "$WORKING_FOLDER"
+fi
+mkdir "$WORKING_FOLDER"
+tar -xaf "$SDIST_FILE" -C "$WORKING_FOLDER" --strip-components=1
 
-# Init version
-sed -i -e "s/0.0.0/$VERSION/" "$WORKING_DIR/leaf/__init__.py"
-tar -czf "$TARGET/leaf_$VERSION.tar.gz" -C "$WORKING_DIR" .
+# Get verison
+test -f "$WORKING_FOLDER/PKG-INFO"
+VERSION=$(awk '/^Version:/ {print $2}' "$WORKING_FOLDER/PKG-INFO")
+test -n "$VERSION"
 
 # Copy debian skel
 rsync -Pra \
-	"$ROOT/packaging/extrafiles/" \
-	"$WORKING_DIR/"
+	"$SKEL_FOLDER/" \
+	"$WORKING_FOLDER/"
 
 # Create deb
 (
-	cd "$WORKING_DIR" \
-	&& dch --create --package leaf --newversion $VERSION -u low -D release --force-distribution -M "Leaf Package Manager" \
+	cd "$WORKING_FOLDER" \
+	&& dch --create --package leaf --newversion "$VERSION" -u low -D release --force-distribution -M "Leaf Package Manager" \
 	&& debuild -b
 )
 
 # Create _latest artifacts & clean dist folder
-(
-	rm -rf "$WORKING_DIR" \
-	&& cd "$TARGET" \
-	&& cp "leaf_$VERSION.tar.gz"	"leaf_latest.tar.gz" \
-	&& cp "leaf_${VERSION}_all.deb"	"leaf_latest.deb"
-)
+rm -rf "$WORKING_FOLDER"
+cp -an "$SDIST_FILE" "$TARGET_FOLDER"
+cp -an "$TARGET_FOLDER/leaf_${VERSION}_all.deb" "$TARGET_FOLDER/leaf_latest.deb"
