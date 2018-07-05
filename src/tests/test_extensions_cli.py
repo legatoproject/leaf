@@ -34,11 +34,6 @@ class TestExtensionsCli(LeafCliWrapper):
             os.environ['MANPATH'] = TestExtensionsCli.OLD_MANPATH
         LeafCliWrapper.tearDown(self)
 
-    # FIXME @chloe: first leaf shell call:
-    # > does not exit when using eclipse launch configuration
-    # > fails when run by tox
-    # > passes when run by nosetest locally
-    @skip
     def testShell(self):
         pwd = os.getcwd()
         try:

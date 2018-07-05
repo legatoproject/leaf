@@ -17,8 +17,6 @@
 export LEAF_SHARED_DIR="$1"
 shift
 
-
-
 # Any remaining arguments past are interpreted as a command to execute.
 export LEAF_SHELL_EXEC_COMMAND="$@"
 
@@ -30,5 +28,11 @@ export ZDOTDIR="$LEAF_SHARED_DIR"
 
 
 
-# Exec the sub-shell with our custom, enhanced configuration.
+if [ -n "$LEAF_SHELL_EXEC_COMMAND" ]
+then
+    # Exec the sub-shell to run a custom command, then exit
+    exec zsh -c "source $LEAF_SHARED_DIR/.zshrc"
+fi
+
+# Spawn the sub-shell with our custom, enhanced configuration.
 exec zsh

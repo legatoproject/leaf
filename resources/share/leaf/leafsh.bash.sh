@@ -22,5 +22,11 @@ export LEAF_SHELL_EXEC_COMMAND="$@"
 
 
 
-# Exec the sub-shell with our custom, enhanced configuration.
+if [ -n "$LEAF_SHELL_EXEC_COMMAND" ]
+then
+    # Exec the sub-shell to run a custom command, then exit
+    exec bash -c "source $LEAF_SHARED_DIR/.bashrc"
+fi
+
+# Spawn the sub-shell with our custom, enhanced configuration.
 exec bash --rcfile "$LEAF_SHARED_DIR/.bashrc"
