@@ -3,12 +3,12 @@
 '''
 
 from datetime import datetime, timedelta
-from leaf.constants import LeafConstants
 import os
 import sys
 import time
 import unittest
 
+from leaf.constants import EnvConstants
 from leaf.core.dependencies import DependencyType
 from leaf.core.features import FeatureManager
 from leaf.format.logger import Verbosity, TextLogger
@@ -17,6 +17,7 @@ from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier, AvailablePackage,\
     InstalledPackage
 from leaf.utils import isFolderIgnored
+
 from tests.testutils import AbstractTestWithRepo, envFileToMap
 
 
@@ -31,17 +32,14 @@ class TestPackageManager_File(AbstractTestWithRepo):
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
 
-        os.environ[LeafConstants.ENV_CONFIG_FILE] = str(
-            self.getConfigurationFile())
-        os.environ[LeafConstants.ENV_CACHE_FOLDER] = str(
-            self.getCacheFolder())
         self.pm = PackageManager(TextLogger(VERBOSITY, True),
                                  nonInteractive=True)
 
-        if "LEAF_TIMEOUT" not in os.environ:
+        if EnvConstants.DOWNLOAD_TIMEOUT not in os.environ:
             # Fix CI timeout
-            os.environ["LEAF_TIMEOUT"] = "30"
-            print("Override LEAF_TIMEOUT=" + os.environ["LEAF_TIMEOUT"],
+            os.environ[EnvConstants.DOWNLOAD_TIMEOUT] = "30"
+            print("Override %s=%s" % (EnvConstants.DOWNLOAD_TIMEOUT,
+                                      os.environ[EnvConstants.DOWNLOAD_TIMEOUT]),
                   file=sys.stderr)
 
         self.pm.setInstallFolder(self.getInstallFolder())

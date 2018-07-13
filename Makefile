@@ -39,7 +39,7 @@ docker-test:
 		-e LEAF_TEST_CLASS="$(LEAF_TEST_CLASS)" \
 		-e LEAF_TEST_TOX_ARGS="$(LEAF_TEST_TOX_ARGS)" \
 		leaf-test:latest \
-		sh -c 'cp -a /src/leaf /tmp/leaf && cd /tmp/leaf && make manpages test'
+		sh -c 'cp -a /src/leaf /tmp/leaf && cd /tmp/leaf && git clean -fdX && make clean manpages test'
 
 gpg:
 	gpg --batch --gen-key ./packaging/gpg-script

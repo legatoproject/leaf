@@ -18,7 +18,7 @@ from tarfile import TarFile
 import urllib.request
 
 from leaf import __version__
-from leaf.constants import JsonConstants, LeafConstants, LeafFiles
+from leaf.constants import JsonConstants, LeafConstants, LeafFiles, EnvConstants
 from leaf.core.coreutils import VariableResolver, StepExecutor
 from leaf.core.dependencies import DependencyManager, DependencyType
 from leaf.model.base import JsonObject
@@ -40,9 +40,9 @@ class RemoteManager():
         Constructor
         '''
         self.logger = logger
-        self.configurationFile = getAltEnvPath(LeafConstants.ENV_CONFIG_FILE,
+        self.configurationFile = getAltEnvPath(EnvConstants.CUSTOM_CONFIG_FILE,
                                                LeafFiles.DEFAULT_CONFIG_FILE)
-        self.cacheFolder = getAltEnvPath(LeafConstants.ENV_CACHE_FOLDER,
+        self.cacheFolder = getAltEnvPath(EnvConstants.CUSTOM_CACHE_FOLDER,
                                          LeafFiles.DEFAULT_CACHE_FOLDER,
                                          mkdirIfNeeded=True)
         self.remoteCacheFile = self.cacheFolder / LeafFiles.CACHE_REMOTES_FILENAME

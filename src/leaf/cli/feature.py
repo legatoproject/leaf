@@ -10,7 +10,6 @@ from leaf.cli.cliutils import LeafMetaCommand, LeafCommand, initCommonArgs
 from leaf.core.features import FeatureManager
 from leaf.model.base import Scope
 from leaf.model.environment import Environment
-from leaf.utils import findWorkspaceRoot
 
 
 class FeatureMetaCommand(LeafMetaCommand):

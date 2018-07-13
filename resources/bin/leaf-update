@@ -9,20 +9,20 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-import argcomplete
 from argparse import ArgumentParser
 import argparse
-from leaf.constants import LeafConstants
 import os
 from pathlib import Path
 import sys
 import traceback
 
-from leaf.format.logger import TextLogger, Verbosity
+import argcomplete
+from leaf.constants import LeafConstants
 from leaf.core.packagemanager import PackageManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.model.package import PackageIdentifier
-from leaf.utils import findWorkspaceRoot
+
+from leaf.format.logger import TextLogger, Verbosity
 
 
 def getLatestAvailablePackage(motif, piList):
@@ -64,9 +64,7 @@ if __name__ == '__main__':
         logger = TextLogger(args.verbosity, nonInteractive)
         packageManager = PackageManager(logger, nonInteractive)
         workspaceManager = WorkspaceManager(
-            findWorkspaceRoot(currentFolder=Path(os.environ["LEAF_WORKSPACE"])
-                              if "LEAF_WORKSPACE" in os.environ
-                              else None), packageManager)
+            WorkspaceManager.findRoot(), packageManager)
         profileName = workspaceManager.getCurrentProfileName()
         profile = workspaceManager.getProfile(profileName)
 

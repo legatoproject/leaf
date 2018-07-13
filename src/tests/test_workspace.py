@@ -30,7 +30,12 @@ class TestProfile(AbstractTestWithRepo):
         self.pm = PackageManager(self.logger, nonInteractive=True)
         self.pm.setInstallFolder(self.getInstallFolder())
         self.pm.createRemote("default", self.getRemoteUrl())
-        self.ws = WorkspaceManager(self.getWorkspaceFolder(), self.pm)
+        self.ws = WorkspaceManager(
+            WorkspaceManager.findRoot(
+                customPath=self.getWorkspaceFolder(),
+                checkEnv=False,
+                checkParents=False),
+            self.pm)
 
     def testInit(self):
         with self.assertRaises(Exception):

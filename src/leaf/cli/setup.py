@@ -7,12 +7,10 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 import argparse
-import os
-from pathlib import Path
 
 from leaf.cli.cliutils import LeafCommand, initCommonArgs, LeafCommandGenerator
+from leaf.core.workspacemanager import WorkspaceManager
 from leaf.model.workspace import Profile
-from leaf.utils import findWorkspaceRoot
 
 
 class SetupCommand(LeafCommand):
@@ -51,12 +49,9 @@ class SetupCommand(LeafCommand):
                 "You need to add at least one package to your profile")
 
         # Find or create workspace
-        wspath = findWorkspaceRoot(args.workspace, failIfNoWs=False)
-        if wspath is None:
-            wspath = args.workspace
-            if wspath is None:
-                wspath = Path(os.getcwd())
-            logger.confirm(question="Cannot find workspace, initialize one in %s?" % wspath,
+        workspaceRoot = WorkspaceManager.findRoot(customPath=args.workspace)
+        if not WorkspaceManager.isWorkspaceRoot(workspaceRoot):
+            logger.confirm(question="Cannot find workspace, initialize one in %s?" % workspaceRoot,
                            failOnDecline=True)
             self.leafExec(cmdGenerator, "init",
                           logger=logger)

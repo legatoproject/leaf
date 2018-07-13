@@ -1,4 +1,3 @@
-from leaf.constants import LeafConstants, LeafFiles
 import os
 from pathlib import Path
 import shutil
@@ -8,9 +7,11 @@ import unittest
 from unittest.case import TestCase
 
 from leaf.cli.cli import LeafCli
-from leaf.format.logger import TextLogger, Verbosity
+from leaf.constants import EnvConstants, LeafFiles
 from leaf.core.relengmanager import RelengManager
 from leaf.model.package import PackageIdentifier, Manifest
+
+from leaf.format.logger import TextLogger, Verbosity
 
 
 LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
@@ -66,9 +67,9 @@ class AbstractTestWithRepo(unittest.TestCase):
         shutil.rmtree(str(AbstractTestWithRepo.VOLATILE_FOLDER),
                       ignore_errors=True)
         AbstractTestWithRepo.VOLATILE_FOLDER.mkdir()
-        os.environ[LeafConstants.ENV_CONFIG_FILE] = str(
+        os.environ[EnvConstants.CUSTOM_CONFIG_FILE] = str(
             self.getConfigurationFile())
-        os.environ[LeafConstants.ENV_CACHE_FOLDER] = str(
+        os.environ[EnvConstants.CUSTOM_CACHE_FOLDER] = str(
             self.getCacheFolder())
 
     def tearDown(self):

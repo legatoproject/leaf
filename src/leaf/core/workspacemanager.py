@@ -7,10 +7,12 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from collections import OrderedDict
-from leaf.constants import LeafFiles, JsonConstants
+import os
+from pathlib import Path
 import shutil
 
 from leaf import __version__
+from leaf.constants import LeafFiles, JsonConstants, EnvConstants
 from leaf.core.dependencies import DependencyManager, DependencyType,\
     DependencyStrategy
 from leaf.model.config import WorkspaceConfiguration
@@ -25,6 +27,33 @@ class WorkspaceManager():
     Represent a workspace, where leaf profiles apply
     '''
 
+    @staticmethod
+    def isWorkspaceRoot(folder):
+        return folder is not None and (folder / LeafFiles.WS_CONFIG_FILENAME).is_file()
+
+    @staticmethod
+    def findRoot(customPath=None, checkEnv=True, checkParents=True):
+        # If custom path is given, use it as is
+        if customPath is not None:
+            return customPath
+
+        # Check env if no custom path given
+        if checkEnv and EnvConstants.WORKSPACE_ROOT in os.environ:
+            return Path(os.environ[EnvConstants.WORKSPACE_ROOT])
+
+        # Check parents
+        if checkParents:
+            currentFolder = Path(os.getenv('PWD'))
+            if WorkspaceManager.isWorkspaceRoot(currentFolder):
+                return currentFolder
+            else:
+                for parent in currentFolder.parents:
+                    if WorkspaceManager.isWorkspaceRoot(parent):
+                        return parent
+
+        # Use PWD
+        return Path(os.getcwd())
+
     def __init__(self, rootFolder, packageManager):
         self.packageManager = packageManager
         self.logger = packageManager.logger
@@ -34,7 +63,7 @@ class WorkspaceManager():
         self.currentLink = self.dataFolder / LeafFiles.CURRENT_PROFILE_LINKNAME
 
     def isInitialized(self):
-        return self.configFile.exists()
+        return WorkspaceManager.isWorkspaceRoot(self.rootFolder)
 
     def inittialize(self):
         if self.isInitialized():
@@ -67,7 +96,7 @@ class WorkspaceManager():
 
     def getWorkspaceEnvironment(self):
         out = self.readConfiguration().getEnvironment()
-        out.env.append(('LEAF_WORKSPACE', str(self.rootFolder)))
+        out.env.append((EnvConstants.WORKSPACE_ROOT, str(self.rootFolder)))
         return out
 
     def updateWorkspaceEnv(self, setMap=None, unsetList=None):

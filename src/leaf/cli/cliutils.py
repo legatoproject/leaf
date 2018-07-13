@@ -9,7 +9,6 @@ Leaf Package Manager
 
 from abc import abstractmethod, ABC
 from collections import OrderedDict
-import os
 from pathlib import Path
 import traceback
 
@@ -17,7 +16,6 @@ from leaf.format.logger import Verbosity, TextLogger
 from leaf.core.packagemanager import PackageManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.model.base import Scope
-from leaf.utils import findWorkspaceRoot
 
 
 def initCommonArgs(parser,
@@ -113,14 +111,10 @@ class GenericCommand(ABC):
         return PackageManager(self.getLogger(args), loggerAttr[1])
 
     def getWorkspace(self, args, autoFindWorkspace=True, checkInitialized=True):
-        wspath = None
-        if args is not None and args.workspace is not None:
-            wspath = args.workspace
-        elif autoFindWorkspace:
-            wspath = findWorkspaceRoot(failIfNoWs=checkInitialized)
-        if wspath is None:
-            wspath = Path(os.getcwd())
-        out = WorkspaceManager(wspath, self.getPackageManager(args))
+        out = WorkspaceManager(
+            WorkspaceManager.findRoot(customPath=args.workspace,
+                                      checkParents=autoFindWorkspace),
+            self.getPackageManager(args))
         if checkInitialized and not out.isInitialized():
             raise ValueError("Workspace is not initialized")
         return out

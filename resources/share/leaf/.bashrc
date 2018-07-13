@@ -10,17 +10,8 @@
 # Name of the user's rc to load, and a message to display if the user's rc file can not be found.
 LEAF_SHELL_USER_RC="$HOME/.bashrc"
 
-LEAF_SHELL_NO_CONFIG_MESSAGE="Could not find a Bash shell configuration.
-Run the following to create a new default one:
-
-    cp /etc/skel/.bashrc ~/.bashrc"
-
-
-
 # The user's base configuration and our common code.
 source "$LEAF_SHARED_DIR/leafsh.common.sh"
-
-
 
 # Called just before the Bash prompt is drawn.
 function lsh_bash_PromptCmd

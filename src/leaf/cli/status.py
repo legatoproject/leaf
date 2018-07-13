@@ -8,7 +8,6 @@ Leaf Package Manager
 '''
 from leaf.cli.cliutils import LeafCommand
 from leaf.core.workspacemanager import WorkspaceManager
-from leaf.utils import findWorkspaceRoot
 
 
 class StatusCommand(LeafCommand):
@@ -18,11 +17,10 @@ class StatusCommand(LeafCommand):
                              "print leaf status")
 
     def execute(self, args):
-        wspath = findWorkspaceRoot(currentFolder=args.workspace,
-                                   failIfNoWs=False)
-        if wspath is not None:
-            ws = WorkspaceManager(wspath, self.getPackageManager(args))
-            self.getLogger(args).displayItem(ws)
-        else:
+        wsRoot = WorkspaceManager.findRoot(customPath=args.workspace)
+        if not WorkspaceManager.isWorkspaceRoot(wsRoot):
             self.getLogger(args).printDefault(
                 "Not in a workspace, use 'leaf init' to create one")
+        else:
+            ws = WorkspaceManager(wsRoot, self.getPackageManager(args))
+            self.getLogger(args).displayItem(ws)

@@ -1,12 +1,11 @@
 '''
 @author: seb
 '''
-from leaf.constants import LeafConstants
-import os
 
-from leaf.format.logger import TextLogger, Verbosity
 from leaf.core.packagemanager import PackageManager
 from leaf.model.filtering import MetaPackageFilter
+
+from leaf.format.logger import TextLogger, Verbosity
 from tests.testutils import AbstractTestWithRepo
 
 
@@ -14,10 +13,6 @@ class FilteringTest(AbstractTestWithRepo):
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
-        os.environ[LeafConstants.ENV_CONFIG_FILE] = str(
-            self.getConfigurationFile())
-        os.environ[LeafConstants.ENV_CACHE_FOLDER] = str(
-            self.getCacheFolder())
         pm = PackageManager(TextLogger(Verbosity.DEFAULT, True), True)
         pm.createRemote("default", self.getRemoteUrl())
         pm.fetchRemotes()

@@ -9,20 +9,8 @@
 # Name of the user's rc to load, and a message to display if the user's rc file can not be found.
 LEAF_SHELL_USER_RC="$LEAF_SHELL_USER_ZDOTDIR/.zshrc"
 
-LEAF_SHELL_NO_CONFIG_MESSAGE="Could not find a shell configuration.
-
-Run the following in a Zsh shell:
-
-    autoload -U zsh-newuser-install
-    zsh-newuser-install -f"
-
-
-
-
 # The user's base configuration and our common code.
 source "$LEAF_SHARED_DIR/leafsh.common.sh"
-
-
 
 # Function to update the prompt in Zsh.
 function lsh_zsh_UpdatePrompt

@@ -10,12 +10,10 @@ Leaf Package Manager
 from collections import OrderedDict
 import hashlib
 import json
-from leaf.constants import LeafConstants, LeafFiles
 import os
 from pathlib import Path
 import random
 import re
-import requests
 import string
 import sys
 from tarfile import TarFile
@@ -25,6 +23,8 @@ import urllib
 from urllib.parse import urlparse, urlunparse
 
 from leaf import __version__
+from leaf.constants import LeafConstants
+import requests
 
 
 _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
@@ -227,22 +227,6 @@ def jsonLoadFile(file):
 
 def jsonLoad(fp):
     return json.load(fp, object_pairs_hook=OrderedDict)
-
-
-def isWorkspaceRoot(folder):
-    return folder is not None and (folder / LeafFiles.WS_CONFIG_FILENAME).is_file()
-
-
-def findWorkspaceRoot(currentFolder=None, failIfNoWs=True):
-    if currentFolder is None:
-        currentFolder = Path(os.getcwd())
-    if isWorkspaceRoot(currentFolder):
-        return currentFolder
-    for parent in currentFolder.resolve().parents:
-        if isWorkspaceRoot(parent):
-            return parent
-    if failIfNoWs:
-        raise ValueError("Cannot find workspace root from %s" % os.getcwd())
 
 
 def mkTmpLeafRootDir():

@@ -12,12 +12,22 @@ import os
 from pathlib import Path
 
 
+class EnvConstants():
+    '''
+    Leaf specific env vars
+    '''
+    WORKSPACE_ROOT = 'LEAF_WORKSPACE'
+    CUSTOM_CONFIG_FILE = 'LEAF_CONFIG_FILE'
+    CUSTOM_CACHE_FOLDER = 'LEAF_CACHE_FOLDER'
+    DOWNLOAD_TIMEOUT = 'LEAF_TIMEOUT'
+
+
 class LeafConstants():
     '''
     Constants needed by Leaf
     '''
     MIN_PYTHON_VERSION = (3, 4)
-    DOWNLOAD_TIMEOUT = int(os.environ.get("LEAF_TIMEOUT", "5"))
+    DOWNLOAD_TIMEOUT = int(os.environ.get(EnvConstants.DOWNLOAD_TIMEOUT, "5"))
     LEAF_COMPRESSION = {'.leaf': 'xz',
                         '.tar':  '',
                         '.xz':   'xz',
@@ -26,8 +36,6 @@ class LeafConstants():
                         '.gz':   'gz'}
     DEFAULT_PROFILE = "default"
     CACHE_DELTA = timedelta(days=1)
-    ENV_CONFIG_FILE = "LEAF_CONFIG_FILE"
-    ENV_CACHE_FOLDER = "LEAF_CACHE_FOLDER"
 
 
 class LeafFiles():
