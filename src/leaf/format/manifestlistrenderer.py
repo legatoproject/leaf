@@ -10,6 +10,7 @@ from leaf.model.package import AvailablePackage, InstalledPackage, ConditionalPa
 from leaf.format.table import Table
 from leaf.format.renderers import Renderer
 from leaf.format.alignment import HAlign
+from leaf.format.formatutils import sizeof_fmt
 
 
 class ManifestListRenderer(Renderer):
@@ -151,7 +152,7 @@ class ManifestListRenderer(Renderer):
             if depCount == 0:
                 # Size
                 labels.append("Size:")
-                values.append(str(inputElt.getSize()) + ' bytes')
+                values.append(sizeof_fmt(inputElt.getSize()))
         # For Installed Packages
         elif isinstance(inputElt, InstalledPackage):
             #Folder

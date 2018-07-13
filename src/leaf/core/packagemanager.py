@@ -30,6 +30,7 @@ from leaf.model.remote import Remote
 from leaf.utils import getAltEnvPath, jsonLoadFile, jsonWriteFile, resolveUrl,\
     isFolderIgnored, getCachedArtifactName, markFolderAsIgnored,\
     mkTmpLeafRootDir, downloadFile
+from leaf.format.formatutils import sizeof_fmt
 
 
 class RemoteManager():
@@ -491,7 +492,8 @@ class PackageManager(RemoteManager):
                     if ap.getSize() is not None:
                         totalSize += ap.getSize()
                 if totalSize > 0:
-                    self.logger.printDefault("Total size:", totalSize, "bytes")
+                    self.logger.printDefault(
+                        "Total size:", sizeof_fmt(totalSize))
                 if not self.logger.confirm():
                     raise ValueError("Installation aborted")
 
