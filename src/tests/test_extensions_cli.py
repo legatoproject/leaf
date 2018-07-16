@@ -169,6 +169,9 @@ class TestExtensionsCli(LeafCliWrapper):
             traceback.print_exc()
             self.fail("System exit caught")
 
+    def testVersion(self):
+        self.leafExec("version")
+
 
 if __name__ == "__main__":
     unittest.main()

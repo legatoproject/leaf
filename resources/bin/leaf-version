@@ -1,0 +1,3 @@
+#!/bin/sh
+# LEAF_DESCRIPTION display leaf version
+leaf --version
