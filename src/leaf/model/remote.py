@@ -35,10 +35,10 @@ class Remote(JsonObject):
         return JsonObject(self.content).jsonget(JsonConstants.INFO, default={})
 
     def getInfoName(self):
-        return self.getInfo().jsonget(JsonConstants.REMOTE_NAME)
+        return self.getInfo().get(JsonConstants.REMOTE_NAME)
 
     def getInfoDescription(self):
-        return self.getInfo().jsonget(JsonConstants.REMOTE_DESCRIPTION)
+        return self.getInfo().get(JsonConstants.REMOTE_DESCRIPTION)
 
     def getInfoDate(self):
-        return self.getInfo().jsonget(JsonConstants.REMOTE_DATE)
+        return self.getInfo().get(JsonConstants.REMOTE_DATE)

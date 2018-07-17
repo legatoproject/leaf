@@ -17,6 +17,13 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
         self.leafExec("config")
 
     def testRemote(self):
+        with self.assertStdout(
+                stdout="remote.out",
+                stderr="remote.err",
+                variables={
+                    "{REMOTE_URL}": self.getRemoteUrl()}):
+            self.leafExec(("remote", "list"))
+
         self.leafExec(["remote", "add"], "alt", self.getRemoteUrl())
         self.leafExec(["remote", "add"], "alt", self.getRemoteUrl(),
                       expectedRc=2)

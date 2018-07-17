@@ -1,24 +1,27 @@
+from _io import StringIO
+from contextlib import contextmanager
+from leaf.constants import EnvConstants, LeafFiles
 import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 from tempfile import mkdtemp
 import unittest
 from unittest.case import TestCase
 
 from leaf.cli.cli import LeafCli
-from leaf.constants import EnvConstants, LeafFiles
 from leaf.core.relengmanager import RelengManager
-from leaf.model.package import PackageIdentifier, Manifest
-
 from leaf.format.logger import TextLogger, Verbosity
+from leaf.model.package import PackageIdentifier, Manifest
 
 
 LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
 LEAF_UT_SKIP = os.environ.get("LEAF_UT_SKIP", "")
 
 ROOT_FOLDER = Path(__file__).parent / '..' / '..'
-RESOURCE_FOLDER = ROOT_FOLDER / "src" / "tests" / "resources/"
+RESOURCE_FOLDER = ROOT_FOLDER / "src" / "tests" / "resources"
+EXPECTED_OUTPUT_FOLDER = ROOT_FOLDER / "src" / "tests" / "expected_ouput"
 EXTENSIONS_FOLDER = ROOT_FOLDER / "resources" / "bin"
 
 SEPARATOR = "--------------------"
@@ -28,6 +31,51 @@ ALT_FILENAMES = {
     "compress-bz2_1.0": 'compress-bz2_1.0.tar.bz2',
     "compress-gz_1.0":  'compress-gz_1.0.tar.gz'
 }
+
+
+class StringIOWrapper(StringIO):
+
+    def __init__(self, stream, *args, **kwargs):
+        StringIO.__init__(self, *args, **kwargs)
+        self.__altstream__ = stream
+
+    def write(self, txt):
+        super().write(txt)
+        self.__altstream__.write(txt)
+
+
+class ContentChecker():
+    _STDOUT = sys.stdout
+    _STDERR = sys.stderr
+
+    def __init__(self, tester, stdoutFile=None, stderrFile=None, variables=None):
+        self.tester = tester
+        self.stdoutFile, self.stderrFile = stdoutFile, stderrFile
+        self.variables = variables
+        self.stdout = StringIOWrapper(ContentChecker._STDOUT)
+        self.stderr = StringIOWrapper(ContentChecker._STDERR)
+
+    def __enter__(self):
+        sys.stdout = self.stdout
+        sys.stderr = self.stderr
+
+    def __exit__(self, *args):
+        sys.stdout = ContentChecker._STDOUT
+        sys.stderr = ContentChecker._STDERR
+        self._checkContent(self.stdoutFile, self.stdout)
+        self._checkContent(self.stderrFile, self.stderr)
+
+    def _checkContent(self, file, stream):
+        if file is not None:
+            with open(str(file)) as fp:
+                lines = []
+                for line in fp.read().splitlines():
+                    for k, v in self.variables.items():
+                        line = line.replace(k, v)
+                    lines.append(line)
+                self.tester.assertEqual(
+                    lines,
+                    stream.getvalue().splitlines())
 
 
 class AbstractTestWithRepo(unittest.TestCase):
@@ -60,8 +108,21 @@ class AbstractTestWithRepo(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        if not LEAF_UT_DEBUG is not None:
+        if LEAF_UT_DEBUG is None:
             shutil.rmtree(str(AbstractTestWithRepo.ROOT_FOLDER), True)
+
+    def assertStdout(self, stdout=None, stderr=None, variables=None):
+        classFolder = EXPECTED_OUTPUT_FOLDER / self.__class__.__name__
+        self.assertTrue(classFolder.is_dir())
+        stdoutFile, stderrFile = None, None
+        if stdout is not None:
+            stdoutFile = classFolder / stdout
+        if stderr is not None:
+            stderrFile = classFolder / stderr
+        return ContentChecker(self,
+                              stdoutFile=stdoutFile,
+                              stderrFile=stderrFile,
+                              variables=variables)
 
     def setUp(self):
         shutil.rmtree(str(AbstractTestWithRepo.VOLATILE_FOLDER),
@@ -162,7 +223,7 @@ class LeafCliWrapper(AbstractTestWithRepo):
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
         self.leafExec("config", "--root", self.getInstallFolder())
-        self.leafExec(["remote", "add"], "default", self.getRemoteUrl())
+        self.leafExec(("remote", "add"), "default", self.getRemoteUrl())
 
     def leafExec(self, verb, *args, altWorkspace=None, expectedRc=0):
         if altWorkspace is None:
@@ -188,11 +249,7 @@ class LeafCliWrapper(AbstractTestWithRepo):
         if args is not None:
             command += args
         command = [str(i) for i in command]
-        print(SEPARATOR,
-              '[%s] leaf %s' % (type(self).__name__,
-                                " ".join(command)))
         out = LeafCli().run(command)
-        print(SEPARATOR + SEPARATOR + SEPARATOR)
         if expectedRc is not None:
             self.assertEqual(expectedRc, out, " ".join(command))
         return out

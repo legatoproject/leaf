@@ -1,0 +1,3 @@
+default
+     Url: {REMOTE_URL}
+     Enabled: True
