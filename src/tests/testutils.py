@@ -1,19 +1,20 @@
 from _io import StringIO
-from contextlib import contextmanager
-from leaf.constants import EnvConstants, LeafFiles
 import os
-from pathlib import Path
 import shutil
-import subprocess
 import sys
 from tempfile import mkdtemp
-import unittest
-from unittest.case import TestCase
 
+from pathlib import Path
+
+from contextlib import contextmanager
 from leaf.cli.cli import LeafCli
+from leaf.constants import EnvConstants, LeafFiles
 from leaf.core.relengmanager import RelengManager
 from leaf.format.logger import TextLogger, Verbosity
 from leaf.model.package import PackageIdentifier, Manifest
+import subprocess
+import unittest
+from unittest.case import TestCase
 
 
 LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
@@ -66,16 +67,18 @@ class ContentChecker():
         self._checkContent(self.stderrFile, self.stderr)
 
     def _checkContent(self, file, stream):
+        lines = []
+        streamLines = stream.getvalue().splitlines()
         if file is not None:
             with open(str(file)) as fp:
-                lines = []
                 for line in fp.read().splitlines():
-                    for k, v in self.variables.items():
-                        line = line.replace(k, v)
+                    if self.variables is not None:
+                        for k, v in self.variables.items():
+                            line = line.replace(k, v)
                     lines.append(line)
-                self.tester.assertEqual(
-                    lines,
-                    stream.getvalue().splitlines())
+        self.tester.assertEqual(
+            lines,
+            streamLines)
 
 
 class AbstractTestWithRepo(unittest.TestCase):
@@ -138,6 +141,9 @@ class AbstractTestWithRepo(unittest.TestCase):
 
     def getRemoteUrl(self):
         return (AbstractTestWithRepo.REPO_FOLDER / "index.json").as_uri()
+
+    def getCompositeUrl(self):
+        return (AbstractTestWithRepo.REPO_FOLDER / "composite.json").as_uri()
 
     def getVolatileItem(self, name, mkdir=True):
         out = AbstractTestWithRepo.VOLATILE_FOLDER / name

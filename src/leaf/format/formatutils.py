@@ -6,11 +6,17 @@ Utils to format logger output
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from math import log
-
 '''
 Units used to show file size with their respective decimal count
 '''
+
+from math import log
+import os
+from shutil import which
+
+import subprocess
+
+
 unit_list = [
     ('bytes', 0),
     ('kB', 0),
@@ -35,3 +41,22 @@ def sizeof_fmt(num):
         return '0 bytes'
     if num == 1:
         return '1 byte'
+
+
+def getPager():
+    '''
+    Return the appropriate pager
+    Check $PAGER env var, if not set use less with some args
+    If set to less without args; return less with args
+    If set to empty or less with args or anything else, return None
+    '''
+    pager = os.getenv("PAGER", "less").split(' ')
+    binName = pager[0]
+    if which(binName) is None:
+        pager = None
+    elif len(pager) == 1:
+        if binName == "":
+            pager = None
+        if binName == "less":
+            pager = ("less", "-S", "-P", "Leaf -- Press q to exit")
+    return pager

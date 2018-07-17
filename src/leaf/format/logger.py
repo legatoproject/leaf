@@ -9,8 +9,9 @@ Leaf Package Manager
 
 from abc import ABC, abstractmethod
 from collections import OrderedDict
-from enum import IntEnum, unique
 import sys
+
+from enum import IntEnum, unique
 
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.model.environment import Environment
@@ -303,4 +304,4 @@ class TextLogger (ILogger):
 
     def printRenderer(self, renderer):
         renderer.verbosity = self.getVerbosity()
-        print(renderer)
+        renderer.print()

@@ -7,7 +7,15 @@ Abstract parent for command renderers
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from abc import ABC, abstractmethod
+import errno
+from shutil import get_terminal_size
+
+from leaf.format.formatutils import getPager
 from leaf.format.logger import Verbosity
+from subprocess import Popen, PIPE
+
+
+TERMINAL_WIDTH, TERMINAL_HEIGHT = get_terminal_size((-1, -1))
 
 
 class Renderer(list, ABC):
@@ -43,3 +51,54 @@ class Renderer(list, ABC):
         else:
             out = self._toStringDefault()
         return str(out)
+
+    def print(self):
+        '''
+        Print or pipe to pager if necessary and possible 
+        '''
+        out = str(self)
+        if len(out) > 0:
+            pager = getPager()
+            if self._shouldUsePager(out) and pager is not None:
+                self._pipeToPager(pager, out)
+            else:
+                print(out)
+
+    def _shouldUsePager(self, printed):
+        '''
+        Check the terminal size and return True if we need pager 
+        '''
+        if TERMINAL_HEIGHT == -1 or TERMINAL_WIDTH == - 1:
+            return False
+
+        lines = printed.split('\n')
+
+        # Check height
+        if len(lines) + 1 > TERMINAL_HEIGHT:  # +1 for prompt
+            return True
+
+        # Check width
+        return max(map(len, lines)) > TERMINAL_WIDTH
+
+    def _pipeToPager(self, pager, toPrint):
+        '''
+        Pipe toPrint to the given pager 
+        '''
+        p = Popen(pager, stdin=PIPE)
+        try:
+            p.stdin.write(toPrint.encode())
+        except IOError as e:
+            if e.errno == errno.EPIPE or e.errno == errno.EINVAL:
+                # Stop loop on "Invalid pipe" or "Invalid argument".
+                # No sense in continuing with broken pipe.
+                return
+            else:
+                # Raise any other error.
+                raise
+        p.stdin.close()
+        p.wait()
+
+        # This should always be printed below any output written to page.
+        # It avoid to have a '%' char at the end when user pipe to cat for
+        # example
+        print("")
