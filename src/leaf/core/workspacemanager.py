@@ -8,7 +8,6 @@ Leaf Package Manager
 '''
 from collections import OrderedDict
 import os
-from pathlib import Path
 import shutil
 
 from leaf import __version__
@@ -17,9 +16,9 @@ from leaf.core.dependencies import DependencyManager, DependencyType,\
     DependencyStrategy
 from leaf.model.config import WorkspaceConfiguration
 from leaf.model.environment import Environment
-from leaf.model.package import Manifest
 from leaf.model.workspace import Profile
 from leaf.utils import jsonLoadFile, checkSupportedLeaf, jsonWriteFile
+from pathlib import Path
 
 
 class WorkspaceManager():
@@ -247,22 +246,16 @@ class WorkspaceManager():
         elif profile.folder.is_dir():
             shutil.rmtree(str(profile.folder))
         profile.folder.mkdir()
-        env = self._getSkelEnvironement(profile)
 
-        # Check if packages need to be installed
-        missingApList = DependencyManager.compute(
-            profile.getPackagesMap().values(),
-            DependencyType.INSTALL,
-            apMap=self.packageManager.listAvailablePackages(),
-            ipMap=self.packageManager.listInstalledPackages(),
-            env=env)
-
-        # Install needed package
-        if len(missingApList) > 0:
+        # Check if all needed packages are installed
+        try:
+            self.getProfileDependencies(profile)
+            self.logger.printVerbose("All packages are already installed")
+        except:
+            self.logger.printDefault("Profile is out of sync")
             self.packageManager.installFromRemotes(
-                list(map(Manifest.getIdentifier, missingApList)), env=env)
-        else:
-            self.logger.printDefault("All packages are already installed")
+                profile.getPackages(),
+                env=self._getSkelEnvironement(profile))
 
         # Do all needed links
         profilesDependencyList = self.getProfileDependencies(profile)
