@@ -8,6 +8,7 @@ Leaf Package Manager
 '''
 from leaf.cli.cliutils import LeafCommand
 from leaf.core.workspacemanager import WorkspaceManager
+from leaf.format.renderer.workspace import WorkspaceRenderer
 
 
 class StatusCommand(LeafCommand):
@@ -24,4 +25,4 @@ class StatusCommand(LeafCommand):
         else:
             loggerAttr = self.getLoggerAttr(args)
             wm = WorkspaceManager(wsRoot, loggerAttr[0], loggerAttr[1])
-            wm.logger.displayItem(wm)
+            wm.printRenderer(WorkspaceRenderer(wm))

@@ -10,7 +10,7 @@ import argparse
 
 from leaf.cli.cliutils import LeafCommand
 from leaf.core.tags import TagManager
-from leaf.format.manifestlistrenderer import ManifestListRenderer
+from leaf.format.renderer.manifest import ManifestListRenderer
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import Manifest
 
@@ -62,4 +62,4 @@ class SearchCommand(LeafCommand):
         # Print filtered packages
         rend = ManifestListRenderer(pkgFilter)
         rend.extend(mf for mf in mfList if pkgFilter.matches(mf))
-        pm.logger.printRenderer(rend)
+        pm.printRenderer(rend)

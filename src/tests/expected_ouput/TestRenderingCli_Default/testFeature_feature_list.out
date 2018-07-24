@@ -1,0 +1,13 @@
+Refreshing available packages...
+Fetching remote default
+┌─────────────────────────────────────────────────────────────────┐
+│                            5 features                           │
+├─────────────────────────┬───────────────────────┬───────────────┤
+│         Feature         │      Description      │     Values    │
+╞═════════════════════════╪═══════════════════════╪═══════════════╡
+│ featureWithDups         │                       │ enum1|enum2   │
+│ featureWithMultipleKeys │                       │ enum1         │
+│ myFeatureFoo            │ Some description here │ bar|notbar    │
+│ myFeatureHello          │ Some description here │ default|world │
+│ test-src                │                       │ binary|source │
+└─────────────────────────┴───────────────────────┴───────────────┘

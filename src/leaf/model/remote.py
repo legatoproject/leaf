@@ -42,3 +42,6 @@ class Remote(JsonObject):
 
     def getInfoDate(self):
         return self.getInfo().get(JsonConstants.REMOTE_DATE)
+
+    def __str__(self):
+        return self.alias

@@ -9,6 +9,7 @@ Leaf Package Manager
 import argparse
 
 from leaf.cli.cliutils import LeafMetaCommand, LeafCommand, initCommonArgs
+from leaf.format.renderer.environment import EnvironmentRenderer
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
 from leaf.utils import envListToMap
@@ -65,7 +66,7 @@ class EnvPrintCommand(LeafCommand):
                 raise ValueError(
                     "Profile %s is out of sync, please run 'leaf profile sync %s'" % (name, name))
             env = wm.getFullEnvironment(profile)
-        wm.logger.displayItem(env)
+        wm.printRenderer(EnvironmentRenderer(env))
         if 'activateScript' in vars(args):
             env.generateScripts(args.activateScript, args.deactivateScript)
 
@@ -85,7 +86,7 @@ class EnvBuiltinCommand(LeafCommand):
         pm = self.getPackageManager(args)
 
         env = pm.getLeafEnvironment()
-        pm.logger.displayItem(env)
+        pm.printRenderer(EnvironmentRenderer(env))
         env.generateScripts(args.activateScript, args.deactivateScript)
 
 
@@ -109,7 +110,7 @@ class EnvUserCommand(LeafCommand):
                              unsetList=args.envRmList)
 
         env = pm.getUserEnvironment()
-        pm.logger.displayItem(env)
+        pm.printRenderer(EnvironmentRenderer(env))
         env.generateScripts(args.activateScript, args.deactivateScript)
 
 
@@ -133,7 +134,7 @@ class EnvWorkspaceCommand(LeafCommand):
                                   unsetList=args.envRmList)
 
         env = wm.getWorkspaceEnvironment()
-        wm.logger.displayItem(env)
+        wm.printRenderer(EnvironmentRenderer(env))
         env.generateScripts(args.activateScript, args.deactivateScript)
 
 
@@ -163,7 +164,7 @@ class EnvProfileCommand(LeafCommand):
             profile = wm.updateProfile(profile)
 
         env = profile.getEnvironment()
-        wm.logger.displayItem(env)
+        wm.printRenderer(EnvironmentRenderer(env))
         env.generateScripts(args.activateScript, args.deactivateScript)
 
 
@@ -187,5 +188,5 @@ class EnvPackageCommand(LeafCommand):
 
         env = pm.getPackagesEnvironment(
             [PackageIdentifier.fromString(pis) for pis in args.pisList])
-        pm.logger.displayItem(env)
+        pm.printRenderer(EnvironmentRenderer(env))
         env.generateScripts(args.activateScript, args.deactivateScript)

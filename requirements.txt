@@ -6,3 +6,4 @@ flake8-html
 autopep8
 argcomplete
 requests
+colorama

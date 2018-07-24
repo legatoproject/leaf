@@ -23,6 +23,7 @@ from leaf.core.coreutils import VariableResolver, StepExecutor
 from leaf.core.dependencies import DependencyManager, DependencyType
 from leaf.format.formatutils import sizeof_fmt
 from leaf.format.logger import TextLogger
+from leaf.format.theme import ThemeManager
 from leaf.model.base import JsonObject
 from leaf.model.config import UserConfiguration
 from leaf.model.environment import Environment
@@ -56,8 +57,15 @@ class LoggerManager(_LeafBase):
 
     def __init__(self, verbosity, nonInteractive):
         _LeafBase.__init__(self)
+        themesFile = self.configurationFolder / LeafFiles.THEMES_FILENAME
+        self.themeManager = ThemeManager(themesFile)
         self.logger = TextLogger(verbosity, nonInteractive)
         self.nonInteractive = nonInteractive
+
+    def printRenderer(self, renderer):
+        renderer.verbosity = self.logger.getVerbosity()
+        renderer.tm = self.themeManager
+        renderer.print()
 
 
 class RemoteManager(LoggerManager):
@@ -178,19 +186,15 @@ class RemoteManager(LoggerManager):
             content = OrderedDict()
             activeRemotes = self.listRemotes(onlyEnabled=True).values()
 
-            self.logger.progressStart('Fetch remote(s)',
-                                      message="Refreshing available packages...",
-                                      total=len(activeRemotes))
+            self.logger.printDefault("Refreshing available packages...")
             worked = 0
             for remote in activeRemotes:
                 self.logger.printDefault("Fetching remote %s" % remote.alias)
                 self.recursiveFetchUrl(remote.getUrl(), content)
                 worked += 1
-                self.logger.progressWorked('Fetch remote(s)',
-                                           worked=worked,
+                self.logger.progressWorked(worked=worked,
                                            total=len(activeRemotes))
             jsonWriteFile(self.remoteCacheFile, content)
-            self.logger.progressDone('Fetch remote(s)')
 
 
 class PackageManager(RemoteManager):
@@ -499,9 +503,6 @@ class PackageManager(RemoteManager):
             if len(apToInstall) == 0:
                 self.logger.printDefault("All packages are installed")
             else:
-                self.logger.progressStart('Installation',
-                                          total=len(apToInstall) * 2)
-
                 # Check ap list can be installed
                 self.checkPackagesForInstall(apToInstall)
 
@@ -531,8 +532,7 @@ class PackageManager(RemoteManager):
                                                   availablePackages=availablePackages,
                                                   env=env)
 
-                self.logger.progressWorked('Installation',
-                                           message="Required packages checked",
+                self.logger.progressWorked(message="Required packages checked",
                                            worked=1,
                                            total=len(apToInstall) * 2 + 1)
 
@@ -541,8 +541,7 @@ class PackageManager(RemoteManager):
                 for ap in apToInstall:
                     la = self.downloadAvailablePackage(ap)
                     laList.append(la)
-                    self.logger.progressWorked('Installation',
-                                               message="Downloaded %s" % ap.getIdentifier(),
+                    self.logger.progressWorked(message="Downloaded %s" % ap.getIdentifier(),
                                                worked=len(laList) + 1,
                                                total=len(apToInstall) * 2 + 1)
 
@@ -551,13 +550,10 @@ class PackageManager(RemoteManager):
                     ip = self.extractLeafArtifact(la, env,
                                                   keepFolderOnError=keepFolderOnError)
                     out.append(ip)
-                    self.logger.progressWorked('Installation',
-                                               message="Installed %s" % la.getIdentifier(),
+                    self.logger.progressWorked(message="Installed %s" % la.getIdentifier(),
                                                worked=len(laList) +
                                                len(out) + 1,
                                                total=len(apToInstall) * 2 + 1)
-
-            self.logger.progressDone('Installation')
 
         finally:
             if not keepFolderOnError and prereqRootFolder is not None:
@@ -590,8 +586,6 @@ class PackageManager(RemoteManager):
 
             total = len(ipToRemove)
             worked = 0
-            self.logger.progressStart('Uninstall package(s)',
-                                      total=total)
             env = Environment.build(self.getLeafEnvironment(),
                                     self.getUserEnvironment())
             for ip in ipToRemove:
@@ -603,12 +597,11 @@ class PackageManager(RemoteManager):
                 self.logger.printVerbose("Remove folder:", ip.folder)
                 shutil.rmtree(str(ip.folder))
                 worked += 1
-                self.logger.progressWorked('Uninstall package(s)',
-                                           worked=worked,
+                self.logger.progressWorked(worked=worked,
                                            total=total)
                 del installedPackages[ip.getIdentifier()]
-            self.logger.progressDone('Uninstall package(s)',
-                                     message="%d package(s) removed" % (len(ipToRemove)))
+            self.logger.printDefault(
+                "%d package(s) removed" % (len(ipToRemove)))
 
     def syncPackages(self, pisList, env=None):
 

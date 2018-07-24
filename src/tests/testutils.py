@@ -15,8 +15,10 @@ from leaf.format.logger import Verbosity
 from leaf.model.package import PackageIdentifier, Manifest
 
 
+TestCase.maxDiff = None
 LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
 LEAF_UT_SKIP = os.environ.get("LEAF_UT_SKIP", "")
+LEAF_UT_CREATE_TEMPLATE = os.environ.get("LEAF_UT_CREATE_TEMPLATE")
 
 ROOT_FOLDER = Path(__file__).parent / '..' / '..'
 RESOURCE_FOLDER = ROOT_FOLDER / "src" / "tests" / "resources"
@@ -47,39 +49,92 @@ class ContentChecker():
     _STDOUT = sys.stdout
     _STDERR = sys.stderr
 
-    def __init__(self, tester, stdoutFile=None, stderrFile=None, variables=None):
+    def __init__(self, tester, testCase, templateOut=None, templateErr=[], variables=None, byMethod=True):
         self.tester = tester
-        self.stdoutFile, self.stderrFile = stdoutFile, stderrFile
+        self.testCase = testCase
+        self.templateOut, self.templateErr = templateOut, templateErr
         self.variables = variables
         self.stdout = StringIOWrapper(ContentChecker._STDOUT)
         self.stderr = StringIOWrapper(ContentChecker._STDERR)
+        self.byMethod = byMethod
 
     def __enter__(self):
         sys.stdout = self.stdout
         sys.stderr = self.stderr
 
-    def __exit__(self, *args):
+    def __exit__(self, *_):
         sys.stdout = ContentChecker._STDOUT
         sys.stderr = ContentChecker._STDERR
-        self._checkContent(self.stdoutFile, self.stdout)
-        self._checkContent(self.stderrFile, self.stderr)
+        self._checkContent(self.templateOut, self.stdout)
+        self._checkContent(self.templateErr, self.stderr)
 
-    def _checkContent(self, file, stream):
-        lines = []
+    def _checkContent(self, template, stream):
+        if template is None:
+            # No check
+            return
+
         streamLines = stream.getvalue().splitlines()
-        if file is not None:
-            with open(str(file)) as fp:
-                for line in fp.read().splitlines():
-                    if self.variables is not None:
-                        for k, v in self.variables.items():
-                            line = line.replace(k, v)
+        lines = []
+        if isinstance(template, str):
+            # Template is a file name
+            classFolder = EXPECTED_OUTPUT_FOLDER / self.testCase.__class__.__name__
+            if self.byMethod:
+                template = self.testCase.id().split('.')[-1] + '_' + template
+            template = classFolder / template
+
+            # Generate template if envar is set
+            if LEAF_UT_CREATE_TEMPLATE is not None:
+                if not classFolder.exists():
+                    classFolder.mkdir()
+                for line in streamLines:
+                    line = self._replaceVariables(line, True)
                     lines.append(line)
+                with template.open(mode='w') as f:
+                    f.write('\n'.join(lines))
+                return
+
+            # Read template content
+            self.tester.assertTrue(template.exists())
+            with open(str(template)) as fp:
+                for line in fp.read().splitlines():
+                    line = self._replaceVariables(line)
+                    lines.append(line)
+        else:
+            lines = template
+
         self.tester.assertEqual(
             lines,
             streamLines)
 
+    def _replaceVariables(self, line, reverse=False):
+        if self.variables is not None:
+            for k, v in self.variables.items():
+                k, v = str(k), str(v)
+                if reverse:
+                    line = line.replace(v, k)
+                else:
+                    line = line.replace(k, v)
+        return line
 
-class AbstractTestWithRepo(unittest.TestCase):
+
+class AbstractTestWithChecker(unittest.TestCase):
+
+    def assertStdout(self, templateOut=None, templateErr=[], variables=None, byMethod=True):
+        '''
+        Possibles values for templates :
+        - None -> the stream is not checked
+        - Empty list, tuple or set -> the stream is checked as empty
+        - File name -> the stream is compared to the file content
+        '''
+        return ContentChecker(self,
+                              testCase=self,
+                              templateOut=templateOut,
+                              templateErr=templateErr,
+                              variables=variables,
+                              byMethod=byMethod)
+
+
+class AbstractTestWithRepo(AbstractTestWithChecker):
 
     ROOT_FOLDER = None
     REPO_FOLDER = None
@@ -110,19 +165,6 @@ class AbstractTestWithRepo(unittest.TestCase):
     def tearDownClass(cls):
         if LEAF_UT_DEBUG is None:
             shutil.rmtree(str(AbstractTestWithRepo.ROOT_FOLDER), True)
-
-    def assertStdout(self, stdout=None, stderr=None, variables=None):
-        classFolder = EXPECTED_OUTPUT_FOLDER / self.__class__.__name__
-        self.assertTrue(classFolder.is_dir())
-        stdoutFile, stderrFile = None, None
-        if stdout is not None:
-            stdoutFile = classFolder / stdout
-        if stderr is not None:
-            stderrFile = classFolder / stderr
-        return ContentChecker(self,
-                              stdoutFile=stdoutFile,
-                              stderrFile=stderrFile,
-                              variables=variables)
 
     def setUp(self):
         shutil.rmtree(str(AbstractTestWithRepo.VOLATILE_FOLDER),

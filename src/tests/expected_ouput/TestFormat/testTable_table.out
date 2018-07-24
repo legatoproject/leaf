@@ -1,0 +1,10 @@
+┌─────────────────────────────────╥─────────────────────────────────────────────────────────────────────────────┐
+│                                 ║                                    Cell2:                                   │
+│                                 ║                                 - multiline,                                │
+│ Cell1:                          ║                      - horizontal alignment: centered,                      │
+│ - multiline,                    ║                            - Horizontally spanned                           │
+│ - vertical alignment: centered, ╠═════════════════════════════════════════════╤═══════════════════════════════╡
+│ - Vertically spanned            ║                                             │                        Cell4: │
+│                                 ║                                             │                   - multiline │
+│                                 ║ Cell3: one line, vertical alignment: bottom │ - horizontal alignment: right │
+└─────────────────────────────────╨─────────────────────────────────────────────┴───────────────────────────────┘

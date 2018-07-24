@@ -1,0 +1,30 @@
+Refreshing available packages...
+Fetching remote default
+Fetched file://{ROOT_FOLDER}/repository/index.json
+Fetched file://{ROOT_FOLDER}/repository/composite.json
+┌────────────────────────────────────────────────────────────────┐
+│                           5 features                           │
+├─────────────────────────┬──────────────────────────────────────┤
+│         Feature         │              Properties              │
+╞═════════════════════════╪══════════════════════════════════════╡
+│ featureWithDups         │         Key: featureWithDups         │
+│                         │      Values: enum1(VALUE1)           │
+│                         │              enum2(VALUE2)           │
+├─────────────────────────┼──────────────────────────────────────┤
+│ featureWithMultipleKeys │         Key: featureWithMultipleKeys │
+│                         │       Value: enum1(VALUE1)           │
+├─────────────────────────┼──────────────────────────────────────┤
+│ myFeatureFoo            │ Description: Some description here   │
+│                         │         Key: FOO                     │
+│                         │      Values: bar(BAR)                │
+│                         │              notbar(OTHER_VALUE)     │
+├─────────────────────────┼──────────────────────────────────────┤
+│ myFeatureHello          │ Description: Some description here   │
+│                         │         Key: HELLO                   │
+│                         │      Values: default()               │
+│                         │              world(WoRlD)            │
+├─────────────────────────┼──────────────────────────────────────┤
+│ test-src                │         Key: LEAF_FTR_TEST_SRC       │
+│                         │      Values: binary()                │
+│                         │              source(1)               │
+└─────────────────────────┴──────────────────────────────────────┘

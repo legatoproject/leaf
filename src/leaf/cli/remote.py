@@ -7,6 +7,7 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from leaf.cli.cliutils import LeafMetaCommand, LeafCommand
+from leaf.format.renderer.remote import RemoteListRenderer
 
 
 class RemoteMetaCommand(LeafMetaCommand):
@@ -38,8 +39,9 @@ class RemoteListCommand(LeafCommand):
     def execute(self, args):
         pm = self.getPackageManager(args)
 
-        for remote in pm.listRemotes().values():
-            pm.logger.displayItem(remote)
+        rend = RemoteListRenderer()
+        rend.extend(pm.listRemotes().values())
+        pm.printRenderer(rend)
 
 
 class RemoteAddCommand(LeafCommand):

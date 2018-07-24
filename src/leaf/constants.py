@@ -8,8 +8,8 @@ Leaf Package Manager
 '''
 
 from datetime import timedelta
-import os
 from pathlib import Path
+import os
 
 
 class EnvConstants():
@@ -56,6 +56,7 @@ class LeafFiles():
     CACHE_DOWNLOAD_FOLDERNAME = "files"
     CACHE_REMOTES_FILENAME = 'remotes.json'
     CONFIG_FILENAME = 'config.json'
+    THEMES_FILENAME = 'themes.ini'
 
 
 class JsonConstants(object):

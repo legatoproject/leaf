@@ -3,9 +3,9 @@
 '''
 
 import os
-import unittest
 
 from tests.testutils import LeafCliWrapper, RESOURCE_FOLDER, LEAF_UT_SKIP
+import unittest
 
 
 class TestPackageManagerCli_Default(LeafCliWrapper):
@@ -18,8 +18,8 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
 
     def testRemote(self):
         with self.assertStdout(
-                stdout="remote.out",
-                stderr="remote.err",
+                templateOut="remote.out",
+                byMethod=False,
                 variables={
                     "{REMOTE_URL}": self.getRemoteUrl()}):
             self.leafExec(("remote", "list"))

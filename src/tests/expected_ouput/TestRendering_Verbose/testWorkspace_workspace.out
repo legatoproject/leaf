@@ -1,0 +1,13 @@
+[Errno 2] No such file or directory: '{ROOT_FOLDER}/volatile/workspace/leaf-data/foo'
+[Errno 2] No such file or directory: '{ROOT_FOLDER}/volatile/workspace/leaf-data/bar'
+┌────────────────────────────────────────────────────────┐
+│ Workspace: {ROOT_FOLDER}/volatile/workspace │
+│                       2 profiles                       │
+├─────────┬──────┬───────────┬───────────────────────────┤
+│ Profile │ Sync │  Env vars │          Packages         │
+╞═════════╪══════╪═══════════╪═══════════════════════════╡
+│ foo     │ no   │ FOO=BAR   │ container-A_1.0           │
+│         │      │ FOO2=BAR2 │                           │
+├─────────┼──────┼───────────┼───────────────────────────┤
+│ bar     │ no   │           │ container-B_1.0           │
+└─────────┴──────┴───────────┴───────────────────────────┘

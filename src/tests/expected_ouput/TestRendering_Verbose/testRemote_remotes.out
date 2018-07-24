@@ -1,0 +1,22 @@
+┌───────────────────────────────────────────────────────┐
+│                       3 remotes                       │
+├───────────────────────────┬───────────────────────────┤
+│           Alias           │         Properties        │
+╞═══════════════════════════╪═══════════════════════════╡
+│ MyRemote                  │         Url: remote_url1  │
+│                           │        Name: remote_name1 │
+│                           │ Description: remote_desc1 │
+│                           │ Last update: remote_date1 │
+│                           │     Enabled: yes          │
+│                           │     Fetched: yes          │
+├───────────────────────────┼───────────────────────────┤
+│ AnotherRemoteWithLessInfo │         Url: remote_url1  │
+│                           │     Enabled: yes          │
+│                           │     Fetched: no           │
+├───────────────────────────┼───────────────────────────┤
+│ DisabledRemote            │         Url: remote_url3  │
+│                           │        Name: remote_name3 │
+│                           │ Description: remote_desc3 │
+│                           │ Last update: remote_date3 │
+│                           │     Enabled: no           │
+└───────────────────────────┴───────────────────────────┘

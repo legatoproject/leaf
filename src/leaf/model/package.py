@@ -10,11 +10,12 @@ Leaf Package Manager
 from collections import OrderedDict
 from functools import total_ordering
 import io
-from leaf.constants import JsonConstants, LeafFiles
-from pathlib import Path
 import re
 from tarfile import TarFile
 
+from pathlib import Path
+
+from leaf.constants import JsonConstants, LeafFiles
 from leaf.model.base import JsonObject
 from leaf.utils import resolveUrl, jsonLoad, jsonLoadFile, checkSupportedLeaf, \
     versionComparator_lt, stringToTuple
@@ -334,3 +335,6 @@ class Feature(JsonObject):
             self.getKey() == other.getKey() and \
             self.getValues() == other.getValues() and \
             self.getDescription() == other.getDescription()
+
+    def __str__(self):
+        return self.name

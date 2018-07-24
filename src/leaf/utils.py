@@ -9,22 +9,23 @@ Leaf Package Manager
 
 from collections import OrderedDict
 import hashlib
-import json
 import os
-from pathlib import Path
 import random
 import re
-import string
 import sys
 from tarfile import TarFile
 import tempfile
 import time
-import urllib
-from urllib.parse import urlparse, urlunparse
 
+from pathlib import Path
+import requests
+
+import json
 from leaf import __version__
 from leaf.constants import LeafConstants
-import requests
+import string
+import urllib
+from urllib.parse import urlparse, urlunparse
 
 
 _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
@@ -177,22 +178,18 @@ def downloadFile(url, folder, logger, filename=None, sha1sum=None):
                                stream=True,
                                timeout=LeafConstants.DOWNLOAD_TIMEOUT)
             size = int(req.headers.get('content-length', -1))
-            logger.progressStart('Download file', total=size)
             currentSize = 0
             with open(str(targetFile), 'wb') as fp:
                 for data in req.iter_content(1024 * 1024):
                     currentSize += len(data)
-                    logger.progressWorked('Download file',
-                                          "Downloading %s" % targetFile.name,
+                    logger.progressWorked("Downloading %s" % targetFile.name,
                                           worked=currentSize,
                                           total=size,
                                           sameLine=True)
                     fp.write(data)
         else:
-            logger.progressStart('Download file')
             urllib.request.urlretrieve(url, str(targetFile))
-        logger.progressDone('Download file',
-                            "[100%%] Downloading %s" % targetFile.name)
+        logger.printDefault("[100%%] Downloading %s" % targetFile.name)
         if sha1sum is not None and sha1sum != computeSha1sum(targetFile):
             raise ValueError("Invalid SHA1 sum for %s, expecting %s" %
                              (targetFile.name, sha1sum))

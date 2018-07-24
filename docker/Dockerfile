@@ -6,7 +6,7 @@ RUN apt-get update \
 	&& apt-get install -y --no-install-recommends \
 		python3-all python3-pip python3-setuptools python3-setuptools-scm \
 		python3-nose python3-coverage tox \
-		python3-requests python3-argcomplete \
+		python3-requests python3-argcomplete python3-colorama \
 		debhelper dh-python devscripts build-essential fakeroot bash-completion \
 		file git rsync zsh \
 		asciidoc-base docbook docbook-xml xsltproc xmlto \

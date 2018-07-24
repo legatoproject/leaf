@@ -1,0 +1,25 @@
+┌───────────────────────────────────────────────────────────────┐
+│               4 packages - Filter: "container-A"              │
+├─────────────────┬─────────────────────────────────────────────┤
+│    Identifier   │                  Properties                 │
+╞═════════════════╪═════════════════════════════════════════════╡
+│ container-A_1.0 │               Tag: foo                      │
+│                 │            Source: default                  │
+│                 │ Included Packages: container-B_1.0          │
+│                 │                    container-C_1.0          │
+├─────────────────┼─────────────────────────────────────────────┤
+│ container-A_1.1 │               Tag: bar                      │
+│                 │            Source: default                  │
+│                 │ Included Packages: container-B_1.0          │
+│                 │                    container-C_1.0          │
+├─────────────────┼─────────────────────────────────────────────┤
+│ container-A_2.0 │              Tags: foo,bar                  │
+│                 │            Source: default                  │
+│                 │ Included Packages: container-C_1.0          │
+│                 │                    container-D_1.0          │
+├─────────────────┼─────────────────────────────────────────────┤
+│ container-A_2.1 │              Tags: latest,installed,foo,bar │
+│                 │            Source: default                  │
+│                 │ Included Packages: container-C_1.0          │
+│                 │                    container-D_1.0          │
+└─────────────────┴─────────────────────────────────────────────┘

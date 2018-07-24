@@ -97,3 +97,6 @@ class Profile(JsonObject, IEnvObject):
                 except:
                     pass
         return out
+
+    def __str__(self):
+        return self.name

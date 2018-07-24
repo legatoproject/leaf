@@ -6,6 +6,9 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
+import operator
+
+from leaf.model.package import Manifest
 
 
 class FeatureManager():
@@ -17,8 +20,10 @@ class FeatureManager():
         self.features = {}
 
         def visit(mfList):
-            for mf in mfList:
-                for name, feature in mf.getFeaturesMap().items():
+            # Sort to ensure same behavior over Python versions
+            for mf in sorted(mfList, key=Manifest.getName):
+                # Sort to ensure same behavior over Python versions
+                for name, feature in sorted(mf.getFeaturesMap().items(), key=operator.itemgetter(0)):
                     if name not in self.features:
                         self.features[name] = feature
                     else:

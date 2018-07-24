@@ -1,0 +1,13 @@
+[Errno 2] No such file or directory: '{ROOT_FOLDER}/volatile/workspace/leaf-data/foo'
+[Errno 2] No such file or directory: '{ROOT_FOLDER}/volatile/workspace/leaf-data/bar'
+[90m┌[0m[90m─────────[0m[90m─[0m[90m──────[0m[90m─[0m[90m───────────[0m[90m─[0m[90m───────────────────────────[0m[90m┐[0m
+[90m│[0m Workspace: {ROOT_FOLDER}/volatile/workspace [90m│[0m
+[90m│[0m                       2 [1mprofiles[0m                       [90m│[0m
+[90m├[0m[90m─────────[0m[90m┬[0m[90m──────[0m[90m┬[0m[90m───────────[0m[90m┬[0m[90m───────────────────────────[0m[90m┤[0m
+[90m│[0m [1mProfile[0m [90m│[0m [1mSync[0m [90m│[0m  [1mEnv vars[0m [90m│[0m          [1mPackages[0m         [90m│[0m
+[90m╞[0m[90m═════════[0m[90m╪[0m[90m══════[0m[90m╪[0m[90m═══════════[0m[90m╪[0m[90m═══════════════════════════[0m[90m╡[0m
+[90m│[0m foo     [90m│[0m no   [90m│[0m FOO=BAR   [90m│[0m container-A_1.0           [90m│[0m
+[90m│[0m         [90m│[0m      [90m│[0m FOO2=BAR2 [90m│[0m                           [90m│[0m
+[90m├[0m[90m─────────[0m[90m┼[0m[90m──────[0m[90m┼[0m[90m───────────[0m[90m┼[0m[90m───────────────────────────[0m[90m┤[0m
+[90m│[0m bar     [90m│[0m no   [90m│[0m           [90m│[0m container-B_1.0           [90m│[0m
+[90m└[0m[90m─────────[0m[90m┴[0m[90m──────[0m[90m┴[0m[90m───────────[0m[90m┴[0m[90m───────────────────────────[0m[90m┘[0m

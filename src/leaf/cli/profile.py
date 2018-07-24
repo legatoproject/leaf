@@ -9,6 +9,7 @@ Leaf Package Manager
 import argparse
 from leaf.cli.cliutils import LeafCommand, initCommonArgs, LeafMetaCommand
 from leaf.core.coreutils import retrievePackageIdentifier
+from leaf.format.renderer.profile import ProfileListRenderer
 
 
 class ProfileMetaCommand(LeafMetaCommand):
@@ -69,11 +70,12 @@ class ProfileListCommand(AbstractProfileCommand):
     def execute(self, args):
         wm = self.getWorkspaceManager(args)
         name = self.getProfileName(args)
+        rend = ProfileListRenderer()
         if name is None:
-            for profile in wm.listProfiles().values():
-                wm.logger.displayItem(profile)
+            rend.extend(wm.listProfiles().values())
         else:
-            wm.logger.displayItem(wm.getProfile(name))
+            rend.append(wm.getProfile(name))
+        wm.printRenderer(rend)
 
 
 class ProfileCreateCommand(AbstractProfileCommand):

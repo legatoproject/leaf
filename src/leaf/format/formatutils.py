@@ -6,17 +6,15 @@ Utils to format logger output
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
+from math import log
+from shutil import which
+import os
+import sys
+
+
 '''
 Units used to show file size with their respective decimal count
 '''
-
-from math import log
-import os
-from shutil import which
-
-import subprocess
-
-
 unit_list = [
     ('bytes', 0),
     ('kB', 0),
@@ -58,5 +56,12 @@ def getPager():
         if binName == "":
             pager = None
         if binName == "less":
-            pager = ("less", "-S", "-P", "Leaf -- Press q to exit")
+            pager = ("less", "-r", "-S", "-P", "Leaf -- Press q to exit")
     return pager
+
+
+def isatty():
+    '''
+    Return true if we are in a tty context
+    '''
+    return sys.stdout.isatty()

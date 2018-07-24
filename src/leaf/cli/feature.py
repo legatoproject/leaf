@@ -8,6 +8,7 @@ Leaf Package Manager
 '''
 from leaf.cli.cliutils import LeafMetaCommand, LeafCommand, initCommonArgs
 from leaf.core.features import FeatureManager
+from leaf.format.renderer.feature import FeatureListRenderer
 from leaf.model.base import Scope
 from leaf.model.environment import Environment
 
@@ -43,9 +44,10 @@ class FeatureListCommand(LeafCommand):
         pm = self.getPackageManager(args)
 
         featureManager = FeatureManager(pm)
-        for feature in sorted(featureManager.features.values(),
-                              key=lambda x: x.name):
-            pm.logger.displayItem(feature)
+        rend = FeatureListRenderer()
+        rend.extend(list(sorted(featureManager.features.values(),
+                                key=lambda x: x.name)))
+        pm.printRenderer(rend)
 
 
 class FeatureQueryCommand(LeafCommand):

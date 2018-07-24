@@ -33,13 +33,16 @@ docker-image:
 	docker build -t "leaf-test:latest" docker/
 
 docker-test:
+	TMP_WORK_DIR=`mktemp -d -p /tmp leaf-docker-test.XXXXXX` && \
+	chmod 777 $$TMP_WORK_DIR && \
 	docker run --rm \
 		--user 1000 \
 		-v $(PWD):/src/leaf \
+		-v $$TMP_WORK_DIR:/tmp/leaf \
 		-e LEAF_TEST_CLASS="$(LEAF_TEST_CLASS)" \
 		-e LEAF_TEST_TOX_ARGS="$(LEAF_TEST_TOX_ARGS)" \
 		leaf-test:latest \
-		sh -c 'cp -a /src/leaf /tmp/leaf && cd /tmp/leaf && git clean -fdX && make clean manpages test'
+		sh -c 'cp -R /src/leaf /tmp && cd /tmp/leaf && git clean -fdX && make clean manpages test'
 
 gpg:
 	gpg --batch --gen-key ./packaging/gpg-script

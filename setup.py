@@ -48,6 +48,7 @@ setup(name='leaf',
           'leaf.cli',
           'leaf.core',
           'leaf.format',
+          'leaf.format.renderer',
           'leaf.model'
       ],
       entry_points={

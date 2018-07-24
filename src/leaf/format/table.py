@@ -20,7 +20,7 @@ Example:
         .newCell("Cell3: one line, vertical alignment: bottom", vAlign=VAlign.BOTTOM).newSep() \
         .newCell("Cell4:\n- multiline\n- horizontal alignment: right", HAlign.RIGHT).newSep()
     table.newRow().newSep(nbElt)
-    print(str(table))
+    print(table)
 Result:
     ┌─────────────────────────────────╥─────────────────────────────────────────────────────────────────────────────┐
     │                                 ║                                    Cell2:                                   │
@@ -47,8 +47,11 @@ You have a few constraints when you use this API (which are checked when trying 
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from abc import ABC, abstractmethod
+
 from enum import unique, Enum
+
 from leaf.format.alignment import HAlign, VAlign
+from leaf.format.ansi import removeAnsiChars
 from leaf.format.chars import _PADDING_CHAR, _SEPARATORS_DICT
 
 
@@ -57,7 +60,8 @@ class Table():
     Represent the table
     '''
 
-    def __init__(self):
+    def __init__(self, themeManager):
+        self.tm = themeManager
         self.rows = []
         self.columns = []
 
@@ -68,6 +72,18 @@ class Table():
         out = _Row(self)
         self.rows.append(out)
         return out
+
+    def newHeader(self, text, tableSize):
+        '''
+        Add header to the given Table like that:
+        ┌──────────────────────────────────────────────────────────────────┐
+        │                               text                               │
+        ├──────────────────────────────────────────────────────────────────┤
+        '''
+        self.newRow().newSep(tableSize)
+        self.newRow().newSep() \
+            .newCell(text, HAlign.CENTER).newHSpan(tableSize - 3).newSep()
+        self.newRow().newSep(tableSize)
 
     @property
     def minHeight(self):
@@ -111,22 +127,15 @@ class Table():
 
         # Prepare char table with final size using dummy '*' char (useful to
         # debug a layout issue)
-        tableStrings = ["*" * self.minWidth] * self.minHeight
-        for row in self.rows:
-            for elt in row:
-                hMin, vMin = elt.getPosition()
+        tableStrings = [""] * self.minHeight
+        for col in self.columns:
+            for elt in col:
+                _, vMin = elt.getPosition()
                 # draw return the string list corresponding to this element
                 eltStrings = elt.draw()
-                # Extract corresponding rows from final table
-                vMax = vMin + len(eltStrings)
-                subrows = tableStrings[vMin:vMax]
                 # Erase dummy chars with the chars returned by the elements
                 for i, stringToWrite in enumerate(eltStrings):
-                    previousChars = subrows[i][:hMin]
-                    hMax = hMin + len(stringToWrite)
-                    nextChars = subrows[i][hMax:]
-                    subrows[i] = previousChars + stringToWrite + nextChars
-                tableStrings[vMin:vMax] = subrows
+                    tableStrings[vMin + i] += stringToWrite
         return "\n".join(tableStrings)
 
 
@@ -411,7 +420,7 @@ class _Cell(_TableElement):
 
     def __init__(self, label, hAlign=HAlign.LEFT, vAlign=VAlign.TOP):
         _TableElement.__init__(self)
-        self.inputLines = str(label).split("\n")
+        self.inputLines = str(label).split('\n')
         self.__outputLines_cache = None
         self.hAlign = hAlign
         self.vAlign = vAlign
@@ -439,7 +448,7 @@ class _Cell(_TableElement):
     def minHeight(self):
         '''
         Give the minimum height of this cell in char
-        Span TAKEN into account (so it can be less than the contentWidth)
+        Span TAKEN into account (so it can be less than the contentHeight)
         '''
         return self.contentHeight
 
@@ -465,7 +474,7 @@ class _Cell(_TableElement):
         Give the minimum width of this cell in char
         Span NOT taken into account
         '''
-        return max(map(len, self.outputLines))
+        return max(map(lambda text: len(removeAnsiChars(text)), self.outputLines))
 
     @property
     def _spanHeight(self):
@@ -712,4 +721,4 @@ class _Separator(_TableElement):
         '''
         Return the list of String corresponding to this separator
         '''
-        return [self._findSepChar() * self.column.minWidth] * self.row.minHeight
+        return [self.table.tm.TABLE_SEPARATOR(self._findSepChar() * self.column.minWidth)] * self.row.minHeight

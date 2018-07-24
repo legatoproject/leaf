@@ -8,6 +8,7 @@ Vertical and horizontal alignment code
 '''
 import math
 from enum import unique, Enum
+from leaf.format.ansi import removeAnsiChars
 
 
 def _topAlign(lines, height):
@@ -45,14 +46,21 @@ def _bottomAlign(lines, height):
     return out
 
 
+def _alignWithoutAnsiChars(hAlignFunct):
+    def wrap(text, size, spanChar):
+        extraSize = len(text) - len(removeAnsiChars(text))
+        return hAlignFunct(text, size + extraSize, spanChar)
+    return wrap
+
+
 @unique
 class HAlign(Enum):
     '''
     Types of Horizontal alignment
     '''
-    LEFT = str.ljust
-    CENTER = str.center
-    RIGHT = str.rjust
+    LEFT = _alignWithoutAnsiChars(str.ljust)
+    CENTER = _alignWithoutAnsiChars(str.center)
+    RIGHT = _alignWithoutAnsiChars(str.rjust)
 
 
 @unique

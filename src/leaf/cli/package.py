@@ -11,7 +11,7 @@ import argparse
 
 from leaf.cli.cliutils import LeafCommand, LeafMetaCommand
 from leaf.core.dependencies import DependencyType
-from leaf.format.manifestlistrenderer import ManifestListRenderer
+from leaf.format.renderer.manifest import ManifestListRenderer
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import Manifest
 from leaf.utils import mkTmpLeafRootDir, envListToMap
@@ -76,7 +76,7 @@ class PackageListCommand(LeafCommand):
         mfList = sorted(pm.listInstalledPackages().values(),
                         key=Manifest.getIdentifier)
         rend.extend(mf for mf in mfList if pkgFilter.matches(mf))
-        pm.logger.printRenderer(rend)
+        pm.printRenderer(rend)
 
 
 class PackageDepsCommand(LeafCommand):
@@ -130,8 +130,9 @@ class PackageDepsCommand(LeafCommand):
         items = pm.listDependencies(args.packages,
                                     args.dependencyType,
                                     envMap=envListToMap(args.customEnvList))
-        for i in items:
-            pm.logger.displayItem(i)
+        rend = ManifestListRenderer()
+        rend.extend(items)
+        pm.printRenderer(rend)
 
 
 class PackageInstallCommand(LeafCommand):
