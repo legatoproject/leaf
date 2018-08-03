@@ -1,20 +1,19 @@
 from _io import StringIO
+from contextlib import contextmanager
+from leaf.constants import EnvConstants, LeafFiles
 import os
+from pathlib import Path
 import shutil
+import subprocess
 import sys
 from tempfile import mkdtemp
+import unittest
+from unittest.case import TestCase
 
-from pathlib import Path
-
-from contextlib import contextmanager
 from leaf.cli.cli import LeafCli
-from leaf.constants import EnvConstants, LeafFiles
 from leaf.core.relengmanager import RelengManager
 from leaf.format.logger import TextLogger, Verbosity
 from leaf.model.package import PackageIdentifier, Manifest
-import subprocess
-import unittest
-from unittest.case import TestCase
 
 
 LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
@@ -310,6 +309,11 @@ def checkMime(file, expectedMime):
     mime = subprocess.getoutput("file -bi " + str(file))
     if not mime.startswith("application/" + expectedMime):
         raise ValueError("File %s has invalid mime type %s" % (file, mime))
+
+
+def countLines(file):
+    with open(str(file)) as fp:
+        return len(fp.read().splitlines())
 
 
 def envFileToMap(envDumpFile):

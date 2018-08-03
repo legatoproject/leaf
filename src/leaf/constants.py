@@ -91,6 +91,7 @@ class JsonConstants(object):
     INFO_FEATURE_KEY = 'key'
     INFO_FEATURE_VALUES = 'values'
     INSTALL = 'install'
+    SYNC = 'sync'
     UNINSTALL = 'uninstall'
     STEP_LABEL = 'label'
     STEP_IGNORE_FAIL = 'ignoreFail'

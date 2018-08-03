@@ -11,10 +11,10 @@ from pathlib import Path
 
 from leaf.cli.cliutils import LeafCommand, LeafMetaCommand
 from leaf.core.dependencies import DependencyType
+from leaf.format.manifestlistrenderer import ManifestListRenderer
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import Manifest
 from leaf.utils import mkTmpLeafRootDir, envListToMap
-from leaf.format.manifestlistrenderer import ManifestListRenderer
 
 
 class PackageMetaCommand(LeafMetaCommand):
@@ -30,6 +30,7 @@ class PackageMetaCommand(LeafMetaCommand):
     def getSubCommands(self):
         return [PackageInstallCommand(),
                 PackageUninstallCommand(),
+                PackageSyncCommand(),
                 PackageDepsCommand(),
                 PackagePrereqCommand()]
 
@@ -215,3 +216,22 @@ class PackageUninstallCommand(LeafCommand):
         app = self.getPackageManager(args)
 
         app.uninstallPackages(args.packages)
+
+
+class PackageSyncCommand(LeafCommand):
+
+    def __init__(self):
+        LeafCommand.__init__(self,
+                             "sync",
+                             "performs sync operation")
+
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        parser.add_argument('packages', metavar='PKGNAME',
+                            nargs=argparse.ONE_OR_MORE,
+                            help='name of package to uninstall')
+
+    def execute(self, args):
+        app = self.getPackageManager(args)
+
+        app.syncPackages(args.packages)

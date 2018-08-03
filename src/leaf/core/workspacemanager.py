@@ -7,11 +7,11 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from collections import OrderedDict
+from leaf.constants import LeafFiles, JsonConstants, EnvConstants
 import os
 import shutil
 
 from leaf import __version__
-from leaf.constants import LeafFiles, JsonConstants, EnvConstants
 from leaf.core.dependencies import DependencyManager, DependencyType,\
     DependencyStrategy
 from leaf.model.config import WorkspaceConfiguration
@@ -263,7 +263,13 @@ class WorkspaceManager():
             piFolder = profile.folder / ip.getIdentifier().name
             if piFolder.exists():
                 piFolder = profile.folder / str(ip.getIdentifier())
-            piFolder.symlink_to(ip.folder)
+            try:
+                self.packageManager.syncPackages([str(ip.getIdentifier())])
+                piFolder.symlink_to(ip.folder)
+            except Exception as e:
+                self.logger.printError(
+                    "Error while sync operation on %s" % ip.getIdentifier())
+                self.logger.printError(str(e))
 
     def getFullEnvironment(self, profile):
         self.isProfileSync(profile, raiseIfNotSync=True)

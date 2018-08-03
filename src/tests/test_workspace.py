@@ -8,9 +8,9 @@ import unittest
 
 import leaf
 from leaf.core.features import FeatureManager
-from leaf.format.logger import TextLogger, Verbosity
 from leaf.core.packagemanager import PackageManager
 from leaf.core.workspacemanager import WorkspaceManager
+from leaf.format.logger import TextLogger, Verbosity
 from leaf.model.package import PackageIdentifier, Manifest
 from tests.test_depends import mkpi
 from tests.testutils import AbstractTestWithRepo

@@ -9,7 +9,8 @@ from leaf.model.package import PackageIdentifier
 
 def retrievePackageIdentifier(motif, validPiList):
     '''
-    If only package name is given retrieve the latest package in given list with same package name
+    If only package name is given retrieve the latest package in given list 
+    with same package name
     '''
     if PackageIdentifier.isValidIdentifier(motif):
         return PackageIdentifier.fromString(motif)
@@ -78,32 +79,33 @@ class StepExecutor():
         self.variableResolver = variableResolver
 
     def postInstall(self,):
-        steps = self.package.jsonget(JsonConstants.INSTALL, default=[])
-        if len(steps) > 0:
-            self.runSteps(steps, self.package, label="Post-install")
+        self.runSteps(self.package.jsonget(
+            JsonConstants.INSTALL, default=[]),
+            label="install")
 
     def preUninstall(self):
-        steps = self.package.jsonget(JsonConstants.UNINSTALL, default=[])
-        if len(steps) > 0:
-            self.runSteps(steps, self.package, label="Pre-uninstall")
+        self.runSteps(self.package.jsonget(
+            JsonConstants.UNINSTALL, default=[]),
+            label="uninstall")
 
-    def runSteps(self, steps, ip, label=""):
-        self.logger.progressStart('Execute steps', total=len(steps))
-        worked = 0
-        for step in steps:
-            if JsonConstants.STEP_LABEL in step:
-                self.logger.printDefault(step[JsonConstants.STEP_LABEL])
-            self.doExec(step)
-            worked += 1
-            self.logger.progressWorked('Execute steps',
-                                       worked=worked,
-                                       total=len(steps))
-        self.logger.progressDone('Execute steps')
+    def sync(self):
+        self.runSteps(self.package.jsonget(
+            JsonConstants.SYNC, default=[]),
+            label="sync")
 
-    def doExec(self, step):
+    def runSteps(self, steps, label):
+        if steps is not None and len(steps) > 0:
+            self.logger.printDefault("Run %s steps for %s" %
+                                     (label, self.package.getIdentifier()))
+            for step in steps:
+                if JsonConstants.STEP_LABEL in step:
+                    self.logger.printDefault(step[JsonConstants.STEP_LABEL])
+                self.doExec(step, label)
+
+    def doExec(self, step, label):
         command = [self.resolve(arg)
                    for arg in step[JsonConstants.STEP_EXEC_COMMAND]]
-        self.logger.printVerbose("Exec:", ' '.join(command))
+        self.logger.printVerbose("Execute:", ' '.join(command))
         env = dict(os.environ)
         for k, v in step.get(JsonConstants.STEP_EXEC_ENV, {}).items():
             v = self.resolve(v)
@@ -120,16 +122,19 @@ class StepExecutor():
                              stdout=stdout,
                              stderr=subprocess.STDOUT)
         if rc != 0:
+            self.logger.printVerbose("Command '%s' exited with %s" %
+                                     (" ".join(command), rc))
             if step.get(JsonConstants.STEP_IGNORE_FAIL, False):
-                self.logger.printVerbose("Return code is",
-                                         rc,
-                                         "but step ignores failure")
+                self.logger.printVerbose("Step ignores failure")
             else:
-                raise ValueError("Step exited with return code " + str(rc))
+                raise ValueError("Error during %s step for %s" %
+                                 (label, self.package.getIdentifier()))
 
-    def resolve(self, value, failOnUnknownVariable=True, prefixWithFolder=False):
-        out = self.variableResolver.resolve(value,
-                                            failOnUnknownVariable=failOnUnknownVariable)
+    def resolve(self, value,
+                failOnUnknownVariable=True, prefixWithFolder=False):
+        out = self.variableResolver.resolve(
+            value,
+            failOnUnknownVariable=failOnUnknownVariable)
         if prefixWithFolder:
             return str(self.targetFolder / out)
         return out

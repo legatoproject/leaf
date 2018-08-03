@@ -1,0 +1,18 @@
+{
+  "info": {
+    "name": "sync",
+    "version": "1.0"
+  },
+  "sync": [
+    {
+      "command": [
+        "sh",
+        "-c",
+        "date >> ${LEAF_TARGET_FILE}"
+      ],
+      "env": {
+        "LEAF_TARGET_FILE": "sync.log"
+      }
+    }
+  ]
+}

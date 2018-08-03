@@ -7,7 +7,8 @@ import os
 import shutil
 import unittest
 
-from tests.testutils import LeafCliWrapper, envFileToMap, LEAF_UT_SKIP
+from tests.testutils import LeafCliWrapper, envFileToMap, LEAF_UT_SKIP,\
+    countLines
 
 
 class TestProfileCli_Default(LeafCliWrapper):
@@ -521,6 +522,22 @@ class TestProfileCli_Default(LeafCliWrapper):
                       "--workspace", "featureWithDups", "enum1")
         self.leafExec(("feature", "toggle"),
                       "--profile", "featureWithDups", "enum1")
+
+    def testSync(self):
+        syncFile = self.getInstallFolder() / "sync_1.0" / "sync.log"
+        self.assertFalse(syncFile.exists())
+
+        self.leafExec("init")
+        self.leafExec(("profile", "create"), "foo")
+        self.leafExec(("profile", "config"), "-p", "sync_1.0")
+        self.leafExec(("profile", "sync"))
+        self.assertEqual(1, countLines(syncFile))
+
+        self.leafExec(("profile", "sync"))
+        self.assertEqual(2, countLines(syncFile))
+
+        self.leafExec(("package", "sync"), "sync_1.0")
+        self.assertEqual(3, countLines(syncFile))
 
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
