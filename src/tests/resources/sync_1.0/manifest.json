@@ -3,12 +3,15 @@
     "name": "sync",
     "version": "1.0"
   },
+  "env": {
+    "MYVAR1": "MYVALUE"
+  },
   "sync": [
     {
       "command": [
         "sh",
         "-c",
-        "date >> ${LEAF_TARGET_FILE}"
+        "echo $MYVAR1 $MYVAR2 >> ${LEAF_TARGET_FILE}"
       ],
       "env": {
         "LEAF_TARGET_FILE": "sync.log"

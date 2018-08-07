@@ -7,18 +7,18 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from collections import OrderedDict
-from leaf.constants import LeafFiles, JsonConstants, EnvConstants
 import os
+from pathlib import Path
 import shutil
 
 from leaf import __version__
+from leaf.constants import LeafFiles, JsonConstants, EnvConstants
 from leaf.core.dependencies import DependencyManager, DependencyType,\
     DependencyStrategy
 from leaf.model.config import WorkspaceConfiguration
 from leaf.model.environment import Environment
 from leaf.model.workspace import Profile
 from leaf.utils import jsonLoadFile, checkSupportedLeaf, jsonWriteFile
-from pathlib import Path
 
 
 class WorkspaceManager():
@@ -264,7 +264,10 @@ class WorkspaceManager():
             if piFolder.exists():
                 piFolder = profile.folder / str(ip.getIdentifier())
             try:
-                self.packageManager.syncPackages([str(ip.getIdentifier())])
+                env = self._getSkelEnvironement(profile)
+                self.packageManager.syncPackages(
+                    [str(ip.getIdentifier())],
+                    env=env)
                 piFolder.symlink_to(ip.folder)
             except Exception as e:
                 self.logger.printError(

@@ -2,13 +2,14 @@
 @author: seb
 '''
 
-from leaf.constants import LeafFiles
 import os
 import shutil
 import unittest
 
+from leaf.constants import LeafFiles
+
 from tests.testutils import LeafCliWrapper, envFileToMap, LEAF_UT_SKIP,\
-    countLines
+    getLines
 
 
 class TestProfileCli_Default(LeafCliWrapper):
@@ -531,13 +532,41 @@ class TestProfileCli_Default(LeafCliWrapper):
         self.leafExec(("profile", "create"), "foo")
         self.leafExec(("profile", "config"), "-p", "sync_1.0")
         self.leafExec(("profile", "sync"))
-        self.assertEqual(1, countLines(syncFile))
+        self.assertTrue(syncFile.exists())
+        self.assertEqual([""],
+                         getLines(syncFile))
 
         self.leafExec(("profile", "sync"))
-        self.assertEqual(2, countLines(syncFile))
+        self.assertTrue(syncFile.exists())
+        self.assertEqual(["",
+                          ""],
+                         getLines(syncFile))
 
         self.leafExec(("package", "sync"), "sync_1.0")
-        self.assertEqual(3, countLines(syncFile))
+        self.assertTrue(syncFile.exists())
+        self.assertEqual(["",
+                          "",
+                          ""],
+                         getLines(syncFile))
+
+        self.leafExec(("env", "workspace"), "--set", "MYVAR2=AAA")
+        self.leafExec(("profile", "sync"))
+        self.assertTrue(syncFile.exists())
+        self.assertEqual(["",
+                          "",
+                          "",
+                          "AAA"],
+                         getLines(syncFile))
+
+        self.leafExec(("env", "profile"), "--set", "MYVAR2=BBB")
+        self.leafExec(("profile", "sync"))
+        self.assertTrue(syncFile.exists())
+        self.assertEqual(["",
+                          "",
+                          "",
+                          "AAA",
+                          "BBB"],
+                         getLines(syncFile))
 
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")

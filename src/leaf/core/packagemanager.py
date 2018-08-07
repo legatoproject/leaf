@@ -11,7 +11,6 @@ from builtins import filter
 from collections import OrderedDict
 from datetime import datetime
 import json
-from leaf.constants import JsonConstants, LeafConstants, LeafFiles, EnvConstants
 import os
 import platform
 import shutil
@@ -19,6 +18,7 @@ from tarfile import TarFile
 import urllib.request
 
 from leaf import __version__
+from leaf.constants import JsonConstants, LeafConstants, LeafFiles, EnvConstants
 from leaf.core.coreutils import VariableResolver, StepExecutor
 from leaf.core.dependencies import DependencyManager, DependencyType
 from leaf.format.formatutils import sizeof_fmt
@@ -589,19 +589,20 @@ class PackageManager(RemoteManager):
             self.logger.progressDone('Uninstall package(s)',
                                      message="%d package(s) removed" % (len(ipToRemove)))
 
-    def syncPackages(self, pisList):
+    def syncPackages(self, pisList, env=None):
 
         ipMap = self.listInstalledPackages()
 
-        env = Environment.build(self.getLeafEnvironment(),
-                                self.getUserEnvironment())
+        if env is None:
+            env = Environment.build(self.getLeafEnvironment(),
+                                    self.getUserEnvironment())
 
         for pis in pisList:
             pi = PackageIdentifier.fromString(pis)
             ip = ipMap.get(pi)
             if ip is None:
                 raise ValueError("Cannot find package %s", pis)
-            self.logger.printQuiet("Sync package %s" % pis)
+            self.logger.printVerbose("Sync package %s" % pis)
             vr = VariableResolver(ip,
                                   self.listInstalledPackages().values())
             stepExec = StepExecutor(self.logger, ip, vr, env=env)
@@ -619,9 +620,9 @@ class PackageManager(RemoteManager):
             if isinstance(item, InstalledPackage):
                 ip = item
             elif isinstance(item, PackageIdentifier):
-                if item not in installedPackages:
+                ip = installedPackages.get(item)
+                if ip is None:
                     raise ValueError("Cannot find package %s" % item)
-                ip = installedPackages[item]
             else:
                 raise ValueError("Invalid package %s" % item)
             ipEnv = Environment("Exported by package %s" % ip.getIdentifier())

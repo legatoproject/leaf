@@ -1,6 +1,5 @@
 from _io import StringIO
 from contextlib import contextmanager
-from leaf.constants import EnvConstants, LeafFiles
 import os
 from pathlib import Path
 import shutil
@@ -11,6 +10,7 @@ import unittest
 from unittest.case import TestCase
 
 from leaf.cli.cli import LeafCli
+from leaf.constants import EnvConstants, LeafFiles
 from leaf.core.relengmanager import RelengManager
 from leaf.format.logger import TextLogger, Verbosity
 from leaf.model.package import PackageIdentifier, Manifest
@@ -311,9 +311,9 @@ def checkMime(file, expectedMime):
         raise ValueError("File %s has invalid mime type %s" % (file, mime))
 
 
-def countLines(file):
+def getLines(file):
     with open(str(file)) as fp:
-        return len(fp.read().splitlines())
+        return fp.read().splitlines()
 
 
 def envFileToMap(envDumpFile):

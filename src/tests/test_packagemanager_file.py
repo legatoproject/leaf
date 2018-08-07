@@ -3,12 +3,12 @@
 '''
 
 from datetime import datetime, timedelta
-from leaf.constants import EnvConstants
 import os
 import sys
 import time
 import unittest
 
+from leaf.constants import EnvConstants
 from leaf.core.dependencies import DependencyType
 from leaf.core.features import FeatureManager
 from leaf.core.packagemanager import PackageManager
@@ -17,7 +17,9 @@ from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier, AvailablePackage,\
     InstalledPackage
 from leaf.utils import isFolderIgnored
-from tests.testutils import AbstractTestWithRepo, envFileToMap, countLines
+
+from tests.testutils import AbstractTestWithRepo, envFileToMap,\
+    getLines
 
 
 VERBOSITY = Verbosity.VERBOSE
@@ -528,11 +530,22 @@ class TestPackageManager_File(AbstractTestWithRepo):
 
         self.pm.syncPackages(["sync_1.0"])
         self.assertTrue(syncFile.exists())
-        self.assertEqual(1, countLines(syncFile))
+        self.assertEqual([""],
+                         getLines(syncFile))
 
         self.pm.syncPackages(["sync_1.0"])
         self.assertTrue(syncFile.exists())
-        self.assertEqual(2, countLines(syncFile))
+        self.assertEqual(["",
+                          ""],
+                         getLines(syncFile))
+
+        self.pm.updateUserEnv({"MYVAR2": "MYOTHERVALUE"})
+        self.pm.syncPackages(["sync_1.0"])
+        self.assertTrue(syncFile.exists())
+        self.assertEqual(["",
+                          "",
+                          "MYOTHERVALUE"],
+                         getLines(syncFile))
 
 
 if __name__ == "__main__":
