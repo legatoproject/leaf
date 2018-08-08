@@ -160,11 +160,6 @@ class TestExtensionsCli(LeafCliWrapper):
             self.assertTrue(fakeSrcFile.is_file())
             self.checkProfileContent(
                 "FEATURE-TEST", ["featured-with-source", "condition-A"])
-
-            # Check with badly built package without sync script
-            self.leafExec("getsrc", "broken", expectedRc=10)
-            self.checkProfileContent(
-                "FEATURE-TEST", ["featured-with-source", "source-broken"])
         except SystemExit:
             traceback.print_exc()
             self.fail("System exit caught")

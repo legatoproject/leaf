@@ -3,7 +3,10 @@
     "name": "source",
     "version": "1.0"
   },
-  "env": {
-    "PATH": "@{DIR}:$PATH"
-  }
+  "sync": [
+    {
+      "command": ["@{DIR}/test-src-sync"],
+      "verbose": true
+    }
+  ]
 }

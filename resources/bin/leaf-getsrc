@@ -44,10 +44,7 @@ leafCall() {
 	if test -n "$LEAF_NON_INTERACTIVE"; then
 		local ARGS="--non-interactive"
 	fi
-	if test -n "$LEAF_WORKSPACE"; then
-		local ARGS="$ARGS -w $LEAF_WORKSPACE"
-	fi
-	python3 -m leaf $ARGS "$@"
+	\leaf $ARGS "$@"
 }
 
 if test -z "$LEAFSRCMODULE"; then
@@ -55,35 +52,30 @@ if test -z "$LEAFSRCMODULE"; then
 	leafCall feature list -q | grep -e '-src$' | sed -e 's/-src$//g'
 else
 	# Check current status
-	CURRENT_STATE=$(leafCall feature query ${LEAFSRCMODULE}-src -q 2> /dev/null)
+	QUERY_ERROR=$(mktemp)
+	CURRENT_STATE=$(leafCall feature query ${LEAFSRCMODULE}-src -q 2> $QUERY_ERROR || true)
 	if test -z "$CURRENT_STATE"; then
-		echo "Unknown source module: ${LEAFSRCMODULE}"
-		exit 2
+		if test "$(cat $QUERY_ERROR)" = "Cannot find feature ${LEAFSRCMODULE}-src"; then
+			echo "Unknown source module: ${LEAFSRCMODULE}"
+			exit 2
+		else
+			echo "Profile out of sync; try \`leaf profile sync\`"
+			exit 3
+		fi
 	fi
-	
-	if test -n "$DISABLE_MODE" -a "$CURRENT_STATE" != binary; then
-		FTR_TOGGLE=binary	# Only switch back feature to binary if currently set to something else
-	elif test -z "$DISABLE_MODE" -a "$CURRENT_STATE" = binary; then
-		FTR_TOGGLE=source	# Only switch feature to source, if still set to binary
+
+	if test -n "$DISABLE_MODE" -a "$CURRENT_STATE" != "binary"; then
+		FTR_TOGGLE="binary"	# Only switch back feature to binary if currently set to something else
+	elif test -z "$DISABLE_MODE" -a "$CURRENT_STATE" = "binary"; then
+		FTR_TOGGLE="source"	# Only switch feature to source, if still set to binary
 	fi
-	
+
 	# Need to toggle?
 	if test -n "$FTR_TOGGLE"; then
 		leafCall feature toggle ${LEAFSRCMODULE}-src $FTR_TOGGLE $FTR_OPTIONS
-		leafCall profile sync $FTR_OPTIONS
 	fi
-	
-	# Sync?
-	if test -z "$DISABLE_MODE"; then
-		# Trigger source synchronization for module
-		SYNCCMD=${LEAFSRCMODULE}-src-sync
-		( \
-			eval "$(leafCall env)"; \
-			if ! which $SYNCCMD > /dev/null; then \
-				echo "Source synchronization command not found ($SYNCCMD)"; \
-				exit 10; \
-			fi; \
-			exec $SYNCCMD
-		)
-	fi
+
+	# Sync
+	export LEAF_CMD=getsrc
+	leafCall profile sync $FTR_OPTIONS
 fi
