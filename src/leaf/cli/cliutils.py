@@ -12,9 +12,9 @@ from collections import OrderedDict
 from pathlib import Path
 import traceback
 
-from leaf.format.logger import Verbosity, TextLogger
-from leaf.core.packagemanager import PackageManager
+from leaf.core.packagemanager import PackageManager, LoggerManager
 from leaf.core.workspacemanager import WorkspaceManager
+from leaf.format.logger import Verbosity
 from leaf.model.base import Scope
 
 
@@ -102,20 +102,20 @@ class GenericCommand(ABC):
             nonInteractive = getattr(args, 'nonInteractive')
         return (verbosity, nonInteractive)
 
-    def getLogger(self, args):
+    def getLoggerManager(self, args):
         loggerAttr = self.getLoggerAttr(args)
-        return TextLogger(loggerAttr[0], loggerAttr[1])
+        return LoggerManager(loggerAttr[0], loggerAttr[1])
 
     def getPackageManager(self, args):
         loggerAttr = self.getLoggerAttr(args)
-        return PackageManager(self.getLogger(args), loggerAttr[1])
+        return PackageManager(loggerAttr[0], loggerAttr[1])
 
-    def getWorkspace(self, args, autoFindWorkspace=True, checkInitialized=True):
-        out = WorkspaceManager(
-            WorkspaceManager.findRoot(customPath=args.workspace,
-                                      checkParents=autoFindWorkspace),
-            self.getPackageManager(args))
-        if checkInitialized and not out.isInitialized():
+    def getWorkspaceManager(self, args, autoFindWorkspace=True, checkInitialized=True):
+        loggerAttr = self.getLoggerAttr(args)
+        wsRoot = WorkspaceManager.findRoot(customPath=args.workspace,
+                                           checkParents=autoFindWorkspace)
+        out = WorkspaceManager(wsRoot, loggerAttr[0], loggerAttr[1])
+        if checkInitialized and not out.isWorkspaceInitialized():
             raise ValueError("Workspace is not initialized")
         return out
 
@@ -134,7 +134,7 @@ class GenericCommand(ABC):
         except Exception as e:
             if not catchException:
                 raise e
-            logger = self.getLogger(args)
+            logger = self.getLoggerManager(args).logger
             logger.printError(e)
             if logger.isVerbose():
                 traceback.print_exc()

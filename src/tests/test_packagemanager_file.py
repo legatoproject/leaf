@@ -33,8 +33,7 @@ class TestPackageManager_File(AbstractTestWithRepo):
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
 
-        self.pm = PackageManager(TextLogger(VERBOSITY, True),
-                                 nonInteractive=True)
+        self.pm = PackageManager(VERBOSITY, True)
 
         if EnvConstants.DOWNLOAD_TIMEOUT not in os.environ:
             # Fix CI timeout

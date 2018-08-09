@@ -3,9 +3,8 @@
 '''
 
 from leaf.core.packagemanager import PackageManager
-from leaf.model.filtering import MetaPackageFilter
-
 from leaf.format.logger import TextLogger, Verbosity
+from leaf.model.filtering import MetaPackageFilter
 from tests.testutils import AbstractTestWithRepo
 
 
@@ -13,7 +12,7 @@ class FilteringTest(AbstractTestWithRepo):
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
-        pm = PackageManager(TextLogger(Verbosity.DEFAULT, True), True)
+        pm = PackageManager(Verbosity.DEFAULT, True)
         pm.createRemote("default", self.getRemoteUrl())
         pm.fetchRemotes()
         self.content = pm.listAvailablePackages().values()

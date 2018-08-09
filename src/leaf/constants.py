@@ -17,8 +17,8 @@ class EnvConstants():
     Leaf specific env vars
     '''
     WORKSPACE_ROOT = 'LEAF_WORKSPACE'
-    CUSTOM_CONFIG_FILE = 'LEAF_CONFIG_FILE'
-    CUSTOM_CACHE_FOLDER = 'LEAF_CACHE_FOLDER'
+    CUSTOM_CONFIG = 'LEAF_CONFIG'
+    CUSTOM_CACHE = 'LEAF_CACHE'
     DOWNLOAD_TIMEOUT = 'LEAF_TIMEOUT'
 
 
@@ -43,15 +43,19 @@ class LeafFiles():
     Files & Folders used by Leaf
     '''
     MANIFEST = 'manifest.json'
+    # Workspace
     WS_CONFIG_FILENAME = "leaf-workspace.json"
     WS_DATA_FOLDERNAME = "leaf-data"
     CURRENT_PROFILE_LINKNAME = "current"
+    # Configuration folders
     USER_HOME = Path(os.path.expanduser("~"))
     DEFAULT_LEAF_ROOT = USER_HOME / '.leaf'
-    DEFAULT_CONFIG_FILE = USER_HOME / '.leaf-config.json'
+    DEFAULT_CONFIG_FOLDER = USER_HOME / '.config' / 'leaf'
     DEFAULT_CACHE_FOLDER = USER_HOME / '.cache' / 'leaf'
+    # Configuration files
     CACHE_DOWNLOAD_FOLDERNAME = "files"
     CACHE_REMOTES_FILENAME = 'remotes.json'
+    CONFIG_FILENAME = 'config.json'
 
 
 class JsonConstants(object):

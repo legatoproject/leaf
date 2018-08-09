@@ -16,13 +16,15 @@ class WorkspaceInitCommand(LeafCommand):
                              "initialize workspace")
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        ws = self.getWorkspace(
-            args, autoFindWorkspace=False, checkInitialized=False)
+        wm = self.getWorkspaceManager(args,
+                                      autoFindWorkspace=False,
+                                      checkInitialized=False)
 
-        if ws.configFile.exists():
-            raise ValueError("File %s already exist" % str(ws.configFile))
-        if ws.dataFolder.exists():
-            raise ValueError("Folder %s already exist" % str(ws.dataFolder))
-        ws.readConfiguration(initIfNeeded=True)
-        logger.printDefault("Workspace initialized", ws.rootFolder)
+        if wm.workspaceConfigFile.exists():
+            raise ValueError("File %s already exist" %
+                             str(wm.workspaceConfigFile))
+        if wm.workspaceDataFolder.exists():
+            raise ValueError("Folder %s already exist" %
+                             str(wm.workspaceDataFolder))
+        wm.readWorkspaceConfiguration(initIfNeeded=True)
+        wm.logger.printDefault("Workspace initialized", wm.workspaceRootFolder)

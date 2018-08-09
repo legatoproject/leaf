@@ -36,9 +36,7 @@ class SetupCommand(LeafCommand):
         return LeafCli().run(command, handleExceptions=False)
 
     def execute(self, args):
-
-        logger = self.getLogger(args)
-        app = self.getPackageManager(args)
+        pm = self.getPackageManager(args)
 
         cmdGenerator = LeafCommandGenerator()
         cmdGenerator.initCommonArgs(args)
@@ -51,31 +49,31 @@ class SetupCommand(LeafCommand):
         # Find or create workspace
         workspaceRoot = WorkspaceManager.findRoot(customPath=args.workspace)
         if not WorkspaceManager.isWorkspaceRoot(workspaceRoot):
-            logger.confirm(question="Cannot find workspace, initialize one in %s?" % workspaceRoot,
-                           failOnDecline=True)
+            pm.logger.confirm(question="Cannot find workspace, initialize one in %s?" % workspaceRoot,
+                              failOnDecline=True)
             self.leafExec(cmdGenerator, "init",
-                          logger=logger)
+                          logger=pm.logger)
 
         # Resolve packages
-        piList = app.resolveLatest(args.pkgAddList, ipMap=True, apMap=True)
+        piList = pm.resolveLatest(args.pkgAddList, ipMap=True, apMap=True)
 
         # Profile name
         profileName = args.profiles
         if profileName is None:
             profileName = Profile.genDefaultName(piList)
-            logger.printDefault(
+            pm.logger.printDefault(
                 "No profile name given, the new profile will be automatically named %s" % profileName)
 
         self.leafExec(cmdGenerator, ("profile", "create"),
                       [profileName],
-                      logger=logger)
+                      logger=pm.logger)
 
         configArgs = [profileName]
         for m in args.pkgAddList:
             configArgs += ["-p", m]
         self.leafExec(cmdGenerator, ("profile", "config"),
                       configArgs,
-                      logger=logger)
+                      logger=pm.logger)
 
         if args.envAddList is not None or args.envRmList is not None:
             configArgs = [profileName]
@@ -87,8 +85,8 @@ class SetupCommand(LeafCommand):
                     configArgs += ["--unset", e]
             self.leafExec(cmdGenerator, ("env", "profile"),
                           configArgs,
-                          logger=logger)
+                          logger=pm.logger)
 
         self.leafExec(cmdGenerator, ("profile", "sync"),
                       [profileName],
-                      logger=logger)
+                      logger=pm.logger)

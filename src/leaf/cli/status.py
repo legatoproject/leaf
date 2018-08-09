@@ -19,8 +19,9 @@ class StatusCommand(LeafCommand):
     def execute(self, args):
         wsRoot = WorkspaceManager.findRoot(customPath=args.workspace)
         if not WorkspaceManager.isWorkspaceRoot(wsRoot):
-            self.getLogger(args).printDefault(
+            self.getLoggerManager(args).logger.printDefault(
                 "Not in a workspace, use 'leaf init' to create one")
         else:
-            ws = WorkspaceManager(wsRoot, self.getPackageManager(args))
-            self.getLogger(args).displayItem(ws)
+            loggerAttr = self.getLoggerAttr(args)
+            wm = WorkspaceManager(wsRoot, loggerAttr[0], loggerAttr[1])
+            wm.logger.displayItem(wm)

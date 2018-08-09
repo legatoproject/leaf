@@ -7,11 +7,12 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 import argparse
+
 from leaf.cli.cliutils import LeafCommand
 from leaf.core.tags import TagManager
+from leaf.format.manifestlistrenderer import ManifestListRenderer
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import Manifest
-from leaf.format.manifestlistrenderer import ManifestListRenderer
 
 
 class SearchCommand(LeafCommand):
@@ -37,7 +38,6 @@ class SearchCommand(LeafCommand):
                             nargs=argparse.ZERO_OR_MORE)
 
     def execute(self, args):
-        logger = self.getLogger(args)
         pm = self.getPackageManager(args)
 
         pkgFilter = MetaPackageFilter()
@@ -62,4 +62,4 @@ class SearchCommand(LeafCommand):
         # Print filtered packages
         rend = ManifestListRenderer(pkgFilter)
         rend.extend(mf for mf in mfList if pkgFilter.matches(mf))
-        logger.printRenderer(rend)
+        pm.logger.printRenderer(rend)

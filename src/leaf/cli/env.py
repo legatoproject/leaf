@@ -48,11 +48,10 @@ class EnvPrintCommand(LeafCommand):
                             metavar='PROFILE', help='the profile name')
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        workspace = self.getWorkspace(args, checkInitialized=False)
+        wm = self.getWorkspaceManager(args, checkInitialized=False)
 
         env = None
-        if not workspace.isInitialized():
+        if not wm.isWorkspaceInitialized():
             env = Environment.build(
                 self.getPackageManager(args).getLeafEnvironment(),
                 self.getPackageManager(args).getUserEnvironment())
@@ -60,13 +59,13 @@ class EnvPrintCommand(LeafCommand):
             # Get profile name, key could not exist if command is default
             # command
             name = args.profiles if "profiles" in vars(
-                args) and args.profiles is not None else workspace.getCurrentProfileName()
-            profile = workspace.getProfile(name)
-            if not workspace.isProfileSync(profile):
+                args) and args.profiles is not None else wm.getCurrentProfileName()
+            profile = wm.getProfile(name)
+            if not wm.isProfileSync(profile):
                 raise ValueError(
                     "Profile %s is out of sync, please run 'leaf profile sync %s'" % (name, name))
-            env = workspace.getFullEnvironment(profile)
-        logger.displayItem(env)
+            env = wm.getFullEnvironment(profile)
+        wm.logger.displayItem(env)
         if 'activateScript' in vars(args):
             env.generateScripts(args.activateScript, args.deactivateScript)
 
@@ -83,11 +82,10 @@ class EnvBuiltinCommand(LeafCommand):
         initCommonArgs(parser, withEnvScripts=True)
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        packageManager = self.getPackageManager(args)
+        pm = self.getPackageManager(args)
 
-        env = packageManager.getLeafEnvironment()
-        logger.displayItem(env)
+        env = pm.getLeafEnvironment()
+        pm.logger.displayItem(env)
         env.generateScripts(args.activateScript, args.deactivateScript)
 
 
@@ -104,15 +102,14 @@ class EnvUserCommand(LeafCommand):
         initCommonArgs(parser, addRemoveEnv=True, withEnvScripts=True)
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        packageManager = self.getPackageManager(args)
+        pm = self.getPackageManager(args)
 
         if args.envAddList is not None or args.envRmList is not None:
-            packageManager.updateUserEnv(setMap=envListToMap(args.envAddList),
-                                         unsetList=args.envRmList)
+            pm.updateUserEnv(setMap=envListToMap(args.envAddList),
+                             unsetList=args.envRmList)
 
-        env = packageManager.getUserEnvironment()
-        logger.displayItem(env)
+        env = pm.getUserEnvironment()
+        pm.logger.displayItem(env)
         env.generateScripts(args.activateScript, args.deactivateScript)
 
 
@@ -129,15 +126,14 @@ class EnvWorkspaceCommand(LeafCommand):
         initCommonArgs(parser, addRemoveEnv=True, withEnvScripts=True)
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        workspace = self.getWorkspace(args)
+        wm = self.getWorkspaceManager(args)
 
         if args.envAddList is not None or args.envRmList is not None:
-            workspace.updateWorkspaceEnv(setMap=envListToMap(args.envAddList),
-                                         unsetList=args.envRmList)
+            wm.updateWorkspaceEnv(setMap=envListToMap(args.envAddList),
+                                  unsetList=args.envRmList)
 
-        env = workspace.getWorkspaceEnvironment()
-        logger.displayItem(env)
+        env = wm.getWorkspaceEnvironment()
+        wm.logger.displayItem(env)
         env.generateScripts(args.activateScript, args.deactivateScript)
 
 
@@ -156,18 +152,18 @@ class EnvProfileCommand(LeafCommand):
                             metavar='PROFILE', help='the profile name')
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        workspace = self.getWorkspace(args)
-        name = args.profiles if args.profiles is not None else workspace.getCurrentProfileName()
-        profile = workspace.getProfile(name)
+        wm = self.getWorkspaceManager(args)
+
+        name = args.profiles if args.profiles is not None else wm.getCurrentProfileName()
+        profile = wm.getProfile(name)
 
         if args.envAddList is not None or args.envRmList is not None:
             profile.updateEnv(setMap=envListToMap(args.envAddList),
                               unsetList=args.envRmList)
-            profile = workspace.updateProfile(profile)
+            profile = wm.updateProfile(profile)
 
         env = profile.getEnvironment()
-        logger.displayItem(env)
+        wm.logger.displayItem(env)
         env.generateScripts(args.activateScript, args.deactivateScript)
 
 
@@ -187,9 +183,9 @@ class EnvPackageCommand(LeafCommand):
                             nargs=argparse.REMAINDER)
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        app = self.getPackageManager(args)
-        env = app.getPackagesEnvironment(
+        pm = self.getPackageManager(args)
+
+        env = pm.getPackagesEnvironment(
             [PackageIdentifier.fromString(pis) for pis in args.pisList])
-        logger.displayItem(env)
+        pm.logger.displayItem(env)
         env.generateScripts(args.activateScript, args.deactivateScript)

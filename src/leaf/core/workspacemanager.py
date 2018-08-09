@@ -7,21 +7,22 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from collections import OrderedDict
-import os
 from pathlib import Path
+import os
 import shutil
 
 from leaf import __version__
 from leaf.constants import LeafFiles, JsonConstants, EnvConstants
 from leaf.core.dependencies import DependencyManager, DependencyType,\
     DependencyStrategy
+from leaf.core.packagemanager import PackageManager
 from leaf.model.config import WorkspaceConfiguration
 from leaf.model.environment import Environment
 from leaf.model.workspace import Profile
 from leaf.utils import jsonLoadFile, checkSupportedLeaf, jsonWriteFile
 
 
-class WorkspaceManager():
+class WorkspaceManager(PackageManager):
     '''
     Represent a workspace, where leaf profiles apply
     '''
@@ -53,64 +54,65 @@ class WorkspaceManager():
         # Use PWD
         return Path(os.getcwd())
 
-    def __init__(self, rootFolder, packageManager):
-        self.packageManager = packageManager
-        self.logger = packageManager.logger
-        self.rootFolder = rootFolder
-        self.configFile = rootFolder / LeafFiles.WS_CONFIG_FILENAME
-        self.dataFolder = rootFolder / LeafFiles.WS_DATA_FOLDERNAME
-        self.currentLink = self.dataFolder / LeafFiles.CURRENT_PROFILE_LINKNAME
+    def __init__(self, workspaceRootFolder, verbosity, nonInteractive):
+        PackageManager.__init__(self, verbosity, nonInteractive)
+        self.workspaceRootFolder = workspaceRootFolder
+        self.workspaceConfigFile = workspaceRootFolder / LeafFiles.WS_CONFIG_FILENAME
+        self.workspaceDataFolder = workspaceRootFolder / LeafFiles.WS_DATA_FOLDERNAME
+        self.currentLink = self.workspaceDataFolder / LeafFiles.CURRENT_PROFILE_LINKNAME
 
-    def isInitialized(self):
-        return WorkspaceManager.isWorkspaceRoot(self.rootFolder)
+    def isWorkspaceInitialized(self):
+        return WorkspaceManager.isWorkspaceRoot(self.workspaceRootFolder)
 
-    def inittialize(self):
-        if self.isInitialized():
+    def initializeWorkspace(self):
+        if self.isWorkspaceInitialized():
             raise ValueError("Workspace is already initialized")
-        self.writeConfiguration(WorkspaceConfiguration({}))
+        self.writeWorkspaceConfiguration(WorkspaceConfiguration({}))
 
-    def readConfiguration(self, initIfNeeded=False):
+    def readWorkspaceConfiguration(self, initIfNeeded=False):
         '''
         Return the configuration and if current leaf version is supported
         '''
-        if not self.isInitialized():
+        if not self.isWorkspaceInitialized():
             if not initIfNeeded:
                 raise("Workspace is not initialized")
-            self.inittialize()
-        wsc = WorkspaceConfiguration(jsonLoadFile(self.configFile))
+            self.initializeWorkspace()
+        wsc = WorkspaceConfiguration(jsonLoadFile(self.workspaceConfigFile))
         checkSupportedLeaf(wsc.jsonget(JsonConstants.INFO_LEAF_MINVER),
                            exceptionMessage="Leaf has to be updated to work with this workspace")
         return wsc
 
-    def writeConfiguration(self, wsc):
+    def writeWorkspaceConfiguration(self, wsc):
         '''
         Write the configuration and set the min leaf version to current version
         '''
-        if not self.dataFolder.exists():
-            self.dataFolder.mkdir()
+        if not self.workspaceDataFolder.exists():
+            self.workspaceDataFolder.mkdir()
         wsc.json[JsonConstants.WS_LEAFMINVERSION] = __version__
-        tmpFile = self.dataFolder / ("tmp-" + LeafFiles.WS_CONFIG_FILENAME)
+        tmpFile = self.workspaceDataFolder / \
+            ("tmp-" + LeafFiles.WS_CONFIG_FILENAME)
         jsonWriteFile(tmpFile, wsc.json, pp=True)
-        tmpFile.rename(self.configFile)
+        tmpFile.rename(self.workspaceConfigFile)
 
     def getWorkspaceEnvironment(self):
-        out = self.readConfiguration().getEnvironment()
-        out.env.append((EnvConstants.WORKSPACE_ROOT, str(self.rootFolder)))
+        out = self.readWorkspaceConfiguration().getEnvironment()
+        out.env.append((EnvConstants.WORKSPACE_ROOT,
+                        str(self.workspaceRootFolder)))
         return out
 
     def updateWorkspaceEnv(self, setMap=None, unsetList=None):
-        wsc = self.readConfiguration()
+        wsc = self.readWorkspaceConfiguration()
         wsc.updateEnv(setMap, unsetList)
-        self.writeConfiguration(wsc)
+        self.writeWorkspaceConfiguration(wsc)
 
     def listProfiles(self):
         '''
         Return a map(name/profile) of all profiles
         '''
-        wsc = self.readConfiguration()
+        wsc = self.readWorkspaceConfiguration()
         out = OrderedDict()
         for name, json in wsc.getProfilesMap().items():
-            out[name] = Profile(name, self.dataFolder / name, json)
+            out[name] = Profile(name, self.workspaceDataFolder / name, json)
         try:
             out[self.getCurrentProfileName()].isCurrentProfile = True
         except:
@@ -127,12 +129,12 @@ class WorkspaceManager():
 
     def createProfile(self, name):
         name = Profile.checkValidName(name)
-        wsc = self.readConfiguration()
+        wsc = self.readWorkspaceConfiguration()
         pfMap = wsc.getProfilesMap()
         if name in pfMap:
             raise ValueError("Profile %s already exists" % name)
         pfMap[name] = {}
-        self.writeConfiguration(wsc)
+        self.writeWorkspaceConfiguration(wsc)
         return self.getProfile(name)
 
     def renameProfile(self, oldname, newname):
@@ -144,7 +146,7 @@ class WorkspaceManager():
         if oldProfile.isCurrentProfile:
             self.updateCurrentLink(None)
 
-        wsc = self.readConfiguration()
+        wsc = self.readWorkspaceConfiguration()
         pfMap = wsc.getProfilesMap()
         if oldname not in pfMap:
             raise ValueError("Cannot find oldProfile %s" % oldname)
@@ -152,7 +154,7 @@ class WorkspaceManager():
             raise ValueError("Profile %s already exists" % newname)
         pfMap[newname] = pfMap[oldname]
         del pfMap[oldname]
-        self.writeConfiguration(wsc)
+        self.writeWorkspaceConfiguration(wsc)
 
         newProfile = self.getProfile(newname)
         # Rename old folder
@@ -166,12 +168,12 @@ class WorkspaceManager():
         return newProfile
 
     def updateProfile(self, profile):
-        wsc = self.readConfiguration()
+        wsc = self.readWorkspaceConfiguration()
         pfMap = wsc.getProfilesMap()
         if profile.name not in pfMap:
             raise ValueError("Cannot update profile %s" % profile.name)
         pfMap[profile.name] = profile.json
-        self.writeConfiguration(wsc)
+        self.writeWorkspaceConfiguration(wsc)
         return self.getProfile(profile.name)
 
     def deleteProfile(self, name):
@@ -182,10 +184,10 @@ class WorkspaceManager():
         if profile.isCurrentProfile:
             self.updateCurrentLink(None)
         # Update configuration
-        wsc = self.readConfiguration()
+        wsc = self.readWorkspaceConfiguration()
         pfMap = wsc.getProfilesMap()
         del pfMap[name]
-        self.writeConfiguration(wsc)
+        self.writeWorkspaceConfiguration(wsc)
 
     def isProfileSync(self, profile, raiseIfNotSync=False):
         '''
@@ -241,8 +243,8 @@ class WorkspaceManager():
 
     def provisionProfile(self, profile):
         # Ensure FS clean
-        if not self.dataFolder.is_dir():
-            self.dataFolder.mkdir()
+        if not self.workspaceDataFolder.is_dir():
+            self.workspaceDataFolder.mkdir()
         elif profile.folder.is_dir():
             shutil.rmtree(str(profile.folder))
         profile.folder.mkdir()
@@ -253,7 +255,7 @@ class WorkspaceManager():
             self.logger.printVerbose("All packages are already installed")
         except:
             self.logger.printDefault("Profile is out of sync")
-            self.packageManager.installFromRemotes(
+            self.installFromRemotes(
                 profile.getPackages(),
                 env=self._getSkelEnvironement(profile))
 
@@ -265,9 +267,7 @@ class WorkspaceManager():
                 piFolder = profile.folder / str(ip.getIdentifier())
             try:
                 env = self._getSkelEnvironement(profile)
-                self.packageManager.syncPackages(
-                    [str(ip.getIdentifier())],
-                    env=env)
+                self.syncPackages([str(ip.getIdentifier())], env=env)
                 piFolder.symlink_to(ip.folder)
             except Exception as e:
                 self.logger.printError(
@@ -277,14 +277,14 @@ class WorkspaceManager():
     def getFullEnvironment(self, profile):
         self.isProfileSync(profile, raiseIfNotSync=True)
         out = self._getSkelEnvironement(profile)
-        out.addSubEnv(self.packageManager.getPackagesEnvironment(
+        out.addSubEnv(self.getPackagesEnvironment(
             self.getProfileDependencies(profile)))
         return out
 
     def _getSkelEnvironement(self, profile):
         return Environment.build(
-            self.packageManager.getLeafEnvironment(),
-            self.packageManager.getUserEnvironment(),
+            self.getLeafEnvironment(),
+            self.getUserEnvironment(),
             self.getWorkspaceEnvironment(),
             profile.getEnvironment())
 
@@ -296,5 +296,5 @@ class WorkspaceManager():
             profile.getPackagesMap().values(),
             DependencyType.INSTALLED,
             strategy=DependencyStrategy.LATEST_VERSION,
-            ipMap=self.packageManager.listInstalledPackages(),
+            ipMap=self.listInstalledPackages(),
             env=self._getSkelEnvironement(profile))

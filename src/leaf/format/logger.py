@@ -9,11 +9,9 @@ Leaf Package Manager
 
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+from enum import IntEnum, unique
 import sys
 
-from enum import IntEnum, unique
-
-from leaf.core.workspacemanager import WorkspaceManager
 from leaf.model.environment import Environment
 from leaf.model.package import AvailablePackage, InstalledPackage, Manifest, \
     LeafArtifact, Feature, ConditionalPackageIdentifier
@@ -127,6 +125,7 @@ class TextLogger (ILogger):
             self.printDefault(message)
 
     def displayItem(self, item):
+        from leaf.core.workspacemanager import WorkspaceManager
         if isinstance(item, Environment):
             def commentConsumer(c):
                 print(Environment.comment(c))
@@ -137,9 +136,9 @@ class TextLogger (ILogger):
             item.printEnv(kvConsumer=kvConsumer,
                           commentConsumer=None if self.isQuiet() else commentConsumer)
         elif isinstance(item, WorkspaceManager):
-            print("Workspace %s" % item.rootFolder)
+            print("Workspace %s" % item.workspaceRootFolder)
             if self.isVerbose():
-                wsc = item.readConfiguration()
+                wsc = item.readWorkspaceConfiguration()
                 content = OrderedDict()
                 content["Workspace env"] = wsc.getEnvMap()
                 self.prettyprintContent(content)

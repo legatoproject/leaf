@@ -10,11 +10,11 @@ Leaf Package Manager
 from builtins import filter
 from collections import OrderedDict
 from datetime import datetime
+from tarfile import TarFile
 import json
 import os
 import platform
 import shutil
-from tarfile import TarFile
 import urllib.request
 
 from leaf import __version__
@@ -22,6 +22,7 @@ from leaf.constants import JsonConstants, LeafConstants, LeafFiles, EnvConstants
 from leaf.core.coreutils import VariableResolver, StepExecutor
 from leaf.core.dependencies import DependencyManager, DependencyType
 from leaf.format.formatutils import sizeof_fmt
+from leaf.format.logger import TextLogger
 from leaf.model.base import JsonObject
 from leaf.model.config import UserConfiguration
 from leaf.model.environment import Environment
@@ -33,19 +34,41 @@ from leaf.utils import getAltEnvPath, jsonLoadFile, jsonWriteFile, resolveUrl,\
     mkTmpLeafRootDir, downloadFile
 
 
-class RemoteManager():
-
-    def __init__(self, logger):
+class _LeafBase():
+    def __init__(self):
         '''
         Constructor
         '''
-        self.logger = logger
-        self.configurationFile = getAltEnvPath(EnvConstants.CUSTOM_CONFIG_FILE,
-                                               LeafFiles.DEFAULT_CONFIG_FILE)
-        self.cacheFolder = getAltEnvPath(EnvConstants.CUSTOM_CACHE_FOLDER,
-                                         LeafFiles.DEFAULT_CACHE_FOLDER,
-                                         mkdirIfNeeded=True)
-        self.remoteCacheFile = self.cacheFolder / LeafFiles.CACHE_REMOTES_FILENAME
+        self.configurationFolder = getAltEnvPath(
+            EnvConstants.CUSTOM_CONFIG,
+            LeafFiles.DEFAULT_CONFIG_FOLDER,
+            mkdirIfNeeded=True)
+        self.cacheFolder = getAltEnvPath(
+            EnvConstants.CUSTOM_CACHE,
+            LeafFiles.DEFAULT_CACHE_FOLDER,
+            mkdirIfNeeded=True)
+
+        self.configurationFile = self.configurationFolder / \
+            LeafFiles.CONFIG_FILENAME
+
+
+class LoggerManager(_LeafBase):
+
+    def __init__(self, verbosity, nonInteractive):
+        _LeafBase.__init__(self)
+        self.logger = TextLogger(verbosity, nonInteractive)
+        self.nonInteractive = nonInteractive
+
+
+class RemoteManager(LoggerManager):
+
+    def __init__(self, verbosity, nonInteractive):
+        LoggerManager.__init__(self, verbosity, nonInteractive)
+        '''
+        Constructor
+        '''
+        self.remoteCacheFile = self.cacheFolder / \
+            LeafFiles.CACHE_REMOTES_FILENAME
 
     def readConfiguration(self):
         '''
@@ -175,15 +198,13 @@ class PackageManager(RemoteManager):
     Main API for using Leaf package manager
     '''
 
-    def __init__(self, logger, nonInteractive):
+    def __init__(self, verbosity, nonInteractive):
         '''
         Constructor
         '''
-        RemoteManager.__init__(self, logger)
-        self.logger = logger
+        RemoteManager.__init__(self, verbosity, nonInteractive)
         self.downloadCacheFolder = self.cacheFolder / \
             LeafFiles.CACHE_DOWNLOAD_FOLDERNAME
-        self.nonInteractive = nonInteractive
 
     def getInstallFolder(self):
         out = self.readConfiguration().getRootFolder()

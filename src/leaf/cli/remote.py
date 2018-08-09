@@ -36,9 +36,10 @@ class RemoteListCommand(LeafCommand):
             "list remote repositories")
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        for remote in self.getPackageManager(args).listRemotes().values():
-            logger.displayItem(remote)
+        pm = self.getPackageManager(args)
+
+        for remote in pm.listRemotes().values():
+            pm.logger.displayItem(remote)
 
 
 class RemoteAddCommand(LeafCommand):
@@ -56,7 +57,9 @@ class RemoteAddCommand(LeafCommand):
                             help='the remote URL (supported url schemes: http(s)://, file://)')
 
     def execute(self, args):
-        self.getPackageManager(args).createRemote(args.alias[0], args.url[0])
+        pm = self.getPackageManager(args)
+
+        pm.createRemote(args.alias[0], args.url[0])
 
 
 class RemoteRemoveCommand(LeafCommand):
@@ -72,7 +75,9 @@ class RemoteRemoveCommand(LeafCommand):
                             help='the alias of the remote to remove')
 
     def execute(self, args):
-        self.getPackageManager(args).deleteRemote(args.alias[0])
+        pm = self.getPackageManager(args)
+
+        pm.deleteRemote(args.alias[0])
 
 
 class RemoteEnableCommand(LeafCommand):
@@ -89,6 +94,7 @@ class RemoteEnableCommand(LeafCommand):
 
     def execute(self, args):
         pm = self.getPackageManager(args)
+
         remote = pm.listRemotes().get(args.alias[0])
         if remote is None:
             raise ValueError("Cannot find remote %s" % args.alias[0])
@@ -110,6 +116,7 @@ class RemoteDisableCommand(LeafCommand):
 
     def execute(self, args):
         pm = self.getPackageManager(args)
+
         remote = pm.listRemotes().get(args.alias[0])
         if remote is None:
             raise ValueError("Cannot find remote %s" % args.alias[0])
@@ -125,4 +132,6 @@ class RemoteFetchCommand(LeafCommand):
                              "fetch content from enabled remotes")
 
     def execute(self, args):
-        self.getPackageManager(args).fetchRemotes(smartRefresh=False)
+        pm = self.getPackageManager(args)
+
+        pm.fetchRemotes(smartRefresh=False)

@@ -130,9 +130,9 @@ class AbstractTestWithRepo(unittest.TestCase):
         shutil.rmtree(str(AbstractTestWithRepo.VOLATILE_FOLDER),
                       ignore_errors=True)
         AbstractTestWithRepo.VOLATILE_FOLDER.mkdir()
-        os.environ[EnvConstants.CUSTOM_CONFIG_FILE] = str(
-            self.getConfigurationFile())
-        os.environ[EnvConstants.CUSTOM_CACHE_FOLDER] = str(
+        os.environ[EnvConstants.CUSTOM_CONFIG] = str(
+            self.getConfigurationFolder())
+        os.environ[EnvConstants.CUSTOM_CACHE] = str(
             self.getCacheFolder())
 
     def tearDown(self):
@@ -150,8 +150,8 @@ class AbstractTestWithRepo(unittest.TestCase):
             out.mkdir()
         return out
 
-    def getConfigurationFile(self):
-        return self.getVolatileItem("config.json", mkdir=False)
+    def getConfigurationFolder(self):
+        return self.getVolatileItem("config", mkdir=True)
 
     def getInstallFolder(self):
         return self.getVolatileItem("packages")

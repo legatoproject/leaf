@@ -40,12 +40,12 @@ class FeatureListCommand(LeafCommand):
         LeafCommand.initArgs(self, parser)
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        packageManager = self.getPackageManager(args)
-        featureManager = FeatureManager(packageManager)
+        pm = self.getPackageManager(args)
+
+        featureManager = FeatureManager(pm)
         for feature in sorted(featureManager.features.values(),
                               key=lambda x: x.name):
-            logger.displayItem(feature)
+            pm.logger.displayItem(feature)
 
 
 class FeatureQueryCommand(LeafCommand):
@@ -63,32 +63,32 @@ class FeatureQueryCommand(LeafCommand):
                             help='the feature name')
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        packageManager = self.getPackageManager(args)
-        featureManager = FeatureManager(packageManager)
+        pm = self.getPackageManager(args)
+
+        featureManager = FeatureManager(pm)
         featureName = args.featureName[0]
         feature = featureManager.getFeature(featureName)
-        logger.printVerbose("Found feature %s with key %s" %
-                            (feature.name, feature.getKey()))
+        pm.logger.printVerbose("Found feature %s with key %s" %
+                               (feature.name, feature.getKey()))
 
         env = None
-        workspace = self.getWorkspace(args, checkInitialized=False)
-        if workspace.isInitialized():
+        workspace = self.getWorkspaceManager(args, checkInitialized=False)
+        if workspace.isWorkspaceInitialized():
             profile = workspace.getProfile(workspace.getCurrentProfileName())
             env = workspace.getFullEnvironment(profile)
         else:
-            env = Environment.build(packageManager.getLeafEnvironment(),
-                                    packageManager.getUserEnvironment())
+            env = Environment.build(pm.getLeafEnvironment(),
+                                    pm.getUserEnvironment())
         envValue = env.findValue(feature.getKey())
-        logger.printVerbose("Found %s=%s in env" %
-                            (feature.getKey(), envValue))
+        pm.logger.printVerbose("Found %s=%s in env" %
+                               (feature.getKey(), envValue))
         featureEnumList = feature.retrieveEnumsForValue(envValue)
         response = ' | '.join(featureEnumList)
-        if logger.isQuiet():
-            logger.printQuiet(response)
+        if pm.logger.isQuiet():
+            pm.logger.printQuiet(response)
         else:
-            logger.printDefault("%s = %s" %
-                                (feature.name, response))
+            pm.logger.printDefault("%s = %s" %
+                                   (feature.name, response))
 
 
 class FeatureToggleCommand(LeafCommand):
@@ -110,16 +110,17 @@ class FeatureToggleCommand(LeafCommand):
                             help='the feature value')
 
     def execute(self, args):
-        packageManager = self.getPackageManager(args)
-        featureManager = FeatureManager(packageManager)
+        pm = self.getPackageManager(args)
+
+        featureManager = FeatureManager(pm)
         name = args.featureName[0]
         value = args.featureValue[0]
         if args.envScope == Scope.USER:
             featureManager.toggleUserFeature(
-                name, value, packageManager)
+                name, value, pm)
         elif args.envScope == Scope.WORKSPACE:
             featureManager.toggleWorkspaceFeature(
-                name, value, self.getWorkspace(args))
+                name, value, self.getWorkspaceManager(args))
         elif args.envScope == Scope.PROFILE:
             featureManager.toggleProfileFeature(
-                name, value, self.getWorkspace(args))
+                name, value, self.getWorkspaceManager(args))

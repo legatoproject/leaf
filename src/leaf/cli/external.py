@@ -6,14 +6,15 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-import argparse
 from collections import OrderedDict
-import os
 from os.path import pathsep
 from pathlib import Path
+import argparse
+import os
 import subprocess
 
 from leaf.cli.cliutils import GenericCommand
+
 
 MOTIF = 'LEAF_DESCRIPTION'
 HEADER_SIZE = 2048
@@ -44,15 +45,13 @@ class ExternalCommand(GenericCommand):
                             nargs=argparse.REMAINDER)
 
     def execute(self, args):
-        # Create a package manager to get env
-        packageManager = self.getPackageManager(args)
-        workspace = self.getWorkspace(args, checkInitialized=False)
+        wm = self.getWorkspaceManager(args, checkInitialized=False)
 
         env = dict(os.environ)
-        env.update(packageManager.getLeafEnvironment().toMap())
-        env.update(packageManager.getUserEnvironment().toMap())
-        if workspace.isInitialized():
-            env.update(workspace.getWorkspaceEnvironment().toMap())
+        env.update(wm.getLeafEnvironment().toMap())
+        env.update(wm.getUserEnvironment().toMap())
+        if wm.isWorkspaceInitialized():
+            env.update(wm.getWorkspaceEnvironment().toMap())
 
         # Use args to run the external command
         command = [str(self.executable)]

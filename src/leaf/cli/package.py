@@ -6,8 +6,8 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-import argparse
 from pathlib import Path
+import argparse
 
 from leaf.cli.cliutils import LeafCommand, LeafMetaCommand
 from leaf.core.dependencies import DependencyType
@@ -57,7 +57,6 @@ class PackageListCommand(LeafCommand):
                             help="filter with given keywords")
 
     def execute(self, args):
-        logger = self.getLogger(args)
         pm = self.getPackageManager(args)
 
         pkgFilter = MetaPackageFilter()
@@ -77,7 +76,7 @@ class PackageListCommand(LeafCommand):
         mfList = sorted(pm.listInstalledPackages().values(),
                         key=Manifest.getIdentifier)
         rend.extend(mf for mf in mfList if pkgFilter.matches(mf))
-        logger.printRenderer(rend)
+        pm.logger.printRenderer(rend)
 
 
 class PackageDepsCommand(LeafCommand):
@@ -126,13 +125,13 @@ class PackageDepsCommand(LeafCommand):
                             help='package name')
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        app = self.getPackageManager(args)
-        items = app.listDependencies(args.packages,
-                                     args.dependencyType,
-                                     envMap=envListToMap(args.customEnvList))
+        pm = self.getPackageManager(args)
+
+        items = pm.listDependencies(args.packages,
+                                    args.dependencyType,
+                                    envMap=envListToMap(args.customEnvList))
         for i in items:
-            logger.displayItem(i)
+            pm.logger.displayItem(i)
 
 
 class PackageInstallCommand(LeafCommand):
@@ -157,14 +156,13 @@ class PackageInstallCommand(LeafCommand):
                             help='name of packages to install')
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        app = self.getPackageManager(args)
+        pm = self.getPackageManager(args)
 
-        items = app.installFromRemotes(args.packages,
-                                       keepFolderOnError=args.keepOnError)
+        items = pm.installFromRemotes(args.packages,
+                                      keepFolderOnError=args.keepOnError)
         if len(items) > 0:
-            logger.printQuiet("Packages installed: " +
-                              ' '.join([str(p.getIdentifier()) for p in items]))
+            pm.logger.printQuiet("Packages installed: " +
+                                 ' '.join([str(p.getIdentifier()) for p in items]))
 
 
 class PackagePrereqCommand(LeafCommand):
@@ -185,17 +183,16 @@ class PackagePrereqCommand(LeafCommand):
                             help='package name')
 
     def execute(self, args):
-        logger = self.getLogger(args)
-        app = self.getPackageManager(args)
+        pm = self.getPackageManager(args)
 
         tmpRootFolder = args.prereqRootFolder
         if tmpRootFolder is None:
             tmpRootFolder = mkTmpLeafRootDir()
-        logger.printQuiet("Prereq root folder: %s" % tmpRootFolder)
-        errorCount = app.installPrereqFromRemotes(args.packages,
-                                                  tmpRootFolder,
-                                                  raiseOnError=False)
-        logger.printQuiet("Prereq installed with %d error(s)" % errorCount)
+        pm.logger.printQuiet("Prereq root folder: %s" % tmpRootFolder)
+        errorCount = pm.installPrereqFromRemotes(args.packages,
+                                                 tmpRootFolder,
+                                                 raiseOnError=False)
+        pm.logger.printQuiet("Prereq installed with %d error(s)" % errorCount)
         return errorCount
 
 
@@ -213,9 +210,9 @@ class PackageUninstallCommand(LeafCommand):
                             help='name of package to uninstall')
 
     def execute(self, args):
-        app = self.getPackageManager(args)
+        pm = self.getPackageManager(args)
 
-        app.uninstallPackages(args.packages)
+        pm.uninstallPackages(args.packages)
 
 
 class PackageSyncCommand(LeafCommand):
@@ -232,6 +229,6 @@ class PackageSyncCommand(LeafCommand):
                             help='name of package to uninstall')
 
     def execute(self, args):
-        app = self.getPackageManager(args)
+        pm = self.getPackageManager(args)
 
-        app.syncPackages(args.packages)
+        pm.syncPackages(args.packages)

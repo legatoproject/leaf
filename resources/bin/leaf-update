@@ -10,19 +10,18 @@ Leaf Package Manager
 '''
 
 from argparse import ArgumentParser
+from pathlib import Path
 import argparse
 import os
-from pathlib import Path
 import sys
 import traceback
 
 import argcomplete
-from leaf.constants import LeafConstants
-from leaf.core.packagemanager import PackageManager
-from leaf.core.workspacemanager import WorkspaceManager
-from leaf.model.package import PackageIdentifier
 
+from leaf.constants import LeafConstants
+from leaf.core.workspacemanager import WorkspaceManager
 from leaf.format.logger import TextLogger, Verbosity
+from leaf.model.package import PackageIdentifier
 
 
 def getLatestAvailablePackage(motif, piList):
@@ -61,16 +60,18 @@ if __name__ == '__main__':
 
     try:
         nonInteractive = os.environ.get("LEAF_NON_INTERACTIVE") is not None
-        logger = TextLogger(args.verbosity, nonInteractive)
-        packageManager = PackageManager(logger, nonInteractive)
         workspaceManager = WorkspaceManager(
-            WorkspaceManager.findRoot(), packageManager)
+            WorkspaceManager.findRoot(),
+            args.verbosity,
+            nonInteractive)
+        logger = workspaceManager.logger
+
         profileName = workspaceManager.getCurrentProfileName()
         profile = workspaceManager.getProfile(profileName)
 
         profilePackageMap = profile.getPackagesMap()
-        allPiList = list(packageManager.listInstalledPackages()) + \
-            list(packageManager.listAvailablePackages())
+        allPiList = list(workspaceManager.listInstalledPackages()) + \
+            list(workspaceManager.listAvailablePackages())
 
         updatePiList = []
 
