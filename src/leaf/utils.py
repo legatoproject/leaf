@@ -152,6 +152,18 @@ def computeSha1sum(file):
     return hasher.hexdigest()
 
 
+def downloadData(url, outputFile=None, timeout=LeafConstants.DOWNLOAD_TIMEOUT):
+    '''
+    Download data and write it to outputFile 
+    or return the data if outputFile is None
+    '''
+    with urllib.request.urlopen(url, timeout=timeout) as stream:
+        if outputFile is None:
+            return stream.read()
+        with open(str(outputFile), 'wb') as fp:
+            fp.write(stream.read())
+
+
 def downloadFile(url, folder, logger, filename=None, sha1sum=None):
     '''
     Download an artifact and eventually check its sha1
@@ -159,6 +171,8 @@ def downloadFile(url, folder, logger, filename=None, sha1sum=None):
     parsedUrl = urlparse(url)
     if filename is None:
         filename = Path(parsedUrl.path).name
+    if not folder.exists():
+        folder.mkdir(parents=True)
     targetFile = folder / filename
     if targetFile.exists():
         if sha1sum is None:

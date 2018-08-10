@@ -57,11 +57,23 @@ class RemoteAddCommand(LeafCommand):
                             help='the alias of the new remote')
         parser.add_argument('url', metavar='URL', nargs=1,
                             help='the remote URL (supported url schemes: http(s)://, file://)')
+        group = parser.add_mutually_exclusive_group()
+        group.required = True
+        group.add_argument("--insecure",
+                           dest="insecure",
+                           action="store_true",
+                           help="disable content checking for remote")
+        group.add_argument("--gpg",
+                           dest="gpgKey",
+                           action="store",
+                           help="GPG fingerprint to verify signature")
 
     def execute(self, args):
         pm = self.getPackageManager(args)
 
-        pm.createRemote(args.alias[0], args.url[0])
+        pm.createRemote(args.alias[0], args.url[0],
+                        insecure=args.insecure,
+                        gpgKey=args.gpgKey)
 
 
 class RemoteRemoveCommand(LeafCommand):

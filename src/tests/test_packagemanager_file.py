@@ -12,7 +12,7 @@ from leaf.constants import EnvConstants
 from leaf.core.dependencies import DependencyType
 from leaf.core.features import FeatureManager
 from leaf.core.packagemanager import PackageManager
-from leaf.format.logger import Verbosity, TextLogger
+from leaf.format.logger import Verbosity
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier, AvailablePackage,\
     InstalledPackage
@@ -47,11 +47,14 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.assertEqual(0, len(self.pm.listInstalledPackages()))
         self.assertEqual(0, len(self.pm.readConfiguration().getRemotesMap()))
         self.assertEqual(0, len(self.pm.listRemotes()))
-        self.pm.createRemote("default", self.getRemoteUrl())
-        self.assertEqual(1, len(self.pm.readConfiguration().getRemotesMap()))
+
+        self.pm.createRemote("default", self.getRemoteUrl(), insecure=True)
+        self.pm.createRemote("other", self.getRemoteUrl2(), insecure=True)
+        self.assertEqual(2, len(self.pm.readConfiguration().getRemotesMap()))
         self.pm.fetchRemotes(True)
-        self.assertEqual(1, len(self.pm.listRemotes()))
+        self.assertEqual(2, len(self.pm.listRemotes()))
         self.assertTrue(self.pm.listRemotes()["default"].isFetched())
+        self.assertTrue(self.pm.listRemotes()["other"].isFetched())
         self.assertNotEqual(0, len(self.pm.listAvailablePackages()))
 
     def testCompression(self):
@@ -63,41 +66,32 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.checkContent(self.pm.listInstalledPackages(), packs)
 
     def testEnableDisableRemote(self):
-        self.assertEqual(1, len(self.pm.listRemotes(True)))
+        self.assertEqual(2, len(self.pm.listRemotes(True)))
         self.assertTrue(len(self.pm.listAvailablePackages()) > 0)
-        apMap = self.pm.listAvailablePackages()
 
         remote = self.pm.listRemotes()["default"]
         remote.setEnabled(False)
         self.pm.updateRemote(remote)
-        self.assertEqual(1, len(self.pm.listRemotes(False)))
+        self.assertEqual(2, len(self.pm.listRemotes(False)))
+        self.assertEqual(1, len(self.pm.listRemotes(True)))
+        self.assertTrue(len(self.pm.listAvailablePackages()) == 1)
+
+        remote = self.pm.listRemotes()["other"]
+        remote.setEnabled(False)
+        self.pm.updateRemote(remote)
+        self.assertEqual(2, len(self.pm.listRemotes(False)))
         self.assertEqual(0, len(self.pm.listRemotes(True)))
-        self.assertTrue(len(self.pm.listAvailablePackages()) == 0)
-        self.pm.fetchRemotes()
         self.assertTrue(len(self.pm.listAvailablePackages()) == 0)
 
         remote = self.pm.listRemotes()["default"]
         remote.setEnabled(True)
         self.pm.updateRemote(remote)
-        self.assertEqual(1, len(self.pm.listRemotes(False)))
-        self.assertEqual(1, len(self.pm.listRemotes(True)))
-        self.assertTrue(len(self.pm.listAvailablePackages()) > 0)
-
-        self.pm.createRemote("composite",
-                             self.getRemoteUrl().replace("index", "composite"))
-        self.assertEqual(len(apMap),
-                         len(self.pm.listAvailablePackages(smartRefresh=False)))
-
-        remote = self.pm.listRemotes()["default"]
-        remote.setEnabled(False)
+        remote = self.pm.listRemotes()["other"]
+        remote.setEnabled(True)
         self.pm.updateRemote(remote)
-        self.assertGreater(len(apMap),
-                           len(self.pm.listAvailablePackages(smartRefresh=False)))
-
-    def testComposite(self):
-        packs = ["composite_1.0"]
-        self.pm.installFromRemotes(packs)
-        self.checkContent(self.pm.listInstalledPackages(), packs)
+        self.assertEqual(2, len(self.pm.listRemotes(False)))
+        self.assertEqual(2, len(self.pm.listRemotes(True)))
+        self.assertTrue(len(self.pm.listAvailablePackages()) > 0)
 
     def testContainer(self):
         self.pm.installFromRemotes(["container-A_1.0"])

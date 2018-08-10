@@ -92,11 +92,6 @@ class RepositoryIndexSubCommand(LeafCommand):
                             metavar='STRING',
                             dest='index_description',
                             help='description of the repository')
-        parser.add_argument('--composite',
-                            dest='index_composites',
-                            metavar='FILE',
-                            action='append',
-                            help='reference composite index file')
         parser.add_argument('artifacts',
                             type=Path,
                             nargs=argparse.REMAINDER,
@@ -108,5 +103,4 @@ class RepositoryIndexSubCommand(LeafCommand):
         rm.index(args.index_output,
                  args.artifacts,
                  args.index_name,
-                 args.index_description,
-                 args.index_composites)
+                 args.index_description)

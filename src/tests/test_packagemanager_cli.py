@@ -21,11 +21,14 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
                 templateOut="remote.out",
                 byMethod=False,
                 variables={
-                    "{REMOTE_URL}": self.getRemoteUrl()}):
+                    "{REMOTE_URL}": self.getRemoteUrl(),
+                    "{REMOTE_URL2}": self.getRemoteUrl2()}):
             self.leafExec(("remote", "list"))
 
-        self.leafExec(["remote", "add"], "alt", self.getRemoteUrl())
-        self.leafExec(["remote", "add"], "alt", self.getRemoteUrl(),
+        self.leafExec(["remote", "add"], "--insecure",
+                      "alt", self.getRemoteUrl())
+        self.leafExec(["remote", "add"], "--insecure",
+                      "alt", self.getRemoteUrl(),
                       expectedRc=2)
 
         self.leafExec(["remote", "disable"], "alt")

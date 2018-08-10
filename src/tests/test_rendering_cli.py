@@ -18,8 +18,8 @@ class TestRenderingCli_Default(LeafCliWrapper):
         with self.assertStdout(
                 templateOut="search_all.out",
                 variables={
-                    "{COMPOSITE_URL}": self.getCompositeUrl(),
-                    "{REMOTE_URL}": self.getRemoteUrl()}):
+                    "{REMOTE_URL}": self.getRemoteUrl(),
+                    "{REMOTE_URL2}": self.getRemoteUrl2()}):
             self.leafExec("search", "-a", "container-A")
         with self.assertStdout(
                 templateOut="package_list.out",
@@ -28,12 +28,13 @@ class TestRenderingCli_Default(LeafCliWrapper):
             self.leafExec(["package", "list"], "--all")
 
     def testRemote(self):
-        self.leafExec(["remote", "add"], "alt", self.getRemoteUrl())
+        self.leafExec(["remote", "add"], "alt", self.getRemoteUrl(), "--insecure")
         self.leafExec(["remote", "disable"], "alt")
         with self.assertStdout(
                 templateOut="remote_list.out",
                 variables={
-                    "{REMOTE_URL}": self.getRemoteUrl()}):
+                    "{REMOTE_URL}": self.getRemoteUrl(),
+                    "{REMOTE_URL2}": self.getRemoteUrl2()}):
             self.leafExec(("remote", "list"))
 
     def testEnvironment(self):

@@ -1,7 +1,8 @@
 Refreshing available packages...
-Fetching remote default
 Fetched file://{ROOT_FOLDER}/repository/index.json
-Fetched file://{ROOT_FOLDER}/repository/composite.json
+Fetched content from default
+Fetched file://{ROOT_FOLDER}/repository/index2.json
+Fetched content from other
 ┌────────────────────────────────────────────────────────────────┐
 │                           5 features                           │
 ├─────────────────────────┬──────────────────────────────────────┤

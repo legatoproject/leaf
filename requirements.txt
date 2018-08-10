@@ -7,3 +7,4 @@ autopep8
 argcomplete
 requests
 colorama
+python-gnupg

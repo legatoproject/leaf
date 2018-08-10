@@ -13,7 +13,7 @@ class FilteringTest(AbstractTestWithRepo):
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
         pm = PackageManager(Verbosity.DEFAULT, True)
-        pm.createRemote("default", self.getRemoteUrl())
+        pm.createRemote("default", self.getRemoteUrl(), insecure=True)
         pm.fetchRemotes()
         self.content = pm.listAvailablePackages().values()
         self.assertTrue(len(self.content) > 0)

@@ -56,7 +56,7 @@ class RelengManager(LoggerManager):
                 tf.add(str(file),
                        str(file.relative_to(manifestFile.parent)))
 
-    def index(self, outputFile, artifacts, name=None, description=None, composites=[]):
+    def index(self, outputFile, artifacts, name=None, description=None):
         '''
         Create an index.json referencing all given artifacts
         '''
@@ -69,22 +69,29 @@ class RelengManager(LoggerManager):
 
         rootNode = OrderedDict()
         rootNode[JsonConstants.INFO] = infoNode
-        if composites is not None and len(composites) > 0:
-            rootNode[JsonConstants.REMOTE_COMPOSITE] = composites
 
+        sha1Map = {}
         packagesNode = []
         rootNode[JsonConstants.REMOTE_PACKAGES] = packagesNode
         for a in artifacts:
             la = LeafArtifact(a)
-            self.logger.printDefault("Found:", la.getIdentifier())
-            fileNode = OrderedDict()
-            fileNode[JsonConstants.REMOTE_PACKAGE_FILE] = str(
-                Path(a).relative_to(outputFile.parent))
-            fileNode[JsonConstants.REMOTE_PACKAGE_SHA1SUM] = str(
-                computeSha1sum(a))
-            fileNode[JsonConstants.REMOTE_PACKAGE_SIZE] = a.stat().st_size
-            fileNode[JsonConstants.INFO] = la.getNodeInfo()
-            packagesNode.append(fileNode)
+            pi = la.getIdentifier()
+            sha1 = computeSha1sum(a)
+            if pi in sha1Map:
+                if sha1 != sha1Map[pi]:
+                    raise ValueError(
+                        "Artifact %s has multiple artifacts for same version" % pi)
+                self.logger.printDefault("Artifact already present, skip:", pi)
+            else:
+                sha1Map[pi] = sha1
+                self.logger.printDefault("Found:", pi)
+                fileNode = OrderedDict()
+                fileNode[JsonConstants.REMOTE_PACKAGE_FILE] = str(
+                    Path(a).relative_to(outputFile.parent))
+                fileNode[JsonConstants.REMOTE_PACKAGE_SHA1SUM] = str(sha1)
+                fileNode[JsonConstants.REMOTE_PACKAGE_SIZE] = a.stat().st_size
+                fileNode[JsonConstants.INFO] = la.getNodeInfo()
+                packagesNode.append(fileNode)
 
         jsonWriteFile(outputFile, rootNode, pp=True)
         self.logger.printDefault("Index created:", outputFile)

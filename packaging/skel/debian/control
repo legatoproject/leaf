@@ -9,7 +9,7 @@ Homepage: http://legato.io
 
 Package: leaf
 Architecture: all
-Depends: ${misc:Depends}, ${python3:Depends}, python3-requests, gnupg, bash-completion
+Depends: ${misc:Depends}, ${python3:Depends}, python3-requests, gnupg, bash-completion, python3-gnupg
 Recommends: python3-argcomplete, python3-colorama
 Description: Legato Package Manager Tool
  Used to manage deliverables related to Legato Application Framework

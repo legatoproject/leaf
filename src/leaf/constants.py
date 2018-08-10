@@ -20,6 +20,7 @@ class EnvConstants():
     CUSTOM_CONFIG = 'LEAF_CONFIG'
     CUSTOM_CACHE = 'LEAF_CACHE'
     DOWNLOAD_TIMEOUT = 'LEAF_TIMEOUT'
+    GPG_KEYSERVER = "LEAF_GPG_KEYSERVER"
 
 
 class LeafConstants():
@@ -27,7 +28,8 @@ class LeafConstants():
     Constants needed by Leaf
     '''
     MIN_PYTHON_VERSION = (3, 4)
-    DOWNLOAD_TIMEOUT = int(os.environ.get(EnvConstants.DOWNLOAD_TIMEOUT, "5"))
+    DOWNLOAD_TIMEOUT = int(os.environ.get(EnvConstants.DOWNLOAD_TIMEOUT,
+                                          "5"))
     LEAF_COMPRESSION = {'.leaf': 'xz',
                         '.tar':  '',
                         '.xz':   'xz',
@@ -36,6 +38,8 @@ class LeafConstants():
                         '.gz':   'gz'}
     DEFAULT_PROFILE = "default"
     CACHE_DELTA = timedelta(days=1)
+    GPG_SIG_EXTENSION = '.asc'
+    DEFAULT_GPG_KEYSERVER = 'subset.pool.sks-keyservers.net'
 
 
 class LeafFiles():
@@ -57,6 +61,7 @@ class LeafFiles():
     CACHE_REMOTES_FILENAME = 'remotes.json'
     CONFIG_FILENAME = 'config.json'
     THEMES_FILENAME = 'themes.ini'
+    GPG_DIRNAME = 'gpg'
 
 
 class JsonConstants(object):
@@ -67,6 +72,7 @@ class JsonConstants(object):
     CONFIG_REMOTES = 'remotes'
     CONFIG_REMOTE_URL = 'url'
     CONFIG_REMOTE_ENABLED = 'enabled'
+    CONFIG_REMOTE_GPGKEY = 'gpgKey'
     CONFIG_ENV = 'env'
     CONFIG_ROOT = 'rootfolder'
 
@@ -74,7 +80,6 @@ class JsonConstants(object):
     REMOTE_NAME = 'name'
     REMOTE_DATE = 'date'
     REMOTE_DESCRIPTION = 'description'
-    REMOTE_COMPOSITE = 'composite'
     REMOTE_PACKAGES = 'packages'
     REMOTE_PACKAGE_SIZE = 'size'
     REMOTE_PACKAGE_FILE = 'file'

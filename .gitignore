@@ -3,6 +3,8 @@
 /output/
 
 # Eclipse
+/.project
+/.pydevproject
 /.settings/
 
 # VS Code

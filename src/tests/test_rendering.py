@@ -111,7 +111,7 @@ class TestRendering_Default(LeafCliWrapper):
         AbstractTestWithRepo.setUp(self)
         pm = PackageManager(self.loggerManager.logger, nonInteractive=True)
         pm.setInstallFolder(self.getInstallFolder())
-        pm.createRemote("default", self.getRemoteUrl())
+        pm.createRemote("default", self.getRemoteUrl(), insecure=True)
         ws = WorkspaceManager(
             WorkspaceManager.findRoot(
                 customPath=self.getWorkspaceFolder(),

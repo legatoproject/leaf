@@ -33,6 +33,9 @@ ALT_FILENAMES = {
     "compress-gz_1.0":  'compress-gz_1.0.tar.gz'
 }
 
+TEST_GPG_FINGERPRINT = "E35D6817397359074160F68952ECE808A2BC372C"
+TEST_GPG_HOMEDIR = ROOT_FOLDER / 'src' / 'tests' / 'gpg'
+
 
 class StringIOWrapper(StringIO):
 
@@ -181,8 +184,8 @@ class AbstractTestWithRepo(AbstractTestWithChecker):
     def getRemoteUrl(self):
         return (AbstractTestWithRepo.REPO_FOLDER / "index.json").as_uri()
 
-    def getCompositeUrl(self):
-        return (AbstractTestWithRepo.REPO_FOLDER / "composite.json").as_uri()
+    def getRemoteUrl2(self):
+        return (AbstractTestWithRepo.REPO_FOLDER / "index2.json").as_uri()
 
     def getVolatileItem(self, name, mkdir=True):
         out = AbstractTestWithRepo.VOLATILE_FOLDER / name
@@ -268,7 +271,10 @@ class LeafCliWrapper(AbstractTestWithRepo):
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
         self.leafExec("config", "--root", self.getInstallFolder())
-        self.leafExec(("remote", "add"), "default", self.getRemoteUrl())
+        self.leafExec(("remote", "add"), "--insecure",
+                      "default", self.getRemoteUrl())
+        self.leafExec(("remote", "add"), "--insecure",
+                      "other", self.getRemoteUrl2())
 
     def leafExec(self, verb, *args, altWorkspace=None, expectedRc=0):
         if altWorkspace is None:
@@ -304,7 +310,7 @@ def generateRepo(sourceFolder, outputFolder):
     if not outputFolder.is_dir():
         outputFolder.mkdir(parents=True)
     artifactsList = []
-    artifactsListComposite = []
+    artifactsList2 = []
 
     rm = RelengManager(Verbosity.DEFAULT, True)
     for packageFolder in sourceFolder.iterdir():
@@ -320,17 +326,20 @@ def generateRepo(sourceFolder, outputFolder):
                 outputFile = outputFolder / filename
                 rm.pack(manifestFile, outputFile, updateDate=False)
                 checkArchiveFormat(str(outputFile))
-                if manifest.getName().startswith("composite"):
-                    artifactsListComposite.append(outputFile)
+                if manifest.getName() == "install":
+                    artifactsList2.append(outputFile)
                 else:
                     artifactsList.append(outputFile)
-
-    rm.index(outputFolder / "composite.json",
-             artifactsListComposite, "composite")
-
-    rm.index(outputFolder / "index.json",
-             artifactsList, "composite", composites=["composite.json"])
-
+    rm.index(outputFolder / "index.json", artifactsList)
+    rm.index(outputFolder / "index2.json", artifactsList2)
+    subprocess.check_call(["gpg",
+                           "--homedir", str(TEST_GPG_HOMEDIR),
+                           "--detach-sign", "--armor",
+                           str(outputFolder / "index.json")])
+    subprocess.check_call(["gpg",
+                           "--homedir", str(TEST_GPG_HOMEDIR),
+                           "--detach-sign", "--armor",
+                           str(outputFolder / "index2.json")])
 
 def checkArchiveFormat(file):
     if (file.endswith(".tar")):

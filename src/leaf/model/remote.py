@@ -20,6 +20,9 @@ class Remote(JsonObject):
     def isEnabled(self):
         return self.jsonget(JsonConstants.CONFIG_REMOTE_ENABLED, True)
 
+    def getGpgKey(self):
+        return self.jsonget(JsonConstants.CONFIG_REMOTE_GPGKEY)
+
     def setEnabled(self, enabled):
         self.json[JsonConstants.CONFIG_REMOTE_ENABLED] = enabled
 
@@ -45,3 +48,8 @@ class Remote(JsonObject):
 
     def __str__(self):
         return self.alias
+
+    def getAvailablePackageList(self):
+        if not self.isFetched():
+            raise ValueError("Remote is not fetched")
+        return JsonObject(self.content).jsonget(JsonConstants.REMOTE_PACKAGES, [])

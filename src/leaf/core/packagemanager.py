@@ -11,11 +11,13 @@ from builtins import filter
 from collections import OrderedDict
 from datetime import datetime
 from tarfile import TarFile
+from tempfile import NamedTemporaryFile
 import json
 import os
 import platform
 import shutil
-import urllib.request
+
+import gnupg
 
 from leaf import __version__
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles, EnvConstants
@@ -30,9 +32,9 @@ from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier, AvailablePackage, \
     InstalledPackage, LeafArtifact, Manifest
 from leaf.model.remote import Remote
-from leaf.utils import getAltEnvPath, jsonLoadFile, jsonWriteFile, resolveUrl,\
+from leaf.utils import getAltEnvPath, jsonLoadFile, jsonWriteFile, \
     isFolderIgnored, getCachedArtifactName, markFolderAsIgnored,\
-    mkTmpLeafRootDir, downloadFile
+    mkTmpLeafRootDir, downloadFile, downloadData
 
 
 class _LeafBase():
@@ -68,10 +70,57 @@ class LoggerManager(_LeafBase):
         renderer.print()
 
 
-class RemoteManager(LoggerManager):
+class GPGManager(LoggerManager):
 
     def __init__(self, verbosity, nonInteractive):
         LoggerManager.__init__(self, verbosity, nonInteractive)
+        self.gpgHome = self.configurationFolder / LeafFiles.GPG_DIRNAME
+        if not self.gpgHome.is_dir():
+            self.gpgHome.mkdir(mode=0o700)
+
+        self.gpg = gnupg.GPG(gnupghome=str(self.gpgHome))
+        self.gpgDefaultKeyserver = os.environ.get(
+            EnvConstants.GPG_KEYSERVER,
+            LeafConstants.DEFAULT_GPG_KEYSERVER)
+
+    def gpgVerifyContent(self, data, sigUrl, expectedKey=None):
+        self.logger.printVerbose(
+            "Known GPG keys:", len(self.gpg.list_keys()))
+        with NamedTemporaryFile() as sigFile:
+            downloadData(sigUrl, sigFile.name)
+            verif = self.gpg.verify_data(sigFile.name, data)
+            if verif.valid:
+                self.logger.printVerbose(
+                    "Content has been signed by %s (%s)" %
+                    (verif.username, verif.pubkey_fingerprint))
+                if expectedKey is not None:
+                    if expectedKey != verif.pubkey_fingerprint:
+                        raise ValueError(
+                            "Content is not signed with %s" % expectedKey)
+            else:
+                raise ValueError("Signed content could not be verified")
+
+    def gpgImportKeys(self, *keys, keyserver=None):
+        if keyserver is None:
+            keyserver = self.gpgDefaultKeyserver
+        if len(keys) > 0:
+            self.logger.printVerbose(
+                "Update GPG keys for %s from %s" %
+                (", ".join(keys), keyserver))
+            gpgImport = self.gpg.recv_keys(keyserver, *keys)
+            for result in gpgImport.results:
+                if 'ok' in result:
+                    self.logger.printVerbose(
+                        "Received GPG key {fingerprint}".format(**result))
+                else:
+                    raise ValueError(
+                        "Error receiving GPG keys: {text}".format(**result))
+
+
+class RemoteManager(GPGManager):
+
+    def __init__(self, verbosity, nonInteractive):
+        GPGManager.__init__(self, verbosity, nonInteractive)
         '''
         Constructor
         '''
@@ -102,24 +151,35 @@ class RemoteManager(LoggerManager):
 
     def listRemotes(self, onlyEnabled=False):
         out = OrderedDict()
+
+        cache = None
+        if self.remoteCacheFile.exists():
+            cache = jsonLoadFile(self.remoteCacheFile)
+
         for alias, json in self.readConfiguration().getRemotesMap().items():
             remote = Remote(alias, json)
             if remote.isEnabled() or not onlyEnabled:
                 out[alias] = remote
-        if self.remoteCacheFile.exists():
-            cache = jsonLoadFile(self.remoteCacheFile)
-            for remote in out.values():
-                if remote.getUrl() in cache and remote.isEnabled():
-                    remote.content = cache[remote.getUrl()]
+            url = remote.getUrl()
+            if cache is not None and url in cache:
+                remote.content = cache[url]
+
         return out
 
-    def createRemote(self, alias, url, enabled=True):
+    def createRemote(self, alias, url, enabled=True, insecure=False, gpgKey=None):
         usrc = self.readConfiguration()
         remotes = usrc.getRemotesMap()
         if alias in remotes:
             raise ValueError("Remote %s already exists" % alias)
-        remotes[alias] = {JsonConstants.CONFIG_REMOTE_URL: str(url),
-                          JsonConstants.CONFIG_REMOTE_ENABLED: enabled}
+        if insecure:
+            remotes[alias] = {JsonConstants.CONFIG_REMOTE_URL: str(url),
+                              JsonConstants.CONFIG_REMOTE_ENABLED: enabled}
+        elif gpgKey is not None:
+            remotes[alias] = {JsonConstants.CONFIG_REMOTE_URL: str(url),
+                              JsonConstants.CONFIG_REMOTE_ENABLED: enabled,
+                              JsonConstants.CONFIG_REMOTE_GPGKEY: gpgKey}
+        else:
+            raise ValueError("Invalid security for remote %s" % alias)
         # Save and clean cache
         self.writeConfiguration(usrc)
         self.cleanRemotesCacheFile()
@@ -154,24 +214,6 @@ class RemoteManager(LoggerManager):
         self.writeConfiguration(usrc)
         self.cleanRemotesCacheFile()
 
-    def recursiveFetchUrl(self, remoteurl, content):
-        '''
-        Fetch an URL content and keep it in the given dict
-        '''
-        if remoteurl not in content:
-            try:
-                with urllib.request.urlopen(remoteurl, timeout=LeafConstants.DOWNLOAD_TIMEOUT) as url:
-                    data = json.loads(url.read().decode())
-                    self.logger.printVerbose("Fetched", remoteurl)
-                    content[remoteurl] = data
-                    composites = data.get(JsonConstants.REMOTE_COMPOSITE)
-                    if composites is not None:
-                        for composite in composites:
-                            self.recursiveFetchUrl(resolveUrl(
-                                remoteurl, composite), content)
-            except Exception as e:
-                self.logger.printError("Error fetching", remoteurl, ":", e)
-
     def fetchRemotes(self, smartRefresh=True):
         '''
         Refresh remotes content with smart refresh, ie auto refresh after X days
@@ -183,17 +225,28 @@ class RemoteManager(LoggerManager):
                 self.logger.printDefault("Cache file is outdated")
                 os.remove(str(self.remoteCacheFile))
         if not self.remoteCacheFile.exists():
-            content = OrderedDict()
-            activeRemotes = self.listRemotes(onlyEnabled=True).values()
-
             self.logger.printDefault("Refreshing available packages...")
-            worked = 0
-            for remote in activeRemotes:
-                self.logger.printDefault("Fetching remote %s" % remote.alias)
-                self.recursiveFetchUrl(remote.getUrl(), content)
-                worked += 1
-                self.logger.progressWorked(worked=worked,
-                                           total=len(activeRemotes))
+            content = OrderedDict()
+            for remote in self.listRemotes(onlyEnabled=True).values():
+                try:
+                    indexUrl = remote.getUrl()
+                    data = downloadData(indexUrl)
+                    gpgKey = remote.getGpgKey()
+                    if gpgKey is not None:
+                        signatureUrl = indexUrl + LeafConstants.GPG_SIG_EXTENSION
+                        self.logger.printDefault(
+                            "Verifying signature for remote %s" % remote.alias)
+                        self.gpgImportKeys(gpgKey)
+                        self.gpgVerifyContent(data,
+                                              signatureUrl,
+                                              expectedKey=gpgKey)
+                    self.logger.printVerbose("Fetched", indexUrl)
+                    content[indexUrl] = json.loads(data.decode())
+                    self.logger.printDefault(
+                        "Fetched content from %s" % remote.alias)
+                except Exception as e:
+                    self.logger.printError(
+                        "Error fetching", indexUrl, ":", e)
             jsonWriteFile(self.remoteCacheFile, content)
 
 
@@ -283,42 +336,25 @@ class PackageManager(RemoteManager):
         out = OrderedDict()
         self.fetchRemotes(smartRefresh=smartRefresh)
 
-        if self.remoteCacheFile.exists():
-            userRemotes = self.listRemotes(True).values()
-
-            remotesMap = OrderedDict()
-            for remoteUrl, remoteJson in jsonLoadFile(self.remoteCacheFile).items():
-                remotesMap[remoteUrl] = JsonObject(remoteJson)
-
-            # Build the links between remote and parent remotes
-            parentsTree = {}
-            for remoteUrl, remoteModel in remotesMap.items():
-                for subPath in remoteModel.jsonget(JsonConstants.REMOTE_COMPOSITE, []):
-                    compositeUrl = resolveUrl(remoteUrl, subPath)
-                    if compositeUrl not in parentsTree:
-                        parentsTree[compositeUrl] = []
-                    if remoteUrl not in parentsTree[compositeUrl]:
-                        parentsTree[compositeUrl].append(remoteUrl)
-
-            def retrieveSourceRemotes(remoteUrl, acc):
-                # Check is URL is a user remote
-                for remote in userRemotes:
-                    if remote.getUrl() == remoteUrl and remote not in acc:
-                        acc.append(remote)
-                # Visit all
-                if remoteUrl in parentsTree:
-                    for parentUrl in parentsTree[remoteUrl]:
-                        retrieveSourceRemotes(parentUrl, acc)
-
-            for remoteUrl, remoteModel in remotesMap.items():
-                for pkgInfoJson in remoteModel.jsonget(JsonConstants.REMOTE_PACKAGES, []):
-                    ap = AvailablePackage(pkgInfoJson, remoteUrl)
+        for remote in self.listRemotes(onlyEnabled=True).values():
+            if remote.isFetched():
+                for apInfoJson in remote.getAvailablePackageList():
+                    ap = AvailablePackage(apInfoJson, remote.getUrl())
+                    ap.sourceRemotes.append(remote)
                     if ap.getIdentifier() not in out:
                         out[ap.getIdentifier()] = ap
                     else:
-                        ap = out[ap.getIdentifier()]
-                    retrieveSourceRemotes(remoteUrl, ap.sourceRemotes)
-
+                        ap2 = out[ap.getIdentifier()]
+                        ap2.sourceRemotes.append(remote)
+                        # Checks that aps are the same
+                        if ap.getSha1sum() != ap2.getSha1sum():
+                            self.logger.printError(
+                                ("Package %s is available in several remotes " +
+                                 "with same version but different content!") %
+                                ap.getIdentifier())
+                            raise ValueError(
+                                "Package %s has multiple artifacts for the same version" %
+                                ap.getIdentifier())
         return out
 
     def listInstalledPackages(self):
@@ -376,8 +412,6 @@ class PackageManager(RemoteManager):
         '''
         filename = getCachedArtifactName(ap.getFilename(),
                                          ap.getSha1sum())
-        if not self.downloadCacheFolder.is_dir():
-            self.downloadCacheFolder.mkdir()
         cachedFile = downloadFile(ap.getUrl(),
                                   self.downloadCacheFolder,
                                   self.logger,

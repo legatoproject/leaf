@@ -1,0 +1,33 @@
+This is a revocation certificate for the OpenPGP key:
+
+pub   rsa2048/52ECE808A2BC372C 2018-08-09 [SC] [expires: 2020-08-08]
+      E35D6817397359074160F68952ECE808A2BC372C
+      Key fingerprint = E35D 6817 3973 5907 4160  F689 52EC E808 A2BC 372C
+uid                          leaf package manager <leaf@leaf.tld>
+
+A revocation certificate is a kind of "kill switch" to publicly
+declare that a key shall not anymore be used.  It is not possible
+to retract such a revocation certificate once it has been published.
+
+Use it to revoke this key in case of a compromise or loss of
+the secret key.  However, if the secret key is still accessible,
+it is better to generate a new revocation certificate and give
+a reason for the revocation.  For details see the description of
+of the gpg command "--generate-revocation" in the GnuPG manual.
+
+To avoid an accidental use of this file, a colon has been inserted
+before the 5 dashes below.  Remove this colon with a text editor
+before importing and publishing this revocation certificate.
+
+:-----BEGIN PGP PUBLIC KEY BLOCK-----
+Comment: This is a revocation certificate
+
+iQE2BCABCAAgFiEE411oFzlzWQdBYPaJUuzoCKK8NywFAltsN88CHQAACgkQUuzo
+CKK8Nyz6sgf/X8TUH5eEa8BbsOzoXqTCqOlkLo9MJrzvr3/tR+4ajFoX35zYfffu
+Lii1um/mmZ3qUqM1EcxPwHQ/UJfcrlXYHuk3wNxrX7hRK5PwOuq/P2udnsXF70qa
+L/KjLxHE4sz62xiUQHGZDGTG2P1Qbzcmh4Z3v2TjuyhxTxEvXB43bO0rlNT1Er62
+ysjNMwXAhcMgOKwCyIDm4ROMcIE9EP2Q4vYxAdbj6jxRIDtMxm4knFKxHpMPNjO9
+fhWjGx9Go5+H+TaFX3/KC8xbGdIx1LnnHredGjdg/2Xj/XfVg4ZDGzvPhQkKcC5S
+IjYvc8r6ObcVx2QuHn4p6LOSGLpNAVOhjA==
+=lTFK
+-----END PGP PUBLIC KEY BLOCK-----

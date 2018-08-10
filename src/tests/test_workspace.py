@@ -34,7 +34,7 @@ class TestProfile(AbstractTestWithRepo):
             VERBOSITY,
             True)
         self.wm.setInstallFolder(self.getInstallFolder())
-        self.wm.createRemote("default", self.getRemoteUrl())
+        self.wm.createRemote("default", self.getRemoteUrl(), insecure=True)
 
     def testInit(self):
         with self.assertRaises(Exception):
