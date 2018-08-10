@@ -7,8 +7,8 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-import argparse
 from pathlib import Path
+import argparse
 
 from leaf.cli.cliutils import LeafCommand, LeafMetaCommand
 from leaf.core.relengmanager import RelengManager
@@ -62,9 +62,11 @@ class RepositoryPackSubCommand(LeafCommand):
                             help='the manifest file to package')
 
     def execute(self, args):
-        RelengManager(self.getLogger(args)).pack(args.manifest,
-                                                 args.pack_output,
-                                                 args.updateDate)
+        loggerAttr = self.getLoggerAttr(args)
+        rm = RelengManager(loggerAttr[0], loggerAttr[1])
+        rm.pack(args.manifest,
+                args.pack_output,
+                args.updateDate)
 
 
 class RepositoryIndexSubCommand(LeafCommand):
@@ -101,8 +103,10 @@ class RepositoryIndexSubCommand(LeafCommand):
                             help='leaf artifacts')
 
     def execute(self, args):
-        RelengManager(self.getLogger(args)).index(args.index_output,
-                                                  args.artifacts,
-                                                  args.index_name,
-                                                  args.index_description,
-                                                  args.index_composites)
+        loggerAttr = self.getLoggerAttr(args)
+        rm = RelengManager(loggerAttr[0], loggerAttr[1])
+        rm.index(args.index_output,
+                 args.artifacts,
+                 args.index_name,
+                 args.index_description,
+                 args.index_composites)

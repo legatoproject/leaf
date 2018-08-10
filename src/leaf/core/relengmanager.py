@@ -8,21 +8,22 @@ Leaf Package Manager
 '''
 from collections import OrderedDict
 from datetime import datetime
-from leaf.constants import JsonConstants
 from pathlib import Path
 
+from leaf.constants import JsonConstants
+from leaf.core.packagemanager import LoggerManager
 from leaf.model.package import Manifest, LeafArtifact
 from leaf.utils import jsonLoadFile, openOutputTarFile, computeSha1sum,\
     jsonWriteFile
 
 
-class RelengManager():
+class RelengManager(LoggerManager):
     '''
     Methods needed for releng, ie generate packages and maintain repository
     '''
 
-    def __init__(self, logger):
-        self.logger = logger
+    def __init__(self, verbosity, nonInteractive):
+        LoggerManager.__init__(self, verbosity, nonInteractive)
 
     def _getNowDate(self):
         return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")

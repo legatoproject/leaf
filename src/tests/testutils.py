@@ -1,18 +1,17 @@
 from _io import StringIO
-from contextlib import contextmanager
-import os
 from pathlib import Path
+from tempfile import mkdtemp
+from unittest.case import TestCase
+import os
 import shutil
 import subprocess
 import sys
-from tempfile import mkdtemp
 import unittest
-from unittest.case import TestCase
 
 from leaf.cli.cli import LeafCli
 from leaf.constants import EnvConstants, LeafFiles
 from leaf.core.relengmanager import RelengManager
-from leaf.format.logger import TextLogger, Verbosity
+from leaf.format.logger import Verbosity
 from leaf.model.package import PackageIdentifier, Manifest
 
 
@@ -105,8 +104,7 @@ class AbstractTestWithRepo(unittest.TestCase):
 
         assert RESOURCE_FOLDER.exists(), "Cannot find resources folder!"
         generateRepo(RESOURCE_FOLDER,
-                     AbstractTestWithRepo.REPO_FOLDER,
-                     TextLogger(Verbosity.QUIET, nonInteractive=True))
+                     AbstractTestWithRepo.REPO_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -260,13 +258,13 @@ class LeafCliWrapper(AbstractTestWithRepo):
         return out
 
 
-def generateRepo(sourceFolder, outputFolder, logger):
+def generateRepo(sourceFolder, outputFolder):
     if not outputFolder.is_dir():
         outputFolder.mkdir(parents=True)
     artifactsList = []
     artifactsListComposite = []
 
-    app = RelengManager(logger)
+    rm = RelengManager(Verbosity.DEFAULT, True)
     for packageFolder in sourceFolder.iterdir():
         if packageFolder.is_dir():
             manifestFile = packageFolder / LeafFiles.MANIFEST
@@ -278,18 +276,18 @@ def generateRepo(sourceFolder, outputFolder, logger):
                 filename = ALT_FILENAMES.get(str(manifest.getIdentifier()),
                                              str(manifest.getIdentifier()) + ".leaf")
                 outputFile = outputFolder / filename
-                app.pack(manifestFile, outputFile, updateDate=False)
+                rm.pack(manifestFile, outputFile, updateDate=False)
                 checkArchiveFormat(str(outputFile))
                 if manifest.getName().startswith("composite"):
                     artifactsListComposite.append(outputFile)
                 else:
                     artifactsList.append(outputFile)
 
-    app.index(outputFolder / "composite.json",
-              artifactsListComposite, "composite")
+    rm.index(outputFolder / "composite.json",
+             artifactsListComposite, "composite")
 
-    app.index(outputFolder / "index.json",
-              artifactsList, "composite", composites=["composite.json"])
+    rm.index(outputFolder / "index.json",
+             artifactsList, "composite", composites=["composite.json"])
 
 
 def checkArchiveFormat(file):
