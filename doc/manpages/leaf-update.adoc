@@ -6,7 +6,7 @@ leaf-update - update packages in a leaf profile
 
 == SYNOPSIS
 
-*leaf* *update* [*-p* _PACKAGE_]
+*leaf* *update* [*-p* _PACKAGE_ ...]
 
 == DESCRIPTION
 
@@ -15,7 +15,7 @@ to another version.
 
 == OPTIONS
 
-*-p* _PACKAGE_::
+*-p|--add-package* _PACKAGE_::
 
 Package ID to be added/updated to the current profile.
 Note that the *-p* option is optional, and can be used several times.
@@ -29,22 +29,22 @@ current profile to the latest available version.
 
 == EXAMPLES
 
-=== Update all packages to the latest version
+Update all packages to the latest version::
 
 Assuming that you're already working with a current profile:
-
++
 *leaf update*
 
-=== Update all packages to a given version (works even for downgrade)
+Update all packages to a given version (works even for downgrade)::
 
 Assuming that current profile uses _mysdk_ package in version 2:
-
++
 *leaf update -p mysdk_v1*
 
-=== Add another package to profile
+Add another package to profile::
 
 Assuming that current profile uses _mysdk_ package:
-
++
 *leaf update -p anotherPackage*
 
 == BEHAVIOR

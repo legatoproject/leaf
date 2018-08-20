@@ -1,0 +1,67 @@
+= leaf-config(1)
+
+== NAME
+
+leaf-config - configure leaf
+
+== SYNOPSIS
+
+*leaf* *config* [*--root* _PACKAGES_ROOT_]
+
+== DESCRIPTION
+
+*leaf config* command allows to configure the leaf tool behavior.
+
+If used without specifying any option, the command will simply outputs the location of the current configuration
+file (cf _LEAF_CONFIG_ variable description below).
+
+If used with **--root** option, the command will set the packages install location.
+
+Beyond this command, the leaf tool is also configured through a set of environment variables, described in this page as well.
+
+== OPTIONS
+
+*--root* _PACKAGES_ROOT_::
+
+Sets the location where packages are installed. A package named _myPackage_1.0_ will be extracted and installed
+in the _PACKAGES_ROOT/myPackage_1.0_ folder. Default value for this parameter is *$HOME/.leaf*
+
+== VARIABLES
+
+The following environment variables can be used to configure the leaf tool behavior.
+
+=== _LEAF_CONFIG_
+
+Location for the leaf configuration folder. Default value is *$HOME/.config/leaf*
+
+In this location are stored the following files and folders:
+
+*Leaf main configuration file (config.json)*::
+
+This file stores the packages root install folder (cf *--root* option above), the configured remotes list (see *leaf remote*)
+and the user global environment (see *leaf env*)
+
+*Leaf color themes configuration file (themes.ini)*::
+
+This file contains the colors themes definition (see *leaf help colors* help page)
+
+*gpg keyring folder (gpg)*::
+
+This folder contains the keyrings used by leaf for remotes gpg signing verification
+
+=== _LEAF_CACHE_
+
+Location for the leaf download cache. Default value is *$HOME/.cache/leaf*
+
+This is the location where leaf stores the cached information read from remote indexes, and where it
+downloads the package artifacts before install in the packages root folder.
+
+=== _LEAF_TIMEOUT_
+
+Duration (in seconds) of the download timeout. Default value is *5*
+
+This is the timeout before leaf gives up to download data when the remote falls in an inactive state.
+
+== SEE ALSO
+
+*leaf remote*, *leaf env*, *leaf help colors*

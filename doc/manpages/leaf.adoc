@@ -17,12 +17,44 @@ leaf - development workspace manager
 *leaf* is a workspace management tool, allowing to setup and configure a development environment
 based on packages.
 
+== OPTIONS
+
+These options are generic for all *leaf* commands
+
+*-v|--verbose*::
+
+Toggle output to verbose mode (more details)
+
+*-q|--quiet*::
+
+Toggle output to quiet mode (less details)
+
+*-V|--version*::
+
+Display *leaf* current version and exit; same as *leaf version* command
+
+*-h|--help*::
+
+Display command help and exit
+
+*--non-interactive*::
+
+Answer the default choice to every asked question
+
+*-w|--workspace _WORKSPACE_*::
+
+Use specified workspace path instead of looking in the current directory structure
+
 == COMMANDS
 
 The different actions that can be performed with *leaf* are available through commands.
 Use *leaf help _COMMAND_* to get documentation for a specific action.
 
 === High level commands
+
+*help*::
+
+Display *leaf* manual pages
 
 *search*::
 
@@ -40,38 +72,58 @@ Change to a different active profile in the current workspace
 
 Spawn a shell with the development environment loaded in the current workspace
 
+*status*::
+
+Display information about the current workspace status
+
 *update*::
 
 Update the current profile packages configuration
 
+*getsrc*::
+
+Toggle packages used in the current profile in "source code" mode
+
 === Low level commands
 
-etc...
+*version*::
 
-== OPTIONS
+Displays *leaf* current version
 
-These options are generic for all *leaf* commands
+*config*::
 
-*-v|--verbose*::
+Setup *leaf* configuration
 
-Toggle output to verbose mode (more details)
+*remote*::
 
-*-q|--quiet*::
+Manage remotes (package repositories) from which *leaf* can install packages
 
-Toggle output to quiet mode (less details)
+*feature*::
 
-*-V|--version*::
+Manage "features", used to tweak package dependencies
 
-Display *leaf* current version and exit
+*init*::
 
-*-h|--help*::
+Initialize workspace directory
 
-Display command help and exit
+*profile*::
 
-*--non-interactive*::
+Manage profiles in a workspace
 
-Answer the default choice to every asked question
+*package*::
 
-*-w _WORKSPACE_*::
+Manage packages (out of workspace)
 
-Use specified workspace path instead of looking in the current directory structure
+*env*::
+
+Display and set environment variables
+
+== Other help pages
+
+*colors*::
+
+Documentation page on how to configure colors rendering with *leaf*
+
+*others*::
+
+Other help pages are also contributed; see *leaf help --list* to get all the available help pages

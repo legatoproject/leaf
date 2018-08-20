@@ -6,7 +6,7 @@ leaf-feature - toggle features for packages
 
 == SYNOPSIS
 
-*leaf* *feature* *list*
+*leaf* *feature* [*list*]
 
 *leaf* *feature* *toggle* _FEATURE_ _VALUE_ [*--user*|*--workspace*|*--profile*]
 
@@ -29,9 +29,13 @@ flexibility to be configured either in the user, in the workspace or in the prof
 
 *list*::
 
-This command lists the available features coming from the available and installed packages.
-For each feature, following information is provided: the _FEATURE_ id (to be used with other commands),
-some description text explaining the purpose of it, and a list of possible _VALUE_ items.
+This command lists the available features coming from the available and installed packages. This is the default command if the command name is omitted.
++
+Depending on the *-q*|*-v* options, the output information is:
++
+  - default: displays a table with _FEATURE_ id, some description text explaining the feature purpose, and a list of possible _VALUE_ items
+  - *-v*: as above, plus the name of variable used to store the current feature _VALUE_
+  - *-q*: displays only _FEATURE_ id list
 
 *query*::
 
@@ -62,28 +66,28 @@ specifically to the current profile (if *--profile* is used; default if not spec
 
 == EXAMPLES
 
-=== Get features list
+Get features list::
 
 Valid wherever you are:
-
++
 *leaf feature list*
 
-=== Get feature status
+Get feature status::
 
 Check if asked feature is enabled in current context:
-
++
 *leaf feature query someFeature*
 
-=== Set feature value for current profile
+Set feature value for current profile::
 
 Assuming you're in an existing workspace:
-
++
 *leaf feature toggle someFeature someValue*
 
-=== Set feature value for all workspaces
+Set feature value for all workspaces::
 
 Valid wherever your are:
-
++
 *leaf feature toggle someFeature someValue --user*
 
 == BEHAVIOR

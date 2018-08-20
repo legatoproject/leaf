@@ -1,0 +1,144 @@
+= leaf-profile(1)
+
+== NAME
+
+leaf-profile - manage profiles in a leaf workspace
+
+== SYNOPSIS
+
+*leaf* *profile* [*list*]
+
+*leaf* *profile* *create* _PROFILE_
+
+*leaf* *profile* *rename* _NEWNAME_
+
+*leaf* *profile* *delete* [_PROFILE_]
+
+*leaf* *profile* *switch* _PROFILE_
+
+*leaf* *profile* *sync* [_PROFILE_]
+
+*leaf* *profile* *config* [_PROFILE_] [*-p* _PACKAGE_ ...] [*-rm-package* _PACKAGE_ ...]
+
+== DESCRIPTION
+
+*leaf profile* command allows to manage profiles in a *leaf* workspace. Workspace must exist before the *leaf profile* command
+can be used (see *leaf setup* or *leaf init*).
+
+This command directly updates the workspace configuration file (*leaf-workspace.json*) and the *leaf-data* tree structure (see *leaf init*).
+
+The command behavior depends on the used sub-command.
+
+== SUB-COMMANDS
+
+*list*::
+
+This command lists the profiles in the workspace. This is the default command if the command name is omitted.
++
+Depending on the *-q*|*-v* options, the output information is:
++
+  - default: displays a table with _PROFILE_ and a *[current]* tag next to the *current* profile
+  - *-v*: as above, plus the profile configured profiles and environment variables (see *leaf env*)
+  - *-q*: displays only _PROFILE_ list
+
+*create*::
+
+This command creates a new empty profile named _PROFILE_.
++
+The command will fail if _PROFILE_ profile name is already used by another profile.
+
+*rename*::
+
+This commands renames *current* profile to _NEWNAME_.
++
+The command will fail if _NEWNAME_ profile name is already used by another profile.
+
+*delete*::
+
+This command deletes the profile named _PROFILE_ from the workspace (or the *current* profile if
+_PROFILE_ is not specified).
++
+If the *current* profile is deleted, the first profile (in the *leaf-workspace.json* file order) is switched as *current*.
+
+*switch*::
+
+This commands switches the profile named _PROFILE_ as the *current* one.
++
+The *leaf-data/current* symbolic link is updated to point to the _PROFILE_ folder.
+
+*sync*::
+
+This command triggers the profile synchronization operation, for profile named _PROFILE_ or *current* profile
+(if _PROFILE_ is not specified)
++
+Profile synchronization is composed of the following steps:
++
+  - for each package configured in the profile, *leaf* makes sure the package is installed
+  - if not, each missing package is installed (see *leaf package install*)
+  - once all packages are installed, the _PROFILE_ folder in *leaf-data* is refreshed with symbolic links to installed packages
+  - then, if packages are defining synchronization hooks, these ones are executed (see *leaf package sync*)
+
+*config*::
+
+This command allows to modify the profile named _PROFILE_ (or *current* profile if _PROFILE_ is not specified) by
+adding or removing packages (see options below)
+
+== OPTIONS
+
+_PROFILE_,_NEWNAME_::
+
+A profile name, which must be unique in a given workspace.
+
+*-p|--add-package* _PACKAGE_::
+
+Package ID to be added to the profile.
+Note that the *-p* option can be used several times.
+The *leaf search* command can be used to display the available packages.
+The package ID can have two formats:
+* NAME: the latest available version with this package _NAME_ will be added to the profile
+* NAME_VERSION: the specified version will be added to the profile
++
+Note that a given package _NAME_ can exist only one time in a given profile. If the *-p* option is used to
+add a package _NAME_ which is already configured in the profile, the new _VERSION_ will replace the existing one.
+
+*--rm-package* _PACKAGE_::
+
+Package ID to be removed from the profile.
+
+== EXAMPLES
+
+List profiles::
+
+*leaf profile*
+
+List profiles with more details::
+
+*leaf profile list -v*
+
+Create profiles::
+
+*leaf profile create MYPROFILE && leaf profile create aProfile*
+
+Rename profile::
+
+*leaf profile rename theProfile*
+
+Delete profile::
+
+*leaf profile delete theProfile*
+
+Switch profile::
+
+*leaf profile switch MYPROFILE*
+
+Configure profile::
+
+*leaf profile config -p myPackage -p myOtherPackage_1.2 && leaf profile config --rm-package myOtherPackage*
+
+Synchronize profile::
+
+*leaf profile sync*
+
+== SEE ALSO
+
+*leaf search*, *leaf setup*, *leaf package*, *leaf env*

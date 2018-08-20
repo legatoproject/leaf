@@ -1,0 +1,33 @@
+= leaf-init(1)
+
+== NAME
+
+leaf-init - initialize a leaf workspace
+
+== SYNOPSIS
+
+*leaf* *init*
+
+== DESCRIPTION
+
+*leaf init* command is a low level command used to create a *leaf* workspace.
+
+If the *-w|--workspace* option is set, it will be used to determine the workspace location, otherwise
+the workspace location will be the current directory.
+
+A *leaf* workspace is composed of:
+
+  - a *leaf-workspace.json* file. This file stores all the workspace/profile specific configuration (packages, environment variables)
+  +
+  This file can typically be stored in configuration management, in order to share a workspace configuration among a development team.
+  
+  - a *leaf-data* folder. This folder is automatically managed by *leaf* commands to build a tree of *leaf* packages according to the
+  current workspace profiles configuration.
+  +
+  As this folder content is really specific to a given system, it shall be typically ignored in configuration management system (*.gitignore* file or whatever)
+
+This command is invoked as part of *leaf setup*, if a new workspace needs to be created.
+
+== SEE ALSO
+
+*leaf setup*

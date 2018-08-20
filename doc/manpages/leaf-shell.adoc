@@ -13,7 +13,7 @@ leaf-shell - Run a shell within the Leaf profile environment.
 *leaf shell* allows users to easily use a leaf configured environment and run command line tools
 within that environment.
 
-Leaf SDK packages can provide environment variables that support the build process.  For example,
+Leaf packages can provide environment variables that support the build process.  For example,
 these packages can provide an updated path to their bundled command line tools.  They can also
 provide, variables that fine tune the building process, define target information and anything else
 that enables the tooling to build software for your target.
@@ -65,22 +65,22 @@ set to anything other than *right* the prompt will appear on the left.  The defa
 
 == EXAMPLES
 
-=== Start up the user default shell
+Start up the user default shell::
 
 *leaf shell*
 
-=== Start up a shell that isn't the user's default shell
+Start up a shell that isn't the user's default shell::
 
 *leaf shell -n zsh*
 
-=== Run a build and terminate the sub-shell
+Run a build and terminate the sub-shell::
 
 *leaf shell -c make*
 
-=== Run multiple commands within a sub-shell and then exit it
+Run multiple commands within a sub-shell and then exit it::
 
 *leaf shell -c "cd subDir && make && make install"*
-
++
 Note that we needed to add quotes this time around the command.  This is to prevent the host shell
 from trying to interpret the _&&_ operator and allow it to be passed down to the sub-shell.
 

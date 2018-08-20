@@ -1,0 +1,163 @@
+= leaf-env(1)
+
+== NAME
+
+leaf-env - manage environment variables with leaf
+
+== SYNOPSIS
+
+*leaf* *env* [*print*] [_PROFILE_] [*--activate-script* _FILE_] [*--deactivate-script* _FILE_]
+
+*leaf* *env* *builtin*
+
+*leaf* *env* *user* [*--set* _KEY_=_VALUE_ ...] [*--unset* _KEY_ ...]
+
+*leaf* *env* *workspace* [*--set* _KEY_=_VALUE_ ...] [*--unset* _KEY_ ...]
+
+*leaf* *env* *profile* [_PROFILE_] [*--set* _KEY_[=_VALUE_] ...] [*--unset* _KEY_ ...]
+
+*leaf* *env* *package* _PACKAGE_
+
+== DESCRIPTION
+
+*leaf env* command allows to display environment variables set by different contexts, related to the user configuration, the workspace and 
+profiles, and the profile used packages.
+
+This command also allows to configure environment variables in the different scopes (user/workspace/profile).
+
+The command behavior depends on the used sub-command.
+
+== SUB-COMMANDS
+
+*print*::
+
+This command prints the full environment for the current context. This is the default command if the command name is omitted.
+This full environment is a concatenation of the following scopes:
++
+  - *builtin* variables
+  - *user* scope variables
+  - *workspace* scope variables
+  - *profile* scope variables
+  - *package* scope variables, for each package contained in the specified/*current* profile
++
+The command output is a shell script that can be directly evaluated to configure the environment.
+Consequently, the order listed above explains the overriding policy between different scopes.
+E.g. a variable set in the *profile* scope will override the value set in the *workspace* scope, etc.
++
+Alternatively the *--activate-script* and/or *--deactivate-script* options can be used to generate script files, ready
+to be sourced in the current terminal to set/unset the environment for the current context (this is what is implicitly done
+by the *leaf shell* command).
++
+The output shell script includes comments highlighting from which scope is coming every environment variable.
+These comments can be disabled by using the *-q* option.
+
+*builtin*::
+
+This command displays the built-in *LEAF_XX* variables:
++
+  - *LEAF_VERSION*: current *leaf* tool version
+  - *LEAF_PLATFORM_SYSTEM*: current platform operating system (usually _Linux_)
+  - *LEAF_PLATFORM_MACHINE*: current platform machine architecture (_x86_64_ / _i386_)
+  - *LEAF_PLATFORM_RELEASE*: current platform kernel version
+
+*user*::
+
+This commands allows to display and configure variables in the global _user_ scope.
+Variables in this scope are common to all workspaces. The variables configuration is stored in the main *leaf*
+configuration file (see *leaf config*).
++
+The *--set* and *--unset* options can be used to configure the variables in this scope.
+
+*workspace*::
+
+This commands allows to display and configure variables in the current _workspace_ scope.
+Variables in this scope are specific to the current workspace and common to all profiles.
+The variables configuration is stored in the *leaf-workspace.json* workspace file (see *leaf init*).
++
+In addition to the user defined variables, *leaf* will automatically set the *LEAF_WORKSPACE* variable
+to the current workspace location.
++
+The *--set* and *--unset* options can be used to configure the variables in this scope.
+
+*profile*::
+
+This commands allows to display and configure variables in the current _profile_ scope.
+Variables in this scope are specific to the specified/*current* profile.
+The variables configuration is stored in the *leaf-workspace.json* workspace file (see *leaf init*).
++
+In addition to the user defined variables, *leaf* will automatically set the *LEAF_PROFILE* variable
+to the current profile name.
++
+The *--set* and *--unset* options can be used to configure the variables in this scope.
+
+*package*::
+
+This command displays the environment provided by the package with _PACKAGE_ identifier (see *leaf help manifest*).
+
+== OPTIONS
+
+_PROFILE_::
+
+Profile name to work with, instead of working with *current* profile
+
+_PACKAGE_::
+
+Package ID from which to display the environment
+
+*--activate-script* _FILE_::
+
+Generate a _FILE_ shell script containing instructions to set the environment for the selected scope.
+
+*--deactivate-script* _FILE_::
+
+Generate a _FILE_ shell script containing instructions to unset the environment for the selected scope.
+
+*--set* _KEY_[=_VALUE_]::
+
+Set the _KEY_ variable to the specified _VALUE_ in the selected scope.
+
+*--unset* _KEY_::
+
+Unset the _KEY_ variable in the selected scope.
+
+== EXAMPLES
+
+Dump environment for current context::
+
+*leaf env*
+
+Load environment in current context::
+
+*eval $(leaf env print -q)*
+
+Display built-in environment::
+
+*leaf env builtin*
+
+Display user environment::
+
+*leaf env user*
+
+Add variable to user environment::
+
+*leaf env user --set MYVAR=1*
+
+Remove variable from user environment::
+
+*leaf env user --unset MYVAR*
+
+Display workspace environment::
+
+*leaf env workspace*
+
+Display profile environment::
+
+*leaf env profile*
+
+Display package environment::
+
+*leaf env package MYPACKAGE_1.0*
+
+== SEE ALSO
+
+*leaf init*, *leaf config*, *leaf package*

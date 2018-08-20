@@ -1,0 +1,30 @@
+= leaf-select(1)
+
+== NAME
+
+leaf-select - change and synchronize current profile
+
+== SYNOPSIS
+
+*leaf* *select* _PROFILE_
+
+== DESCRIPTION
+
+*leaf select* command is an high level command, allowing to change the *current* profile in the workspace,
+and trigger profile synchronization operation (in order to make sure everything is ready to work with new *current* profile)
+
+== BEHAVIOR
+
+As an high level command, using *leaf select* is equivalent to chaining the following steps:
+
+*leaf profile switch _PROFILE_*::
+
+The profile named with _PROFILE_ name is selected as the new *current* profile.
+
+*leaf profile sync*::
+
+Finally, the profile provisioning will be triggered to install the required packages (if necessary) and refresh the *leaf-data* structure.
+
+== SEE ALSO
+
+*leaf setup*, *leaf profile*

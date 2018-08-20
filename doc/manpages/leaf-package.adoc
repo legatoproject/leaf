@@ -1,0 +1,159 @@
+= leaf-package(1)
+
+== NAME
+
+leaf-package - manage packages at low level (out of any workspace)
+
+== SYNOPSIS
+
+*leaf* *package* [*list*] [*-a*] [*-t* _TAG_ ...] [_KEYWORD_ ...]
+
+*leaf* *package* *install* _PACKAGE_ ... [*-k*]
+
+*leaf* *package* *uninstall* _PACKAGE_ ...
+
+*leaf* *package* *sync* _PACKAGE_ ...
+
+*leaf* *package* *prereq* _PACKAGE_ ... *--target* _PREREQROOTFOLDER_
+
+*leaf* *package* *deps* _PACKAGE_ ... [*--installed* | *--available* | *--install* | *--uninstall* | *--prereq*] [*--env* _KEY_=_VALUE_]
+
+== DESCRIPTION
+
+*leaf package* command allows to manipulate packages at low level (i.e. out of any link to any workspace).
+
+This command directly works in the packages root installation folder (see *leaf config*).
+
+The command behavior depends on the used sub-command.
+
+== SUB-COMMANDS
+
+*list*::
+
+This command lists the installed packages in the root folder. This is the default command if the command name is omitted.
++
+The *leaf package list* command behaves like the *leaf search* command; it just works with installed packages instead of
+available packages.
+
+*install*::
+
+This command installs the required _PACKAGE_ identifiers to the root folder.
++
+The install process follows these steps:
++
+  - It first builds the dependency chain (see *deps* sub-command)
+  - For all package to be installed, prerequisite packages are installed first (see *prereq* sub-command)
+  - Then all packages are downloaded and extracted to the root folder
+  - Finally, post-install hooks are executed for each newly installed package (see *leaf help manifest*)
+
+*uninstall*::
+
+This command uninstalls the required _PACKAGE_ identifiers from the root folder.
++
+The uninstall process follows these steps:
++
+  - It first builds the dependency chain (see *deps* sub-command)
+  - Then, pre-uninstall hooks are executed for each package to be removed (see *leaf help manifest*)
+  - Finally, packages are removed from the root folder
+
+*sync*::
+
+This command executes the synchronization hooks for each required _PACKAGE_ identifiers (see *leaf help manifest*)
+
+*prereq*::
+
+This commands installs the prerequisite packages for each required _PACKAGE_ identifiers (see *leaf help manifest*)
++
+Note that prerequisite packages are considered as volatile, and are not kept in the root packages folder but installed in
+a temporary one that will be removed after the install operation (unless the *--target* option is used).
+
+*deps*::
+
+This command builds a dependency chain for all required _PACKAGE_ identifiers.
++
+The build dependency chain depends on the used option (see below)
+
+== OPTIONS
+
+*-a|--all*::
+
+See *leaf search*
+
+*-t|--tag* _TAG_::
+
+See *leaf search*
++
+Note that the *latest* and *installed* dynamic tags are *not* created by the *leaf package list* command.
+
+_KEYWORD_::
+
+See *leaf search*
+
+_PACKAGE_::
+
+A package identifier
+
+*-k|--keep*::
+
+Package install folder is renamed with *_ignored* suffix in the root folder and not deleted after a failed install.
+This can be useful to troubleshoot post install hooks behavior when designing package manifests (see *leaf help manifest*)
+
+*--target* _PREREQROOTFOLDER_::
+
+Alternative install folder for prerequisite packages install. This folder won't be deleted after the install.
+
+*--env* _KEY_=_VALUE_::
+
+Specifies an environment variable to tweak the dynamic dependency chain (as some dependencies are conditioned with variables).
+
+*--installed*::
+
+Builds the dependency chain of the installed packages related to the specified _PACKAGE_ (only installed packages will be listed)
+
+*--available*::
+
+Builds the dependency chain of the available packages related to the specified _PACKAGE_ (only available packages will be listed)
+
+*--install*::
+
+Builds the dependency chain of the available packages related to the specified _PACKAGE_ that still need to be installed
+(already installed packages will be filtered)
+
+*--uninstall*::
+
+Builds the dependency chain of the installed packages related to the specified _PACKAGE_ that can be safely uninstalled
+(not required anymore as a dependency of any other remaining installed package)
+
+*--prereq*::
+
+Builds the dependency chain of the available packages related to the specified _PACKAGE_ as prerequisites
+
+== EXAMPLES
+
+List packages::
+
+*leaf package*
+
+List packages with more details::
+
+*leaf package list -v*
+
+Install package::
+
+*leaf package install myPackage*
+
+Uninstall package::
+
+*leaf package uninstall myPackage*
+
+List package prerequisites dependency::
+
+*leaf package deps myPackage --prereq*
+
+Install package prerequisites::
+
+*leaf package prereq myPackage --target /tmp/prerequisited*
+
+== SEE ALSO
+
+*leaf search*, *leaf config*

@@ -40,15 +40,15 @@ This option allows to get back to binary mode instead of source code mode.
 
 == EXAMPLES
 
-=== Get source modules list
+Get source modules list::
 
 *leaf getsrc*
 
-=== Trigger source code fetching
+Trigger source code fetching::
 
 *leaf getsrc mymodule*
 
-=== Get back to binary mode
+Get back to binary mode::
 
 *leaf getsrc mymodule --disable*
 

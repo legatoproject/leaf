@@ -6,7 +6,7 @@ leaf-setup - setup a leaf profile
 
 == SYNOPSIS
 
-*leaf* *setup* [_PROFILE_NAME_] *-p* _PACKAGE_ [*--set* _KEY_[=_VALUE_]]
+*leaf* *setup* [_PROFILE_] *-p* _PACKAGE_ ... [*--set* _KEY_[=_VALUE_] ...]
 
 == DESCRIPTION
 
@@ -14,15 +14,15 @@ leaf-setup - setup a leaf profile
 
 == OPTIONS
 
-_PROFILE_NAME_::
+_PROFILE_::
 
 Name to be given to the profile.
 This argument is optional; if not specified, a profile name will be automatically generated
 by concatenating + upper casing the _NAME_ specified in *-p* options (see below).
-Profile names are unique in a given workspace; if the chosen or generated _PROFILE_NAME_ is already
+Profile names are unique in a given workspace; if the chosen or generated _PROFILE_ is already
 used in the current workspace, the command will fail.
 
-*-p* _PACKAGE_::
+*-p|--add-package* _PACKAGE_::
 
 Package ID to be added to the created profile.
 Note that the *-p* option can be used several times, and must be specified at least one time.
@@ -37,16 +37,16 @@ Variable to add to the profile definition (see *leaf help env*).
 
 == EXAMPLES
 
-=== Create a new workspace and profile, using the latest version
+Create a new workspace and profile, using the latest version::
 
 Assuming that you're in a new empty directory:
-
++
 *leaf setup -p mysdk*
 
-=== Add a profile to an existing workspace, with another version
+Add a profile to an existing workspace, with another version::
 
 Assuming that you're in a directory that already contains a workspace:
-
++
 *leaf setup MYSDK2 -p mysdk_version2*
 
 == BEHAVIOR
@@ -60,9 +60,9 @@ is equivalent to chaining the following steps:
 If the current directory is not already into a workspace tree (i.e. the workspace root itself or a sub-directory),
 the workspace will be created here (after confirmation).
 
-*leaf profile create _PROFILE_NAME_*::
+*leaf profile create _PROFILE_*::
 
-A new profile will then be created in the current workspace, using _PROFILE_NAME_ as a name (user provided or generated).
+A new profile will then be created in the current workspace, using _PROFILE_ as a name (user provided or generated).
 The new profile is then selected to be the current profile.
 
 *leaf profile config -p _PACKAGE_*::
