@@ -47,7 +47,8 @@ export LEAF_SHELL_ZSH_PROMPT_SIDE=${LEAF_SHELL_ZSH_PROMPT_SIDE:-left}
 # shell.
 if [ -z "$chpwd_functions" ]
 then
-    export chpwd_functions=()
+    typeset -a chpwd_functions
+    export chpwd_functions
 fi
 
 chpwd_functions+=lsh_HandleChangedDir
