@@ -78,44 +78,6 @@ $ ./setup.py install_data
 ```
 
 
-### Building Debian Package
-
-Install dependencies:
-
-```shell
-$ sudo apt-get install --no-install-recommends \
-                       python3 python3-requests python3-argcomplete \
-                       python3-setuptools python3-setuptools-scm python3-all python3-nose \
-                       debhelper dh-python devscripts build-essential fakeroot \
-                       asciidoc-base docbook docbook-xml xsltproc xmlto
-```
-
-Debian packages need to be signed and *leaf* package needs to be signed by *developerstudio@sierrawireless.com*.
-To build your *leaf* package, generate a custom *gpg key* for *developerstudio@sierrawireless.com* (you only need to do this once):
-
-```shell
-$ make gpg
-```
-
-Build the man pages:
-
-```shell
-$ make manpages
-```
-
-Build the package:
-
-```shell
-$ make deb
-# to install the package:
-$ make install
-# or
-$ sudo dpkg -i target/leaf_latest.deb
-# then install eventually missing dependencies
-$ sudo apt-get -f install
-```
-
-
 ### Troubleshooting
 
 #### Ubuntu 14.04 LTS support

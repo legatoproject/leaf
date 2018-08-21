@@ -1,7 +1,3 @@
-# Packaging
-/target/
-/output/
-
 # Eclipse
 /.project
 /.pydevproject

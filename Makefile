@@ -1,33 +1,24 @@
 # Makefile used to build leaf deliverables
 
 # Setup directories
-OUTPUT:=output
-TARGET:=target
 DIST:=dist
-MANDIR:=resources/man
+MAN_OUTPUT_DIR?=resources/man
+MAN_INPUT_DIR?=doc/manpages
 LEAF_TEST_CLASS?=
 LEAF_TEST_TOX_ARGS?=
 
 #.SILENT:
-.PHONY: ci docker-build docker-test clean test gpg sdist deb install uninstall manpages
+.PHONY: docker-build docker-test clean test sdist manpages
 
-all: manpages sdist deb
+all: manpages sdist
 
 clean:
-	rm -rf $(MANDIR) $(DIST) $(TARGET) $(OUTPUT)
+	rm -rf $(MAN_OUTPUT_DIR) $(DIST)
 
 manpages:
-	rm -rf $(MANDIR)
-	mkdir -p $(MANDIR)/man1
-	./doc/manpages/mkman.sh doc/manpages/ $(MANDIR)/man1
-
-ci: clean manpages test sdist deb
-	rm -rf $(OUTPUT)
-	mkdir -p $(OUTPUT)
-	cp -a $(TARGET)/*       $(OUTPUT)
-	cp -a nosetests_*.xml   $(OUTPUT)
-	cp -a coverage-report_* $(OUTPUT)
-	cp -a flake-report_*    $(OUTPUT)
+	rm -rf $(MAN_OUTPUT_DIR)
+	mkdir -p $(MAN_OUTPUT_DIR)/man1
+	./doc/manpages/mkman.sh $(MAN_INPUT_DIR) $(MAN_OUTPUT_DIR)/man1
 
 docker-image:
 	docker build -t "leaf-test:latest" docker/
@@ -44,9 +35,6 @@ docker-test:
 		leaf-test:latest \
 		sh -c 'cp -R /src/leaf /tmp && cd /tmp/leaf && git clean -fdX && make clean manpages test'
 
-gpg:
-	gpg --batch --gen-key ./packaging/gpg-script
-
 venv: requirements.txt
 	virtualenv -p python3 venv --no-site-packages
 	./venv/bin/pip install -r requirements.txt
@@ -58,14 +46,3 @@ test:
 sdist:
 	rm -rf $(DIST)
 	python3 setup.py sdist
-
-deb:
-	rm -rf $(TARGET)
-	./packaging/mkdeb.sh $(DIST)/leaf-*.tar.gz $(TARGET)
-
-install:
-	sudo apt install ./$(TARGET)/leaf_latest.deb
-
-uninstall:
-	sudo dpkg -r leaf
-

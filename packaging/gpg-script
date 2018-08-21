@@ -1,9 +1,0 @@
-%no-ask-passphrase
-%no-protection
-Key-Type: 1
-Key-Length: 2048
-Subkey-Type: 1
-Subkey-Length: 2048
-Name-Real: Developer Studio Team 
-Name-Email: developerstudio@sierrawireless.com
-Expire-Date: 0

@@ -19,6 +19,7 @@ fi
 
 ADOC_FOLDER="$1"
 OUTPUT_FOLDER="$2"
+ROOT_FOLDER=$(dirname "$0")
 
 echo "Generate manpages from files in $ADOC_FOLDER"
 if ! test -d "$ADOC_FOLDER"; then
@@ -43,12 +44,12 @@ TMPPAGE=$(mktemp)
 for PAGE in "$ADOC_FOLDER"/leaf*.adoc; do
 	echo "Creating manpage from $PAGE in $OUTPUT_FOLDER"
   echo -n "" > "$TMPPAGE"
-  if test -f "$ADOC_FOLDER/header.adoc"; then
-    cat "$ADOC_FOLDER/header.adoc" >> "$TMPPAGE"
+  if test -f "$ROOT_FOLDER/header.adoc"; then
+    cat "$ROOT_FOLDER/header.adoc" >> "$TMPPAGE"
   fi
 	cat "$PAGE" >> "$TMPPAGE"
-	if test -f "$ADOC_FOLDER/footer.adoc"; then
-    cat "$ADOC_FOLDER/footer.adoc" >> "$TMPPAGE"
+	if test -f "$ROOT_FOLDER/footer.adoc"; then
+    cat "$ROOT_FOLDER/footer.adoc" >> "$TMPPAGE"
   fi
 	sed -e "s/{VERSION}/${VERSION}/" -i "$TMPPAGE"
 	a2x -f manpage "$TMPPAGE" -D "$OUTPUT_FOLDER"
