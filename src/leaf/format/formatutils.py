@@ -56,7 +56,7 @@ def getPager():
         if binName == "":
             pager = None
         if binName == "less":
-            pager = ("less", "-r", "-S", "-P", "Leaf -- Press q to exit")
+            pager = ("less", "-R", "-S", "-P", "Leaf -- Press q to exit")
     return pager
 
 
