@@ -35,6 +35,8 @@ Lists the configured remotes. (default command)
 - *-v*: as above, plus the fetched state (has this remote being fetched yet) and the last time
   the packages were cached from the remote.
 - *-q*: displays only _ALIAS_ list
++
+Note that the *list* command must be specified if one of the *-q*|*-v* option is specified.
 
 *add*::
 

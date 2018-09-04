@@ -41,6 +41,8 @@ Depending on the *-q*|*-v* options, the output information is:
   - [blank]: displays a table with _PROFILE_ and a *[current]* tag next to the *current* profile
   - *-v*: as above, plus the profile configured profiles and environment variables (see *leaf env*)
   - *-q*: displays only _PROFILE_ list
++
+Note that the *list* command must be specified if one of the *-q*|*-v* option is specified.
 
 *create*::
 

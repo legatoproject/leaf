@@ -31,6 +31,8 @@ Lists the available features for available and installed packages. (default opti
     purpose, and a list of possible _VALUE_ items
   - *-v*: as above, plus the name of variable used to store the current feature _VALUE_
   - *-q*: displays only _FEATURE_ id list
++
+Note that the *list* command must be specified if one of the *-q*|*-v* option is specified.
 
 *query*::
 
