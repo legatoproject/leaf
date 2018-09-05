@@ -10,54 +10,65 @@ leaf-search - search for available leaf packages
 
 == DESCRIPTION
 
-*leaf search* command allows to search for available *leaf* packages on the configured remotes (see *leaf remote*).
-Depending on the input search options, the available packages list will be filtered to display only the matching ones.
+Search for available *leaf* packages. Filters are available to limit the number of packages returned.
 
-When packages are found, depending on the *-q*|*-v* options, the output information is:
+Output:
 
-  - default: displays a table with _PACKAGE_ identifier, description and tags, for each found package
-  - *-v*: as above, plus the release date, the source remote _ALIAS_ (see *leaf remote*), and the size (if no dependencies) or the list of package dependencies
+  - [blank]: displays a table with _PACKAGE_ identifier, description and tags, for each found package
+  - *-v*: as above, plus the release date, the source remote _ALIAS_ (see *leaf remote*), and the
+  size (if no dependencies) or the list of package dependencies
   - *-q*: displays only _PACKAGE_ identifiers list
+  - *package*: displays wildcard matching of the package name (i.e.; wp will return all packages with
+  a wp in the name)
 
-Note that the displayed _PACKAGE_ identifiers are the values that can be used with *-p* option in *leaf setup* or *leaf update* commands.
+Note: The displayed _PACKAGE_ identifiers are the values that can be used with *-p* option in
+*leaf setup* or *leaf update* commands.
 
-Depending on the current terminal size, if the output is too large to fit, it will be automatically displayed through a pager. *$PAGER* 
-environment variable will be used to select the pager; if not set, the *less* pager will be used.
+Depending on the current terminal size, if the output is too large to fit, it will be automatically
+displayed through a pager. *$PAGER* environment variable will be used to select the pager; if not
+set, the *less* pager will be used.
 
 == OPTIONS
 
 *-a|--all*::
 
-When this option is used, all packages will be displayed (not only the _master_ ones). _master_ packages are usually top-level
-packages that depends on other low-level packages, in order to create a consistent baseline of packages that have been tested
-to work together.
+All packages will be displayed (not only the _master_ ones). _master_ packages are top-level
+packages (i.e.; package manifests) that contain a dependency matrix of other sub-packages.
 +
-When this option is not used (default behavior), only the _master_ packages are displayed.
+The default behavior is to only display the _master_ packages.
 
 *-t|--tag* _TAG_::
 
-Restrict the search output to only display packages with at least a tag that is *exactly* matching the given _TAG_.
+Restrict the search output to only display packages with at least a tag that is *exactly* matching
+the given _TAG_.
 +
-If _TAG_ is a comma separated list, packages with at least a tag matching *one* of the specified values will be displayed.
+If _TAG_ is a comma separated list, packages with at least a tag matching *one* of the specified
+values will be displayed. (*OR* filtering)
 +
-The *-t* option can be specified several times. In this case, only packages with tags that are matching *all* specified _TAG_
-values will be displayed.
+The *-t* option can be specified several times. Only packages with tags that are matching *all*
+specified _TAG_ values will be displayed. (*AND* filtering)
 +
-In addition to the tags defined by the packages themselves, dynamic tags are automatically set by the *leaf search* command:
+In addition to the tags defined by the packages themselves, dynamic tags are automatically set by
+the *leaf search* command:
 +
-  - *latest*: for a given package name, the *latest* tag will be set on the highest version
-  - *installed*: if a package is already installed on the system, the *installed* tag will be added for this package
+  - *latest*: for a given package name, the *latest* tag will be set on the highest version of all
+    _enabled remotes_
+  - *installed*: if a package is already installed on the system, the *installed* tag will be
+    displayed
 +
-Note that these dynamic tags can be searched with the *-t* option like other tags.
+Note: These dynamic tags can be searched with the *-t* option like other tags.
 
 _KEYWORD_::
 
-Restrict the search output to only display packages matching with the given _KEYWORD_. A given package is considered to
-be matching with a _KEYWORD_ if either its _PACKAGE_ identifier or its description *contains* the _KEYWORD_.
+Restrict the search output to only display packages matching with the given _KEYWORD_. A given
+package is considered to be matching with a _KEYWORD_ if either its _PACKAGE_ identifier or its
+description *contains* the _KEYWORD_.
 +
-If _KEYWORD_ is a comma separated list, packages that are matching with *at least* one of the specified values will be displayed.
+If _KEYWORD_ is a comma separated list, packages that are matching with *at least* one of the
+specified values will be displayed. (*OR* filtering)
 +
-Several _KEYWORD_ values can be specified. In this case, only packages that are matching with *all* of the specified values will be displayed.
+Several _KEYWORD_ values can be specified. Only packages that are matching with *all* of the
+specified values will be displayed. (*AND* filtering)
 
 == EXAMPLES
 
@@ -73,11 +84,11 @@ Search for packages matching with *latest* tag::
 
 *leaf search -t latest*
 
-Search for packages matching with either *latest* or *installed* tag::
+Search for packages matching with either *latest* OR *installed* tag::
 
 *leaf search -t latest,installed*
 
-Search for packages matching with both *latest* and *custom* tags::
+Search for packages matching with both *latest* AND *custom* tags::
 
 *leaf search -t latest -t custom*
 
@@ -85,15 +96,15 @@ Search for packages matching with *V1* keyword::
 
 *leaf search V1*
 
-Search for packages matching with *V1* keyword and *latest* tag::
+Search for packages matching with *V1* keyword AND *latest* tag::
 
 *leaf search V1 -t latest*
 
-Search for packages matching with either *V1* or *V2* keyword::
+Search for packages matching with either *V1* OR *V2* keyword::
 
 *leaf search V1,V2*
 
-Search for packages matching with both *V1* and *lib* keywords::
+Search for packages matching with both *V1* AND *lib* keywords::
 
 *leaf search V1 lib*
 

@@ -20,9 +20,8 @@ leaf-package - manage packages at low level (out of any workspace)
 
 == DESCRIPTION
 
-*leaf package* command allows to manipulate packages at low level (i.e. out of any link to any workspace).
-
-This command directly works in the packages root installation folder (see *leaf config*).
+*leaf package* allows users to manipulate packages at low level (i.e. out of any link to any
+workspace). It directly works in the packages root installation folder (see *leaf config*).
 
 The command behavior depends on the used sub-command.
 
@@ -30,46 +29,47 @@ The command behavior depends on the used sub-command.
 
 *list*::
 
-This command lists the installed packages in the root folder. This is the default command if the command name is omitted.
+Lists the installed packages in the root folder. (default option)
 +
-The *leaf package list* command behaves like the *leaf search* command; it just works with installed packages instead of
-available packages.
+The *leaf package list* command behaves like the *leaf search* command; listing installed packages
+instead of available packages.
 
 *install*::
 
-This command installs the required _PACKAGE_ identifiers to the root folder.
+Installs the required _PACKAGE_ identifiers to the root folder.
 +
 The install process follows these steps:
 +
-  - It first builds the dependency chain (see *deps* sub-command)
-  - For all package to be installed, prerequisite packages are installed first (see *prereq* sub-command)
-  - Then all packages are downloaded and extracted to the root folder
-  - Finally, post-install hooks are executed for each newly installed package (see *leaf help manifest*)
+  - Builds the dependency chain (see *deps* sub-command)
+  - Installs prerequisite packages are installed first (see *prereq* sub-command)
+  - Downloads and extracts the packages to the root folder
+  - Post-install hooks are executed for any newly installed package (see *leaf help manifest*)
 
 *uninstall*::
 
-This command uninstalls the required _PACKAGE_ identifiers from the root folder.
+Uninstalls the required _PACKAGE_ identifiers from the root folder.
 +
 The uninstall process follows these steps:
 +
-  - It first builds the dependency chain (see *deps* sub-command)
-  - Then, pre-uninstall hooks are executed for each package to be removed (see *leaf help manifest*)
-  - Finally, packages are removed from the root folder
+  - Builds the dependency chain (see *deps* sub-command)
+  - Pre-uninstall hooks are executed for any package to be removed (see *leaf help manifest*)
+  - Packages are removed from the root folder
 
 *sync*::
 
-This command executes the synchronization hooks for each required _PACKAGE_ identifiers (see *leaf help manifest*)
+Executes the synchronization hooks for each required _PACKAGE_ identifiers (see *leaf help manifest*)
 
 *prereq*::
 
-This commands installs the prerequisite packages for each required _PACKAGE_ identifiers (see *leaf help manifest*)
+Installs the prerequisite packages for each required _PACKAGE_ identifiers (see *leaf help manifest*)
 +
-Note that prerequisite packages are considered as volatile, and are not kept in the root packages folder but installed in
-a temporary one that will be removed after the install operation (unless the *--target* option is used).
+Note: Pre-requisite packages are considered volatile, and are not kept in the root packages
+folder but installed into a temporary folder that is removed after the install operation (unless the
+ *--target* option is used).
 
 *deps*::
 
-This command builds a dependency chain for all required _PACKAGE_ identifiers.
+Builds a dependency chain for all required _PACKAGE_ identifiers.
 +
 The build dependency chain depends on the used option (see below)
 
@@ -77,56 +77,81 @@ The build dependency chain depends on the used option (see below)
 
 *-a|--all*::
 
-See *leaf search*
+All packages will be displayed (not only the _master_ ones). _master_ packages are top-level
+packages (i.e.; package manifests) that contain a dependency matrix of other sub-packages.
++
+The default behavior is to only display the _master_ packages.
 
 *-t|--tag* _TAG_::
 
-See *leaf search*
+Restrict the search output to only display packages with at least a tag that is *exactly* matching
+the given _TAG_.
 +
-Note that the *latest* and *installed* dynamic tags are *not* created by the *leaf package list* command.
+If _TAG_ is a comma separated list, packages with at least a tag matching *one* of the specified
+values will be displayed. (*OR* filtering)
++
+The *-t* option can be specified several times. Only packages with tags that are matching *all*
+specified _TAG_ values will be displayed. (*AND* filtering)
+
 
 _KEYWORD_::
 
-See *leaf search*
+Restrict the search output to only display packages matching with the given _KEYWORD_. A given
+package is considered to be matching with a _KEYWORD_ if either its _PACKAGE_ identifier or its
+description *contains* the _KEYWORD_.
++
+If _KEYWORD_ is a comma separated list, packages that are matching with *at least* one of the
+specified values will be displayed. (*OR* filtering)
++
+Several _KEYWORD_ values can be specified. Only packages that are matching with *all* of the
+specified values will be displayed. (*AND* filtering)
+
+Note: The *latest* and *installed* dynamic tags are *not* created by the *leaf package list* command.
 
 _PACKAGE_::
 
-A package identifier
+The package identifier
 
 *-k|--keep*::
 
-Package install folder is renamed with *_ignored* suffix in the root folder and not deleted after a failed install.
-This can be useful to troubleshoot post install hooks behavior when designing package manifests (see *leaf help manifest*)
+Package install folder is renamed with *_ignored* suffix in the root folder and not deleted after a
+failed install. It can be useful to troubleshoot post install hooks behavior when designing package
+manifests (see *leaf help manifest*)
 
 *--target* _PREREQROOTFOLDER_::
 
-Alternative install folder for prerequisite packages install. This folder won't be deleted after the install.
+Alternative install folder for prerequisite packages install. TheThis folder won't be deleted after
+the install.
 
 *--env* _KEY_=_VALUE_::
 
-Specifies an environment variable to tweak the dynamic dependency chain (as some dependencies are conditioned with variables).
+Specifies an environment variable to tweak the dynamic dependency chain (as some dependencies are
+conditioned with variables).
 
 *--installed*::
 
-Builds the dependency chain of the installed packages related to the specified _PACKAGE_ (only installed packages will be listed)
+Builds the dependency chain of the installed packages related to the specified _PACKAGE_
+(only installed packages will be listed)
 
 *--available*::
 
-Builds the dependency chain of the available packages related to the specified _PACKAGE_ (only available packages will be listed)
+Builds the dependency chain of the available packages related to the specified _PACKAGE_
+(only available packages will be listed)
 
 *--install*::
 
-Builds the dependency chain of the available packages related to the specified _PACKAGE_ that still need to be installed
-(already installed packages will be filtered)
+Builds the dependency chain of the available packages related to the specified _PACKAGE_ that still
+need to be installed (already installed packages will be filtered)
 
 *--uninstall*::
 
-Builds the dependency chain of the installed packages related to the specified _PACKAGE_ that can be safely uninstalled
-(not required anymore as a dependency of any other remaining installed package)
+Builds the dependency chain of the installed packages related to the specified _PACKAGE_ that can be
+safely uninstalled (not required anymore as a dependency of any other remaining installed package)
 
 *--prereq*::
 
-Builds the dependency chain of the available packages related to the specified _PACKAGE_ as prerequisites
+Builds the dependency chain of the available packages related to the specified _PACKAGE_ as
+prerequisites
 
 == EXAMPLES
 

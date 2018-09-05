@@ -2,7 +2,7 @@
 
 == NAME
 
-leaf-update - update packages in a leaf profile
+leaf-update - updates packages within a leaf profile
 
 == SYNOPSIS
 
@@ -10,22 +10,23 @@ leaf-update - update packages in a leaf profile
 
 == DESCRIPTION
 
-*leaf update* command is an high level command, allowing to update the packages in a *leaf* profile 
-to another version.
+*leaf update* update the packages in a *leaf* profile to another package (i.e.; a different version).
 
 == OPTIONS
 
 *-p|--add-package* _PACKAGE_::
 
-Package ID to be added/updated to the current profile.
-Note that the *-p* option is optional, and can be used several times.
-The *leaf search* command can be used to display the available packages.
-The package ID can have two formats:
-* NAME: the latest available version with this package _NAME_ will be added to the profile
+Package identifier to be added/updated to the current profile.
+The package identifier will be accepted in two formats:
+* NAME: the latest available version with the package _NAME_ will be added to the profile
 * NAME_VERSION: the specified version will be added to the profile
 
-If no *-p* option is specified, *leaf update* will try to update all packages configured in the 
-current profile to the latest available version.
+Note: The *-p* option can be used multiple times.
+
+Note: The *leaf search* command can be used to display the available packages.
+
+If no *-p* option is specified, *leaf update* will try to update the package configured in the
+current profile to the latest available version (marked as *latest* in *leaf search*).
 
 == EXAMPLES
 
@@ -35,7 +36,7 @@ Assuming that you're already working with a current profile:
 +
 *leaf update*
 
-Update all packages to a given version (works even for downgrade)::
+Update the profile to a new package (works even for downgrade)::
 
 Assuming that current profile uses _mysdk_ package in version 2:
 +
@@ -49,7 +50,7 @@ Assuming that current profile uses _mysdk_ package:
 
 == BEHAVIOR
 
-*leaf update* can be used either to update your profile to the latest version, downgrade to an older 
+*leaf update* can be used either to update your profile to the latest version, downgrade to an older
 version, or add a new package to the profile. As an high level command, using *leaf update*
 is equivalent to chaining the following steps:
 
@@ -59,12 +60,12 @@ An implicit search is performed to look at the available packages, matching with
 
 *leaf profile config -p _PACKAGE_*::
 
-For each specified *-p* option, or if it is not specified for each new version of the profile 
+For each specified *-p* option, or if it is not specified for each new version of the profile
 packages, configuration is updated to point to the new version.
 
 *leaf profile sync*::
 
-Finally, the profile provisioning will be triggered to install the required packages (if necessary) 
+The profile provisioning will be triggered to install the required packages (if necessary)
 and refresh the *leaf-data* structure.
 
 == SEE ALSO

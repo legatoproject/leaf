@@ -4,7 +4,56 @@
 
 leaf - development workspace manager
 
-== SYNOPSIS
+== DESCRIPTION
+
+Leaf is a workspace manager that will download, install and configure the required software packages
+for a development environment.
+
+To list all available leaf commands see *leaf help --list*
+
+== Common leaf scenarios
+
+=== Informational Leaf Commands
+*help*::
+Displays this page and other help commands. e.g.; *leaf help _COMMAND_*
+*version*::
+Displays the version of Leaf
+
+=== Initialize a workspace/profile and download a package for your target (see also: *leaf help start*)
+*search*::
+Search for a package for your target
+*setup*::
+Setup a workspace (if not created), create/setup a profile and download packages
+*shell*::
+Enter into a shell configured for your profile and environment
+
+=== Manage your Profile
+*status*::
+List your current profiles and their status
+*select*::
+Switch between multiple profiles
+*update*::
+Update(upgrade/downgrade) a profile to another version of a package
+*profile*::
+Manage your profiles: rename, delete, sync
+
+=== Configure a profile to use the source or binary version of a package (see also: *leaf help source*)
+*getsrc*::
+Switch to the source version of a package (if available)
+
+=== Manage your Leaf Environment::
+*colors*::
+Change to a different color theme
+*env*::
+Create, set, and remove environment variables
+*config*::
+Manage the configuration of leaf
+
+=== Manage the repositories for your packages. (see also: *leaf help streams*)
+*remote*::
+Add, remove and manage the list of remote repositories
+
+== Options
 
 *leaf* [*--non-interactive*] [*-w* _WORKSPACE_] *_COMMAND_* [*-v*|*-q*] [options...]
 
@@ -12,118 +61,12 @@ leaf - development workspace manager
 
 *leaf* [*_COMMAND_*] *-h|--help* # Display help
 
-== DESCRIPTION
-
-*leaf* is a workspace management tool, allowing to setup and configure a development environment
-based on packages.
-
-== OPTIONS
-
-These options are generic for all *leaf* commands
-
-*-v|--verbose*::
-
-Toggle output to verbose mode (more details)
-
-*-q|--quiet*::
-
-Toggle output to quiet mode (less details)
-
-*-V|--version*::
-
-Display *leaf* current version and exit; same as *leaf version* command
-
-*-h|--help*::
-
-Display command help and exit
-
+=== Optional arguments for all commands
+*-v, --verbose*::
+increase the level of logging for the command
+*-q, --quiet*::
+remove all command output except meaningful information
 *--non-interactive*::
-
-Answer the default choice to every asked question
-
-*-w|--workspace _WORKSPACE_*::
-
-Use specified workspace path instead of looking in the current directory structure
-
-== COMMANDS
-
-The different actions that can be performed with *leaf* are available through commands.
-Use *leaf help _COMMAND_* to get documentation for a specific action.
-
-=== High level commands
-
-*help*::
-
-Display *leaf* manual pages
-
-*search*::
-
-Search for available packages
-
-*setup*::
-
-All in one command to setup a workspace, and configure a profile inside
-
-*select*::
-
-Change to a different active profile in the current workspace
-
-*shell*::
-
-Spawn a shell with the development environment loaded in the current workspace
-
-*status*::
-
-Display information about the current workspace status
-
-*update*::
-
-Update the current profile packages configuration
-
-*getsrc*::
-
-Toggle packages used in the current profile in "source code" mode
-
-=== Low level commands
-
-*version*::
-
-Displays *leaf* current version
-
-*config*::
-
-Setup *leaf* configuration
-
-*remote*::
-
-Manage remotes (package repositories) from which *leaf* can install packages
-
-*feature*::
-
-Manage "features", used to tweak package dependencies
-
-*init*::
-
-Initialize workspace directory
-
-*profile*::
-
-Manage profiles in a workspace
-
-*package*::
-
-Manage packages (out of workspace)
-
-*env*::
-
-Display and set environment variables
-
-== Other help pages
-
-*colors*::
-
-Documentation page on how to configure colors rendering with *leaf*
-
-*others*::
-
-Other help pages are also contributed; see *leaf help --list* to get all the available help pages
+answer the default choice to every question asked
+*-w, --workspace _WORKSPACE_*::
+use the specified workspace path

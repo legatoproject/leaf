@@ -2,7 +2,7 @@
 
 == NAME
 
-leaf-remote - configure remote package repositories
+leaf-remote - configure remote package repository locations
 
 == SYNOPSIS
 
@@ -20,53 +20,54 @@ leaf-remote - configure remote package repositories
 
 == DESCRIPTION
 
-*leaf remote* command allows to manage remotes. A remote is a package repository, i.e. a location from which leaf is 
-installing packages.
+*leaf remote* command allows to manage remote url repositories of packages. (i.e. a location from
+which leaf is downloading and installing packages.)
 
-Remotes are configured in the main *leaf* configuration file (see *leaf config*).
+Remotes are stored/configured in the *leaf* configuration file (see *leaf config*).
 
 == SUB-COMMANDS
 
 *list*::
 
-This command lists the configured remotes. This is the default command if the command name is omitted.
+Lists the configured remotes. (default command)
 +
-Depending on the *-q*|*-v* options, the output information is:
-+
-  - default: displays a table with _ALIAS_, _URL_ and enable/disable state for each remote entry.
-  - *-v*: as above, plus the fetched state (has this remote being fetched yet) and the time it was fetched for the last time
-  - *-q*: displays only _ALIAS_ list
+- [blank]: displays a table with _ALIAS_, _URL_ and the enable/disable state for each remote.
+- *-v*: as above, plus the fetched state (has this remote being fetched yet) and the last time
+  the packages were cached from the remote.
+- *-q*: displays only _ALIAS_ list
 
 *add*::
 
-This command adds a remote to the user configuration. To add a remote, you need to specify:
+Adds a remote to the user configuration (you also must specify):
 +
-  - the remote _ALIAS_: a user defined name used to identify this remote in other commands
+  - the remote _ALIAS_: a user defined name used to identify the remote within the leaf environment
   - the remote _URL_: the URL to the remote index file
   - the security option: either *--insecure* or *--gpg*; see below
 
 *remove*::
 
-This commands removes the _ALIAS_ remote from the user configuration.
+Removes the _ALIAS_ remote from the user configuration.
 
 *enable*::
 
-This commands enables the _ALIAS_ remote in the user configuration; this remote will be queried in all the remote fetch operations.
+Enables the _ALIAS_ remote in the user configuration; Enabled remotes will be queried in all
+fetch operations.
 
 *disable*::
 
-This commands disables the _ALIAS_ remote in the user configuration; this remote will _NOT_ be queried in any remote fetch operation.
+Disables the _ALIAS_ remote in the user configuration; Disabled remotes will _NOT_ be queried in any
+fetch operation.
 
 *fetch*::
 
-This commands triggers the remote fetch operation: package information is retrieved from all enabled remotes in the configuration.
-This is the packages information that is displayed in *leaf search* command.
+Triggers the remote fetch operation: package information is retrieved from all enabled remotes in
+the configuration.  *fetch* also refreshes the local cached index of packages in *leaf search*.
 
 == OPTIONS
 
 _ALIAS_::
 
-A user defined name used to identify the remote in all remote related *leaf* commands. This name must be unique.
+A user defined name to identify the remote in all other *leaf* commands; *must be unique*.
 
 _URL_::
 
@@ -74,17 +75,18 @@ URL to the remote index file. _https:_, _http:_ and _file:_ protocols are suppor
 
 *--insecure*::
 
-When adding a remote, specifies that no index signature verification need to be performed.
+When adding a remote, specifies that no index signature verification is needed.
 
 *--gpg* _GPGKEY_::
 
-When adding a remote, specifies that index needs to be verified as signed by the key identified with _GPGKEY_ fingerprint.
+When adding a remote, specifies that an index needs to be verified and signed with the key identified
+in the _GPGKEY_ fingerprint.
 
 == EXAMPLES
 
 List remotes::
 
-*leaf remote*
+*leaf remote* or *leaf remote list*
 
 List remotes with more details::
 
@@ -92,7 +94,7 @@ List remotes with more details::
 
 Add remote::
 
-*leaf remote add myremote http://myserver.org/path/to/index.json --gpg 0123456789ABCDEF*
+*leaf remote add myremote http://myserver.org/path/to/index.json --gpg <key>*
 
 Add remote (insecure)::
 
@@ -118,8 +120,9 @@ Fetch remote information::
 
 The package information read from enabled remotes is stored in the *leaf* cache (see *leaf config*).
 
-As the package information fetch is an important part of the *leaf* workflows, the *leaf remote fetch* is implicit and automatically triggered
-by commands that are related to remote available packages (e.g. *leaf search*, *leaf setup*, *leaf package install*, etc). This smart
+As the package information fetch is an important part of the *leaf* workflows, the
+*leaf remote fetch* is implicit and automatically triggered by commands that are related to remote
+available packages (e.g. *leaf search*, *leaf setup*, *leaf package install*, etc). This smart
 remote fetch is triggered only if the cache is considered as invalid.
 
 The remote cache is considered as invalid if:
@@ -128,7 +131,7 @@ The remote cache is considered as invalid if:
   - the remotes configuration has changed since the last fetch (something added, removed, enabled or disabled)
   - the current cache information is more than 24 hours old
 
-Note that the *leaf remote fetch* operation forces a remote fetch operation immediately, whatever if the cache is considered to be still valid or not.
+Note that the *leaf remote fetch* operation forces a remote fetch operation immediately.
 
 == SEE ALSO
 

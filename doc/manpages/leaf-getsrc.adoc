@@ -12,10 +12,10 @@ leaf-getsrc - trigger source code fetching for packages
 
 == DESCRIPTION
 
-*leaf getsrc* command allows to toggle the required module in source mode, and to trigger the
-source code fetching operation for this module.
+*leaf getsrc* command allows users to toggle the required module in source mode, and to trigger the
+source code fetching operation for a module.
 
-If used without specifying any _MODULE_, the command will return all available source modules in
+If used without specifying any _MODULE_, the command will return all available source modules within
 the current profile.
 
 If used with a _MODULE_ parameter, the command will toggle the corresponding feature in source
@@ -29,14 +29,14 @@ A source module identifier. List of available _MODULE_ items is returned by a si
 
 *--user|--workspace|--profile*::
 
-Modified scope option. This option allows to specify which scope needs to be configured with the
-feature corresponding to the required source _MODULE_. This allows to toggle a feature across all workspaces
-(if *--user* is used), across all profiles of a given workspace (if *--workspace* is used), or
-specifically to the current profile (if *--profile* is used; default if not specified).
+Allows a user to specify which scope needs to be configured with the
+feature corresponding to the required source _MODULE_. Allows a user to toggle a feature across all
+workspaces (if *--user* is used), across all profiles of a given workspace (if *--workspace* is
+used), or specifically to the current profile (if *--profile* is used; default if not specified).
 
 *--disable*::
 
-This option allows to get back to binary mode instead of source code mode.
+Allows a user to get back to binary mode instead of source code mode.
 
 == EXAMPLES
 
@@ -59,7 +59,7 @@ is equivalent to chaining the following steps:
 
 *leaf feature list*::
 
-The command verifies if the feature corresponding to the required source module exist. It shall have
+Verifies if the feature corresponding to the required source module exist. It *must* have
 the same name that the _MODULE_, with a *-src* suffix (will be called _MODULE_FEATURE_).
 
 *leaf feature query _MODULE_FEATURE_*::
@@ -77,9 +77,9 @@ If necessary (if the feature value changed), the profile provisioning is trigger
 
 source fetching operation trigger::
 
-The last step is to trigger the source fetching operation. This is assumed to be handled by an
-executable named with _MODULE_FEATURE_ and a *-sync* suffix, provided on the *$PATH* by the installed
-packages.
+The last step is to trigger the source fetching operation. It is assumed to be handled by an
+executable named with _MODULE_FEATURE_ and a *-sync* suffix, provided on the *$PATH* by the
+installed packages.
 
 == SEE ALSO
 

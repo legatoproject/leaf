@@ -2,7 +2,7 @@
 
 == NAME
 
-leaf-status - display current workspace status
+leaf-status - display current profile and workspace status
 
 == SYNOPSIS
 
@@ -10,12 +10,13 @@ leaf-status - display current workspace status
 
 == DESCRIPTION
 
-*leaf status* command allows to display the current workspace status. Workspace must exist before the *leaf profile* command
-can be used (see *leaf setup* or *leaf init*).
+*leaf status* displays the current profile and workspace status. A workspace must exist before
+the *leaf status* command can be used (see *leaf setup* or *leaf init*).
 
 Depending on the *-q*|*-v* options, the output information is:
 
-  - default: displays a table with profile names, a *[current]* tag next to the *current* profile, and if each profile is currently synchronized
+  - [blank]: displays a table with profile names, a *[current]* tag next to the *current* profile,
+  and if each profile is currently synchronized
   - *-v*: as above, plus the profile configured profiles and environment variables (see *leaf env*)
   - *-q*: displays only the workspace location
 

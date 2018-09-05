@@ -2,93 +2,128 @@
 
 == NAME
 
-leaf-colors - support for color themes in leaf
+leaf-colors - customize and update the leaf color themes
 
 == DESCRIPTION
 
-The output of some *leaf* commands is highlighted with some colors. The purpose of this document is to
-explain how these colors can be customized in order to fit better with your terminal colors.
+This page explains how to customize the output of the *leaf* commands to better
+display the colors that work with your terminal.
 
 == Configuration file
 
-The colors configuration is done in the *themes.ini* configuration file. This file is located in the *leaf* configuration
-folder (see *leaf config* documentation).
+The colors configuration reads the colors from the *themes.ini* configuration file. *themes.ini* is
+located in the *leaf* configuration folder (see *leaf config* documentation).
 
 == Themes
 
-Colors can be gathered by "themes". The purpose of a theme is to set a collection of colors, and then you can switch
-from a colors collection to another by simply changing the active theme.
+Colors are grouped by "themes". The purpose of a theme is to set a collection of colors, and then
+switch from a colors collection to another by simply changing the active theme by selecting the active one
+in the *themes.ini* configuration file.
 
-In the configuration file, themes are gathered by sections. A section is identified by its header (*[NAME]*) and 
-a list of _key=value_ properties.
+In the configuration file, themes are identified by its header (*[NAME]*) and a list of
+_property = values_ . It is possible to have multiple values defined for one property (see example).
 
-There is a special section called *[DEFAULT]* which configured the default theme behavior.
-This section must always be present in the *themes.ini* file. The coloring behavior will be that if a given property _key_ 
-is not defined in the selected theme, it will fallback to its value in the *[DEFAULT]* section.
+There is a special theme called *[DEFAULT]* which configures the default theme behavior.
+This section must always be present in the *themes.ini* file. The coloring behavior will be that if
+a given property _key_ is not defined in the selected theme, it will fallback to its value in the
+*[DEFAULT]* section.
 
 == Properties
 
-Here is the list of the supported values for property _key_, in a given theme definition.
-Except the *selected* key, all others are a color/style definition (see next chapter)
+Supported values for _property_, in a given theme definition.
+Except the *selected* key, all others are a color/style definition.
 
 === selected
 
-Only used in the *[DEFAULT]* theme. This property identifies the active theme (identifying the theme section *[NAME]*)
+Only used in the *[DEFAULT]* theme. This property identifies the active theme
+(identifying the theme section *[NAME]*)
 
 === error
 
-All the *leaf* error messages
+Defines the color for all the *leaf* error messages
 
 === label
 
-Text labels in tables (everything that is not a property value)
+Defines the color for the text labels in tables (everything that is not a property value)
 
 === table_separator
 
-Table lines
+Defines the color for the border in a table
 
 === tag.XXX
 
-Keyword for *XXX* tag (used in *leaf search* and *leaf package list*)
+Defines the color for a keyword for *XXX* tag (used in *leaf search* and *leaf package list*)
+i.e.; tag.current = F_GREEN will color all the *current* tag's green in *leaf search*
 
 === remote_disabled
 
-Disabled entry when listing remotes (see *leaf remote*)
+Defines the color for a disabled remote (see *leaf remote*)
 
 === profile_current
 
-Current entry when listing profiles (see *leaf status* and *leaf profile*)
+Defines the color for profiles (see *leaf status* and *leaf profile*)
 
 == Colors and styles
 
-Values for the above property keys can be a combination of a foreground color, a background color and a style
+Values for the above property keys can be a combination of a
 
-=== Foreground colors
+    - foreground color
+    - background color
+    - style
 
-Available foreground colors are: *F_BLACK*, *F_RED*, *F_GREEN*, *F_YELLOW*, *F_BLUE*, *F_MAGENTA*, *F_CYAN*, *F_WHITE*
+=== Foreground Colors
 
-Some other values are fairly well supported, but may be not on some specific configurations: *F_LIGHTBLACK*, *F_LIGHTRED*, *F_LIGHTGREEN*, *F_LIGHTYELLOW*, *F_LIGHTBLUE*, *F_LIGHTMAGENTA*, *F_LIGHTCYAN*, *F_LIGHTWHITE*
+Available supported foreground colors:
+*F_BLACK*
+*F_RED*
+*F_GREEN*
+*F_YELLOW*
+*F_BLUE*
+*F_MAGENTA*
+*F_CYAN*
+*F_WHITE*
+
+Other foreground colors (may not be available on all terminals):
+*F_LIGHTBLACK*
+*F_LIGHTRED*
+*F_LIGHTGREEN*
+*F_LIGHTYELLOW*
+*F_LIGHTBLUE*
+*F_LIGHTMAGENTA*
+*F_LIGHTCYAN*
+*F_LIGHTWHITE*
 
 === Background colors
 
-Available background colors are: *B_BLACK*, *B_RED*, *B_GREEN*, *B_YELLOW*, *B_BLUE*, *B_MAGENTA*, *B_CYAN*, *B_WHITE*
+Available supported background colors:
+*B_BLACK*
+*B_RED*
+*B_GREEN*
+*B_YELLOW*
+*B_BLUE*
+*B_MAGENTA*
+*B_CYAN*
+*B_WHITE*
 
-Some other values are fairly well supported, but may be not on some specific configurations: *B_LIGHTBLACK*, *B_LIGHTRED*, *B_LIGHTGREEN*, *B_LIGHTYELLOW*, *B_LIGHTBLUE*, *B_LIGHTMAGENTA*, *B_LIGHTCYAN*, *B_LIGHTWHITE*
+Other background colors (may not be available on all terminals):
+*B_LIGHTBLACK*
+*B_LIGHTRED*
+*B_LIGHTGREEN*
+*B_LIGHTYELLOW*
+*B_LIGHTBLUE*
+*B_LIGHTMAGENTA*
+*B_LIGHTCYAN*
+*B_LIGHTWHITE*
 
 === Styles
 
 Available style values are:
 
 *NORMAL*::
-
-Default fond rendering
-
+Default font rendering
 *BRIGHT*::
-
 Highlighted (bold) font
-
 *DIM*::
-
 Lowlighted (thin) font
 
 [[X1]]
@@ -106,6 +141,8 @@ Here is an example of a *[DEFAULT]* section content:
   tag.latest = F_CYAN
   remote_disabled = F_LIGHTBLACK
   profile_current = F_GREEN
+
+See *themes.ini* for other examples of setting themes.
 
 == SEE ALSO
 
