@@ -94,7 +94,7 @@ class JsonConstants(object):
     REMOTE_PACKAGES = 'packages'
     REMOTE_PACKAGE_SIZE = 'size'
     REMOTE_PACKAGE_FILE = 'file'
-    REMOTE_PACKAGE_SHA1SUM = 'sha1sum'
+    REMOTE_PACKAGE_HASH = 'hash'
 
     # Manifest
     INFO = 'info'

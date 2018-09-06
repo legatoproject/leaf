@@ -12,9 +12,8 @@ from pathlib import Path
 
 from leaf.constants import JsonConstants
 from leaf.core.packagemanager import LoggerManager
-from leaf.model.package import Manifest, LeafArtifact
-from leaf.utils import jsonLoadFile, openOutputTarFile, computeSha1sum,\
-    jsonWriteFile
+from leaf.model.package import LeafArtifact, Manifest
+from leaf.utils import computeHash, jsonLoadFile, jsonWriteFile, openOutputTarFile
 
 
 class RelengManager(LoggerManager):
@@ -70,25 +69,25 @@ class RelengManager(LoggerManager):
         rootNode = OrderedDict()
         rootNode[JsonConstants.INFO] = infoNode
 
-        sha1Map = {}
+        hashMap = {}
         packagesNode = []
         rootNode[JsonConstants.REMOTE_PACKAGES] = packagesNode
         for a in artifacts:
             la = LeafArtifact(a)
             pi = la.getIdentifier()
-            sha1 = computeSha1sum(a)
-            if pi in sha1Map:
-                if sha1 != sha1Map[pi]:
+            hash = computeHash(a)
+            if pi in hashMap:
+                if hash != hashMap[pi]:
                     raise ValueError(
                         "Artifact %s has multiple artifacts for same version" % pi)
                 self.logger.printDefault("Artifact already present, skip:", pi)
             else:
-                sha1Map[pi] = sha1
+                hashMap[pi] = hash
                 self.logger.printDefault("Found:", pi)
                 fileNode = OrderedDict()
                 fileNode[JsonConstants.REMOTE_PACKAGE_FILE] = str(
                     Path(a).relative_to(outputFile.parent))
-                fileNode[JsonConstants.REMOTE_PACKAGE_SHA1SUM] = str(sha1)
+                fileNode[JsonConstants.REMOTE_PACKAGE_HASH] = str(hash)
                 fileNode[JsonConstants.REMOTE_PACKAGE_SIZE] = a.stat().st_size
                 fileNode[JsonConstants.INFO] = la.getNodeInfo()
                 packagesNode.append(fileNode)

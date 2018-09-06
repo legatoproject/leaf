@@ -122,6 +122,9 @@ class ContentChecker():
 
 class AbstractTestWithChecker(unittest.TestCase):
 
+    def __init__(self, methodName):
+        TestCase.__init__(self, methodName)
+
     def assertStdout(self, templateOut=None, templateErr=[], variables=None, byMethod=True):
         '''
         Possibles values for templates :
@@ -144,7 +147,7 @@ class AbstractTestWithRepo(AbstractTestWithChecker):
     VOLATILE_FOLDER = None
 
     def __init__(self, methodName):
-        TestCase.__init__(self, methodName)
+        AbstractTestWithChecker.__init__(self, methodName)
 
     @classmethod
     def setUpClass(cls):
@@ -340,6 +343,7 @@ def generateRepo(sourceFolder, outputFolder):
                            "--homedir", str(TEST_GPG_HOMEDIR),
                            "--detach-sign", "--armor",
                            str(outputFolder / "index2.json")])
+
 
 def checkArchiveFormat(file):
     if (file.endswith(".tar")):

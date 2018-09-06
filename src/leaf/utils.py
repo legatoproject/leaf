@@ -7,26 +7,26 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-from collections import OrderedDict
 import hashlib
+import json
 import os
 import random
 import re
+import string
 import sys
-from tarfile import TarFile
 import tempfile
 import time
-
-from pathlib import Path
-import requests
-
-import json
-from leaf import __version__
-from leaf.constants import LeafConstants
-import string
 import urllib
+from enum import Enum, unique
+from collections import OrderedDict
+from pathlib import Path
+from tarfile import TarFile
 from urllib.parse import urlparse, urlunparse
 
+import requests
+
+from leaf import __version__
+from leaf.constants import LeafConstants
 
 _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
 _VERSION_SEPARATOR = re.compile("[-_.~]")
@@ -94,13 +94,13 @@ def resolveUrl(remoteUrl, subPath):
     return urlunparse(url)
 
 
-def getCachedArtifactName(filename, sha1sum):
+def getCachedArtifactName(filename, hash):
     '''
     Compute a unique name for files in cache
     '''
     prefixLen = 7
-    if sha1sum is not None and len(sha1sum) >= prefixLen:
-        prefix = sha1sum[:prefixLen]
+    if hash is not None:
+        prefix = parseHash(hash)[1][:prefixLen]
     else:
         prefix = ''.join(random.choice(string.ascii_uppercase + string.digits)
                          for _ in range(prefixLen))
@@ -138,23 +138,9 @@ def openOutputTarFile(path):
     return TarFile.open(str(path), mode)
 
 
-def computeSha1sum(file):
-    '''
-    Return the sha1 of the given file
-    '''
-    BLOCKSIZE = 4096
-    hasher = hashlib.sha1()
-    with open(str(file), 'rb') as fp:
-        buf = fp.read(BLOCKSIZE)
-        while len(buf) > 0:
-            hasher.update(buf)
-            buf = fp.read(BLOCKSIZE)
-    return hasher.hexdigest()
-
-
 def downloadData(url, outputFile=None, timeout=LeafConstants.DOWNLOAD_TIMEOUT):
     '''
-    Download data and write it to outputFile 
+    Download data and write it to outputFile
     or return the data if outputFile is None
     '''
     with urllib.request.urlopen(url, timeout=timeout) as stream:
@@ -164,9 +150,9 @@ def downloadData(url, outputFile=None, timeout=LeafConstants.DOWNLOAD_TIMEOUT):
             fp.write(stream.read())
 
 
-def downloadFile(url, folder, logger, filename=None, sha1sum=None):
+def downloadFile(url, folder, logger, filename=None, hash=None):
     '''
-    Download an artifact and eventually check its sha1
+    Download an artifact and check its hash if given
     '''
     parsedUrl = urlparse(url)
     if filename is None:
@@ -175,12 +161,12 @@ def downloadFile(url, folder, logger, filename=None, sha1sum=None):
         folder.mkdir(parents=True)
     targetFile = folder / filename
     if targetFile.exists():
-        if sha1sum is None:
+        if hash is None:
             logger.printVerbose("File exists but cannot be verified, %s will be re-downloaded" %
                                 targetFile.name)
             os.remove(str(targetFile))
-        elif sha1sum != computeSha1sum(targetFile):
-            logger.printVerbose("File exists but SHA1 differs, %s will be re-downloaded" %
+        elif not checkHash(targetFile, hash):
+            logger.printVerbose("File exists but hash differs, %s will be re-downloaded" %
                                 targetFile.name)
             os.remove(str(targetFile))
         else:
@@ -204,9 +190,9 @@ def downloadFile(url, folder, logger, filename=None, sha1sum=None):
         else:
             urllib.request.urlretrieve(url, str(targetFile))
         logger.printDefault("[100%%] Downloading %s" % targetFile.name)
-        if sha1sum is not None and sha1sum != computeSha1sum(targetFile):
-            raise ValueError("Invalid SHA1 sum for %s, expecting %s" %
-                             (targetFile.name, sha1sum))
+        if hash is not None and not checkHash(targetFile, hash):
+            raise ValueError("Invalid hash for %s (expecting %s)" %
+                             (targetFile.name, hash))
     return targetFile
 
 
@@ -246,7 +232,7 @@ def mkTmpLeafRootDir():
 
 def getAltEnvPath(envKey=None, defaultPath=None, mkdirIfNeeded=False):
     '''
-    Returns 'defaultPath' unless 'envKey' exists in env, then returns 'envKey' 
+    Returns 'defaultPath' unless 'envKey' exists in env, then returns 'envKey'
     as a Path
     '''
     out = defaultPath
@@ -257,3 +243,36 @@ def getAltEnvPath(envKey=None, defaultPath=None, mkdirIfNeeded=False):
     if mkdirIfNeeded and not out.is_dir():
         out.mkdir(parents=True)
     return out
+
+
+__HASH_NAME = 'sha384'
+__HASH_FACTORY = hashlib.sha384
+__HASH_BLOCKSIZE = 4096
+
+
+def parseHash(hash):
+    parts = hash.split(':')
+    if len(parts) != 2:
+        raise ValueError("Invalid hash format %s" % hash)
+    if parts[0] != __HASH_NAME:
+        raise ValueError(
+            "Unsupported hash method, expecting %s" % __HASH_NAME)
+    return parts
+
+
+def computeHash(file):
+    '''
+    Return the hash of the given file
+    '''
+    hasher = __HASH_FACTORY()
+    with open(str(file), 'rb') as fp:
+        buf = fp.read(__HASH_BLOCKSIZE)
+        while len(buf) > 0:
+            hasher.update(buf)
+            buf = fp.read(__HASH_BLOCKSIZE)
+    return __HASH_NAME + ':' + hasher.hexdigest()
+
+
+def checkHash(file, value):
+    parseHash(value)
+    return computeHash(file) == value

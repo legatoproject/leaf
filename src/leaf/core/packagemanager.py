@@ -20,8 +20,8 @@ from tempfile import NamedTemporaryFile
 import gnupg
 
 from leaf import __version__
-from leaf.constants import EnvConstants, JsonConstants, LeafConstants, \
-    LeafFiles
+from leaf.constants import (EnvConstants, JsonConstants, LeafConstants,
+                            LeafFiles)
 from leaf.core.coreutils import StepExecutor, VariableResolver
 from leaf.core.dependencies import DependencyManager, DependencyType
 from leaf.format.formatutils import sizeof_fmt
@@ -29,12 +29,13 @@ from leaf.format.logger import TextLogger
 from leaf.format.theme import ThemeManager
 from leaf.model.config import UserConfiguration
 from leaf.model.environment import Environment
-from leaf.model.package import AvailablePackage, InstalledPackage, \
-    LeafArtifact, Manifest, PackageIdentifier
+from leaf.model.package import (AvailablePackage, InstalledPackage,
+                                LeafArtifact, Manifest, PackageIdentifier)
 from leaf.model.remote import Remote
-from leaf.utils import downloadData, downloadFile, getAltEnvPath, \
-    getCachedArtifactName, isFolderIgnored, jsonLoadFile, jsonWriteFile, \
-    markFolderAsIgnored, mkTmpLeafRootDir, versionComparator_lt
+from leaf.utils import (downloadData, downloadFile, getAltEnvPath,
+                        getCachedArtifactName, isFolderIgnored, jsonLoadFile,
+                        jsonWriteFile, markFolderAsIgnored, mkTmpLeafRootDir,
+                        versionComparator_lt)
 
 
 class _LeafBase():
@@ -289,7 +290,7 @@ class RemoteManager(GPGManager):
                     leafMinVersion = ap.getSupportedLeafVersion()
         if leafMinVersion is not None:
             raise ValueError(
-                    "You need to upgrade leaf v%s to use packages from %s" % (leafMinVersion, alias))
+                "You need to upgrade leaf v%s to use packages from %s" % (leafMinVersion, alias))
 
 
 class PackageManager(RemoteManager):
@@ -388,8 +389,7 @@ class PackageManager(RemoteManager):
                     else:
                         ap2 = out[ap.getIdentifier()]
                         ap2.sourceRemotes.append(remote)
-                        # Checks that aps are the same
-                        if ap.getSha1sum() != ap2.getSha1sum():
+                        if ap.getHash() != ap2.getHash():
                             self.logger.printError(
                                 ("Package %s is available in several remotes " +
                                  "with same version but different content!") %
@@ -453,12 +453,12 @@ class PackageManager(RemoteManager):
         @return LeafArtifact
         '''
         filename = getCachedArtifactName(ap.getFilename(),
-                                         ap.getSha1sum())
+                                         ap.getHash())
         cachedFile = downloadFile(ap.getUrl(),
                                   self.downloadCacheFolder,
                                   self.logger,
                                   filename=filename,
-                                  sha1sum=ap.getSha1sum())
+                                  hash=ap.getHash())
         return LeafArtifact(cachedFile)
 
     def extractLeafArtifact(self, la, env,

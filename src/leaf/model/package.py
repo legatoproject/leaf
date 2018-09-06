@@ -234,8 +234,8 @@ class AvailablePackage(Manifest):
     def getFilename(self):
         return Path(self.getSubPath()).name
 
-    def getSha1sum(self):
-        return self.jsonget(JsonConstants.REMOTE_PACKAGE_SHA1SUM)
+    def getHash(self):
+        return self.jsonget(JsonConstants.REMOTE_PACKAGE_HASH)
 
     def getSubPath(self):
         return self.jsonget(JsonConstants.REMOTE_PACKAGE_FILE, mandatory=True)
