@@ -11,17 +11,17 @@ export LEAF_PROFILE="bar";
 # Exported by user configuration
 export UNKNWONVAR="TOTO";
 # Exported by workspace
-export FOO="BAR";
 export LEAF_WORKSPACE="{ROOT_FOLDER}/volatile/workspace";
+export FOO="BAR";
 # Exported by workspace
+export LEAF_WORKSPACE="{ROOT_FOLDER}/volatile/workspace";
 export FOO="BAR";
 export HELLO="PLOP";
-export LEAF_WORKSPACE="{ROOT_FOLDER}/volatile/workspace";
 # Exported by workspace
+export LEAF_WORKSPACE="{ROOT_FOLDER}/volatile/workspace";
 export FOO="BAR";
 export HELLO="wOrlD";
 export FOO2="BAR2";
-export LEAF_WORKSPACE="{ROOT_FOLDER}/volatile/workspace";
 # Exported by package env-A_1.0
 export LEAF_ENV_A="FOO";
 export LEAF_PATH_A="$PATH:{ROOT_FOLDER}/volatile/packages/env-A_1.0:{ROOT_FOLDER}/volatile/packages/env-B_1.0";

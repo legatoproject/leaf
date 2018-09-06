@@ -96,8 +96,8 @@ class WorkspaceManager(PackageManager):
 
     def getWorkspaceEnvironment(self):
         out = self.readWorkspaceConfiguration().getEnvironment()
-        out.env.append((EnvConstants.WORKSPACE_ROOT,
-                        str(self.workspaceRootFolder)))
+        out.env.insert(0, (EnvConstants.WORKSPACE_ROOT,
+                           str(self.workspaceRootFolder)))
         return out
 
     def updateWorkspaceEnv(self, setMap=None, unsetList=None):

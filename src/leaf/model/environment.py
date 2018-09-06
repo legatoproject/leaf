@@ -58,8 +58,8 @@ class Environment():
                 out.addSubEnv(env)
         return out
 
-    def __init__(self, comment=None, content=None):
-        self.comment = comment
+    def __init__(self, label=None, content=None):
+        self.label = label
         self.env = []
         self.children = []
         if isinstance(content, dict):
@@ -75,8 +75,8 @@ class Environment():
 
     def printEnv(self, kvConsumer=None, commentConsumer=None):
         if len(self.env) > 0:
-            if self.comment is not None and commentConsumer is not None:
-                commentConsumer(self.comment)
+            if self.label is not None and commentConsumer is not None:
+                commentConsumer(self.label)
             if kvConsumer is not None:
                 for k, v in self.env:
                     kvConsumer(k, v)
