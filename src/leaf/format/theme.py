@@ -178,6 +178,8 @@ class ThemeManager():
         '''
         return OrderedDict((
             ("error", "BRIGHT + F_RED"),
+            ("hints", "F_GREEN"),
+            ("hints_commands", "BRIGHT + B_GREEN"),
             ("label", "BRIGHT"),
             ("table_separator", "F_LIGHTBLACK"),
             ("tag.current", "F_GREEN"),
@@ -193,6 +195,9 @@ class ThemeManager():
 
         # Error messages
         self.ERROR = _Theme(self, "error")  # Used for error messages
+        self.HINTS = _Theme(self, "hints")  # Used for hints
+        self.HINTS_COMMANDS = _Theme(
+            self, "hints_commands")  # Used for commands in hints
 
         # Tables
         self.LABEL = _Theme(self, "label")

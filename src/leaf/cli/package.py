@@ -15,6 +15,7 @@ from leaf.format.renderer.manifest import ManifestListRenderer
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import Manifest
 from leaf.utils import mkTmpLeafRootDir, envListToMap
+from leaf.core.error import PackageInstallInterruptedException
 
 
 class PackageMetaCommand(LeafMetaCommand):
@@ -159,8 +160,12 @@ class PackageInstallCommand(LeafCommand):
     def execute(self, args):
         pm = self.getPackageManager(args)
 
-        items = pm.installFromRemotes(args.packages,
-                                      keepFolderOnError=args.keepOnError)
+        try:
+            items = pm.installFromRemotes(args.packages,
+                                          keepFolderOnError=args.keepOnError)
+        except Exception as e:
+            raise PackageInstallInterruptedException(args.packages, e)
+
         if len(items) > 0:
             pm.logger.printQuiet("Packages installed: " +
                                  ' '.join([str(p.getIdentifier()) for p in items]))

@@ -20,7 +20,7 @@ LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
 LEAF_UT_SKIP = os.environ.get("LEAF_UT_SKIP", "")
 LEAF_UT_CREATE_TEMPLATE = os.environ.get("LEAF_UT_CREATE_TEMPLATE")
 
-ROOT_FOLDER = Path(__file__).parent / '..' / '..'
+ROOT_FOLDER = Path(__file__).parent.parent.parent
 RESOURCE_FOLDER = ROOT_FOLDER / "src" / "tests" / "resources"
 EXPECTED_OUTPUT_FOLDER = ROOT_FOLDER / "src" / "tests" / "expected_ouput"
 EXTENSIONS_FOLDER = ROOT_FOLDER / "resources" / "bin"

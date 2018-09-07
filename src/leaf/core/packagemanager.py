@@ -7,17 +7,15 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-import json
-import os
-import platform
-import shutil
-from builtins import filter
+from builtins import filter, Exception
 from collections import OrderedDict
 from datetime import datetime
 from tarfile import TarFile
 from tempfile import NamedTemporaryFile
-
-import gnupg
+import json
+import os
+import platform
+import shutil
 
 from leaf import __version__
 from leaf.constants import (EnvConstants, JsonConstants, LeafConstants,
@@ -36,6 +34,11 @@ from leaf.utils import (downloadData, downloadFile, getAltEnvPath,
                         getCachedArtifactName, isFolderIgnored, jsonLoadFile,
                         jsonWriteFile, markFolderAsIgnored, mkTmpLeafRootDir,
                         versionComparator_lt)
+import gnupg
+
+from leaf.core.error import NoRemoteException, NoEnabledRemoteException, NoPackagesInCacheException, BadRemoteUrlException, InvalidPackageNameException, UserCancelException,\
+    LeafException
+from leaf.format.renderer.error import LeafExceptionRenderer, HintsRenderer
 
 
 class _LeafBase():
@@ -85,6 +88,17 @@ class LoggerManager(_LeafBase):
         self.themeManager = ThemeManager(themesFile)
         self.logger = TextLogger(verbosity, nonInteractive)
         self.nonInteractive = nonInteractive
+
+    def printHints(self, *hints):
+        tr = HintsRenderer()
+        tr.extend(hints)
+        self.printRenderer(tr)
+
+    def printException(self, ex):
+        if isinstance(ex, LeafException):
+            self.printRenderer(LeafExceptionRenderer(ex))
+        else:
+            self.logger.printError(str(ex))
 
     def printRenderer(self, renderer):
         renderer.verbosity = self.logger.getVerbosity()
@@ -178,7 +192,10 @@ class RemoteManager(GPGManager):
         if self.remoteCacheFile.exists():
             cache = jsonLoadFile(self.remoteCacheFile)
 
-        for alias, json in self.readConfiguration().getRemotesMap().items():
+        items = self.readConfiguration().getRemotesMap().items()
+        if len(items) == 0:
+            raise NoRemoteException()
+        for alias, json in items:
             remote = Remote(alias, json)
             if remote.isEnabled() or not onlyEnabled:
                 out[alias] = remote
@@ -186,6 +203,8 @@ class RemoteManager(GPGManager):
             if cache is not None and url in cache:
                 remote.content = cache[url]
 
+        if len(out) == 0 and onlyEnabled:
+            raise NoEnabledRemoteException()
         return out
 
     def createRemote(self, alias, url, enabled=True, insecure=False, gpgKey=None):
@@ -273,8 +292,7 @@ class RemoteManager(GPGManager):
                     self.logger.printDefault(
                         "Fetched content from %s" % alias)
                 except Exception as e:
-                    self.logger.printError(
-                        "Error fetching from remote %s:" % (alias), e)
+                    self.printException(BadRemoteUrlException(remote, e))
             if len(content) > 0:
                 jsonWriteFile(self.remoteCacheFile, content)
 
@@ -367,7 +385,7 @@ class PackageManager(RemoteManager):
                     # loop to get the last item
                     pass
             if pi is None:
-                raise ValueError("Cannot find package matching %s" % motif)
+                raise InvalidPackageNameException(motif)
             if pi not in out:
                 out.append(pi)
         return out
@@ -397,6 +415,9 @@ class PackageManager(RemoteManager):
                             raise ValueError(
                                 "Package %s has multiple artifacts for the same version" %
                                 ap.getIdentifier())
+
+        if len(out) == 0:
+            raise NoPackagesInCacheException()
         return out
 
     def listInstalledPackages(self):
@@ -593,7 +614,7 @@ class PackageManager(RemoteManager):
                     self.logger.printDefault(
                         "Total size:", sizeof_fmt(totalSize))
                 if not self.logger.confirm():
-                    raise ValueError("Installation aborted")
+                    raise UserCancelException()
 
                 # Install prereq
                 prereqApList = DependencyManager.compute(piList, DependencyType.PREREQ,

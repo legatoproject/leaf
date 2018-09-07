@@ -89,6 +89,10 @@ Duration (in seconds) of the download timeout. Default value is *5*
 
 Timeout that leaf waits to download data when the remote falls into an inactive state.
 
+=== _LEAF_DEBUG_
+
+When set, will print a stack trace to the screen when an error occurs
+
 == SEE ALSO
 
 *leaf remote*, *leaf env*, *leaf help colors*

@@ -9,6 +9,7 @@ Leaf Package Manager
 import argcomplete
 from argparse import RawDescriptionHelpFormatter, ArgumentParser
 from pathlib import Path
+from signal import signal, SIGINT
 import sys
 
 from leaf import __help_description__, __version__
@@ -26,6 +27,7 @@ from leaf.cli.setup import SetupCommand
 from leaf.cli.status import StatusCommand
 from leaf.cli.workspace import WorkspaceInitCommand
 from leaf.utils import checkPythonVersion
+from leaf.core.error import UserCancelException
 
 
 class LeafCli():
@@ -87,7 +89,15 @@ class LeafCli():
             command.create(subparsers)
         argcomplete.autocomplete(self.parser)
 
+    def catchSigInt(self):
+        # Catch CTRL-C
+        def signal_handler(sig, frame):
+            raise UserCancelException()
+        signal(SIGINT, signal_handler)
+
     def run(self, argv, handleExceptions=True):
+        if handleExceptions:
+            self.catchSigInt()
         args = self.parser.parse_args(argv)
         for cmd in self.commands:
             if cmd.isHandled(args.command):

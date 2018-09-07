@@ -6,6 +6,7 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
+from builtins import Exception
 from collections import OrderedDict
 from pathlib import Path
 import os
@@ -19,6 +20,9 @@ from leaf.model.config import WorkspaceConfiguration
 from leaf.model.environment import Environment
 from leaf.model.workspace import Profile
 from leaf.utils import jsonLoadFile, checkSupportedLeaf, jsonWriteFile
+
+from leaf.core.error import InvalidProfileNameException,\
+    ProfileNameAlreadyExistException, ProfileProvisioningException
 
 
 class WorkspaceManager(PackageManager):
@@ -119,7 +123,7 @@ class WorkspaceManager(PackageManager):
             raise ValueError("Cannot find profile")
         pfMap = self.listProfiles()
         if name not in pfMap:
-            raise ValueError("Cannot find profile %s" % name)
+            raise InvalidProfileNameException(name)
         return pfMap[name]
 
     def createProfile(self, name):
@@ -127,7 +131,7 @@ class WorkspaceManager(PackageManager):
         wsc = self.readWorkspaceConfiguration()
         pfMap = wsc.getProfilesMap()
         if name in pfMap:
-            raise ValueError("Profile %s already exists" % name)
+            raise ProfileNameAlreadyExistException(name)
         pfMap[name] = {}
         self.writeWorkspaceConfiguration(wsc)
         return self.getProfile(name)
@@ -144,9 +148,9 @@ class WorkspaceManager(PackageManager):
         wsc = self.readWorkspaceConfiguration()
         pfMap = wsc.getProfilesMap()
         if oldname not in pfMap:
-            raise ValueError("Cannot find oldProfile %s" % oldname)
+            raise InvalidProfileNameException(oldname)
         if newname in pfMap:
-            raise ValueError("Profile %s already exists" % newname)
+            raise ProfileNameAlreadyExistException(newname)
         pfMap[newname] = pfMap[oldname]
         del pfMap[oldname]
         self.writeWorkspaceConfiguration(wsc)
@@ -250,9 +254,12 @@ class WorkspaceManager(PackageManager):
             self.logger.printVerbose("All packages are already installed")
         except:
             self.logger.printDefault("Profile is out of sync")
-            self.installFromRemotes(
-                profile.getPackages(),
-                env=self._getSkelEnvironement(profile))
+            try:
+                self.installFromRemotes(
+                    profile.getPackages(),
+                    env=self._getSkelEnvironement(profile))
+            except Exception as e:
+                raise ProfileProvisioningException(e)
 
         # Do all needed links
         profilesDependencyList = self.getProfileDependencies(profile)

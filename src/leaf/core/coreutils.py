@@ -5,6 +5,7 @@ import subprocess
 
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
+from leaf.core.error import InvalidPackageNameException
 
 
 def retrievePackageIdentifier(motif, validPiList):
@@ -21,7 +22,7 @@ def retrievePackageIdentifier(motif, validPiList):
                 if out is None or pi > out:
                     out = pi
     if out is None:
-        raise ValueError("Cannot find any package with name %s" % motif)
+        raise InvalidPackageNameException(motif)
     return out
 
 

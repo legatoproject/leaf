@@ -42,6 +42,14 @@ Only used in the *[DEFAULT]* theme. This property identifies the active theme
 
 Defines the color for all the *leaf* error messages
 
+=== hints
+
+Defines the color for hint messages
+
+=== hints_commands
+
+Defines the color for commands in *hints*
+
 === label
 
 Defines the color for the text labels in tables (everything that is not a property value)
@@ -134,6 +142,8 @@ Here is an example of a *[DEFAULT]* section content:
   [DEFAULT]
   selected = DEFAULT
   error = BRIGHT + F_RED
+  hints = F_GREEN
+  hints_commands = BRIGHT + B_GREEN
   label = BRIGHT
   table_separator = F_LIGHTBLACK
   tag.current = F_GREEN

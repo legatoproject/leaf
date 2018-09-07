@@ -10,12 +10,12 @@ Leaf Package Manager
 from abc import abstractmethod, ABC
 from collections import OrderedDict
 from pathlib import Path
-import traceback
 
 from leaf.core.packagemanager import PackageManager, LoggerManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.format.logger import Verbosity
 from leaf.model.base import Scope
+from leaf.core.error import LeafException
 
 
 def initCommonArgs(parser,
@@ -134,10 +134,11 @@ class GenericCommand(ABC):
         except Exception as e:
             if not catchException:
                 raise e
-            logger = self.getLoggerManager(args).logger
-            logger.printError(e)
-            if logger.isVerbose():
-                traceback.print_exc()
+            lm = self.getLoggerManager(args)
+            if isinstance(e, LeafException):
+                lm.printException(e)
+            else:
+                lm.logger.printError(e)
             return 2
 
 

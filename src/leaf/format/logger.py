@@ -10,6 +10,7 @@ Leaf Package Manager
 from abc import ABC, abstractmethod
 from enum import IntEnum, unique
 import sys
+from leaf.core.error import printTrace
 
 
 @unique
@@ -88,6 +89,7 @@ class TextLogger (ILogger):
 
     def printError(self, *message):
         print(*message, file=sys.stderr)
+        printTrace()
 
     def progressWorked(self, message=None, worked=0, total=100, sameLine=False):
         if message is not None:

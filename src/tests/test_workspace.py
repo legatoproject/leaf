@@ -10,6 +10,9 @@ from leaf.core.features import FeatureManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.format.logger import TextLogger, Verbosity
 from leaf.model.package import PackageIdentifier, Manifest
+
+from leaf.core.error import InvalidProfileNameException,\
+    ProfileNameAlreadyExistException
 from tests.test_depends import mkpi
 from tests.testutils import AbstractTestWithRepo
 import leaf
@@ -140,9 +143,9 @@ class TestProfile(AbstractTestWithRepo):
                                          "container-C",
                                          "container-D"])
         self.wm.getFullEnvironment(profile)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ProfileNameAlreadyExistException):
             self.wm.renameProfile("bar", "bar")
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InvalidProfileNameException):
             self.wm.renameProfile("foo", "bar")
 
     def testSwitchProfile(self):

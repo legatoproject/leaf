@@ -92,21 +92,21 @@ class _Ansi():
         except ImportError:
             self.moduleLoaded = False
 
-    def _useActualModule(self):
+    def isEnabled(self):
         return self.moduleLoaded and (self.force or isatty())
 
     def fore(self):
-        if self._useActualModule():
+        if self.isEnabled():
             return self._coloramaFore
         return self._fakeFore
 
     def back(self):
-        if self._useActualModule():
+        if self.isEnabled():
             return self._coloramaBack
         return self._fakeBack
 
     def style(self):
-        if self._useActualModule():
+        if self.isEnabled():
             return self._coloramaStyle
         return self._fakeStyle
 

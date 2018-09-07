@@ -3,11 +3,13 @@
 '''
 
 from collections import OrderedDict
+import os
 import platform
+import sys
 import unittest
 
 from leaf import __version__
-from leaf.constants import LeafFiles, JsonConstants
+from leaf.constants import LeafFiles, JsonConstants, EnvConstants
 from leaf.core.packagemanager import PackageManager, LoggerManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.format.logger import Verbosity
@@ -22,8 +24,10 @@ from leaf.model.package import Manifest, AvailablePackage, InstalledPackage,\
     PackageIdentifier, Feature
 from leaf.model.remote import Remote
 from leaf.utils import jsonLoadFile
+
+from leaf.core.error import LeafException
 from tests.testutils import LeafCliWrapper, LEAF_UT_SKIP, RESOURCE_FOLDER,\
-    AbstractTestWithRepo
+    AbstractTestWithRepo, ROOT_FOLDER
 
 
 class AvailablePackageWithFakeSize(AvailablePackage):
@@ -177,6 +181,50 @@ class TestRendering_Default(LeafCliWrapper):
                 JsonConstants.INFO_FEATURE_DESCRIPTION: "message2"
             }))
             self.loggerManager.printRenderer(rend)
+
+    def _createException(self):
+        ex = LeafException("Random message for this exception")
+        ex.hints.append("this is a first hint with a 'command'")
+        ex.hints.append(
+            "another one with 'a first command' and 'a second one'")
+        ex.cause = Exception("This is a fake cause exception")
+        return ex
+
+    def testHints(self):
+        with self.assertStdout(
+                templateOut="hints.out"):
+            self.loggerManager.printHints(
+                "This is a hints", "This is another hints with a 'fake command'")
+
+    def testError(self):
+        with self.assertStdout(
+                templateOut=[],
+                templateErr="error.err"):
+            self.loggerManager.printException(self._createException())
+
+    def _printError(self):
+        try:
+            1 / 0  # Ooops !
+        except Exception as cause:
+            ex = self._createException()
+            ex.cause = cause
+            print("---- Rendered error ----", file=sys.stderr)
+            self.loggerManager.printException(ex)
+            print("---- Logger error ----", file=sys.stderr)
+            self.loggerManager.logger.printError(ex)
+
+    def testTrace(self):
+        with self.assertStdout(
+                templateOut=[],
+                templateErr="trace.err",
+                variables={
+                    "{ROOT_FOLDER}": ROOT_FOLDER}):
+            print("--------- Production mode ---------", file=sys.stderr)
+            self._printError()
+            os.environ[EnvConstants.DEBUG_MODE] = "1"
+            print("--------- Debug mode ---------", file=sys.stderr)
+            self._printError()
+            del os.environ[EnvConstants.DEBUG_MODE]
 
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")

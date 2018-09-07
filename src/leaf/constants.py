@@ -20,6 +20,7 @@ class EnvConstants():
     CUSTOM_CONFIG = 'LEAF_CONFIG'
     CUSTOM_CACHE = 'LEAF_CACHE'
     DOWNLOAD_TIMEOUT = 'LEAF_TIMEOUT'
+    DEBUG_MODE = 'LEAF_DEBUG'
     GPG_KEYSERVER = "LEAF_GPG_KEYSERVER"
 
 
@@ -65,13 +66,13 @@ class LeafFiles():
     # Skeleton files
     SKEL_FILES = {
         CONFIG_FILENAME: [
-            Path('/') / 'etc'/'leaf' / CONFIG_FILENAME,
-            Path('/') / 'usr'/'share'/'leaf' / CONFIG_FILENAME,
-            USER_HOME / '.local' / 'share'/'leaf' / CONFIG_FILENAME],
+            Path('/') / 'etc' / 'leaf' / CONFIG_FILENAME,
+            Path('/') / 'usr' / 'share' / 'leaf' / CONFIG_FILENAME,
+            USER_HOME / '.local' / 'share' / 'leaf' / CONFIG_FILENAME],
         THEMES_FILENAME: [
             Path('/') / 'etc' / 'leaf' / THEMES_FILENAME,
             Path('/') / 'usr' / 'share' / 'leaf' / THEMES_FILENAME,
-            USER_HOME / '.local' / 'share'/'leaf' / THEMES_FILENAME],
+            USER_HOME / '.local' / 'share' / 'leaf' / THEMES_FILENAME],
     }
 
 

@@ -1,0 +1,18 @@
+--------- Production mode ---------
+---- Rendered error ----
+Random message for this exception
+---- Logger error ----
+Random message for this exception
+--------- Debug mode ---------
+---- Rendered error ----
+Random message for this exception
+Traceback (most recent call last):
+  File "{ROOT_FOLDER}/src/tests/test_rendering.py", line 207, in _printError
+    1 / 0  # Ooops !
+ZeroDivisionError: division by zero
+---- Logger error ----
+Random message for this exception
+Traceback (most recent call last):
+  File "{ROOT_FOLDER}/src/tests/test_rendering.py", line 207, in _printError
+    1 / 0  # Ooops !
+ZeroDivisionError: division by zero
