@@ -59,12 +59,13 @@ class TestRendering_Default(LeafCliWrapper):
     def testManifest(self):
         mfs = self.loadManifest()
         rend = ManifestListRenderer()
-        rend.extend(mfs)
         with self.assertStdout(
                 templateOut="manifest.out",
                 variables={
                     "{ROOT_FOLDER}": AbstractTestWithRepo.ROOT_FOLDER,
                     "{RESOURCE_FOLDER}": RESOURCE_FOLDER}):
+            self.loggerManager.printRenderer(rend)
+            rend.extend(mfs)
             self.loggerManager.printRenderer(rend)
 
     def testRemote(self):
@@ -90,6 +91,7 @@ class TestRendering_Default(LeafCliWrapper):
                     JsonConstants.REMOTE_DATE: "remote_date3"}}))
         with self.assertStdout(
                 templateOut="remotes.out"):
+            self.loggerManager.printRenderer(RemoteListRenderer())
             self.loggerManager.printRenderer(rend)
 
     def testEnvironment(self):
@@ -107,19 +109,22 @@ class TestRendering_Default(LeafCliWrapper):
                            "{PLATFORM_RELEASE}": platform.release()}):
             self.loggerManager.printRenderer(rend)
 
+    def createEmptyWs(self):
+        ws = WorkspaceManager(WorkspaceManager.findRoot(
+            customPath=self.getWorkspaceFolder(),
+            checkEnv=False,
+            checkParents=False),
+            self.loggerManager.logger.getVerbosity(),
+            True)
+        ws.initializeWorkspace()
+        return ws
+
     def createWorkspace(self):
         AbstractTestWithRepo.setUp(self)
         pm = PackageManager(self.loggerManager.logger, nonInteractive=True)
         pm.setInstallFolder(self.getInstallFolder())
         pm.createRemote("default", self.getRemoteUrl(), insecure=True)
-        ws = WorkspaceManager(
-            WorkspaceManager.findRoot(
-                customPath=self.getWorkspaceFolder(),
-                checkEnv=False,
-                checkParents=False),
-            self.loggerManager.logger.getVerbosity(),
-            True)
-        ws.initializeWorkspace()
+        ws = self.createEmptyWs()
 
         pfs = []
         profile = ws.createProfile("foo")
@@ -140,33 +145,37 @@ class TestRendering_Default(LeafCliWrapper):
         return ws, pfs
 
     def testWorkspace(self):
-        rend = WorkspaceRenderer(self.createWorkspace()[0])
         with self.assertStdout(
                 templateOut="workspace.out",
                 variables={
                     "{ROOT_FOLDER}": AbstractTestWithRepo.ROOT_FOLDER}):
-            self.loggerManager.printRenderer(rend)
+            self.loggerManager.printRenderer(
+                WorkspaceRenderer(self.createEmptyWs()))
+            self.loggerManager.printRenderer(
+                WorkspaceRenderer(self.createWorkspace()[0]))
 
     def testProfile(self):
-        rend = ProfileListRenderer(self.createWorkspace()[1])
         with self.assertStdout(
                 templateOut="profile.out"):
-            self.loggerManager.printRenderer(rend)
+            self.loggerManager.printRenderer(ProfileListRenderer())
+            self.loggerManager.printRenderer(
+                ProfileListRenderer(self.createWorkspace()[1]))
 
     def testFeature(self):
         rend = FeatureListRenderer()
-        rend.append(Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message1"
-        }))
-        rend.append(Feature("id2", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY2",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum2": "value2", "enum3": "value3"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message2"
-        }))
         with self.assertStdout(
                 templateOut="feature.out"):
+            self.loggerManager.printRenderer(rend)
+            rend.append(Feature("id1", {
+                JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
+                JsonConstants.INFO_FEATURE_DESCRIPTION: "message1"
+            }))
+            rend.append(Feature("id2", {
+                JsonConstants.INFO_FEATURE_KEY: "KEY2",
+                JsonConstants.INFO_FEATURE_VALUES: {"enum2": "value2", "enum3": "value3"},
+                JsonConstants.INFO_FEATURE_DESCRIPTION: "message2"
+            }))
             self.loggerManager.printRenderer(rend)
 
 

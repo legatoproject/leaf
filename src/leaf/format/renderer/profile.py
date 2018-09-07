@@ -38,12 +38,13 @@ class ProfileListRenderer(Renderer):
         self._addHeaderRows(table, nbElements)
 
         # Body
-        for pf in self:
-            line = self._toDecoratedName(pf)
-            table.newRow().newSep().newCell(line).newSep()
+        if len(self) > 0:
+            for pf in self:
+                line = self._toDecoratedName(pf)
+                table.newRow().newSep().newCell(line).newSep()
 
-        # Footer
-        table.newRow().newSep(nbElements)
+            # Footer
+            table.newRow().newSep(nbElements)
 
         return table
 
@@ -62,26 +63,28 @@ class ProfileListRenderer(Renderer):
 
         # Header
         self._addHeaderRows(table, nbElements)
-        table.newRow().newSep() \
-            .newCell(self.tm.LABEL("Profile"), HAlign.CENTER).newSep() \
-            .newCell(self.tm.LABEL("Env vars"), HAlign.CENTER).newSep() \
-            .newCell(self.tm.LABEL("Packages"), HAlign.CENTER).newSep()
-        table.newRow().newDblSep(nbElements)
 
-        # Body
-        for pf in self:
-            profileName = self._toDecoratedName(pf)
-            env = ["%s=%s" % (k, v) for (k, v) in pf.getEnvMap().items()]
-            packages = map(str, pf.getPackages())
-
-            # Create table row
+        if len(self) > 0:
             table.newRow().newSep() \
-                .newCell(profileName).newSep() \
-                .newCell('\n'.join(env)).newSep() \
-                .newCell('\n'.join(packages)).newSep()
+                .newCell(self.tm.LABEL("Profile"), HAlign.CENTER).newSep() \
+                .newCell(self.tm.LABEL("Env vars"), HAlign.CENTER).newSep() \
+                .newCell(self.tm.LABEL("Packages"), HAlign.CENTER).newSep()
+            table.newRow().newDblSep(nbElements)
 
-            # Footer
-            table.newRow().newSep(nbElements)
+            # Body
+            for pf in self:
+                profileName = self._toDecoratedName(pf)
+                env = ["%s=%s" % (k, v) for (k, v) in pf.getEnvMap().items()]
+                packages = map(str, pf.getPackages())
+
+                # Create table row
+                table.newRow().newSep() \
+                    .newCell(profileName).newSep() \
+                    .newCell('\n'.join(env)).newSep() \
+                    .newCell('\n'.join(packages)).newSep()
+
+                # Footer
+                table.newRow().newSep(nbElements)
 
         return table
 

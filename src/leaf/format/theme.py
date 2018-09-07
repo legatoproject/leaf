@@ -17,28 +17,6 @@ import sys
 
 from leaf.format.ansi import ANSI
 
-
-THEME_FILE_COMMENTS = [
-    "[DEFAULT] section provide default values for all themes",
-    "<selected> key specifies the used theme and is mandatory in [DEFAULT] section (and is used only there)"
-    "Possibles values for foreground are:",
-    "F_BLACK, F_RED, F_GREEN, F_YELLOW, F_BLUE, F_MAGENTA, F_CYAN, F_WHITE",
-    "These other values are fairly well supported, but not part of the standard:",
-    "F_LIGHTBLACK, F_LIGHTRED, F_LIGHTGREEN, F_LIGHTYELLOW, F_LIGHTBLUE, F_LIGHTMAGENTA, F_LIGHTCYAN, F_LIGHTWHITE",
-    "Possibles values for background are:",
-    "B_BLACK, B_RED, B_GREEN, B_YELLOW, B_BLUE, B_MAGENTA, B_CYAN, B_WHITE",
-    "These other values are fairly well supported, but not part of the standard:",
-    "B_LIGHTBLACK, B_LIGHTRED, B_LIGHTGREEN, B_LIGHTYELLOW, B_LIGHTBLUE, B_LIGHTMAGENTA, B_LIGHTCYAN, B_LIGHTWHITE",
-    "Possible values for Style are:",
-    "BRIGHT, DIM, NORMAL",
-    "You can combine Foreground, Background and Style by using '+'",
-    "<label> is used for all non-DATA texts",
-    "You can colors XXX tag by using <tag.XXX> as a key",
-    "<error> is used for error messages",
-    "<table_separator> is used to draw lines of tables",
-    "<remote_disabled> is used for remote which are disabled",
-    "<profile_current> is used for current profile"]
-
 '''
 Map between configuration file and actual code
 '''
