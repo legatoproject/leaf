@@ -11,7 +11,6 @@ from pathlib import Path
 import os
 import shutil
 
-from leaf import __version__
 from leaf.constants import LeafFiles, JsonConstants, EnvConstants
 from leaf.core.dependencies import DependencyManager, DependencyType,\
     DependencyStrategy
@@ -67,7 +66,7 @@ class WorkspaceManager(PackageManager):
     def initializeWorkspace(self):
         if self.isWorkspaceInitialized():
             raise ValueError("Workspace is already initialized")
-        self.writeWorkspaceConfiguration(WorkspaceConfiguration({}))
+        self.writeWorkspaceConfiguration(WorkspaceConfiguration())
 
     def readWorkspaceConfiguration(self, initIfNeeded=False):
         '''
@@ -77,10 +76,7 @@ class WorkspaceManager(PackageManager):
             if not initIfNeeded:
                 raise("Workspace is not initialized")
             self.initializeWorkspace()
-        wsc = WorkspaceConfiguration(jsonLoadFile(self.workspaceConfigFile))
-        checkSupportedLeaf(wsc.jsonget(JsonConstants.INFO_LEAF_MINVER),
-                           exceptionMessage="Leaf has to be updated to work with this workspace")
-        return wsc
+        return WorkspaceConfiguration(self.workspaceConfigFile)
 
     def writeWorkspaceConfiguration(self, wsc):
         '''
@@ -88,10 +84,9 @@ class WorkspaceManager(PackageManager):
         '''
         if not self.workspaceDataFolder.exists():
             self.workspaceDataFolder.mkdir()
-        wsc.json[JsonConstants.WS_LEAFMINVERSION] = __version__
         tmpFile = self.workspaceDataFolder / \
             ("tmp-" + LeafFiles.WS_CONFIG_FILENAME)
-        jsonWriteFile(tmpFile, wsc.json, pp=True)
+        wsc.writeLayerToFile(tmpFile, pp=True)
         tmpFile.rename(self.workspaceConfigFile)
 
     def getWorkspaceEnvironment(self):

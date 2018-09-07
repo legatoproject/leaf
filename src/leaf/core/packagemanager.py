@@ -17,8 +17,6 @@ import os
 import platform
 import shutil
 
-import gnupg
-
 from leaf import __version__
 from leaf.constants import JsonConstants, LeafConstants, LeafFiles, EnvConstants
 from leaf.core.coreutils import VariableResolver, StepExecutor
@@ -26,7 +24,6 @@ from leaf.core.dependencies import DependencyManager, DependencyType
 from leaf.format.formatutils import sizeof_fmt
 from leaf.format.logger import TextLogger
 from leaf.format.theme import ThemeManager
-from leaf.model.base import JsonObject
 from leaf.model.config import UserConfiguration
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier, AvailablePackage, \
@@ -35,6 +32,7 @@ from leaf.model.remote import Remote
 from leaf.utils import getAltEnvPath, jsonLoadFile, jsonWriteFile, \
     isFolderIgnored, getCachedArtifactName, markFolderAsIgnored,\
     mkTmpLeafRootDir, downloadFile, downloadData
+import gnupg
 
 
 class _LeafBase():
@@ -51,15 +49,36 @@ class _LeafBase():
             LeafFiles.DEFAULT_CACHE_FOLDER,
             mkdirIfNeeded=True)
 
-        self.configurationFile = self.configurationFolder / \
-            LeafFiles.CONFIG_FILENAME
+    def _getSkelConfigurationFile(self, filename):
+        '''
+        Try to find a default configuration file
+        '''
+        if filename in LeafFiles.SKEL_FILES:
+            for candidate in LeafFiles.SKEL_FILES[filename]:
+                if candidate.exists():
+                    return candidate
+
+    def getConfigurationFile(self, filename, checkExists=False):
+        '''
+        Return the path of a configuration file.
+        If checkExists arg is True and the file does not exists, returns None
+        '''
+        out = self.configurationFolder / filename
+        if checkExists and not out.exists():
+            return None
+        return out
 
 
 class LoggerManager(_LeafBase):
 
     def __init__(self, verbosity, nonInteractive):
         _LeafBase.__init__(self)
-        themesFile = self.configurationFolder / LeafFiles.THEMES_FILENAME
+        themesFile = self.getConfigurationFile(
+            LeafFiles.THEMES_FILENAME, checkExists=True)
+        # If the theme file does not exists, try to find a skeleton
+        if themesFile is None:
+            themesFile = self._getSkelConfigurationFile(
+                LeafFiles.THEMES_FILENAME)
         self.themeManager = ThemeManager(themesFile)
         self.logger = TextLogger(verbosity, nonInteractive)
         self.nonInteractive = nonInteractive
@@ -131,19 +150,19 @@ class RemoteManager(GPGManager):
         '''
         Read the configuration if it exists, else return the the default configuration
         '''
-        if not self.configurationFile.exists():
-            # Default configuration here
-            skel = UserConfiguration({})
-            skel.setRootFolder(LeafFiles.DEFAULT_LEAF_ROOT)
-            self.writeConfiguration(skel)
-
-        return UserConfiguration(jsonLoadFile(self.configurationFile))
+        return UserConfiguration(
+            self._getSkelConfigurationFile(LeafFiles.CONFIG_FILENAME),
+            self.getConfigurationFile(LeafFiles.CONFIG_FILENAME))
 
     def writeConfiguration(self, usrc):
         '''
         Write the given configuration
         '''
-        jsonWriteFile(self.configurationFile, usrc.json, pp=True)
+        skelFile = self._getSkelConfigurationFile(LeafFiles.CONFIG_FILENAME)
+        usrc.writeLayerToFile(
+            self.getConfigurationFile(LeafFiles.CONFIG_FILENAME),
+            previousLayerFile=skelFile,
+            pp=True)
 
     def cleanRemotesCacheFile(self):
         if self.remoteCacheFile.exists():

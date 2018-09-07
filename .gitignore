@@ -24,3 +24,4 @@ __pycache__
 /nosetests*.xml
 /flake-report*
 /.tox/
+/.pytest_cache/

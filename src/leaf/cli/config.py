@@ -15,21 +15,26 @@ from leaf.constants import LeafFiles
 class ConfigCommand(LeafCommand):
 
     def __init__(self):
-        LeafCommand.__init__(self,
-                             "config",
-                             "update user configuration")
+        LeafCommand.__init__(
+            self,
+            "config",
+            "update user configuration")
 
     def initArgs(self, parser):
         super().initArgs(parser)
-        parser.add_argument('--root',
-                            dest='rootFolder',
-                            metavar='DIR',
-                            type=Path,
-                            help="set the root folder, default: %s" % LeafFiles.DEFAULT_LEAF_ROOT)
+        parser.add_argument(
+            '--root',
+            dest='rootFolder',
+            metavar='DIR',
+            type=Path,
+            help="set the root folder, default: %s" % LeafFiles.DEFAULT_LEAF_ROOT)
 
     def execute(self, args):
         pm = self.getPackageManager(args)
         if args.rootFolder is not None:
             pm.setInstallFolder(args.rootFolder)
-        pm.logger.printDefault("Configuration file: %s" %
-                               pm.configurationFile)
+        configurationFile = pm.getConfigurationFile(
+            LeafFiles.CONFIG_FILENAME, checkExists=True)
+        if configurationFile is not None:
+            pm.logger.printDefault(
+                "Configuration file: %s" % configurationFile)

@@ -140,19 +140,22 @@ class ThemeManager():
         '''
         Write configuration file if it does'nt exist the load it
         '''
-        if not themesFile.exists():
-            self._writeDefaultThemeFile(themesFile)
-        themeConfig = configparser.ConfigParser()
-        themeConfig.read(str(themesFile))
-        # Pick the default theme
-        self.theme = themeConfig["DEFAULT"]
-        # if a selected entry is detected
-        if "selected" in self.theme:
-            selThemeName = themeConfig["DEFAULT"]["selected"]
-            # check if it have it's own section
-            if selThemeName in themeConfig:
-                # Get the corresponding theme
-                self.theme = themeConfig[selThemeName]
+        self.theme = None
+        if themesFile is not None and themesFile.exists():
+            themeConfig = configparser.ConfigParser()
+            themeConfig.read(str(themesFile))
+            # Pick the default theme
+            self.theme = themeConfig["DEFAULT"]
+            # if a selected entry is detected
+            if "selected" in self.theme:
+                selThemeName = themeConfig["DEFAULT"]["selected"]
+                # check if it have it's own section
+                if selThemeName in themeConfig:
+                    # Get the corresponding theme
+                    self.theme = themeConfig[selThemeName]
+
+        if self.theme is None:
+            self.theme = self._getDefaultTheme()
 
         self._createThemes()
 
@@ -191,13 +194,11 @@ class ThemeManager():
         '''
         return self._decorate("tag." + text, text)
 
-    def _writeDefaultThemeFile(self, themesFile):
+    def _getDefaultTheme(self):
         '''
         Write default theme configuration file
         '''
-        themeConfig = configparser.ConfigParser()
-        themeConfig["DEFAULT"] = OrderedDict((
-            ("selected", "DEFAULT"),
+        return OrderedDict((
             ("error", "BRIGHT + F_RED"),
             ("label", "BRIGHT"),
             ("table_separator", "F_LIGHTBLACK"),
@@ -205,22 +206,7 @@ class ThemeManager():
             ("tag.installed", "F_GREEN"),
             ("tag.latest", "F_CYAN"),
             ("remote_disabled", "F_LIGHTBLACK"),
-            ("profile_current", "F_GREEN"),
-        ))
-        themeConfig["DARK"] = OrderedDict((
-            ("label", "DIM + F_YELLOW"),
-        ))
-        themeConfig["LIGHT"] = OrderedDict((
-            ("label", "BRIGHT"),
-        ))
-        with open(str(themesFile), 'w') as themesfile:
-            # Write comments
-            themesfile.write(
-                '\n'.join(map(lambda line: "# " + line, THEME_FILE_COMMENTS)))
-            # Separator between comments and actual contents
-            themesfile.write("\n\n\n")
-            # Write configuration
-            themeConfig.write(themesfile)
+            ("profile_current", "F_GREEN")))
 
     def _createThemes(self):
         # Special instances

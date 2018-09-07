@@ -6,7 +6,11 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
+from collections import OrderedDict
 from enum import IntEnum, unique
+
+from leaf.model.modelutils import layerModelDiff, layerModelUpdate
+from leaf.utils import jsonLoadFile, jsonWriteFile
 
 
 @unique
@@ -25,6 +29,12 @@ class JsonObject():
 
     def __init__(self, json):
         self.json = json
+
+    def has(self, *keys):
+        for key in keys:
+            if key not in self.json:
+                return False
+        return True
 
     def jsonget(self, key, default=None, mandatory=False):
         '''
@@ -51,3 +61,30 @@ class JsonObject():
         if not isinstance(child, dict):
             raise ValueError()
         return JsonObject(child).jsonpath(path[1:], default)
+
+
+class ConfigFileWithLayer(JsonObject):
+
+    def __init__(self, *layerFiles, defaultFactory=OrderedDict):
+        model = None
+        for layer in layerFiles:
+            if layer is not None and layer.exists():
+                if model is None:
+                    model = jsonLoadFile(layer)
+                else:
+                    layerModelUpdate(model, jsonLoadFile(layer))
+        JsonObject.__init__(
+            self, model if model is not None else defaultFactory())
+        self._checkModel()
+
+    def _checkModel(self):
+        '''
+        Method used to check the model and do mandatory migration
+        '''
+        pass
+
+    def writeLayerToFile(self, output, previousLayerFile=None, pp=False):
+        data = self.json
+        if previousLayerFile is not None and previousLayerFile.exists():
+            data = layerModelDiff(jsonLoadFile(previousLayerFile), self.json)
+        jsonWriteFile(output, data, pp=pp)

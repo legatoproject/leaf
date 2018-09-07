@@ -8,21 +8,33 @@ Leaf Package Manager
 '''
 
 from collections import OrderedDict
-from leaf.constants import JsonConstants, LeafFiles
 from pathlib import Path
 
-from leaf.model.base import JsonObject
+from leaf import __version__
+from leaf.constants import JsonConstants, LeafFiles
+from leaf.model.base import ConfigFileWithLayer, JsonObject
 from leaf.model.environment import IEnvObject
+from leaf.utils import checkSupportedLeaf
 
 
-class UserConfiguration(JsonObject, IEnvObject):
+class UserConfiguration(ConfigFileWithLayer, IEnvObject):
     '''
     Represent a user configuration
     '''
 
-    def __init__(self, json):
-        JsonObject.__init__(self, json)
+    def __init__(self, *layers):
+        ConfigFileWithLayer.__init__(self, *layers)
         IEnvObject.__init__(self, "user configuration")
+
+    def _checkModel(self):
+        super()._checkModel()
+        # Check that all remotes have an URL
+        if JsonConstants.CONFIG_REMOTES in self.json:
+            remotes = self.json[JsonConstants.CONFIG_REMOTES]
+            for alias in [alias
+                          for alias, value in remotes.items()
+                          if JsonConstants.CONFIG_REMOTE_URL not in value]:
+                del remotes[alias]
 
     def getEnvMap(self):
         if JsonConstants.CONFIG_ENV not in self.json:
@@ -44,14 +56,19 @@ class UserConfiguration(JsonObject, IEnvObject):
         self.json[JsonConstants.CONFIG_ROOT] = str(folder)
 
 
-class WorkspaceConfiguration(JsonObject, IEnvObject):
+class WorkspaceConfiguration(ConfigFileWithLayer, IEnvObject):
     '''
     Represent a workspace configuration, ie Profiles, env ...
     '''
 
-    def __init__(self, json):
-        JsonObject.__init__(self, json)
+    def __init__(self, *layers):
+        ConfigFileWithLayer.__init__(self, *layers)
         IEnvObject.__init__(self, "workspace")
+
+    def _checkModel(self):
+        checkSupportedLeaf(self.jsonget(JsonConstants.INFO_LEAF_MINVER),
+                           exceptionMessage="Leaf has to be updated to work with this workspace")
+        self.json[JsonConstants.INFO_LEAF_MINVER] = __version__
 
     def getEnvMap(self):
         if JsonConstants.WS_ENV not in self.json:

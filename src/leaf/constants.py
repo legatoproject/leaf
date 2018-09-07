@@ -57,11 +57,22 @@ class LeafFiles():
     DEFAULT_CONFIG_FOLDER = USER_HOME / '.config' / 'leaf'
     DEFAULT_CACHE_FOLDER = USER_HOME / '.cache' / 'leaf'
     # Configuration files
+    CONFIG_FILENAME = 'config.json'
     CACHE_DOWNLOAD_FOLDERNAME = "files"
     CACHE_REMOTES_FILENAME = 'remotes.json'
-    CONFIG_FILENAME = 'config.json'
     THEMES_FILENAME = 'themes.ini'
     GPG_DIRNAME = 'gpg'
+    # Skeleton files
+    SKEL_FILES = {
+        CONFIG_FILENAME: [
+            Path('/') / 'etc'/'leaf' / CONFIG_FILENAME,
+            Path('/') / 'usr'/'share'/'leaf' / CONFIG_FILENAME,
+            USER_HOME / '.local' / 'share'/'leaf' / CONFIG_FILENAME],
+        THEMES_FILENAME: [
+            Path('/') / 'etc' / 'leaf' / THEMES_FILENAME,
+            Path('/') / 'usr' / 'share' / 'leaf' / THEMES_FILENAME,
+            USER_HOME / '.local' / 'share'/'leaf' / THEMES_FILENAME],
+    }
 
 
 class JsonConstants(object):
