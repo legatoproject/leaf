@@ -43,13 +43,14 @@ class TestPackageManager_File(AbstractTestWithRepo):
                   file=sys.stderr)
 
         self.pm.setInstallFolder(self.getInstallFolder())
-        self.assertEqual(0, len(self.pm.listAvailablePackages()))
+        with self.assertRaises(ValueError):
+            self.pm.listAvailablePackages()
         self.assertEqual(0, len(self.pm.listInstalledPackages()))
         self.assertEqual(0, len(self.pm.readConfiguration().getRemotesMap()))
         self.assertEqual(0, len(self.pm.listRemotes()))
 
-        self.pm.createRemote("default", self.getRemoteUrl(), insecure=True)
-        self.pm.createRemote("other", self.getRemoteUrl2(), insecure=True)
+        self.pm.createRemote("default", self.getRemoteUrl(), insecure = True)
+        self.pm.createRemote("other", self.getRemoteUrl2(), insecure = True)
         self.assertEqual(2, len(self.pm.readConfiguration().getRemotesMap()))
         self.pm.fetchRemotes(True)
         self.assertEqual(2, len(self.pm.listRemotes()))
@@ -58,7 +59,7 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.assertNotEqual(0, len(self.pm.listAvailablePackages()))
 
     def testCompression(self):
-        packs = ["compress-bz2_1.0",
+        packs=["compress-bz2_1.0",
                  "compress-gz_1.0",
                  "compress-tar_1.0",
                  "compress-xz_1.0"]
@@ -81,7 +82,8 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.pm.updateRemote(remote)
         self.assertEqual(2, len(self.pm.listRemotes(False)))
         self.assertEqual(0, len(self.pm.listRemotes(True)))
-        self.assertTrue(len(self.pm.listAvailablePackages()) == 0)
+        with self.assertRaises(ValueError):
+            self.pm.listAvailablePackages()
 
         remote = self.pm.listRemotes()["default"]
         remote.setEnabled(True)
@@ -173,12 +175,12 @@ class TestPackageManager_File(AbstractTestWithRepo):
     def testPostinstallError(self):
         with self.assertRaises(Exception):
             self.pm.installFromRemotes(["failure-postinstall-exec_1.0"],
-                                       keepFolderOnError=True)
-        found = False
+                                       keepFolderOnError = True)
+        found=False
         for folder in self.getInstallFolder().iterdir():
             if folder.name.startswith("failure-postinstall-exec_1.0"):
                 self.assertTrue(isFolderIgnored(folder))
-                found = True
+                found=True
                 break
         self.assertTrue(found)
 

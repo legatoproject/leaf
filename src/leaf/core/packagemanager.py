@@ -7,32 +7,34 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
+import json
+import os
+import platform
+import shutil
 from builtins import filter
 from collections import OrderedDict
 from datetime import datetime
 from tarfile import TarFile
 from tempfile import NamedTemporaryFile
-import json
-import os
-import platform
-import shutil
+
+import gnupg
 
 from leaf import __version__
-from leaf.constants import JsonConstants, LeafConstants, LeafFiles, EnvConstants
-from leaf.core.coreutils import VariableResolver, StepExecutor
+from leaf.constants import EnvConstants, JsonConstants, LeafConstants, \
+    LeafFiles
+from leaf.core.coreutils import StepExecutor, VariableResolver
 from leaf.core.dependencies import DependencyManager, DependencyType
 from leaf.format.formatutils import sizeof_fmt
 from leaf.format.logger import TextLogger
 from leaf.format.theme import ThemeManager
 from leaf.model.config import UserConfiguration
 from leaf.model.environment import Environment
-from leaf.model.package import PackageIdentifier, AvailablePackage, \
-    InstalledPackage, LeafArtifact, Manifest
+from leaf.model.package import AvailablePackage, InstalledPackage, \
+    LeafArtifact, Manifest, PackageIdentifier
 from leaf.model.remote import Remote
-from leaf.utils import getAltEnvPath, jsonLoadFile, jsonWriteFile, \
-    isFolderIgnored, getCachedArtifactName, markFolderAsIgnored,\
-    mkTmpLeafRootDir, downloadFile, downloadData
-import gnupg
+from leaf.utils import downloadData, downloadFile, getAltEnvPath, \
+    getCachedArtifactName, isFolderIgnored, jsonLoadFile, jsonWriteFile, \
+    markFolderAsIgnored, mkTmpLeafRootDir, versionComparator_lt
 
 
 class _LeafBase():
@@ -246,7 +248,11 @@ class RemoteManager(GPGManager):
         if not self.remoteCacheFile.exists():
             self.logger.printDefault("Refreshing available packages...")
             content = OrderedDict()
-            for remote in self.listRemotes(onlyEnabled=True).values():
+            remotes = self.listRemotes(onlyEnabled=True)
+            if len(remotes) == 0:
+                raise ValueError(
+                    "No remote configured, first add or enable at least one remote (see 'leaf help remote')")
+            for alias, remote in remotes.items():
                 try:
                     indexUrl = remote.getUrl()
                     data = downloadData(indexUrl)
@@ -254,19 +260,36 @@ class RemoteManager(GPGManager):
                     if gpgKey is not None:
                         signatureUrl = indexUrl + LeafConstants.GPG_SIG_EXTENSION
                         self.logger.printDefault(
-                            "Verifying signature for remote %s" % remote.alias)
+                            "Verifying signature for remote %s" % alias)
                         self.gpgImportKeys(gpgKey)
                         self.gpgVerifyContent(data,
                                               signatureUrl,
                                               expectedKey=gpgKey)
                     self.logger.printVerbose("Fetched", indexUrl)
-                    content[indexUrl] = json.loads(data.decode())
+                    jsonData = json.loads(data.decode())
+                    self._checkRemoteContent(alias, indexUrl, jsonData)
+                    content[indexUrl] = jsonData
                     self.logger.printDefault(
-                        "Fetched content from %s" % remote.alias)
+                        "Fetched content from %s" % alias)
                 except Exception as e:
                     self.logger.printError(
-                        "Error fetching", indexUrl, ":", e)
-            jsonWriteFile(self.remoteCacheFile, content)
+                        "Error fetching from remote %s:" % (alias), e)
+            if len(content) > 0:
+                jsonWriteFile(self.remoteCacheFile, content)
+
+    def _checkRemoteContent(self, alias, url, jsonContent):
+        # Check leaf min version for all packages
+        remote = Remote("", None)
+        remote.content = jsonContent
+        leafMinVersion = None
+        for apInfoJson in remote.getAvailablePackageList():
+            ap = AvailablePackage(apInfoJson, url)
+            if not ap.isSupportedByCurrentLeafVersion():
+                if leafMinVersion is None or versionComparator_lt(leafMinVersion, ap.getSupportedLeafVersion()):
+                    leafMinVersion = ap.getSupportedLeafVersion()
+        if leafMinVersion is not None:
+            raise ValueError(
+                    "You need to upgrade leaf v%s to use packages from %s" % (leafMinVersion, alias))
 
 
 class PackageManager(RemoteManager):

@@ -56,6 +56,9 @@ class TestPackageManager_Http(TestPackageManager_File):
     def getRemoteUrl(self):
         return "http://localhost:%s/index.json" % HTTP_PORT
 
+    def getRemoteUrl2(self):
+        return "http://localhost:%s/index2.json" % HTTP_PORT
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -70,7 +70,6 @@ class TestGPG(LeafCliWrapper):
         self.leafExec(("remote", "fetch"))
 
         self.assertTrue(self.cacheFile.exists())
-        self.assertLess(10, self.cacheFile.stat().st_size)
 
     def testRemoteBadKey(self):
         self.leafExec(("remote", "add"),
@@ -78,8 +77,7 @@ class TestGPG(LeafCliWrapper):
                       "default", self.getRemoteUrl())
         self.leafExec(("remote", "fetch"))
 
-        self.assertTrue(self.cacheFile.exists())
-        self.assertGreater(10, self.cacheFile.exists())
+        self.assertFalse(self.cacheFile.exists())
 
     def testRemoteValidKey(self):
         self.leafExec(("remote", "add"),
@@ -89,7 +87,6 @@ class TestGPG(LeafCliWrapper):
 
         self.leafExec(("search"), "-a")
         self.assertTrue(self.cacheFile.exists())
-        self.assertLess(10, self.cacheFile.stat().st_size)
 
 
 if __name__ == "__main__":
