@@ -2,7 +2,14 @@
 # LEAF_DESCRIPTION help pages for leaf commands
 set -e
 
+# Check if man is installed
+if test -z "$(which man || true)"; then
+	echo "man is not installed"
+	echo "please install it with: sudo apt-get update && sudo apt-get install man"
+	exit 1
+fi
 
+# Parse args
 while test -n "$1"; do
 	case "$1" in
 
