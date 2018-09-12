@@ -52,7 +52,7 @@ from enum import unique, Enum
 
 from leaf.format.alignment import HAlign, VAlign
 from leaf.format.ansi import removeAnsiChars
-from leaf.format.chars import _PADDING_CHAR, _SEPARATORS_DICT
+from leaf.format.chars import PADDING_CHAR, getSeparators
 
 
 class Table():
@@ -64,6 +64,7 @@ class Table():
         self.tm = themeManager
         self.rows = []
         self.columns = []
+        self.separators = getSeparators()
 
     def newRow(self):
         '''
@@ -513,7 +514,7 @@ class _Cell(_TableElement):
 
         # Align
         out = self.vAlign(out, self._spanHeight)
-        out = [self.hAlign(line, self._spanWidth, _PADDING_CHAR)
+        out = [self.hAlign(line, self._spanWidth, PADDING_CHAR)
                for line in out]
 
         return out
@@ -715,7 +716,7 @@ class _Separator(_TableElement):
 
         # Get it from the char dictionary
         # If not found, let's put à * to make debug easiest
-        return _SEPARATORS_DICT.get(key, "*")
+        return self.table.separators.get(key, "*")
 
     def draw(self):
         '''

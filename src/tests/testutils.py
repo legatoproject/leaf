@@ -47,29 +47,37 @@ class StringIOWrapper(StringIO):
         super().write(txt)
         self.__altstream__.write(txt)
 
+    @property
+    def encoding(self):
+        return self.__altstream__.encoding
+
+    @encoding.setter
+    def encoding(self, enc):
+        self.__altstream__.encoding = enc
+
 
 class ContentChecker():
-    _STDOUT = sys.stdout
-    _STDERR = sys.stderr
 
     def __init__(self, tester, testCase, templateOut=None, templateErr=[], variables=None, byMethod=True):
         self.tester = tester
         self.testCase = testCase
         self.templateOut, self.templateErr = templateOut, templateErr
         self.variables = variables
-        self.stdout = StringIOWrapper(ContentChecker._STDOUT)
-        self.stderr = StringIOWrapper(ContentChecker._STDERR)
+        self.sysstdout = sys.stdout
+        self.sysstderr = sys.stderr
+        self.stdoutWrapper = StringIOWrapper(self.sysstdout)
+        self.stderrWrapper = StringIOWrapper(self.sysstderr)
         self.byMethod = byMethod
 
     def __enter__(self):
-        sys.stdout = self.stdout
-        sys.stderr = self.stderr
+        sys.stdout = self.stdoutWrapper
+        sys.stderr = self.stderrWrapper
 
     def __exit__(self, *_):
-        sys.stdout = ContentChecker._STDOUT
-        sys.stderr = ContentChecker._STDERR
-        self._checkContent(self.templateOut, self.stdout)
-        self._checkContent(self.templateErr, self.stderr)
+        sys.stdout = self.sysstdout
+        sys.stderr = self.sysstderr
+        self._checkContent(self.templateOut, self.stdoutWrapper)
+        self._checkContent(self.templateErr, self.stderrWrapper)
 
     def _checkContent(self, template, stream):
         if template is None:

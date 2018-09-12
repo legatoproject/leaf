@@ -7,9 +7,11 @@ from tempfile import mkdtemp
 import unittest
 
 from leaf.format.alignment import VAlign, HAlign
+from leaf.format.chars import _SEPARATORS_ASCII
 from leaf.format.formatutils import sizeof_fmt
 from leaf.format.table import Table
 from leaf.format.theme import ThemeManager
+
 from tests.testutils import AbstractTestWithChecker, LEAF_UT_DEBUG
 
 
@@ -21,7 +23,7 @@ class TestFormat(AbstractTestWithChecker):
         self.assertEqual(sizeof_fmt(123789), "121 kB")
         self.assertEqual(sizeof_fmt(456123789), "435.0 MB")
 
-    def testTable(self):
+    def _createTable(self):
         if LEAF_UT_DEBUG is not None:
             ROOT_FOLDER = Path("/tmp/leaf")
         else:
@@ -38,6 +40,16 @@ class TestFormat(AbstractTestWithChecker):
             .newCell("Cell3: one line, vertical alignment: bottom", vAlign=VAlign.BOTTOM).newSep() \
             .newCell("Cell4:\n- multiline\n- horizontal alignment: right", HAlign.RIGHT).newSep()
         table.newRow().newSep(nbElt)
+        return table
+
+    def testTable(self):
+        with self.assertStdout(
+                templateOut="table.out"):
+            print(self._createTable())
+
+    def testAsciiSwitch(self):
+        table = self._createTable()
+        table.separators = _SEPARATORS_ASCII
         with self.assertStdout(
                 templateOut="table.out"):
             print(table)
