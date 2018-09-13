@@ -76,12 +76,15 @@ The gpg keyring folder that contains the keyrings used by leaf for remotes gpg s
 
 === _LEAF_CACHE_
 
-Location for the leaf download cache. Default value: *$HOME/.cache/leaf*
+Location of cached information. Default value: *$HOME/.cache/leaf*
 
-Location of cached information and may contain:
+It may contain:
 
     - info from remote indexes
     - package artifacts before install
+
+The content of this folder can be deleted at any time to save disk space.
+A warning message will be regularly displayed as soon as this cache size exceeds 5 GB.
 
 === _LEAF_TIMEOUT_
 

@@ -7,23 +7,33 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-from builtins import filter, Exception
-from collections import OrderedDict
-from datetime import datetime
-from tarfile import TarFile
-from tempfile import NamedTemporaryFile
 import json
 import os
 import platform
 import shutil
+from builtins import Exception, filter
+from collections import OrderedDict
+from datetime import datetime
+from signal import SIGINT, signal
+from tarfile import TarFile
+from tempfile import NamedTemporaryFile
+
+import gnupg
 
 from leaf import __version__
 from leaf.constants import (EnvConstants, JsonConstants, LeafConstants,
                             LeafFiles)
 from leaf.core.coreutils import StepExecutor, VariableResolver
 from leaf.core.dependencies import DependencyManager, DependencyType
+from leaf.core.error import (BadRemoteUrlException,
+                             InvalidPackageNameException, LeafException,
+                             NoEnabledRemoteException,
+                             NoPackagesInCacheException, NoRemoteException,
+                             PackageInstallInterruptedException,
+                             UserCancelException)
 from leaf.format.formatutils import sizeof_fmt
 from leaf.format.logger import TextLogger
+from leaf.format.renderer.error import HintsRenderer, LeafExceptionRenderer
 from leaf.format.theme import ThemeManager
 from leaf.model.config import UserConfiguration
 from leaf.model.environment import Environment
@@ -31,14 +41,9 @@ from leaf.model.package import (AvailablePackage, InstalledPackage,
                                 LeafArtifact, Manifest, PackageIdentifier)
 from leaf.model.remote import Remote
 from leaf.utils import (downloadData, downloadFile, getAltEnvPath,
-                        getCachedArtifactName, isFolderIgnored, jsonLoadFile,
-                        jsonWriteFile, markFolderAsIgnored, mkTmpLeafRootDir,
-                        versionComparator_lt)
-import gnupg
-
-from leaf.core.error import NoRemoteException, NoEnabledRemoteException, NoPackagesInCacheException, BadRemoteUrlException, InvalidPackageNameException, UserCancelException,\
-    LeafException
-from leaf.format.renderer.error import LeafExceptionRenderer, HintsRenderer
+                        getCachedArtifactName, getTotalSize, isFolderIgnored,
+                        jsonLoadFile, jsonWriteFile, markFolderAsIgnored,
+                        mkTmpLeafRootDir, versionComparator_lt)
 
 
 class _LeafBase():
@@ -323,6 +328,21 @@ class PackageManager(RemoteManager):
         RemoteManager.__init__(self, verbosity, nonInteractive)
         self.downloadCacheFolder = self.cacheFolder / \
             LeafFiles.CACHE_DOWNLOAD_FOLDERNAME
+        self._checkCacheFolderSize()
+
+    def _checkCacheFolderSize(self):
+        # Check if the download cache folder exists
+        if self.downloadCacheFolder.exists():
+            # Check if it has been checked recently
+            if datetime.fromtimestamp(self.downloadCacheFolder.stat().st_mtime) < datetime.now() - LeafConstants.CACHE_DELTA:
+                # Compute the folder total size
+                cacheSize = getTotalSize(self.downloadCacheFolder)
+                if cacheSize > LeafConstants.CACHE_SIZE_MAX:
+                    # Display a message
+                    self.logger.printError("You can save %s by cleaning the leaf cache folder" % sizeof_fmt(cacheSize))
+                    self.printHints("to clean the cache, you can run: 'rm -r %s'" % self.downloadCacheFolder)
+                    # Update the mtime
+                    self.downloadCacheFolder.touch()
 
     def getInstallFolder(self):
         out = self.readConfiguration().getRootFolder()

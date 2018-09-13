@@ -276,3 +276,17 @@ def computeHash(file):
 def checkHash(file, value):
     parseHash(value)
     return computeHash(file) == value
+
+
+def getTotalSize(item):
+    '''
+    Get the size of a file or a folder (reccursive)
+    '''
+    if not item.exists():
+        return -1
+    if not item.is_dir():
+        return item.stat().st_size
+    out = 0
+    for sub in item.iterdir():
+        out += getTotalSize(sub)
+    return out

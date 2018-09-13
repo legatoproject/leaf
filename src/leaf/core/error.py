@@ -6,12 +6,13 @@ Error management
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from builtins import Exception
 import os
 import sys
 import traceback
+from builtins import Exception
 
 from leaf.constants import EnvConstants
+from leaf.format.formatutils import sizeof_fmt
 
 
 HINTS_CMD_DELIMITER = '\''
