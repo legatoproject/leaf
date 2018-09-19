@@ -40,9 +40,9 @@ class AbstractProfileCommand(LeafCommand):
     def getProfileName(self, args, defaultProvider=None):
         out = None
         if hasattr(args, 'profiles'):
-            if self.profileRequired == True:
+            if self.profileRequired is True:
                 out = args.profiles[0]
-            elif self.profileRequired == False:
+            elif self.profileRequired is False:
                 out = args.profiles
 
         if out is None and defaultProvider is not None:
@@ -51,10 +51,10 @@ class AbstractProfileCommand(LeafCommand):
 
     def initArgs(self, parser):
         super().initArgs(parser)
-        if self.profileRequired == False:
+        if self.profileRequired is False:
             parser.add_argument('profiles', nargs=argparse.OPTIONAL,
                                 metavar='PROFILE', help='the profile name')
-        elif self.profileRequired == True:
+        elif self.profileRequired is True:
             parser.add_argument('profiles', nargs=1,
                                 metavar='PROFILE', help='the profile name')
 

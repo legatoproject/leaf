@@ -1,10 +1,14 @@
+## Tests & Releng
 setuptools-scm
-nose
 coverage
 flake8
 flake8-html
+nose
+## Tools
 autopep8
+git-review
+## Devel
 argcomplete
-requests
 colorama
 python-gnupg
+requests

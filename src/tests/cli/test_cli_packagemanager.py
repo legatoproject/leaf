@@ -3,9 +3,9 @@
 '''
 
 import os
-
-from tests.testutils import LeafCliWrapper, RESOURCE_FOLDER, LEAF_UT_SKIP
 import unittest
+
+from tests.testutils import LEAF_UT_SKIP, LeafCliWrapper, RESOURCE_FOLDER
 
 
 class TestPackageManagerCli_Default(LeafCliWrapper):
@@ -157,7 +157,3 @@ class TestPackageManagerCli_Quiet(TestPackageManagerCli_Default):
     def __init__(self, methodName):
         TestPackageManagerCli_Default.__init__(self, methodName)
         self.postVerbArgs.append("--quiet")
-
-
-if __name__ == "__main__":
-    unittest.main()

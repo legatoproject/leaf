@@ -4,7 +4,6 @@
 
 from pathlib import Path
 from tempfile import mkdtemp
-import unittest
 
 from leaf.format.alignment import VAlign, HAlign
 from leaf.format.chars import _SEPARATORS_ASCII
@@ -53,7 +52,3 @@ class TestFormat(AbstractTestWithChecker):
         with self.assertStdout(
                 templateOut="table.out"):
             print(table)
-
-
-if __name__ == "__main__":
-    unittest.main()

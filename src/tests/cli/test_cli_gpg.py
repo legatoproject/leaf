@@ -4,7 +4,6 @@ Created on 9 août 2018
 @author: seb
 '''
 import os
-import unittest
 
 from leaf.constants import LeafConstants, LeafFiles, EnvConstants
 from leaf.core.packagemanager import GPGManager
@@ -87,8 +86,3 @@ class TestGPG(LeafCliWrapper):
 
         self.leafExec(("search"), "-a")
         self.assertTrue(self.cacheFile.exists())
-
-
-if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
-    unittest.main()

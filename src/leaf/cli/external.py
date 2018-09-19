@@ -68,7 +68,7 @@ def grepDescription(file):
                 for line in header.decode().splitlines():
                     if MOTIF in line:
                         return line.split(MOTIF, 1)[1].strip()
-    except:
+    except Exception:
         pass
 
 

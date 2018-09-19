@@ -2,10 +2,10 @@
 @author: seb
 '''
 
-from leaf.constants import LeafFiles
 import unittest
 
-from tests.testutils import LeafCliWrapper, LEAF_UT_SKIP
+from leaf.constants import LeafFiles
+from tests.testutils import LEAF_UT_SKIP, LeafCliWrapper
 
 
 class TestSetupCli_Default(LeafCliWrapper):
@@ -81,7 +81,3 @@ class TestProfileCli_Quiet(TestSetupCli_Default):
     def __init__(self, methodName):
         TestSetupCli_Default.__init__(self, methodName)
         self.postVerbArgs.append("--quiet")
-
-
-if __name__ == "__main__":
-    unittest.main()

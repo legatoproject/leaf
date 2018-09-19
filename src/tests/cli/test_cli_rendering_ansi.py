@@ -5,7 +5,7 @@
 import unittest
 
 from leaf.format.ansi import ANSI
-from tests.test_rendering_cli import TestRenderingCli_Default
+from tests.cli.test_cli_rendering import TestRenderingCli_Default
 from tests.testutils import LEAF_UT_SKIP
 
 
@@ -37,7 +37,3 @@ class TestAnsiCli_Quiet(TestAnsiCli_Default):
     def __init__(self, methodName):
         TestAnsiCli_Default.__init__(self, methodName)
         self.postVerbArgs.append("--quiet")
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -9,6 +9,7 @@ Leaf Package Manager
 from leaf.cli.cli import LeafCli
 import sys
 
+
 def main():
     return LeafCli().run(sys.argv[1:])
 

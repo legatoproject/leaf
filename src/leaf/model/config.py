@@ -12,7 +12,7 @@ from pathlib import Path
 
 from leaf import __version__
 from leaf.constants import JsonConstants, LeafFiles
-from leaf.model.base import ConfigFileWithLayer, JsonObject
+from leaf.model.base import ConfigFileWithLayer
 from leaf.model.environment import IEnvObject
 from leaf.utils import checkSupportedLeaf
 

@@ -39,7 +39,7 @@ class TagManager():
 
     def tagInstalled(self, mfList, piList):
         '''
-        Tag packages from given mfList as installed if they are in the given piList 
+        Tag packages from given mfList as installed if they are in the given piList
         '''
         for mf in mfList:
             if mf.getIdentifier() in piList:

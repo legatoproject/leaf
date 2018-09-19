@@ -4,7 +4,6 @@
 DIST:=dist
 MAN_OUTPUT_DIR?=resources/man
 MAN_INPUT_DIR?=doc/manpages
-LEAF_TEST_CLASS?=
 LEAF_TEST_TOX_ARGS?=
 
 #.SILENT:
@@ -14,6 +13,7 @@ all: manpages sdist
 
 clean:
 	rm -rf $(MAN_OUTPUT_DIR) $(DIST)
+	rm -rf .coverage coverage-report/ flake-report/ nosetests_*.xml build/
 
 manpages:
 	rm -rf $(MAN_OUTPUT_DIR)
@@ -24,14 +24,10 @@ docker-image:
 	docker build -t "leaf-test:latest" docker/
 
 docker-test:
-	TMP_WORK_DIR=`mktemp -d -p /tmp leaf-docker-test.XXXXXX` && \
-	chmod 777 $$TMP_WORK_DIR && \
 	docker run --rm \
-		--user 1000 \
 		-v $(PWD):/src/leaf \
-		-v $$TMP_WORK_DIR:/tmp/leaf \
-		-e LEAF_TEST_CLASS="$(LEAF_TEST_CLASS)" \
-		-e LEAF_TEST_TOX_ARGS="$(LEAF_TEST_TOX_ARGS)" \
+		-e LEAF_TEST_CLASS \
+		-e LEAF_TEST_TOX_ARGS \
 		leaf-test:latest \
 		sh -c 'cp -R /src/leaf /tmp && cd /tmp/leaf && git clean -fdX && make clean manpages test'
 
@@ -41,7 +37,8 @@ venv: requirements.txt
 	touch venv
 
 test:
-	LEAF_TEST_CLASS=$(LEAF_TEST_CLASS) tox $(LEAF_TEST_TOX_ARGS)
+	chmod 700 src/tests/gpg/
+	tox $(LEAF_TEST_TOX_ARGS)
 
 sdist:
 	rm -rf $(DIST)

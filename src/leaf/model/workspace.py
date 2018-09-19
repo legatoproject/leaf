@@ -94,7 +94,7 @@ class Profile(JsonObject, IEnvObject):
             if link.is_symlink():
                 try:
                     out.append(InstalledPackage(link / LeafFiles.MANIFEST))
-                except:
+                except Exception:
                     pass
         return out
 

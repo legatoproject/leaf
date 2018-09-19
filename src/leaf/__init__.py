@@ -19,7 +19,7 @@ __copyright__ = 'Copyright 2018 Sierra Wireless. All rights reserved.'
 __help_description__ = __copyright__ + '''
 
   Licensed under the ''' + __license__ + '''
-  ''' + __license_url__ + '''  
+  ''' + __license_url__ + '''
 
   Leaf is part of the Legato Project, http://legato.io/
 

@@ -4,7 +4,8 @@
 import unittest
 
 from leaf.model.environment import Environment
-from leaf.model.package import ConditionalPackageIdentifier, PackageIdentifier
+from leaf.model.package import ConditionalPackageIdentifier, \
+    PackageIdentifier
 
 
 class ConditionsTest(unittest.TestCase):
@@ -131,8 +132,3 @@ class ConditionsTest(unittest.TestCase):
         env = Environment("ut", {"FOO": "BAR",
                                  "BAR": "1"})
         self.assertFalse(cpi.isOk(env))
-
-
-if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'ConditionalPackageIdentifierTest.testName']
-    unittest.main()

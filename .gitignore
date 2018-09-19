@@ -20,8 +20,8 @@ __pycache__
 # Generated files
 /resources/man/
 /.coverage
-/coverage-report*
-/nosetests*.xml
-/flake-report*
+/coverage-report/
+/flake-report/
+/nosetests_*.xml
 /.tox/
 /.pytest_cache/

@@ -6,15 +6,12 @@ This module describe how colors and style applies to each kind of printed elemen
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-'''
-Documentation printed at the beginning of the configuration file
-'''
 
-from _io import StringIO
-from collections import OrderedDict
 import configparser
 import sys
+from collections import OrderedDict
 
+from _io import StringIO
 from leaf.format.ansi import ANSI
 
 '''

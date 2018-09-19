@@ -10,7 +10,7 @@ from leaf.core.error import InvalidPackageNameException
 
 def retrievePackageIdentifier(motif, validPiList):
     '''
-    If only package name is given retrieve the latest package in given list 
+    If only package name is given retrieve the latest package in given list
     with same package name
     '''
     if PackageIdentifier.isValidIdentifier(motif):

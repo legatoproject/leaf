@@ -2,29 +2,32 @@
 @author: seb
 '''
 
-from datetime import datetime, timedelta
 import os
+import socketserver
 import sys
 import time
-import unittest
+from datetime import datetime, timedelta
+from http.server import SimpleHTTPRequestHandler
+from multiprocessing import Process
+from time import sleep
 
 from leaf.constants import EnvConstants
 from leaf.core.dependencies import DependencyType
+from leaf.core.error import NoEnabledRemoteException, NoRemoteException
 from leaf.core.features import FeatureManager
 from leaf.core.packagemanager import PackageManager
 from leaf.format.logger import Verbosity
 from leaf.model.environment import Environment
-from leaf.model.package import PackageIdentifier, AvailablePackage,\
-    InstalledPackage
+from leaf.model.package import (AvailablePackage, InstalledPackage,
+                                PackageIdentifier)
 from leaf.utils import isFolderIgnored
-
-from leaf.core.error import NoRemoteException, NoEnabledRemoteException,\
-    PackageInstallInterruptedException
-from tests.testutils import AbstractTestWithRepo, envFileToMap,\
-    getLines
-
+from tests.testutils import AbstractTestWithRepo, envFileToMap, getLines
 
 VERBOSITY = Verbosity.VERBOSE
+HTTP_PORT = os.environ.get("LEAF_HTTP_PORT", "54940")
+
+# Needed for http server
+sys.path.insert(0, os.path.abspath('../..'))
 
 
 class TestPackageManager_File(AbstractTestWithRepo):
@@ -547,5 +550,41 @@ class TestPackageManager_File(AbstractTestWithRepo):
                          getLines(syncFile))
 
 
-if __name__ == "__main__":
-    unittest.main()
+def startHttpServer(rootFolder):
+    print("Start http server for %s on port %s" %
+          (rootFolder, HTTP_PORT), file=sys.stderr)
+    os.chdir(str(rootFolder))
+    socketserver.TCPServer.allow_reuse_address = True
+    httpd = socketserver.TCPServer(("", int(HTTP_PORT)),
+                                   SimpleHTTPRequestHandler)
+    httpd.serve_forever()
+
+
+class TestPackageManager_Http(TestPackageManager_File):
+
+    def __init__(self, methodName):
+        TestPackageManager_File.__init__(self, methodName)
+
+    @classmethod
+    def setUpClass(cls):
+        TestPackageManager_File.setUpClass()
+        print("Using http port %s" % HTTP_PORT, file=sys.stderr)
+        TestPackageManager_Http.process = Process(target=startHttpServer,
+                                                  args=(AbstractTestWithRepo.REPO_FOLDER,))
+        TestPackageManager_Http.process.start()
+        # Wait 10 seconds for the http server to start
+        sleep(10)
+
+    @classmethod
+    def tearDownClass(cls):
+        TestPackageManager_File.tearDownClass()
+        print("Stopping http server ...", file=sys.stderr)
+        TestPackageManager_Http.process.terminate()
+        TestPackageManager_Http.process.join()
+        print("Stopping http server ... done", file=sys.stderr)
+
+    def getRemoteUrl(self):
+        return "http://localhost:%s/index.json" % HTTP_PORT
+
+    def getRemoteUrl2(self):
+        return "http://localhost:%s/index2.json" % HTTP_PORT

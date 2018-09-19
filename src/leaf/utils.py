@@ -17,7 +17,6 @@ import sys
 import tempfile
 import time
 import urllib
-from enum import Enum, unique
 from collections import OrderedDict
 from pathlib import Path
 from tarfile import TarFile
@@ -46,7 +45,7 @@ def stringToTuple(version):
     def tryint(x):
         try:
             return int(x)
-        except:
+        except Exception:
             return x
     return tuple(tryint(x) for x in _VERSION_SEPARATOR.split(version))
 

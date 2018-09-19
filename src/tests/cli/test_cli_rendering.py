@@ -2,10 +2,12 @@
 @author: nico
 '''
 
-from leaf import __version__
 import platform
-from tests.testutils import LeafCliWrapper, LEAF_UT_SKIP, AbstractTestWithRepo
 import unittest
+
+from leaf import __version__
+from tests.testutils import AbstractTestWithRepo, LEAF_UT_SKIP, \
+    LeafCliWrapper
 
 
 class TestRenderingCli_Default(LeafCliWrapper):
@@ -28,7 +30,8 @@ class TestRenderingCli_Default(LeafCliWrapper):
             self.leafExec(["package", "list"], "--all")
 
     def testRemote(self):
-        self.leafExec(["remote", "add"], "alt", self.getRemoteUrl(), "--insecure")
+        self.leafExec(["remote", "add"], "alt",
+                      self.getRemoteUrl(), "--insecure")
         self.leafExec(["remote", "disable"], "alt")
         with self.assertStdout(
                 templateOut="remote_list.out",
@@ -110,7 +113,3 @@ class TestRenderingCli_Quiet(TestRenderingCli_Default):
     def __init__(self, methodName):
         TestRenderingCli_Default.__init__(self, methodName)
         self.postVerbArgs.append("--quiet")
-
-
-if __name__ == "__main__":
-    unittest.main()

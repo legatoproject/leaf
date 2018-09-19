@@ -14,7 +14,6 @@ import shutil
 from builtins import Exception, filter
 from collections import OrderedDict
 from datetime import datetime
-from signal import SIGINT, signal
 from tarfile import TarFile
 from tempfile import NamedTemporaryFile
 
@@ -29,7 +28,6 @@ from leaf.core.error import (BadRemoteUrlException,
                              InvalidPackageNameException, LeafException,
                              NoEnabledRemoteException,
                              NoPackagesInCacheException, NoRemoteException,
-                             PackageInstallInterruptedException,
                              UserCancelException)
 from leaf.format.formatutils import sizeof_fmt
 from leaf.format.logger import TextLogger
@@ -200,8 +198,8 @@ class RemoteManager(GPGManager):
         items = self.readConfiguration().getRemotesMap().items()
         if len(items) == 0:
             raise NoRemoteException()
-        for alias, json in items:
-            remote = Remote(alias, json)
+        for alias, jsondata in items:
+            remote = Remote(alias, jsondata)
             if remote.isEnabled() or not onlyEnabled:
                 out[alias] = remote
             url = remote.getUrl()
@@ -339,8 +337,10 @@ class PackageManager(RemoteManager):
                 cacheSize = getTotalSize(self.downloadCacheFolder)
                 if cacheSize > LeafConstants.CACHE_SIZE_MAX:
                     # Display a message
-                    self.logger.printError("You can save %s by cleaning the leaf cache folder" % sizeof_fmt(cacheSize))
-                    self.printHints("to clean the cache, you can run: 'rm -r %s'" % self.downloadCacheFolder)
+                    self.logger.printError(
+                        "You can save %s by cleaning the leaf cache folder" % sizeof_fmt(cacheSize))
+                    self.printHints(
+                        "to clean the cache, you can run: 'rm -r %s'" % self.downloadCacheFolder)
                     # Update the mtime
                     self.downloadCacheFolder.touch()
 

@@ -1,18 +1,18 @@
-from _io import StringIO
-from pathlib import Path
-from tempfile import mkdtemp
-from unittest.case import TestCase
 import os
 import shutil
 import subprocess
 import sys
 import unittest
+from pathlib import Path
+from tempfile import mkdtemp
+from unittest.case import TestCase
 
+from _io import StringIO
 from leaf.cli.cli import LeafCli
 from leaf.constants import EnvConstants, LeafFiles
 from leaf.core.relengmanager import RelengManager
 from leaf.format.logger import Verbosity
-from leaf.model.package import PackageIdentifier, Manifest
+from leaf.model.package import Manifest, PackageIdentifier
 
 
 TestCase.maxDiff = None
@@ -28,9 +28,9 @@ EXTENSIONS_FOLDER = ROOT_FOLDER / "resources" / "bin"
 SEPARATOR = "--------------------"
 ALT_FILENAMES = {
     "compress-tar_1.0": 'compress-tar_1.0.tar',
-    "compress-xz_1.0":  'compress-xz_1.0.tar.xz',
+    "compress-xz_1.0": 'compress-xz_1.0.tar.xz',
     "compress-bz2_1.0": 'compress-bz2_1.0.tar.bz2',
-    "compress-gz_1.0":  'compress-gz_1.0.tar.gz'
+    "compress-gz_1.0": 'compress-gz_1.0.tar.gz'
 }
 
 TEST_GPG_FINGERPRINT = "E35D6817397359074160F68952ECE808A2BC372C"

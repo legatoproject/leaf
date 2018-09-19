@@ -4,7 +4,6 @@
 
 from collections import OrderedDict
 import platform
-import unittest
 
 from leaf.core.features import FeatureManager
 from leaf.core.workspacemanager import WorkspaceManager
@@ -13,7 +12,6 @@ from leaf.model.package import PackageIdentifier, Manifest
 
 from leaf.core.error import InvalidProfileNameException,\
     ProfileNameAlreadyExistException
-from tests.test_depends import mkpi
 from tests.testutils import AbstractTestWithRepo
 import leaf
 
@@ -41,7 +39,7 @@ class TestProfile(AbstractTestWithRepo):
 
     def testInit(self):
         with self.assertRaises(Exception):
-            self.wm.createProfile()
+            self.wm.createProfile("foo")
         self.wm.initializeWorkspace()
         profile = self.wm.createProfile("foo")
         self.assertIsNotNone(profile)
@@ -334,13 +332,13 @@ class TestProfile(AbstractTestWithRepo):
                                   "container-B",
                                   "container-C",
                                   "container-E"])
-        self.assertEqual(list(map(mkpi,
-                                  ["container-E_1.1",
-                                   "container-B_1.0",
-                                   "container-C_1.0",
-                                   "container-A_1.0"])),
-                         list(map(Manifest.getIdentifier,
-                                  self.wm.getProfileDependencies(profile))))
+        self.assertEqual(
+            PackageIdentifier.fromStringList(["container-E_1.1",
+                                              "container-B_1.0",
+                                              "container-C_1.0",
+                                              "container-A_1.0"]),
+            list(map(Manifest.getIdentifier,
+                     self.wm.getProfileDependencies(profile))))
 
     def testFeatures(self):
         fm = FeatureManager(self.wm)
@@ -387,7 +385,3 @@ class TestProfile(AbstractTestWithRepo):
             fm.toggleUserFeature("featureWithDups", "enum2", self.wm)
         with self.assertRaises(ValueError):
             fm.toggleUserFeature("featureWithMultipleKeys", "enum1", self.wm)
-
-
-if __name__ == "__main__":
-    unittest.main()

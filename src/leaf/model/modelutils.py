@@ -10,8 +10,6 @@ Leaf Package Manager
 
 from collections import OrderedDict
 
-from leaf.utils import jsonLoadFile
-
 
 def layerModelUpdate(left, right):
     '''

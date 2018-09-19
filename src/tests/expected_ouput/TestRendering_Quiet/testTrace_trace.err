@@ -7,12 +7,12 @@ Random message for this exception
 ---- Rendered error ----
 Random message for this exception
 Traceback (most recent call last):
-  File "{ROOT_FOLDER}/src/tests/test_rendering.py", line 207, in _printError
+  File "{ROOT_FOLDER}/src/tests/internal/test_rendering.py", line 206, in _printError
     1 / 0  # Ooops !
 ZeroDivisionError: division by zero
 ---- Logger error ----
 Random message for this exception
 Traceback (most recent call last):
-  File "{ROOT_FOLDER}/src/tests/test_rendering.py", line 207, in _printError
+  File "{ROOT_FOLDER}/src/tests/internal/test_rendering.py", line 206, in _printError
     1 / 0  # Ooops !
 ZeroDivisionError: division by zero

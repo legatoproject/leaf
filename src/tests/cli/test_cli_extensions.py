@@ -4,8 +4,6 @@
 
 import os
 import traceback
-import unittest
-from unittest.case import skip
 
 from tests.testutils import LeafCliWrapper, ROOT_FOLDER
 
@@ -161,7 +159,3 @@ class TestExtensionsCli(LeafCliWrapper):
 
     def testVersion(self):
         self.leafExec("version")
-
-
-if __name__ == "__main__":
-    unittest.main()

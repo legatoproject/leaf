@@ -12,7 +12,6 @@ import traceback
 from builtins import Exception
 
 from leaf.constants import EnvConstants
-from leaf.format.formatutils import sizeof_fmt
 
 
 HINTS_CMD_DELIMITER = '\''

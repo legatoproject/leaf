@@ -7,8 +7,7 @@ import shutil
 import unittest
 
 from leaf.constants import LeafFiles
-
-from tests.testutils import LeafCliWrapper, envFileToMap, LEAF_UT_SKIP,\
+from tests.testutils import LEAF_UT_SKIP, LeafCliWrapper, envFileToMap, \
     getLines
 
 
@@ -581,7 +580,3 @@ class TestProfileCli_Quiet(TestProfileCli_Default):
     def __init__(self, methodName):
         TestProfileCli_Default.__init__(self, methodName)
         self.postVerbArgs.append("--quiet")
-
-
-if __name__ == "__main__":
-    unittest.main()

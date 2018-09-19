@@ -2,15 +2,16 @@
 @author: nico
 '''
 
-from collections import OrderedDict
 import os
 import platform
 import sys
 import unittest
+from collections import OrderedDict
 
 from leaf import __version__
-from leaf.constants import LeafFiles, JsonConstants, EnvConstants
-from leaf.core.packagemanager import PackageManager, LoggerManager
+from leaf.constants import EnvConstants, JsonConstants, LeafFiles
+from leaf.core.error import LeafException
+from leaf.core.packagemanager import LoggerManager, PackageManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.format.logger import Verbosity
 from leaf.format.renderer.environment import EnvironmentRenderer
@@ -20,14 +21,12 @@ from leaf.format.renderer.profile import ProfileListRenderer
 from leaf.format.renderer.remote import RemoteListRenderer
 from leaf.format.renderer.workspace import WorkspaceRenderer
 from leaf.model.environment import Environment
-from leaf.model.package import Manifest, AvailablePackage, InstalledPackage,\
-    PackageIdentifier, Feature
+from leaf.model.package import AvailablePackage, Feature, InstalledPackage, \
+    Manifest, PackageIdentifier
 from leaf.model.remote import Remote
 from leaf.utils import jsonLoadFile
-
-from leaf.core.error import LeafException
-from tests.testutils import LeafCliWrapper, LEAF_UT_SKIP, RESOURCE_FOLDER,\
-    AbstractTestWithRepo, ROOT_FOLDER
+from tests.testutils import AbstractTestWithRepo, LEAF_UT_SKIP, \
+    RESOURCE_FOLDER, ROOT_FOLDER
 
 
 class AvailablePackageWithFakeSize(AvailablePackage):
@@ -41,10 +40,10 @@ class AvailablePackageWithFakeSize(AvailablePackage):
         return 0
 
 
-class TestRendering_Default(LeafCliWrapper):
+class TestRendering_Default(AbstractTestWithRepo):
 
     def __init__(self, methodName):
-        LeafCliWrapper.__init__(self, methodName)
+        AbstractTestWithRepo.__init__(self, methodName)
         self.loggerManager = LoggerManager(Verbosity.DEFAULT, True)
 
     def loadManifest(self):
@@ -239,7 +238,3 @@ class TestRendering_Quiet(TestRendering_Default):
     def __init__(self, methodName):
         TestRendering_Default.__init__(self, methodName)
         self.loggerManager = LoggerManager(Verbosity.QUIET, True)
-
-
-if __name__ == "__main__":
-    unittest.main()

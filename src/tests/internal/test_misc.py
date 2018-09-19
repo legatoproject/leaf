@@ -265,8 +265,3 @@ class TestMisc(unittest.TestCase):
             '{"number":1,"string":"A","object":{"list":[1,2,3],"object":{"number":42,"string":"foo","boolean":true}}}',
             '{"string":null,"object":{"object":{"number":1,"boolean":false}},"string2":"A"}',
             '{"number":1,"object":{"list":[1,2,3],"object":{"number":1,"string":"foo","boolean":false}},"string2":"A"}')
-
-
-if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'Test.testName']
-    unittest.main()

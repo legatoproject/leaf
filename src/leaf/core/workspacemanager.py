@@ -6,23 +6,22 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
+import os
+import shutil
 from builtins import Exception
 from collections import OrderedDict
 from pathlib import Path
-import os
-import shutil
 
-from leaf.constants import LeafFiles, JsonConstants, EnvConstants
-from leaf.core.dependencies import DependencyManager, DependencyType,\
-    DependencyStrategy
+from leaf.constants import EnvConstants, LeafFiles
+from leaf.core.dependencies import (DependencyManager, DependencyStrategy,
+                                    DependencyType)
+from leaf.core.error import (InvalidProfileNameException,
+                             ProfileNameAlreadyExistException,
+                             ProfileProvisioningException)
 from leaf.core.packagemanager import PackageManager
 from leaf.model.config import WorkspaceConfiguration
 from leaf.model.environment import Environment
 from leaf.model.workspace import Profile
-from leaf.utils import jsonLoadFile, checkSupportedLeaf, jsonWriteFile
-
-from leaf.core.error import InvalidProfileNameException,\
-    ProfileNameAlreadyExistException, ProfileProvisioningException
 
 
 class WorkspaceManager(PackageManager):
@@ -114,7 +113,7 @@ class WorkspaceManager(PackageManager):
             out[name] = Profile(name, self.workspaceDataFolder / name, json)
         try:
             out[self.getCurrentProfileName()].isCurrentProfile = True
-        except:
+        except Exception:
             pass
         return out
 
@@ -252,7 +251,7 @@ class WorkspaceManager(PackageManager):
         try:
             self.getProfileDependencies(profile)
             self.logger.printVerbose("All packages are already installed")
-        except:
+        except Exception:
             self.logger.printDefault("Profile is out of sync")
             try:
                 self.installFromRemotes(

@@ -189,7 +189,7 @@ class ManifestListRenderer(Renderer):
     def _getCpis(self, cpis):
         try:
             return str(ConditionalPackageIdentifier.fromString(cpis))
-        except:
+        except Exception:
             return cpis
 
     def _getTagList(self, inputElt):

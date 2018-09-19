@@ -3,7 +3,7 @@
 '''
 
 from leaf.core.packagemanager import PackageManager
-from leaf.format.logger import TextLogger, Verbosity
+from leaf.format.logger import Verbosity
 from leaf.model.filtering import MetaPackageFilter
 from tests.testutils import AbstractTestWithRepo
 
