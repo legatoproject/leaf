@@ -11,62 +11,55 @@ for a development environment.
 
 To list all available leaf commands see *leaf help --list*
 
-== Common leaf scenarios
+== LEAF COMMANDS
 
-=== Informational Leaf Commands
-*help*::
-Displays this page and other help commands. e.g.; *leaf help _COMMAND_*
-*version*::
-Displays the version of Leaf
+Informational Leaf Commands
+[listing]
+help      Displays this page and other help commands. (i.e.; leaf help <command>)
+version   Displays the version of Leaf
 
-=== Initialize a workspace/profile and download a package for your target (see also: *leaf help start*)
-*search*::
-Search for a package for your target
-*setup*::
-Setup a workspace (if not created), create/setup a profile and download packages
-*shell*::
-Enter into a shell configured for your profile and environment
+Initialize a workspace/profile and download a package for your target (see also: *leaf help legato-start*)
+[listing]
+search    Search for a package for your target
+setup     Setup a workspace (if not created), create/setup a profile and download packages
+shell     Enter into a shell configured for your profile and environment
 
-=== Manage your Profile
-*status*::
-List your current profiles and their status
-*select*::
-Switch between multiple profiles
-*update*::
-Update(upgrade/downgrade) a profile to another version of a package
-*profile*::
-Manage your profiles: rename, delete, sync
 
-=== Configure a profile to use the source or binary version of a package (see also: *leaf help source*)
-*getsrc*::
-Switch to the source version of a package (if available)
+Manage your Profile
+[listing]
+status    List your current profiles and their status
+select    Switch between multiple profiles
+update    Update(upgrade/downgrade) a profile to another version of a package
+profile   Manage your profiles: rename, delete, sync
 
-=== Manage your Leaf Environment::
-*colors*::
-Change to a different color theme
-*env*::
-Create, set, and remove environment variables
-*config*::
-Manage the configuration of leaf
 
-=== Manage the repositories for your packages. (see also: *leaf help streams*)
-*remote*::
-Add, remove and manage the list of remote repositories
+Configure a profile to use the source or binary version of a package (see also: *leaf help legato-source*)
+[listing]
+getsrc    Switch to the source version of a package (if available)
 
-== Options
 
-*leaf* [*--non-interactive*] [*-w* _WORKSPACE_] *_COMMAND_* [*-v*|*-q*] [options...]
+Manage your Leaf Environment
+[listing]
+colors    Change to a different color theme
+env       Create, set, and remove environment variables
+config    Manage the configuration of leaf
 
-*leaf* *-V|--version* # Display version
 
-*leaf* [*_COMMAND_*] *-h|--help* # Display help
+Manage the repositories for your packages. (see also: *leaf help legato-workflow*)
+[listing]
+remote    Add, remove and manage the list of remote repositories
 
-=== Optional arguments for all commands
-*-v, --verbose*::
-increase the level of logging for the command
-*-q, --quiet*::
-remove all command output except meaningful information
-*--non-interactive*::
-answer the default choice to every question asked
-*-w, --workspace _WORKSPACE_*::
-use the specified workspace path
+
+== OPTIONS
+[listing]
+leaf [--non-interactive] [-w <workspace>] <command> [-v|-q] [options...]
+leaf -V|--version             Displays version
+leaf [<command>] -h|--help    Display help
+
+=== OPTIONAL ARGUMENTS
+[listing]
+-v, --verbose                 Increase the level of logging for the command
+-q, --quiet                   Remove all command output except meaningful information
+--non-interactive             Answer the default choice to every question asked
+-w, --workspace <workspace>   Use the specified workspace path
+
