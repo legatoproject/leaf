@@ -21,6 +21,7 @@ from leaf.core.error import (InvalidProfileNameException,
 from leaf.core.packagemanager import PackageManager
 from leaf.model.config import WorkspaceConfiguration
 from leaf.model.environment import Environment
+from leaf.model.package import PackageIdentifier
 from leaf.model.workspace import Profile
 
 
@@ -255,7 +256,7 @@ class WorkspaceManager(PackageManager):
             self.logger.printDefault("Profile is out of sync")
             try:
                 self.installFromRemotes(
-                    profile.getPackages(),
+                    PackageIdentifier.fromStringList(profile.getPackages()),
                     env=self._getSkelEnvironement(profile))
             except Exception as e:
                 raise ProfileProvisioningException(e)
@@ -268,7 +269,7 @@ class WorkspaceManager(PackageManager):
                 piFolder = profile.folder / str(ip.getIdentifier())
             try:
                 env = self._getSkelEnvironement(profile)
-                self.syncPackages([str(ip.getIdentifier())], env=env)
+                self.syncPackages([ip.getIdentifier()], env=env)
                 piFolder.symlink_to(ip.folder)
             except Exception as e:
                 self.logger.printError(
@@ -294,7 +295,7 @@ class WorkspaceManager(PackageManager):
         Returns all latest packages needed by a profile
         '''
         return DependencyManager.compute(
-            profile.getPackagesMap().values(),
+            PackageIdentifier.fromStringList(profile.getPackages()),
             DependencyType.INSTALLED,
             strategy=DependencyStrategy.LATEST_VERSION,
             ipMap=self.listInstalledPackages(),

@@ -4,7 +4,7 @@ ERROR:
 Random message for this exception
 CAUSED BY:
 division by zero
-[32mHINT:[0m
+[32mHINTS:[0m
 [32mthis is a first hint with a [0m[1m[42mcommand[0m[32m[0m
 [32manother one with [0m[1m[42ma first command[0m[32m and [0m[1m[42ma second one[0m[32m[0m
 ---- Logger error ----
@@ -15,7 +15,7 @@ ERROR:
 Random message for this exception
 CAUSED BY:
 division by zero
-[32mHINT:[0m
+[32mHINTS:[0m
 [32mthis is a first hint with a [0m[1m[42mcommand[0m[32m[0m
 [32manother one with [0m[1m[42ma first command[0m[32m and [0m[1m[42ma second one[0m[32m[0m
 Traceback (most recent call last):

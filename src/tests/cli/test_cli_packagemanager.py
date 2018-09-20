@@ -5,7 +5,7 @@
 import os
 import unittest
 
-from tests.testutils import LEAF_UT_SKIP, LeafCliWrapper, RESOURCE_FOLDER
+from tests.testutils import LEAF_UT_SKIP, RESOURCE_FOLDER, LeafCliWrapper
 
 
 class TestPackageManagerCli_Default(LeafCliWrapper):
@@ -52,7 +52,7 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
         self.leafExec(["package", "deps"], "--prereq", "container-A_1.0")
 
     def testInstall(self):
-        self.leafExec(["package", "install"], "container-A")
+        self.leafExec(["package", "install"], "container-A_2.1")
         self.leafExec(["package", "list"])
         self.leafExec(["package", "list"], "--all")
         self.checkInstalledPackages(['container-A_2.1',
@@ -90,37 +90,37 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
                                      'container-D_1.0'])
 
     def testConditionalInstall(self):
-        self.leafExec(["package", "install"], "condition")
+        self.leafExec(["package", "install"], "condition_1.0")
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-B_1.0",
                                      "condition-D_1.0",
                                      "condition-F_1.0",
                                      "condition-H_1.0"])
 
-        self.leafExec(["package", "uninstall"], "condition")
+        self.leafExec(["package", "uninstall"], "condition_1.0")
         self.checkInstalledPackages([])
 
         self.leafExec(["env", "user"], "--set", "FOO=BAR")
-        self.leafExec(["package", "install"], "condition")
+        self.leafExec(["package", "install"], "condition_1.0")
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-A_1.0",
                                      "condition-C_1.0",
                                      "condition-F_1.0"])
 
-        self.leafExec(["package", "uninstall"], "condition")
+        self.leafExec(["package", "uninstall"], "condition_1.0")
         self.checkInstalledPackages([])
 
         self.leafExec(["env", "user"],
                       "--set", "FOO2=BAR2",
                       "--set", "HELLO=WorlD")
-        self.leafExec(["package", "install"], "condition")
+        self.leafExec(["package", "install"], "condition_1.0")
         self.checkInstalledPackages(["condition_1.0",
                                      "condition-A_1.0",
                                      "condition-C_1.0",
                                      "condition-E_1.0",
                                      "condition-G_1.0"])
 
-        self.leafExec(["package", "uninstall"], "condition")
+        self.leafExec(["package", "uninstall"], "condition_1.0")
         self.checkInstalledPackages([])
 
     def testPrereq(self):
@@ -143,6 +143,12 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
             self.leafExec("foo.sh")
         finally:
             os.environ['PATH'] = oldPath
+
+    def testInstallUnknownPackage(self):
+        self.leafExec(["package", "install"], "unknwonPackage",
+                      expectedRc=2)
+        self.leafExec(["package", "install"], "container-A",
+                      expectedRc=2)
 
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")

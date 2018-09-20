@@ -6,16 +6,16 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from pathlib import Path
 import argparse
+from pathlib import Path
 
 from leaf.cli.cliutils import LeafCommand, LeafMetaCommand
 from leaf.core.dependencies import DependencyType
+from leaf.core.error import PackageInstallInterruptedException
 from leaf.format.renderer.manifest import ManifestListRenderer
 from leaf.model.filtering import MetaPackageFilter
-from leaf.model.package import Manifest
-from leaf.utils import mkTmpLeafRootDir, envListToMap
-from leaf.core.error import PackageInstallInterruptedException
+from leaf.model.package import Manifest, PackageIdentifier
+from leaf.utils import envListToMap, mkTmpLeafRootDir
 
 
 class PackageMetaCommand(LeafMetaCommand):
@@ -121,14 +121,14 @@ class PackageDepsCommand(LeafCommand):
                             action='append',
                             metavar='KEY=VALUE',
                             help='add given environment variable')
-        parser.add_argument('packages', metavar='PKGNAME',
+        parser.add_argument('packages', metavar='PKG_IDENTIFIER',
                             nargs=argparse.ONE_OR_MORE,
-                            help='package name')
+                            help='package identifier')
 
     def execute(self, args):
         pm = self.getPackageManager(args)
 
-        items = pm.listDependencies(args.packages,
+        items = pm.listDependencies(PackageIdentifier.fromStringList(args.packages),
                                     args.dependencyType,
                                     envMap=envListToMap(args.customEnvList))
         rend = ManifestListRenderer()
@@ -153,15 +153,15 @@ class PackageInstallCommand(LeafCommand):
     def initArgs(self, parser):
         super().initArgs(parser)
         PackageInstallCommand.initInstallArguments(parser)
-        parser.add_argument('packages', metavar='PKGNAME',
+        parser.add_argument('packages', metavar='PKG_IDENTIFIER',
                             nargs=argparse.ONE_OR_MORE,
-                            help='name of packages to install')
+                            help='identifier of packages to install')
 
     def execute(self, args):
         pm = self.getPackageManager(args)
 
         try:
-            items = pm.installFromRemotes(args.packages,
+            items = pm.installFromRemotes(PackageIdentifier.fromStringList(args.packages),
                                           keepFolderOnError=args.keepOnError)
         except Exception as e:
             raise PackageInstallInterruptedException(args.packages, e)
@@ -184,9 +184,9 @@ class PackagePrereqCommand(LeafCommand):
                             dest="prereqRootFolder",
                             type=Path,
                             help="a alternative root folder for required packages installation")
-        parser.add_argument('packages', metavar='PKGNAME',
+        parser.add_argument('packages', metavar='PKG_IDENTIFIER',
                             nargs=argparse.ONE_OR_MORE,
-                            help='package name')
+                            help='package identifier')
 
     def execute(self, args):
         pm = self.getPackageManager(args)
@@ -195,7 +195,7 @@ class PackagePrereqCommand(LeafCommand):
         if tmpRootFolder is None:
             tmpRootFolder = mkTmpLeafRootDir()
         pm.logger.printQuiet("Prereq root folder: %s" % tmpRootFolder)
-        errorCount = pm.installPrereqFromRemotes(args.packages,
+        errorCount = pm.installPrereqFromRemotes(PackageIdentifier.fromStringList(args.packages),
                                                  tmpRootFolder,
                                                  raiseOnError=False)
         pm.logger.printQuiet("Prereq installed with %d error(s)" % errorCount)
@@ -211,14 +211,14 @@ class PackageUninstallCommand(LeafCommand):
 
     def initArgs(self, parser):
         super().initArgs(parser)
-        parser.add_argument('packages', metavar='PKGNAME',
+        parser.add_argument('packages', metavar='PKG_IDENTIFIER',
                             nargs=argparse.ONE_OR_MORE,
-                            help='name of package to uninstall')
+                            help='identifier of package to uninstall')
 
     def execute(self, args):
         pm = self.getPackageManager(args)
 
-        pm.uninstallPackages(args.packages)
+        pm.uninstallPackages(PackageIdentifier.fromStringList(args.packages))
 
 
 class PackageSyncCommand(LeafCommand):
@@ -237,4 +237,4 @@ class PackageSyncCommand(LeafCommand):
     def execute(self, args):
         pm = self.getPackageManager(args)
 
-        pm.syncPackages(args.packages)
+        pm.syncPackages(PackageIdentifier.fromStringList(args.packages))

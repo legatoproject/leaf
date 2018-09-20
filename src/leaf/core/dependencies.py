@@ -7,6 +7,8 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from enum import IntEnum, unique
+
+from leaf.core.error import InvalidPackageNameException
 from leaf.model.package import Manifest, PackageIdentifier
 
 
@@ -40,7 +42,7 @@ class DependencyManager():
         if latestVersions is not None and pi.name in latestVersions:
             pi = latestVersions[pi.name]
         if pi not in mfMap and not ignoreUnknown:
-            raise ValueError("Cannot find package %s" % pi)
+            raise InvalidPackageNameException(pi)
         return mfMap.get(pi)
 
     @staticmethod

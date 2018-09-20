@@ -1,11 +1,12 @@
 
-from leaf.constants import JsonConstants
 import os
 import subprocess
+from builtins import sorted
 
+from leaf.constants import JsonConstants
+from leaf.core.error import InvalidPackageNameException
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
-from leaf.core.error import InvalidPackageNameException
 
 
 def retrievePackageIdentifier(motif, validPiList):
@@ -23,6 +24,29 @@ def retrievePackageIdentifier(motif, validPiList):
                     out = pi
     if out is None:
         raise InvalidPackageNameException(motif)
+    return out
+
+
+def retrievePackage(pi, pkgMap):
+    if pi not in pkgMap:
+        raise InvalidPackageNameException(pi)
+    return pkgMap[pi]
+
+
+def groupPackageIdentifiersByName(piList, pkgMap=None, sort=True):
+    out = pkgMap if pkgMap is not None else {}
+    for pi in piList:
+        if not isinstance(pi, PackageIdentifier):
+            raise ValueError()
+        currentPiList = out.get(pi.name)
+        if currentPiList is None:
+            currentPiList = []
+            out[pi.name] = currentPiList
+        if pi not in currentPiList:
+            currentPiList.append(pi)
+    if sort:
+        for pkgName in out:
+            out[pkgName] = sorted(out[pkgName])
     return out
 
 

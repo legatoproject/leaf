@@ -37,7 +37,7 @@ class HintsRenderer(Renderer):
 
     def _formatHints(self, hints):
         if len(hints) > 0:
-            out = [self.tm.HINTS("HINT:")]
+            out = [self.tm.HINTS("HINTS:" if len(hints) > 1 else "HINT:")]
             out.extend(map(self._colorizeHints, hints))
             return out
         return []
@@ -75,7 +75,7 @@ class LeafExceptionRenderer(HintsRenderer):
         out = []
         out.extend(self._formatError(self[0].msg))
         out.extend(self._formatCause(self[0].cause))
-        out.extend(self._formatHints(self[0].hints))
+        out.extend(self._formatHints(self[0].getHints()))
         return '\n'.join(out)
 
     def _toStringVerbose(self):

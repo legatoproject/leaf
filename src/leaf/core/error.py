@@ -36,6 +36,13 @@ class LeafException(Exception):
         self.cause = cause
         self.hints = []
 
+    def getHints(self):
+        out = []
+        if isinstance(self.cause, LeafException):
+            out += self.cause.getHints()
+        out += self.hints
+        return out
+
 
 class UserCancelException(LeafException):
     def __init__(self):

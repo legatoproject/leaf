@@ -44,6 +44,11 @@ class Renderer(list, ABC):
         '''
         pass
 
+    def __init__(self, *items):
+        list.__init__(self, *items)
+        self.tm = None
+        self.verbosity = None
+
     def __str__(self):
         if self.verbosity == Verbosity.QUIET:
             out = self._toStringQuiet()

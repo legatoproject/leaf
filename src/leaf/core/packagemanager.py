@@ -11,7 +11,7 @@ import json
 import os
 import platform
 import shutil
-from builtins import Exception, filter
+from builtins import Exception
 from collections import OrderedDict
 from datetime import datetime
 from tarfile import TarFile
@@ -22,10 +22,9 @@ import gnupg
 from leaf import __version__
 from leaf.constants import (EnvConstants, JsonConstants, LeafConstants,
                             LeafFiles)
-from leaf.core.coreutils import StepExecutor, VariableResolver
+from leaf.core.coreutils import StepExecutor, VariableResolver, retrievePackage
 from leaf.core.dependencies import DependencyManager, DependencyType
-from leaf.core.error import (BadRemoteUrlException,
-                             InvalidPackageNameException, LeafException,
+from leaf.core.error import (BadRemoteUrlException, LeafException,
                              NoEnabledRemoteException,
                              NoPackagesInCacheException, NoRemoteException,
                              UserCancelException)
@@ -36,7 +35,7 @@ from leaf.format.theme import ThemeManager
 from leaf.model.config import UserConfiguration
 from leaf.model.environment import Environment
 from leaf.model.package import (AvailablePackage, InstalledPackage,
-                                LeafArtifact, Manifest, PackageIdentifier)
+                                LeafArtifact, PackageIdentifier)
 from leaf.model.remote import Remote
 from leaf.utils import (downloadData, downloadFile, getAltEnvPath,
                         getCachedArtifactName, getTotalSize, isFolderIgnored,
@@ -373,43 +372,6 @@ class PackageManager(RemoteManager):
         usrc.updateEnv(setMap, unsetList)
         self.writeConfiguration(usrc)
 
-    def resolveLatest(self, motifList, ipMap=None, apMap=None):
-        '''
-        Search a package given a full packageidentifier
-        or only a name (latest version will be returned then.
-        @return: PackageIdentifier list
-        '''
-        out = []
-        knownPiList = []
-        if ipMap is True:
-            ipMap = self.listInstalledPackages()
-        if ipMap is not None:
-            for pi in ipMap.keys():
-                if pi not in knownPiList:
-                    knownPiList.append(pi)
-        if apMap is True:
-            apMap = self.listAvailablePackages()
-        if apMap is not None:
-            for pi in apMap.keys():
-                if pi not in knownPiList:
-                    knownPiList.append(pi)
-        knownPiList = sorted(knownPiList)
-        for motif in motifList:
-            pi = None
-            if isinstance(motif, PackageIdentifier):
-                pi = motif
-            elif PackageIdentifier.isValidIdentifier(motif):
-                pi = PackageIdentifier.fromString(motif)
-            else:
-                for pi in filter(lambda pi: pi.name == motif, knownPiList):
-                    # loop to get the last item
-                    pass
-            if pi is None:
-                raise InvalidPackageNameException(motif)
-            if pi not in out:
-                out.append(pi)
-        return out
-
     def listAvailablePackages(self, smartRefresh=True):
         '''
         List all available package
@@ -454,24 +416,21 @@ class PackageManager(RemoteManager):
                     out[ip.getIdentifier()] = ip
         return out
 
-    def listDependencies(self, motifList, depType, envMap=None):
+    def listDependencies(self, piList, depType, envMap=None):
         '''
         List all dependencies for given packages
         @return: PackageIdentifier list
         '''
-        installedPackages = self.listInstalledPackages()
-        availablePackages = self.listAvailablePackages()
-        piList = self.resolveLatest(motifList,
-                                    ipMap=installedPackages,
-                                    apMap=availablePackages)
         env = Environment.build(self.getLeafEnvironment(),
                                 self.getUserEnvironment(),
                                 Environment("Custom env", envMap))
-        return DependencyManager.compute(piList, depType,
-                                         apMap=availablePackages,
-                                         ipMap=installedPackages,
-                                         env=env,
-                                         ignoreUnknown=True)
+        return DependencyManager.compute(
+            piList,
+            depType,
+            apMap=self.listAvailablePackages(),
+            ipMap=self.listInstalledPackages(),
+            env=env,
+            ignoreUnknown=True)
 
     def checkPackagesForInstall(self, mfList,
                                 bypassLeafMinVersion=False):
@@ -546,7 +505,7 @@ class PackageManager(RemoteManager):
                 shutil.rmtree(str(targetFolder), True)
             raise e
 
-    def installPrereqFromRemotes(self, motifList, tmpRootFolder,
+    def installPrereqFromRemotes(self, piList, tmpRootFolder,
                                  availablePackages=None,
                                  env=None,
                                  raiseOnError=True):
@@ -558,11 +517,8 @@ class PackageManager(RemoteManager):
         if availablePackages is None:
             availablePackages = self.listAvailablePackages()
 
-        piList = self.resolveLatest(motifList,
-                                    apMap=availablePackages)
-
         # Get packages to install
-        apList = [availablePackages[pi] for pi in piList]
+        apList = [retrievePackage(pi, availablePackages) for pi in piList]
 
         errorCount = 0
         if len(apList) > 0:
@@ -590,7 +546,7 @@ class PackageManager(RemoteManager):
                     errorCount += 1
         return errorCount
 
-    def installFromRemotes(self, motifList,
+    def installFromRemotes(self, piList,
                            env=None,
                            keepFolderOnError=False):
         '''
@@ -600,21 +556,19 @@ class PackageManager(RemoteManager):
         prereqRootFolder = None
         installedPackages = self.listInstalledPackages()
         availablePackages = self.listAvailablePackages()
-        piList = self.resolveLatest(motifList,
-                                    ipMap=installedPackages,
-                                    apMap=availablePackages)
-        try:
-            # Build env to resolve dynamic dependencies
-            if env is None:
-                env = Environment.build(self.getLeafEnvironment(),
-                                        self.getUserEnvironment())
+        out = []
 
+        # Build env to resolve dynamic dependencies
+        if env is None:
+            env = Environment.build(self.getLeafEnvironment(),
+                                    self.getUserEnvironment())
+
+        try:
             apToInstall = DependencyManager.compute(piList,
                                                     DependencyType.INSTALL,
                                                     apMap=availablePackages,
                                                     ipMap=installedPackages,
                                                     env=env)
-            out = []
 
             # Check nothing to do
             if len(apToInstall) == 0:
@@ -644,10 +598,12 @@ class PackageManager(RemoteManager):
 
                 if len(prereqApList) > 0:
                     prereqRootFolder = mkTmpLeafRootDir()
-                    self.installPrereqFromRemotes(map(Manifest.getIdentifier, prereqApList),
-                                                  prereqRootFolder,
-                                                  availablePackages=availablePackages,
-                                                  env=env)
+                    self.installPrereqFromRemotes(
+                        [prereqAp.getIdentifier()
+                         for prereqAp in prereqApList],
+                        prereqRootFolder,
+                        availablePackages=availablePackages,
+                        env=env)
 
                 self.logger.progressWorked(message="Required packages checked",
                                            worked=1,
@@ -680,16 +636,16 @@ class PackageManager(RemoteManager):
 
         return out
 
-    def uninstallPackages(self, motifList):
+    def uninstallPackages(self, piList):
         '''
         Remove given package
         '''
         installedPackages = self.listInstalledPackages()
-        piList = self.resolveLatest(motifList, ipMap=installedPackages)
 
-        ipToRemove = DependencyManager.compute(piList,
-                                               DependencyType.UNINSTALL,
-                                               ipMap=installedPackages)
+        ipToRemove = DependencyManager.compute(
+            piList,
+            DependencyType.UNINSTALL,
+            ipMap=installedPackages)
 
         if len(ipToRemove) == 0:
             self.logger.printDefault(
@@ -699,43 +655,36 @@ class PackageManager(RemoteManager):
             self.logger.printQuiet("Packages to uninstall:",
                                    ", ".join([str(ip.getIdentifier()) for ip in ipToRemove]))
             if not self.logger.confirm():
-                raise ValueError("Operation aborted")
+                raise UserCancelException()
 
-            total = len(ipToRemove)
-            worked = 0
             env = Environment.build(self.getLeafEnvironment(),
                                     self.getUserEnvironment())
             for ip in ipToRemove:
                 self.logger.printDefault("Removing", ip.getIdentifier())
-                vr = VariableResolver(ip,
-                                      self.listInstalledPackages().values())
+                vr = VariableResolver(
+                    ip,
+                    installedPackages.values())
                 stepExec = StepExecutor(self.logger, ip, vr, env=env)
                 stepExec.preUninstall()
                 self.logger.printVerbose("Remove folder:", ip.folder)
                 shutil.rmtree(str(ip.folder))
-                worked += 1
-                self.logger.progressWorked(worked=worked,
-                                           total=total)
                 del installedPackages[ip.getIdentifier()]
-            self.logger.printDefault(
-                "%d package(s) removed" % (len(ipToRemove)))
 
-    def syncPackages(self, pisList, env=None):
+            self.logger.printDefault("%d package(s) removed" % len(ipToRemove))
 
+    def syncPackages(self, piList, env=None):
+        '''
+        Run the sync steps for all given packages
+        '''
         ipMap = self.listInstalledPackages()
-
         if env is None:
             env = Environment.build(self.getLeafEnvironment(),
                                     self.getUserEnvironment())
 
-        for pis in pisList:
-            pi = PackageIdentifier.fromString(pis)
-            ip = ipMap.get(pi)
-            if ip is None:
-                raise ValueError("Cannot find package %s", pis)
-            self.logger.printVerbose("Sync package %s" % pis)
-            vr = VariableResolver(ip,
-                                  self.listInstalledPackages().values())
+        for pi in piList:
+            ip = retrievePackage(pi, ipMap)
+            self.logger.printVerbose("Sync package %s" % ip.getIdentifier())
+            vr = VariableResolver(ip, ipMap.values())
             stepExec = StepExecutor(self.logger, ip, vr, env=env)
             stepExec.sync()
 

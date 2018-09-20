@@ -7,18 +7,18 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-from collections import OrderedDict
-from functools import total_ordering
 import io
 import re
+from collections import OrderedDict
+from functools import total_ordering
+from pathlib import Path
 from tarfile import TarFile
 
-from pathlib import Path
-
 from leaf.constants import JsonConstants, LeafFiles
+from leaf.core.error import InvalidPackageNameException
 from leaf.model.base import JsonObject
-from leaf.utils import resolveUrl, jsonLoad, jsonLoadFile, checkSupportedLeaf, \
-    versionComparator_lt, stringToTuple
+from leaf.utils import checkSupportedLeaf, jsonLoad, jsonLoadFile, resolveUrl, \
+    stringToTuple, versionComparator_lt
 
 
 @total_ordering
@@ -30,12 +30,18 @@ class PackageIdentifier ():
 
     @staticmethod
     def isValidIdentifier(pis):
-        split = pis.partition(PackageIdentifier.SEPARATOR)
-        return (re.compile(PackageIdentifier.NAME_PATTERN).fullmatch(split[0]) is not None and
-                re.compile(PackageIdentifier.VERSION_PATTERN).fullmatch(split[2]) is not None)
+        if isinstance(pis, str):
+            split = pis.partition(PackageIdentifier.SEPARATOR)
+            if len(split) == 3:
+                if re.compile(PackageIdentifier.NAME_PATTERN).fullmatch(split[0]) is not None:
+                    if re.compile(PackageIdentifier.VERSION_PATTERN).fullmatch(split[2]) is not None:
+                        return True
+        return False
 
     @staticmethod
     def fromString(pis):
+        if not PackageIdentifier.isValidIdentifier(pis):
+            raise InvalidPackageNameException(pis)
         split = pis.partition(PackageIdentifier.SEPARATOR)
         return PackageIdentifier(split[0], split[2])
 

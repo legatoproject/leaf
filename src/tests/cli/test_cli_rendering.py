@@ -16,7 +16,7 @@ class TestRenderingCli_Default(LeafCliWrapper):
         LeafCliWrapper.__init__(self, methodName)
 
     def testManifest(self):
-        self.leafExec(["package", "install"], "container-A")
+        self.leafExec(["package", "install"], "container-A_2.1")
         with self.assertStdout(
                 templateOut="search_all.out",
                 variables={

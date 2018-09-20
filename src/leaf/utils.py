@@ -27,6 +27,7 @@ import requests
 from leaf import __version__
 from leaf.constants import LeafConstants
 
+
 _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
 _VERSION_SEPARATOR = re.compile("[-_.~]")
 

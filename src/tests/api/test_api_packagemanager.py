@@ -6,6 +6,7 @@ import os
 import socketserver
 import sys
 import time
+from builtins import ValueError
 from datetime import datetime, timedelta
 from http.server import SimpleHTTPRequestHandler
 from multiprocessing import Process
@@ -13,7 +14,8 @@ from time import sleep
 
 from leaf.constants import EnvConstants
 from leaf.core.dependencies import DependencyType
-from leaf.core.error import NoEnabledRemoteException, NoRemoteException
+from leaf.core.error import (InvalidPackageNameException,
+                             NoEnabledRemoteException, NoRemoteException)
 from leaf.core.features import FeatureManager
 from leaf.core.packagemanager import PackageManager
 from leaf.format.logger import Verbosity
@@ -65,12 +67,12 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.assertNotEqual(0, len(self.pm.listAvailablePackages()))
 
     def testCompression(self):
-        packs = ["compress-bz2_1.0",
-                 "compress-gz_1.0",
-                 "compress-tar_1.0",
-                 "compress-xz_1.0"]
-        self.pm.installFromRemotes(packs)
-        self.checkContent(self.pm.listInstalledPackages(), packs)
+        pisList = ["compress-bz2_1.0",
+                   "compress-gz_1.0",
+                   "compress-tar_1.0",
+                   "compress-xz_1.0"]
+        self.pm.installFromRemotes(PackageIdentifier.fromStringList(pisList))
+        self.checkContent(self.pm.listInstalledPackages(), pisList)
 
     def testEnableDisableRemote(self):
         self.assertEqual(2, len(self.pm.listRemotes(True)))
@@ -103,13 +105,15 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.assertTrue(len(self.pm.listAvailablePackages()) > 0)
 
     def testContainer(self):
-        self.pm.installFromRemotes(["container-A_1.0"])
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["container-A_1.0"]))
         self.checkContent(self.pm.listInstalledPackages(), ["container-A_1.0",
                                                             "container-B_1.0",
                                                             "container-C_1.0",
                                                             "container-E_1.0"])
 
-        self.pm.installFromRemotes(["container-A_2.0"])
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["container-A_2.0"]))
         self.checkContent(self.pm.listInstalledPackages(), ["container-A_1.0",
                                                             "container-B_1.0",
                                                             "container-C_1.0",
@@ -117,27 +121,43 @@ class TestPackageManager_File(AbstractTestWithRepo):
                                                             "container-A_2.0",
                                                             "container-D_1.0"])
 
-        self.pm.uninstallPackages(["container-A_1.0"])
+        self.pm.uninstallPackages(
+            PackageIdentifier.fromStringList(["container-A_1.0"]))
         self.checkContent(self.pm.listInstalledPackages(), ["container-A_2.0",
                                                             "container-C_1.0",
                                                             "container-D_1.0"])
 
-        self.pm.uninstallPackages(["container-A_2.0"])
+        self.pm.uninstallPackages(
+            PackageIdentifier.fromStringList(["container-A_2.0"]))
         self.checkContent(self.pm.listInstalledPackages(), [])
+
+    def testInstallUnknownPackage(self):
+        with self.assertRaises(InvalidPackageNameException):
+            self.pm.installFromRemotes(
+                PackageIdentifier.fromStringList(["unknwonPackage"]))
+        with self.assertRaises(InvalidPackageNameException):
+            self.pm.installFromRemotes(
+                PackageIdentifier.fromStringList(["container-A"]))
+        with self.assertRaises(InvalidPackageNameException):
+            self.pm.installFromRemotes(
+                PackageIdentifier.fromStringList(["unknwonPackage_1.0"]))
 
     def testBadContainer(self):
         with self.assertRaises(Exception):
-            self.pm.installFromRemotes(["failure-depends-leaf_1.0"])
+            self.pm.installFromRemotes(
+                PackageIdentifier.fromStringList(["failure-depends-leaf_1.0"]))
         self.checkContent(self.pm.listInstalledPackages(), [])
 
     def testContainerNotMaster(self):
-        self.pm.installFromRemotes(["container-A_1.1"])
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["container-A_1.1"]))
         self.checkContent(self.pm.listInstalledPackages(), ["container-A_1.1",
                                                             "container-B_1.0",
                                                             "container-C_1.0",
                                                             "container-E_1.0"])
 
-        self.pm.installFromRemotes(["container-A_2.1"])
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["container-A_2.1"]))
         self.checkContent(self.pm.listInstalledPackages(), ["container-A_1.1",
                                                             "container-B_1.0",
                                                             "container-C_1.0",
@@ -145,16 +165,19 @@ class TestPackageManager_File(AbstractTestWithRepo):
                                                             "container-A_2.1",
                                                             "container-D_1.0"])
 
-        self.pm.uninstallPackages(["container-A_1.1"])
+        self.pm.uninstallPackages(
+            PackageIdentifier.fromStringList(["container-A_1.1"]))
         self.checkContent(self.pm.listInstalledPackages(), ["container-A_2.1",
                                                             "container-C_1.0",
                                                             "container-D_1.0"])
 
-        self.pm.uninstallPackages(["container-A_2.1"])
+        self.pm.uninstallPackages(
+            PackageIdentifier.fromStringList(["container-A_2.1"]))
         self.checkContent(self.pm.listInstalledPackages(), [])
 
     def testSteps(self):
-        self.pm.installFromRemotes(["install_1.0"])
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["install_1.0"]))
         self.checkContent(self.pm.listInstalledPackages(), ["install_1.0"])
 
         folder = self.getInstallFolder() / "install_1.0"
@@ -175,14 +198,17 @@ class TestPackageManager_File(AbstractTestWithRepo):
             self.assertEqual(1, len(content))
             self.assertEqual(str(folder), content[0])
 
-        self.pm.uninstallPackages(["install_1.0"])
+        self.pm.uninstallPackages(
+            PackageIdentifier.fromStringList(["install_1.0"]))
         self.checkContent(self.pm.listInstalledPackages(), [])
         self.assertTrue((self.getInstallFolder() / "uninstall.log").is_file())
 
     def testPostinstallError(self):
         with self.assertRaises(Exception):
-            self.pm.installFromRemotes(["failure-postinstall-exec_1.0"],
-                                       keepFolderOnError=True)
+            self.pm.installFromRemotes(
+                PackageIdentifier.fromStringList(
+                    ["failure-postinstall-exec_1.0"]),
+                keepFolderOnError=True)
         found = False
         for folder in self.getInstallFolder().iterdir():
             if folder.name.startswith("failure-postinstall-exec_1.0"):
@@ -191,29 +217,28 @@ class TestPackageManager_File(AbstractTestWithRepo):
                 break
         self.assertTrue(found)
 
-    def testInstallLatest(self):
-        self.pm.installFromRemotes(["version"])
-        self.checkContent(self.pm.listInstalledPackages(), ["version_2.0"])
-
     def testCannotUninstallToKeepDependencies(self):
-        self.pm.installFromRemotes(["container-A_2.0"])
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["container-A_2.0"]))
         self.checkContent(self.pm.listInstalledPackages(), ["container-A_2.0",
                                                             "container-C_1.0",
                                                             "container-D_1.0"])
 
-        self.pm.uninstallPackages(["container-C_1.0"])
+        self.pm.uninstallPackages(
+            PackageIdentifier.fromStringList(["container-C_1.0"]))
         self.checkContent(self.pm.listInstalledPackages(), ["container-A_2.0",
                                                             "container-C_1.0",
                                                             "container-D_1.0"])
 
     def testEnv(self):
-        self.pm.installFromRemotes(["env-A_1.0"])
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["env-A_1.0"]))
         self.checkContent(self.pm.listInstalledPackages(),
                           ["env-A_1.0",
                            "env-B_1.0"])
 
-        env = self.pm.getPackagesEnvironment(list(map(PackageIdentifier.fromString,
-                                                      ["env-A_1.0"])))
+        env = self.pm.getPackagesEnvironment(
+            PackageIdentifier.fromStringList(["env-A_1.0"]))
         self.assertEqual(2, len(env.toList()))
         self.assertEqual([
             ('LEAF_ENV_A', 'FOO'),
@@ -221,9 +246,8 @@ class TestPackageManager_File(AbstractTestWithRepo):
                             (self.getInstallFolder(), self.getInstallFolder()))],
             env.toList())
 
-        env = self.pm.getPackagesEnvironment(list(map(PackageIdentifier.fromString,
-                                                      ["env-B_1.0",
-                                                       "env-A_1.0"])))
+        env = self.pm.getPackagesEnvironment(
+            PackageIdentifier.fromStringList(["env-B_1.0", "env-A_1.0"]))
         self.assertEqual(4, len(env.toList()))
         self.assertEqual([
             ('LEAF_ENV_B', 'BAR'),
@@ -235,23 +259,14 @@ class TestPackageManager_File(AbstractTestWithRepo):
 
     def testSilentFail(self):
         with self.assertRaises(Exception):
-            self.pm.installFromRemotes(["failure-postinstall-exec_1.0"])
+            self.pm.installFromRemotes(
+                PackageIdentifier.fromStringList(["failure-postinstall-exec_1.0"]))
         self.checkContent(self.pm.listInstalledPackages(), [])
 
-        self.pm.installFromRemotes(["failure-postinstall-exec-silent_1.0"])
+        self.pm.installFromRemotes(PackageIdentifier.fromStringList(
+            ["failure-postinstall-exec-silent_1.0"]))
         self.checkContent(self.pm.listInstalledPackages(),
                           ["failure-postinstall-exec-silent_1.0"])
-
-    def testResolveLastVersion(self):
-        self.pm.installFromRemotes(["container-A_2.0"])
-        self.assertEqual([PackageIdentifier.fromString("container-A_2.0")],
-                         self.pm.resolveLatest(["container-A"],
-                                               ipMap=True))
-        self.assertEqual([PackageIdentifier.fromString("container-A_2.1")],
-                         self.pm.resolveLatest(["container-A"],
-                                               apMap=True))
-        with self.assertRaises(Exception):
-            self.pm.resolveLatest(["container-A"])
 
     def testOutdatedCacheFile(self):
 
@@ -302,7 +317,8 @@ class TestPackageManager_File(AbstractTestWithRepo):
         self.assertNotEqual(previousMtime, getMtime())
 
     def testConditionalInstall(self):
-        self.pm.installFromRemotes(["condition_1.0"])
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["condition_1.0"]))
         self.checkContent(self.pm.listInstalledPackages(),
                           ["condition_1.0",
                            "condition-B_1.0",
@@ -310,7 +326,7 @@ class TestPackageManager_File(AbstractTestWithRepo):
                            "condition-F_1.0",
                            "condition-H_1.0"])
 
-        self.pm.installFromRemotes(["condition_1.0"],
+        self.pm.installFromRemotes(PackageIdentifier.fromStringList(["condition_1.0"]),
                                    env=Environment("test",
                                                    {"FOO": "BAR"}))
         self.checkContent(self.pm.listInstalledPackages(),
@@ -328,7 +344,7 @@ class TestPackageManager_File(AbstractTestWithRepo):
         env = Environment.build(self.pm.getLeafEnvironment(),
                                 self.pm.getUserEnvironment(),
                                 Environment("test", {"FOO": "BAR"}))
-        self.pm.installFromRemotes(["condition_1.0"],
+        self.pm.installFromRemotes(PackageIdentifier.fromStringList(["condition_1.0"]),
                                    env=env)
         self.checkContent(self.pm.listInstalledPackages(),
                           ["condition_1.0",
@@ -341,7 +357,8 @@ class TestPackageManager_File(AbstractTestWithRepo):
                            "condition-G_1.0",
                            "condition-H_1.0"])
 
-        self.pm.uninstallPackages(["condition_1.0"])
+        self.pm.uninstallPackages(
+            PackageIdentifier.fromStringList(["condition_1.0"]))
         self.checkContent(self.pm.listInstalledPackages(),
                           [])
 
@@ -353,7 +370,7 @@ class TestPackageManager_File(AbstractTestWithRepo):
                      "prereq-true_1.0",
                      "prereq-env_1.0",
                      "prereq-false_1.0"]
-        errorCount = self.pm.installPrereqFromRemotes(motifList,
+        errorCount = self.pm.installPrereqFromRemotes(PackageIdentifier.fromStringList(motifList),
                                                       self.getAltWorkspaceFolder(),
                                                       raiseOnError=False)
         self.assertEqual(1, errorCount)
@@ -362,29 +379,33 @@ class TestPackageManager_File(AbstractTestWithRepo):
                              (self.getAltWorkspaceFolder() / m).is_dir())
 
     def testPrereqA(self):
-        self.pm.installFromRemotes(["prereq-A_1.0"])
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["prereq-A_1.0"]))
         self.checkContent(self.pm.listInstalledPackages(),
                           ["prereq-A_1.0"])
 
     def testPrereqB(self):
-        self.pm.installFromRemotes(["prereq-B_1.0"])
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["prereq-B_1.0"]))
         self.checkContent(self.pm.listInstalledPackages(),
                           ["prereq-A_1.0",
                            "prereq-B_1.0"])
 
     def testPrereqC(self):
-        self.pm.installFromRemotes(["prereq-C_1.0"])
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["prereq-C_1.0"]))
         self.checkContent(self.pm.listInstalledPackages(),
                           ["prereq-C_1.0",
                            "prereq-true_1.0"])
 
     def testPrereqD(self):
         with self.assertRaises(ValueError):
-            self.pm.installFromRemotes(["prereq-D_1.0"])
+            self.pm.installFromRemotes(
+                PackageIdentifier.fromStringList(["prereq-D_1.0"]))
 
     def testPrereqEnv(self):
         motifList = ["prereq-env_1.0"]
-        errorCount = self.pm.installPrereqFromRemotes(motifList,
+        errorCount = self.pm.installPrereqFromRemotes(PackageIdentifier.fromStringList(motifList),
                                                       self.getAltWorkspaceFolder(),
                                                       raiseOnError=False)
         self.assertEqual(0, errorCount)
@@ -395,13 +416,17 @@ class TestPackageManager_File(AbstractTestWithRepo):
                          str(self.getAltWorkspaceFolder()))
 
     def testDependsAvailable(self):
-        self.assertDeps(self.pm.listDependencies(
-            ["container-A_3.0"], DependencyType.AVAILABLE),
+        self.assertDeps(
+            self.pm.listDependencies(
+                PackageIdentifier.fromStringList(["container-A_3.0"]),
+                DependencyType.AVAILABLE),
             [],
             AvailablePackage)
 
-        self.assertDeps(self.pm.listDependencies(
-            ["container-A_1.0"], DependencyType.AVAILABLE),
+        self.assertDeps(
+            self.pm.listDependencies(
+                PackageIdentifier.fromStringList(["container-A_1.0"]),
+                DependencyType.AVAILABLE),
             ["container-E_1.0",
              "container-B_1.0",
              "container-C_1.0",
@@ -409,68 +434,86 @@ class TestPackageManager_File(AbstractTestWithRepo):
             AvailablePackage)
 
     def testDependsWithCustomEnv(self):
-        self.assertDeps(self.pm.listDependencies(
-            ["condition_1.0"], DependencyType.INSTALL, envMap={}),
+        self.assertDeps(
+            self.pm.listDependencies(
+                PackageIdentifier.fromStringList(["condition_1.0"]),
+                DependencyType.INSTALL,
+                envMap={}),
             ["condition-B_1.0",
              "condition-D_1.0",
              "condition-F_1.0",
              "condition-H_1.0",
-             "condition_1.0"
-             ],
+             "condition_1.0"],
             AvailablePackage)
 
         self.pm.updateUserEnv(setMap={'FOO': 'HELLO'})
-        self.assertDeps(self.pm.listDependencies(
-            ["condition_1.0"], DependencyType.INSTALL, envMap={}),
+        self.assertDeps(
+            self.pm.listDependencies(
+                PackageIdentifier.fromStringList(["condition_1.0"]),
+                DependencyType.INSTALL,
+                envMap={}),
             ["condition-A_1.0",
              "condition-D_1.0",
              "condition-F_1.0",
              "condition-H_1.0",
-             "condition_1.0"
-             ],
+             "condition_1.0"],
             AvailablePackage)
 
-        self.assertDeps(self.pm.listDependencies(
-            ["condition_1.0"], DependencyType.INSTALL, envMap={'FOO': 'BAR'}),
+        self.assertDeps(
+            self.pm.listDependencies(
+                PackageIdentifier.fromStringList(["condition_1.0"]),
+                DependencyType.INSTALL,
+                envMap={'FOO': 'BAR'}),
             ["condition-A_1.0",
              "condition-C_1.0",
              "condition-F_1.0",
-             "condition_1.0"
-             ],
+             "condition_1.0"],
             AvailablePackage)
 
     def testDependsInstall(self):
-        self.assertDeps(self.pm.listDependencies(
-            ["container-A_1.0"], DependencyType.INSTALL),
+        self.assertDeps(
+            self.pm.listDependencies(
+                PackageIdentifier.fromStringList(["container-A_1.0"]),
+                DependencyType.INSTALL),
             ["container-E_1.0",
              "container-B_1.0",
              "container-C_1.0",
              "container-A_1.0"],
             AvailablePackage)
 
-        self.pm.installFromRemotes(["container-A_1.0"])
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["container-A_1.0"]))
 
-        self.assertDeps(self.pm.listDependencies(
-            ["container-A_1.0"], DependencyType.INSTALL),
+        self.assertDeps(
+            self.pm.listDependencies(
+                PackageIdentifier.fromStringList(["container-A_1.0"]),
+                DependencyType.INSTALL),
             [],
             AvailablePackage)
 
-        self.assertDeps(self.pm.listDependencies(
-            ["container-A_2.0"], DependencyType.INSTALL),
+        self.assertDeps(
+            self.pm.listDependencies(
+                PackageIdentifier.fromStringList(["container-A_2.0"]),
+                DependencyType.INSTALL),
             ["container-D_1.0",
              "container-A_2.0"],
             AvailablePackage)
 
     def testDependsInstalled(self):
-        self.assertDeps(self.pm.listDependencies(
-            ["container-A_1.0"], DependencyType.INSTALLED),
+        self.assertDeps(
+            self.pm.listDependencies(
+                PackageIdentifier.fromStringList(["container-A_1.0"]),
+                DependencyType.INSTALLED),
             [],
             InstalledPackage)
 
-        self.pm.installFromRemotes(["container-A_1.0"])
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["container-A_1.0"]))
 
-        self.assertDeps(self.pm.listDependencies(
-            ["container-A_1.0"], DependencyType.INSTALLED),
+        self.assertDeps(
+            self.pm.listDependencies(
+                PackageIdentifier.fromStringList(["container-A_1.0"]),
+                DependencyType.INSTALLED),
             ["container-E_1.0",
              "container-B_1.0",
              "container-C_1.0",
@@ -478,15 +521,20 @@ class TestPackageManager_File(AbstractTestWithRepo):
             InstalledPackage)
 
     def testDependsUninstall(self):
-        self.assertDeps(self.pm.listDependencies(
-            ["container-A_1.0"], DependencyType.UNINSTALL),
+        self.assertDeps(
+            self.pm.listDependencies(
+                PackageIdentifier.fromStringList(["container-A_1.0"]),
+                DependencyType.UNINSTALL),
             [],
             AvailablePackage)
 
-        self.pm.installFromRemotes(["container-A_1.0"])
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["container-A_1.0"]))
 
-        self.assertDeps(self.pm.listDependencies(
-            ["container-A_1.0"], DependencyType.UNINSTALL),
+        self.assertDeps(
+            self.pm.listDependencies(
+                PackageIdentifier.fromStringList(["container-A_1.0"]),
+                DependencyType.UNINSTALL),
             ["container-A_1.0",
              "container-C_1.0",
              "container-B_1.0",
@@ -494,8 +542,10 @@ class TestPackageManager_File(AbstractTestWithRepo):
             InstalledPackage)
 
     def testDependsPrereq(self):
-        self.assertDeps(self.pm.listDependencies(
-            ["prereq-D_1.0"], DependencyType.PREREQ),
+        self.assertDeps(
+            self.pm.listDependencies(
+                PackageIdentifier.fromStringList(["prereq-D_1.0"]),
+                DependencyType.PREREQ),
             ["prereq-false_1.0",
              "prereq-true_1.0"],
             AvailablePackage)
@@ -521,7 +571,8 @@ class TestPackageManager_File(AbstractTestWithRepo):
             fm.getFeature("featureWithMultipleKeys").check()
 
     def testSync(self):
-        self.pm.installFromRemotes(["sync_1.0"])
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["sync_1.0"]))
         self.checkContent(
             self.pm.listInstalledPackages(),
             ["sync_1.0"])
@@ -530,19 +581,19 @@ class TestPackageManager_File(AbstractTestWithRepo):
 
         self.assertFalse(syncFile.exists())
 
-        self.pm.syncPackages(["sync_1.0"])
+        self.pm.syncPackages(PackageIdentifier.fromStringList(["sync_1.0"]))
         self.assertTrue(syncFile.exists())
         self.assertEqual([""],
                          getLines(syncFile))
 
-        self.pm.syncPackages(["sync_1.0"])
+        self.pm.syncPackages(PackageIdentifier.fromStringList(["sync_1.0"]))
         self.assertTrue(syncFile.exists())
         self.assertEqual(["",
                           ""],
                          getLines(syncFile))
 
         self.pm.updateUserEnv({"MYVAR2": "MYOTHERVALUE"})
-        self.pm.syncPackages(["sync_1.0"])
+        self.pm.syncPackages(PackageIdentifier.fromStringList(["sync_1.0"]))
         self.assertTrue(syncFile.exists())
         self.assertEqual(["",
                           "",

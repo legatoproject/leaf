@@ -23,6 +23,33 @@ class TestSetupCli_Default(LeafCliWrapper):
         self.leafExec("setup", "foo", "-p", "container-A")
         self.leafExec("setup", "foo", "-p", "container-A", expectedRc=2)
 
+    def testWithPackageIdentifier(self):
+        self.leafExec("setup", "A",
+                      "-p", "container-A_1.0")
+        self.checkCurrentProfile("A")
+        self.checkProfileContent("A",
+                                 ["container-A",
+                                  "container-B",
+                                  "container-C",
+                                  "container-E"])
+
+        self.leafExec("setup", "B",
+                      "-p", "container-A_2.0")
+        self.checkCurrentProfile("B")
+        self.checkProfileContent("B",
+                                 ["container-A",
+                                  "container-C",
+                                  "container-D"])
+
+    def testWithPackageName(self):
+        self.leafExec("setup", "A",
+                      "-p", "container-A")
+        self.checkCurrentProfile("A")
+        self.checkProfileContent("A",
+                                 ["container-A",
+                                  "container-C",
+                                  "container-D"])
+
     def testProfileContent(self):
         self.leafExec("setup", "foo1",
                       "-p", "condition")

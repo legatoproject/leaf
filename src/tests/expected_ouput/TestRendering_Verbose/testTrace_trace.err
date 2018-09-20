@@ -4,7 +4,7 @@ ERROR:
 Random message for this exception
 CAUSED BY:
 division by zero
-HINT:
+HINTS:
 this is a first hint with a 'command'
 another one with 'a first command' and 'a second one'
 ---- Logger error ----
@@ -15,7 +15,7 @@ ERROR:
 Random message for this exception
 CAUSED BY:
 division by zero
-HINT:
+HINTS:
 this is a first hint with a 'command'
 another one with 'a first command' and 'a second one'
 Traceback (most recent call last):

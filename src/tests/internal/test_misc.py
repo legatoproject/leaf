@@ -9,9 +9,10 @@ from tempfile import mktemp
 
 from leaf.cli.external import grepDescription
 from leaf.constants import JsonConstants
+from leaf.core.coreutils import groupPackageIdentifiersByName
 from leaf.model.base import JsonObject
 from leaf.model.modelutils import layerModelDiff, layerModelUpdate
-from leaf.model.package import Feature
+from leaf.model.package import Feature, PackageIdentifier
 from leaf.utils import checkSupportedLeaf, jsonLoadFile, jsonWriteFile
 from tests.testutils import EXTENSIONS_FOLDER, RESOURCE_FOLDER
 
@@ -265,3 +266,25 @@ class TestMisc(unittest.TestCase):
             '{"number":1,"string":"A","object":{"list":[1,2,3],"object":{"number":42,"string":"foo","boolean":true}}}',
             '{"string":null,"object":{"object":{"number":1,"boolean":false}},"string2":"A"}',
             '{"number":1,"object":{"list":[1,2,3],"object":{"number":1,"string":"foo","boolean":false}},"string2":"A"}')
+
+    def testSortPi(self):
+        a10 = PackageIdentifier.fromString("a_1.0")
+        a20 = PackageIdentifier.fromString("a_2.0")
+        a11 = PackageIdentifier.fromString("a_1.1")
+        a21 = PackageIdentifier.fromString("a_2.1")
+        b10 = PackageIdentifier.fromString("b_1.0")
+        b20 = PackageIdentifier.fromString("b_2.0")
+        b11 = PackageIdentifier.fromString("b_1.1")
+        b21 = PackageIdentifier.fromString("b_2.1")
+
+        pkgMap = groupPackageIdentifiersByName(
+            [a20, a10, b11, b21, a21])
+        self.assertEquals(pkgMap,
+                          {'a': [a10, a20, a21],
+                           'b': [b11, b21]})
+
+        pkgMap = groupPackageIdentifiersByName(
+            [b10, a11, b20, a20], pkgMap=pkgMap)
+        self.assertEquals(pkgMap,
+                          {'a': [a10, a11, a20, a21],
+                           'b': [b10, b11, b20, b21]})

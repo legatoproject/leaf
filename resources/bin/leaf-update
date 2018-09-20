@@ -9,16 +9,18 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-from argparse import ArgumentParser
-from pathlib import Path
 import argparse
-import os
 import sys
 import traceback
+import os
+from argparse import ArgumentParser
+from pathlib import Path
 
 import argcomplete
 
 from leaf.constants import LeafConstants
+from leaf.core.coreutils import groupPackageIdentifiersByName
+from leaf.core.error import InvalidPackageNameException
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.format.logger import TextLogger, Verbosity
 from leaf.model.package import PackageIdentifier
@@ -70,26 +72,47 @@ if __name__ == '__main__':
         profile = workspaceManager.getProfile(profileName)
 
         profilePackageMap = profile.getPackagesMap()
-        allPiList = list(workspaceManager.listInstalledPackages()) + \
-            list(workspaceManager.listAvailablePackages())
+        groupedPackagesMap = groupPackageIdentifiersByName(
+            workspaceManager.listInstalledPackages())
+        groupedPackagesMap = groupPackageIdentifiersByName(
+            workspaceManager.listAvailablePackages(),
+            pkgMap=groupedPackagesMap)
 
         updatePiList = []
 
         motifList = args.packages if args.packages is not None else profilePackageMap.keys()
-        for pin in motifList:
-            pi = getLatestAvailablePackage(pin, allPiList)
+        for motif in motifList:
+            pi = None
+            if PackageIdentifier.isValidIdentifier(motif):
+                # User force specific version
+                pi = PackageIdentifier.fromString(motif)
+                if pi.name not in groupedPackagesMap or pi not in groupedPackagesMap[pi.name]:
+                    # Unknwon package
+                    pi = None
+            elif motif in groupedPackagesMap:
+                # Get latest version
+                pi = groupedPackagesMap[motif][-1]
+
             if pi is None:
-                logger.printError("Cannot find package for %s" % pin)
-            else:
+                # Unknown package identifier
+                raise InvalidPackageNameException(motif)
+
+            if pi is not None and pi not in updatePiList:
+                # Get PI in profile
                 previousPi = profilePackageMap.get(pi.name)
                 if previousPi is None:
+                    # Package not in profile yet, add it
                     if logger.confirm(question="Do you want to add package %s?" % pi):
                         updatePiList.append(pi)
                 elif previousPi != pi:
+                    # Package already in profile with a different version, update it
                     if logger.confirm(
                             question="Do you want to update package %s from %s to %s?" % (
                                 pi.name, previousPi.version, pi.version)):
                         updatePiList.append(pi)
+                else:
+                    # Package already in profile with same version, do nothing
+                    pass
 
         if len(updatePiList) == 0:
             logger.printDefault("Nothing to do")
