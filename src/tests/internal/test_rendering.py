@@ -6,27 +6,26 @@ import os
 import platform
 import sys
 import unittest
-from collections import OrderedDict
 
 from leaf import __version__
 from leaf.constants import EnvConstants, JsonConstants, LeafFiles
-from leaf.core.error import LeafException
 from leaf.core.packagemanager import LoggerManager, PackageManager
-from leaf.core.workspacemanager import WorkspaceManager
 from leaf.format.logger import Verbosity
 from leaf.format.renderer.environment import EnvironmentRenderer
 from leaf.format.renderer.feature import FeatureListRenderer
 from leaf.format.renderer.manifest import ManifestListRenderer
 from leaf.format.renderer.profile import ProfileListRenderer
 from leaf.format.renderer.remote import RemoteListRenderer
-from leaf.format.renderer.workspace import WorkspaceRenderer
 from leaf.model.environment import Environment
-from leaf.model.package import AvailablePackage, Feature, InstalledPackage, \
-    Manifest, PackageIdentifier
+from leaf.model.package import AvailablePackage, Feature, InstalledPackage, Manifest
 from leaf.model.remote import Remote
+from leaf.model.workspace import Profile
 from leaf.utils import jsonLoadFile
-from tests.testutils import AbstractTestWithRepo, LEAF_UT_SKIP, \
-    RESOURCE_FOLDER, ROOT_FOLDER
+
+from leaf.core.error import LeafException
+from leaf.format.renderer.status import StatusRenderer
+from tests.testutils import LEAF_UT_SKIP, RESOURCE_FOLDER,\
+    AbstractTestWithRepo, ROOT_FOLDER, AbstractTestWithChecker
 
 
 class AvailablePackageWithFakeSize(AvailablePackage):
@@ -40,11 +39,14 @@ class AvailablePackageWithFakeSize(AvailablePackage):
         return 0
 
 
-class TestRendering_Default(AbstractTestWithRepo):
+class TestRendering_Default(AbstractTestWithChecker):
 
     def __init__(self, methodName):
-        AbstractTestWithRepo.__init__(self, methodName)
+        AbstractTestWithChecker.__init__(self, methodName)
         self.loggerManager = LoggerManager(Verbosity.DEFAULT, True)
+
+    def getRemoteUrl(self):
+        return "http://fakeUrl"
 
     def loadManifest(self):
         out = []
@@ -64,9 +66,7 @@ class TestRendering_Default(AbstractTestWithRepo):
         rend = ManifestListRenderer()
         with self.assertStdout(
                 templateOut="manifest.out",
-                variables={
-                    "{ROOT_FOLDER}": AbstractTestWithRepo.ROOT_FOLDER,
-                    "{RESOURCE_FOLDER}": RESOURCE_FOLDER}):
+                variables={"{RESOURCE_FOLDER}": RESOURCE_FOLDER}):
             self.loggerManager.printRenderer(rend)
             rend.extend(mfs)
             self.loggerManager.printRenderer(rend)
@@ -112,57 +112,130 @@ class TestRendering_Default(AbstractTestWithRepo):
                            "{PLATFORM_RELEASE}": platform.release()}):
             self.loggerManager.printRenderer(rend)
 
-    def createEmptyWs(self):
-        ws = WorkspaceManager(WorkspaceManager.findRoot(
-            customPath=self.getWorkspaceFolder(),
-            checkEnv=False,
-            checkParents=False),
-            self.loggerManager.logger.getVerbosity(),
-            True)
-        ws.initializeWorkspace()
-        return ws
+    def testStatus(self):
+        profile1 = Profile("profile1", "fake/folder", {
+            JsonConstants.WS_PROFILE_ENV: {
+                "Foo1": "Bar1",
+                "Foo2": "Bar2",
+                "Foo3": "Bar3",
+            }})
+        profile1.isCurrentProfile = True
+        profile2 = Profile("profile2", "fake/folder", {})
+        profile2.isCurrentProfile = True
+        profile3 = Profile("profile3", "fake/folder", {})
+        profile3.isCurrentProfile = True
+        p1 = Manifest({
+            JsonConstants.INFO: {
+                JsonConstants.INFO_NAME: "container-A",
+                JsonConstants.INFO_VERSION: "1.0",
+                JsonConstants.INFO_DESCRIPTION: "Fake description for container A"}})
+        p2 = Manifest({
+            JsonConstants.INFO: {
+                JsonConstants.INFO_NAME: "container-B",
+                JsonConstants.INFO_VERSION: "1.0",
+                JsonConstants.INFO_DESCRIPTION: "Fake description for container B"}})
+        p3 = Manifest({
+            JsonConstants.INFO: {
+                JsonConstants.INFO_NAME: "container-C",
+                JsonConstants.INFO_VERSION: "1.0",
+                JsonConstants.INFO_DESCRIPTION: "Fake description for container C"}})
 
-    def createWorkspace(self):
-        AbstractTestWithRepo.setUp(self)
-        pm = PackageManager(self.loggerManager.logger, nonInteractive=True)
-        pm.setInstallFolder(self.getInstallFolder())
-        pm.createRemote("default", self.getRemoteUrl(), insecure=True)
-        ws = self.createEmptyWs()
-
-        pfs = []
-        profile = ws.createProfile("foo")
-        profile.addPackages(
-            PackageIdentifier.fromStringList(["container-A_1.0"]))
-        profile.updateEnv(OrderedDict([("FOO", "BAR"),
-                                       ("FOO2", "BAR2")]))
-        profile = ws.updateProfile(profile)
-        pfs.append(profile)
-
-        profile = ws.createProfile("bar")
-        profile.addPackages(
-            PackageIdentifier.fromStringList(["container-B_1.0"]))
-        profile = ws.updateProfile(profile)
-        pfs.append(profile)
-
-        ws.readConfiguration()
-        return ws, pfs
-
-    def testWorkspace(self):
         with self.assertStdout(
-                templateOut="workspace.out",
-                variables={
-                    "{ROOT_FOLDER}": AbstractTestWithRepo.ROOT_FOLDER}):
-            self.loggerManager.printRenderer(
-                WorkspaceRenderer(self.createEmptyWs()))
-            self.loggerManager.printRenderer(
-                WorkspaceRenderer(self.createWorkspace()[0]))
+                templateOut="status.out"):
+            print("####### Test with 2 other profiles, 2 incl, 1 deps #######")
+            self.loggerManager.printRenderer(StatusRenderer(
+                workspaceRootFolder="fake/root/folder",
+                currentProfile=profile1,
+                sync=True,
+                includedPackagesMap={
+                    p1.getIdentifier(): p1, p2.getIdentifier(): p2},
+                dependenciesMap={
+                    p3.getIdentifier(): p3},
+                otherProfiles=[profile2, profile3]))
+            print("\n\n\n####### Test with 1 other profile, 0 incl, 2 deps #######")
+            self.loggerManager.printRenderer(StatusRenderer(
+                workspaceRootFolder="fake/root/folder",
+                currentProfile=profile1,
+                sync=True,
+                includedPackagesMap={},
+                dependenciesMap={
+                    p3.getIdentifier(): p3, p2.getIdentifier(): p2},
+                otherProfiles=[profile2]))
+            print("\n\n\n####### Test with 1 other profile, 1 incl, 0 deps #######")
+            self.loggerManager.printRenderer(StatusRenderer(
+                workspaceRootFolder="fake/root/folder",
+                currentProfile=profile1,
+                sync=False,
+                includedPackagesMap={p3.getIdentifier(): p3},
+                dependenciesMap={},
+                otherProfiles=[profile2]))
+            print(
+                "\n\n\n####### Test with no other profiles, no included nor deps nor envvars #######")
+            self.loggerManager.printRenderer(StatusRenderer(
+                workspaceRootFolder="fake/root/folder",
+                currentProfile=profile2,
+                sync=False,
+                includedPackagesMap={},
+                dependenciesMap={},
+                otherProfiles=[]))
 
     def testProfile(self):
-        with self.assertStdout(
-                templateOut="profile.out"):
-            self.loggerManager.printRenderer(ProfileListRenderer())
-            self.loggerManager.printRenderer(
-                ProfileListRenderer(self.createWorkspace()[1]))
+        pack1 = Manifest({
+            JsonConstants.INFO: {
+                JsonConstants.INFO_NAME: "container-A",
+                JsonConstants.INFO_VERSION: "1.0",
+                JsonConstants.INFO_DESCRIPTION: "Fake description for container A"}})
+        pack2 = Manifest({
+            JsonConstants.INFO: {
+                JsonConstants.INFO_NAME: "container-B",
+                JsonConstants.INFO_VERSION: "1.0",
+                JsonConstants.INFO_DESCRIPTION: "Fake description for container B"}})
+        pack3 = Manifest({
+            JsonConstants.INFO: {
+                JsonConstants.INFO_NAME: "container-C",
+                JsonConstants.INFO_VERSION: "1.0",
+                JsonConstants.INFO_DESCRIPTION: "Fake description for container C"}})
+        profile1 = Profile("profile1", "fake/folder", {
+            JsonConstants.WS_PROFILE_ENV: {
+                "Foo1": "Bar1",
+                "Foo2": "Bar2",
+                "Foo3": "Bar3",
+            }})
+        profile2 = Profile("profile2", "fake/folder", {})
+        profile2.isCurrentProfile = True
+        profile3 = Profile("profile3", "fake/folder", {
+            JsonConstants.WS_PROFILE_ENV: {
+                "Foo2": "Bar2",
+                "Foo3": "Bar3",
+            }})
+        profile4 = Profile("profile4", "fake/folder", {})
+        profilesInfoMap = {
+            profile2: {
+                "sync": False,
+                "includedPackagesMap": {pack2.getIdentifier(): pack2},
+                "dependenciesMap": {}},
+            profile3: {
+                "sync": True,
+                "includedPackagesMap": {},
+                "dependenciesMap": {pack2.getIdentifier(): pack2}},
+            profile1: {
+                "sync": True,
+                "includedPackagesMap": {pack1.getIdentifier(): pack1},
+                "dependenciesMap": {pack2.getIdentifier(): pack2, pack3.getIdentifier(): pack3, }},
+            profile4: {
+                "sync": False,
+                "includedPackagesMap": {},
+                "dependenciesMap": {}},
+        }
+        with self.assertStdout(templateOut="profile.out"):
+            print("####### Test with no profile #######")
+            self.loggerManager.printRenderer(ProfileListRenderer(
+                workspaceRootFolder="fake/root/folder",
+                profilesInfoMap={}))
+            print("\n\n\n####### Test with various profiles #######")
+            self.loggerManager.printRenderer(ProfileListRenderer(
+                workspaceRootFolder="fake/root/folder",
+                profilesInfoMap=profilesInfoMap))
 
     def testFeature(self):
         rend = FeatureListRenderer()
@@ -193,7 +266,7 @@ class TestRendering_Default(AbstractTestWithRepo):
         with self.assertStdout(
                 templateOut="hints.out"):
             self.loggerManager.printHints(
-                "This is a hints", "This is another hints with a 'fake command'")
+                "This is a hints", "This is another hint with a 'fake command'")
 
     def testError(self):
         with self.assertStdout(

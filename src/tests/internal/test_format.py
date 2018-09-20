@@ -2,16 +2,12 @@
 @author: nico
 '''
 
-from pathlib import Path
-from tempfile import mkdtemp
-
 from leaf.format.alignment import VAlign, HAlign
 from leaf.format.chars import _SEPARATORS_ASCII
 from leaf.format.formatutils import sizeof_fmt
 from leaf.format.table import Table
-from leaf.format.theme import ThemeManager
 
-from tests.testutils import AbstractTestWithChecker, LEAF_UT_DEBUG
+from tests.testutils import AbstractTestWithChecker
 
 
 class TestFormat(AbstractTestWithChecker):
@@ -23,11 +19,7 @@ class TestFormat(AbstractTestWithChecker):
         self.assertEqual(sizeof_fmt(456123789), "435.0 MB")
 
     def _createTable(self):
-        if LEAF_UT_DEBUG is not None:
-            ROOT_FOLDER = Path("/tmp/leaf")
-        else:
-            ROOT_FOLDER = Path(mkdtemp(prefix="leaf_tests_"))
-        table = Table(ThemeManager(ROOT_FOLDER / "themes.ini"))
+        table = Table()
         nbElt = 7
         table.newRow().newSep(nbElt)
         table.newRow().newSep() \
@@ -42,9 +34,12 @@ class TestFormat(AbstractTestWithChecker):
         return table
 
     def testTable(self):
+        table = self._createTable()
         with self.assertStdout(
                 templateOut="table.out"):
-            print(self._createTable())
+            print(table)
+            table.removeColumns({1, 2, 4, 5})
+            print(table)
 
     def testAsciiSwitch(self):
         table = self._createTable()

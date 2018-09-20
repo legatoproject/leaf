@@ -112,6 +112,7 @@ class TestProfileCli_Default(LeafCliWrapper):
         self.leafExec(("profile", "config"), "-p", "container-A")
         self.leafExec("status")
         self.leafExec(("profile", "sync"))
+        self.leafExec("status")
         self.checkProfileContent("foo", ["container-A",
                                          "container-C",
                                          "container-D"])

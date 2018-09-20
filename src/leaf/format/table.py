@@ -53,6 +53,7 @@ from enum import unique, Enum
 from leaf.format.alignment import HAlign, VAlign
 from leaf.format.ansi import removeAnsiChars
 from leaf.format.chars import PADDING_CHAR, getSeparators
+from leaf.format.theme import ThemeManager
 
 
 class Table():
@@ -60,11 +61,12 @@ class Table():
     Represent the table
     '''
 
-    def __init__(self, themeManager):
+    def __init__(self, themeManager=ThemeManager()):
         self.tm = themeManager
         self.rows = []
         self.columns = []
         self.separators = getSeparators()
+        self.removedColumnsIndexes = set()
 
     def newRow(self):
         '''
@@ -118,10 +120,22 @@ class Table():
                     assert isinstance(_Cardinal.UP(elt), (_Cell, _VerticalSpan)), \
                         "An vertical span must be under another or a cell (not a separator)"
 
+    def removeColumns(self, colIdSet):
+        self.removedColumnsIndexes.update(colIdSet)
+
     def __str__(self):
         # Create columns
+        self.columns.clear()
         self.columns.extend(_Column(self, columnCells)
                             for columnCells in zip(*self.rows))
+
+        # Remove removed columns
+        for index in sorted(self.removedColumnsIndexes, reverse=True):
+            # Simply delete hidden columns
+            del self.columns[index]
+            # For each row, delete the cell which is the hidden column
+            for row in self.rows:
+                del row[index]
 
         # check table coherence
         self._checkTable()

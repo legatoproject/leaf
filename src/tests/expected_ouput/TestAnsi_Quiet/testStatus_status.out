@@ -1,0 +1,17 @@
+####### Test with 2 other profiles, 2 incl, 1 deps #######
+Workspace fake/root/folder
+
+
+
+####### Test with 1 other profile, 0 incl, 2 deps #######
+Workspace fake/root/folder
+
+
+
+####### Test with 1 other profile, 1 incl, 0 deps #######
+Workspace fake/root/folder
+
+
+
+####### Test with no other profiles, no included nor deps nor envvars #######
+Workspace fake/root/folder

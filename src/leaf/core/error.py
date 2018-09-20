@@ -112,3 +112,11 @@ class ProfileNameAlreadyExistException(LeafException):
             "try 'leaf select {0} && leaf update -p xxx' if you want to update profile {0} with package xxx".format(unknownName))
         self.hints.append(
             "try 'leaf setup -p xxx {0}_1' if you want to create a new profile with package xxx".format(unknownName))
+
+
+class NoProfileSelected(LeafException):
+    def __init__(self):
+        LeafException.__init__(
+            self, "No current profile, you need to select to a profile first")
+        self.hints.append(
+            "try 'leaf select xxx' if you want to select profile xxx")

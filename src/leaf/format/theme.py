@@ -70,7 +70,7 @@ class _Theme():
         Each theme can be used as a function
         '''
         text = str(text)
-        if self == self.tm.VOID:
+        if self == ThemeManager.VOID:
             return text
         if self == self.tm.RESET:
             raise ValueError("ThemeManager.RESET cannot be used as a function")
@@ -80,7 +80,7 @@ class _Theme():
         '''
         Let use a theme directly inside a string
         '''
-        if self == self.tm.VOID:
+        if self == ThemeManager.VOID:
             return ""
         if self == self.tm.RESET:
             return ANSI.style().RESET_ALL
@@ -110,8 +110,9 @@ class ThemeManager():
     '''
     Manage theme configuration file and overriding behavior
     '''
+    VOID = _Theme(None, "void")  # Used as a default/identity function
 
-    def __init__(self, themesFile):
+    def __init__(self, themesFile=None):
         '''
         Write configuration file if it does'nt exist the load it
         '''
@@ -187,7 +188,6 @@ class ThemeManager():
 
     def _createThemes(self):
         # Special instances
-        self.VOID = _Theme(self, "void")  # Used as a default/identity function
         self.RESET = _Theme(self, "reset")  # Used to end a theme
 
         # Error messages

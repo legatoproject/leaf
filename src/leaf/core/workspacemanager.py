@@ -17,7 +17,7 @@ from leaf.core.dependencies import (DependencyManager, DependencyStrategy,
                                     DependencyType)
 from leaf.core.error import (InvalidProfileNameException,
                              ProfileNameAlreadyExistException,
-                             ProfileProvisioningException)
+                             ProfileProvisioningException, NoProfileSelected)
 from leaf.core.packagemanager import PackageManager
 from leaf.model.config import WorkspaceConfiguration
 from leaf.model.environment import Environment
@@ -216,11 +216,9 @@ class WorkspaceManager(PackageManager):
                 return self.currentLink.resolve().name
             except Exception:
                 self.currentLink.unlink()
-                raise ValueError(
-                    "No current profile, you need to select a profile first")
+                raise NoProfileSelected()
         else:
-            raise ValueError(
-                "No current profile, you need to select to a profile first")
+            raise NoProfileSelected()
 
     def switchProfile(self, profile):
         # Check folder exist

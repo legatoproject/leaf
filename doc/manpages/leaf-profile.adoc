@@ -38,8 +38,9 @@ Lists the profiles in the workspace. (default option)
 +
 Depending on the *-q*|*-v* options, the output information is:
 +
-  - [blank]: displays a table with _PROFILE_ and a *[current]* tag next to the *current* profile
-  - *-v*: as above, plus the profile configured profiles and environment variables (see *leaf env*)
+  - [blank]: displays a table for all _PROFILE_ (with a *[current]* tag next to the *current* profile),
+  plus all the configured packages
+  - *-v*: as above, plus the package dependencies and environment variables (see *leaf env*)
   - *-q*: displays only _PROFILE_ list
 +
 Note that the *list* command must be specified if one of the *-q*|*-v* option is specified.

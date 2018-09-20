@@ -15,9 +15,8 @@ the *leaf status* command can be used (see *leaf setup* or *leaf init*).
 
 Depending on the *-q*|*-v* options, the output information is:
 
-  - [blank]: displays a table with profile names, a *[current]* tag next to the *current* profile,
-  and if each profile is currently synchronized
-  - *-v*: as above, plus the profile configured profiles and environment variables (see *leaf env*)
+  - [blank]: displays a table with current profile name, plus all the configured packages
+  - *-v*: as above, plus the package dependencies and environment variables (see *leaf env*)
   - *-q*: displays only the workspace location
 
 == SEE ALSO

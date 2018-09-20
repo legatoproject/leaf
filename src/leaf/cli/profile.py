@@ -70,12 +70,41 @@ class ProfileListCommand(AbstractProfileCommand):
     def execute(self, args):
         wm = self.getWorkspaceManager(args)
         name = self.getProfileName(args)
-        rend = ProfileListRenderer()
+        profileList = []
         if name is None:
-            rend.extend(wm.listProfiles().values())
+            profileList.extend(wm.listProfiles().values())
         else:
-            rend.append(wm.getProfile(name))
+            profileList.append(wm.getProfile(name))
+        profilesInfoMap = dict([(p, computeProfileInfo(wm, p))
+                                for p in profileList])
+        rend = ProfileListRenderer(
+            workspaceRootFolder=wm.workspaceRootFolder,
+            profilesInfoMap=profilesInfoMap)
         wm.printRenderer(rend)
+
+
+def computeProfileInfo(workspaceManager, profile):
+    # Sync
+    sync = workspaceManager.isProfileSync(profile)
+
+    # Included Packages
+    pi2pMap = workspaceManager.listInstalledPackages()
+    includedPackIds = set(profile.getPackagesMap().values())
+    ipMap = dict([(pi, pi2pMap.get(pi, None))
+                  for pi in includedPackIds])
+
+    # Dependencies
+    if sync:
+        depPacks = workspaceManager.getProfileDependencies(profile)
+        depsMap = dict([(p.getIdentifier(), p) for p in depPacks])
+        for ipId in includedPackIds:
+            depsMap.pop(ipId, None)
+    else:
+        depsMap = {}
+
+    return {"sync": sync,
+            "includedPackagesMap": ipMap,
+            "dependenciesMap": depsMap}
 
 
 class ProfileCreateCommand(AbstractProfileCommand):

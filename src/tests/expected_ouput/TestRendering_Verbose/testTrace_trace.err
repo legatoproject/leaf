@@ -19,12 +19,12 @@ HINTS:
 this is a first hint with a 'command'
 another one with 'a first command' and 'a second one'
 Traceback (most recent call last):
-  File "{ROOT_FOLDER}/src/tests/internal/test_rendering.py", line 206, in _printError
+  File "{ROOT_FOLDER}/src/tests/internal/test_rendering.py", line 279, in _printError
     1 / 0  # Ooops !
 ZeroDivisionError: division by zero
 ---- Logger error ----
 Random message for this exception
 Traceback (most recent call last):
-  File "{ROOT_FOLDER}/src/tests/internal/test_rendering.py", line 206, in _printError
+  File "{ROOT_FOLDER}/src/tests/internal/test_rendering.py", line 279, in _printError
     1 / 0  # Ooops !
 ZeroDivisionError: division by zero

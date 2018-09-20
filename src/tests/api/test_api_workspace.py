@@ -11,7 +11,7 @@ from leaf.format.logger import TextLogger, Verbosity
 from leaf.model.package import PackageIdentifier, Manifest
 
 from leaf.core.error import InvalidProfileNameException,\
-    ProfileNameAlreadyExistException
+    ProfileNameAlreadyExistException, NoProfileSelected
 from tests.testutils import AbstractTestWithRepo
 import leaf
 
@@ -111,7 +111,7 @@ class TestProfile(AbstractTestWithRepo):
         self.wm.initializeWorkspace()
         self.wm.createProfile("foo")
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(NoProfileSelected):
             self.wm.getCurrentProfileName()
         profile = self.wm.getProfile("foo")
         self.wm.switchProfile(profile)
