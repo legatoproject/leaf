@@ -41,9 +41,9 @@ You have a few constraints when you use this API (which are checked when trying 
         - _Separator using _Row.newSep
     - You can only span a _Cell, not a _Separator
 
-@author:    Nicolas Lambert <nlambert@sierrawireless.com>
+@author:    Legato Tooling Team <letools@sierrawireless.com>
 @copyright: 2018 Sierra Wireless. All rights reserved.
-@contact:   Legato Tooling Team <developerstudio@sierrawireless.com>
+@contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from abc import ABC, abstractmethod

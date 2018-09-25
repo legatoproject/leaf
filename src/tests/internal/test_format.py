@@ -1,5 +1,5 @@
 '''
-@author: nico
+@author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
 from leaf.format.alignment import VAlign, HAlign

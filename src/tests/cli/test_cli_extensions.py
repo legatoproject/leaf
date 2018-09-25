@@ -1,5 +1,5 @@
 '''
-@author: david
+@author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
 import os

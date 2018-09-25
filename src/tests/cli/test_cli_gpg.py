@@ -1,7 +1,5 @@
 '''
-Created on 9 août 2018
-
-@author: seb
+@author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 import os
 

@@ -1,5 +1,5 @@
 '''
-@author: seb
+@author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
 import json
