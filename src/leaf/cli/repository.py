@@ -36,12 +36,17 @@ class RepositoryPackSubCommand(LeafCommand):
 
     def initArgs(self, parser):
         super().initArgs(parser)
-        parser.add_argument('-o',
+        parser.add_argument('-o', '--output',
                             metavar='FILE',
                             required=True,
                             type=Path,
                             dest='pack_output',
                             help='output file')
+
+        parser.add_argument('--no-hash',
+                            action='store_false',
+                            dest='storeExtenalHash',
+                            help='do not store hash in a separate file')
 
         dateGroup = parser.add_mutually_exclusive_group()
 
@@ -66,7 +71,8 @@ class RepositoryPackSubCommand(LeafCommand):
         rm = RelengManager(loggerAttr[0], loggerAttr[1])
         rm.pack(args.manifest,
                 args.pack_output,
-                args.updateDate)
+                updateDate=args.updateDate,
+                storeExtenalHash=args.storeExtenalHash)
 
 
 class RepositoryIndexSubCommand(LeafCommand):
@@ -92,6 +98,10 @@ class RepositoryIndexSubCommand(LeafCommand):
                             metavar='STRING',
                             dest='index_description',
                             help='description of the repository')
+        parser.add_argument('--no-hash',
+                            action='store_false',
+                            dest='useExternalHash',
+                            help='do not use hash in separate file')
         parser.add_argument('artifacts',
                             type=Path,
                             nargs=argparse.REMAINDER,
@@ -102,5 +112,6 @@ class RepositoryIndexSubCommand(LeafCommand):
         rm = RelengManager(loggerAttr[0], loggerAttr[1])
         rm.index(args.index_output,
                  args.artifacts,
-                 args.index_name,
-                 args.index_description)
+                 name=args.index_name,
+                 description=args.index_description,
+                 useExternalHash=args.useExternalHash)

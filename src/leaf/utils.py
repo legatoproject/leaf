@@ -26,6 +26,7 @@ import requests
 
 from leaf import __version__
 from leaf.constants import LeafConstants
+from leaf.core.error import InvalidHashException
 
 
 _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
@@ -165,7 +166,7 @@ def downloadFile(url, folder, logger, filename=None, hash=None):
             logger.printVerbose("File exists but cannot be verified, %s will be re-downloaded" %
                                 targetFile.name)
             os.remove(str(targetFile))
-        elif not checkHash(targetFile, hash):
+        elif not checkHash(targetFile, hash, raiseException=False):
             logger.printVerbose("File exists but hash differs, %s will be re-downloaded" %
                                 targetFile.name)
             os.remove(str(targetFile))
@@ -190,9 +191,8 @@ def downloadFile(url, folder, logger, filename=None, hash=None):
         else:
             urllib.request.urlretrieve(url, str(targetFile))
         logger.printDefault("[100%%] Downloading %s" % targetFile.name)
-        if hash is not None and not checkHash(targetFile, hash):
-            raise ValueError("Invalid hash for %s (expecting %s)" %
-                             (targetFile.name, hash))
+        if hash is not None:
+            checkHash(targetFile, hash, raiseException=True)
     return targetFile
 
 
@@ -247,6 +247,7 @@ def getAltEnvPath(envKey=None, defaultPath=None, mkdirIfNeeded=False):
 
 __HASH_NAME = 'sha384'
 __HASH_FACTORY = hashlib.sha384
+__HASH_LEN = 96
 __HASH_BLOCKSIZE = 4096
 
 
@@ -257,6 +258,9 @@ def parseHash(hash):
     if parts[0] != __HASH_NAME:
         raise ValueError(
             "Unsupported hash method, expecting %s" % __HASH_NAME)
+    if len(parts[1]) != __HASH_LEN:
+        raise ValueError(
+            "Hash value '%s' has not the correct length, expecting %d" % (parts[1], __HASH_LEN))
     return parts
 
 
@@ -273,9 +277,14 @@ def computeHash(file):
     return __HASH_NAME + ':' + hasher.hexdigest()
 
 
-def checkHash(file, value):
-    parseHash(value)
-    return computeHash(file) == value
+def checkHash(file, expected, raiseException=False):
+    parseHash(expected)
+    actual = computeHash(file)
+    if actual != expected:
+        if raiseException is True:
+            raise InvalidHashException(file, actual, expected)
+        return False
+    return True
 
 
 def getTotalSize(item):

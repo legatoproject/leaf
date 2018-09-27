@@ -43,3 +43,6 @@ test:
 sdist:
 	rm -rf $(DIST)
 	python3 setup.py sdist
+
+flake:
+	tox -e clean,flake

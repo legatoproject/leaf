@@ -27,7 +27,7 @@ class LeafException(Exception):
     Base class for exceptions in leaf app
     '''
 
-    def __init__(self, msg=None, cause=None):
+    def __init__(self, msg=None, cause=None, hints=None):
         '''
         Constructor
         '''
@@ -35,6 +35,10 @@ class LeafException(Exception):
         self.msg = msg
         self.cause = cause
         self.hints = []
+        if isinstance(hints, str):
+            self.hints.append(hints)
+        elif hints is not None:
+            self.hints += hints
 
     def getHints(self):
         out = []
@@ -120,3 +124,11 @@ class NoProfileSelected(LeafException):
             self, "No current profile, you need to select to a profile first")
         self.hints.append(
             "try 'leaf select xxx' if you want to select profile xxx")
+
+
+class InvalidHashException(LeafException):
+    def __init__(self, file, actual, expected):
+        LeafException.__init__(
+            self, "The file %s hash could not be verified, expecting %s but was %s" % (file, expected, actual))
+        self.hints.append(
+            "try to download the file again, or contact the package owner")

@@ -24,6 +24,7 @@ container-E_1.0
 container-E_1.1
 env-A_1.0
 env-B_1.0
+failure-badhash_1.0
 failure-depends-leaf_1.0
 failure-postinstall-exec-silent_1.0
 failure-postinstall-exec_1.0
@@ -67,6 +68,7 @@ container-E_1.0
 container-E_1.1
 env-A_1.0
 env-B_1.0
+failure-badhash_1.0
 failure-depends-leaf_1.0
 failure-postinstall-exec-silent_1.0
 failure-postinstall-exec_1.0

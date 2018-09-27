@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import sys
 import unittest
+from builtins import ValueError
 from pathlib import Path
 from tempfile import mkdtemp
 from unittest.case import TestCase
@@ -337,10 +338,22 @@ def generateRepo(sourceFolder, outputFolder):
                 outputFile = outputFolder / filename
                 rm.pack(manifestFile, outputFile, updateDate=False)
                 checkArchiveFormat(str(outputFile))
+                # Create multi index.json
                 if manifest.getName() == "install":
                     artifactsList2.append(outputFile)
                 else:
                     artifactsList.append(outputFile)
+                # Create a problem with failure-badhash package
+                if manifest.getName() == "failure-badhash":
+                    ehf = rm.getExternalHashFile(outputFile)
+                    if not ehf.exists():
+                        raise ValueError()
+                    with open(str(ehf), 'w') as fp:
+                        # chosen by fair dice roll.
+                        # garanteed to be random.
+                        fp.write(
+                            "sha384:d1083143b5c4cf7f1ddaadc391b2d0102fc9fffeb0951ec51020b512ef9548d40cd1af079a1221133faa949fdc304c41")
+
     rm.index(outputFolder / "index.json", artifactsList)
     rm.index(outputFolder / "index2.json", artifactsList2)
     subprocess.check_call(["gpg",

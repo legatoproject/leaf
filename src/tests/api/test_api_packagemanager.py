@@ -14,16 +14,17 @@ from time import sleep
 
 from leaf.constants import EnvConstants
 from leaf.core.dependencies import DependencyType
-from leaf.core.error import (InvalidPackageNameException,
-                             NoEnabledRemoteException, NoRemoteException)
+from leaf.core.error import InvalidHashException, InvalidPackageNameException, \
+    NoEnabledRemoteException, NoRemoteException
 from leaf.core.features import FeatureManager
 from leaf.core.packagemanager import PackageManager
 from leaf.format.logger import Verbosity
 from leaf.model.environment import Environment
-from leaf.model.package import (AvailablePackage, InstalledPackage,
-                                PackageIdentifier)
+from leaf.model.package import AvailablePackage, InstalledPackage, \
+    PackageIdentifier
 from leaf.utils import isFolderIgnored
 from tests.testutils import AbstractTestWithRepo, envFileToMap, getLines
+
 
 VERBOSITY = Verbosity.VERBOSE
 HTTP_PORT = os.environ.get("LEAF_HTTP_PORT", "54940")
@@ -267,6 +268,11 @@ class TestPackageManager_File(AbstractTestWithRepo):
             ["failure-postinstall-exec-silent_1.0"]))
         self.checkContent(self.pm.listInstalledPackages(),
                           ["failure-postinstall-exec-silent_1.0"])
+
+    def testCannotInstallBadHash(self):
+        with self.assertRaises(InvalidHashException):
+            self.pm.installFromRemotes(
+                PackageIdentifier.fromStringList(["failure-badhash_1.0"]))
 
     def testOutdatedCacheFile(self):
 
