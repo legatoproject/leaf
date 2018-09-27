@@ -18,6 +18,7 @@ class ProfileListRenderer(Renderer):
     '''
 
     def __init__(self, workspaceRootFolder, profilesInfoMap):
+        Renderer.__init__(self)
         self.workspaceRootFolder = workspaceRootFolder
         self.extend(profilesInfoMap.keys())
         self.sort(key=str)

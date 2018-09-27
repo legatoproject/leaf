@@ -17,7 +17,9 @@ class EnvironmentRenderer(Renderer):
     '''
 
     def __init__(self, env):
+        Renderer.__init__(self)
         self.append(env)
+        self.usePagerIfNeeded = False
 
     def _toStringQuiet(self):
         self.out = []

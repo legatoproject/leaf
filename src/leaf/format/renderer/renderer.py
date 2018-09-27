@@ -10,10 +10,13 @@ from abc import ABC, abstractmethod
 from shutil import get_terminal_size
 from subprocess import Popen, PIPE
 import errno
+import signal
 
 from leaf.format.ansi import removeAnsiChars
 from leaf.format.formatutils import getPager, isatty
 from leaf.format.logger import Verbosity
+
+from leaf.core.error import UserCancelException
 
 
 TERMINAL_WIDTH, TERMINAL_HEIGHT = get_terminal_size((-1, -1))
@@ -23,6 +26,12 @@ class Renderer(list, ABC):
     '''
     Abstract Renderer
     '''
+
+    def __init__(self, *items):
+        list.__init__(self, *items)
+        self.tm = None
+        self.verbosity = None
+        self.usePagerIfNeeded = True
 
     def _toStringQuiet(self):
         '''
@@ -43,11 +52,6 @@ class Renderer(list, ABC):
         Render inputList in verbose verbosity
         '''
         pass
-
-    def __init__(self, *items):
-        list.__init__(self, *items)
-        self.tm = None
-        self.verbosity = None
 
     def __str__(self):
         if self.verbosity == Verbosity.QUIET:
@@ -74,10 +78,16 @@ class Renderer(list, ABC):
         '''
         Check the terminal size and return True if we need pager
         '''
+        if not self.usePagerIfNeeded:
+            return False
+
+        if self.verbosity == Verbosity.QUIET:
+            return False
+
         if not isatty():
             return False
 
-        if TERMINAL_HEIGHT == -1 or TERMINAL_WIDTH == - 1:
+        if TERMINAL_HEIGHT == -1 or TERMINAL_WIDTH == -1:
             return False
 
         lines = removeAnsiChars(printed).split('\n')
@@ -95,19 +105,23 @@ class Renderer(list, ABC):
         '''
         p = Popen(pager, stdin=PIPE)
         try:
-            p.stdin.write(toPrint.encode())
-        except IOError as e:
-            if e.errno == errno.EPIPE or e.errno == errno.EINVAL:
-                # Stop loop on "Invalid pipe" or "Invalid argument".
-                # No sense in continuing with broken pipe.
-                return
-            else:
-                # Raise any other error.
-                raise
-        p.stdin.close()
-        p.wait()
+            try:
+                p.stdin.write(toPrint.encode())
+            except IOError as e:
+                if e.errno == errno.EPIPE or e.errno == errno.EINVAL:
+                    # Stop loop on "Invalid pipe" or "Invalid argument".
+                    # No sense in continuing with broken pipe.
+                    return
+                else:
+                    # Raise any other error.
+                    raise
+            p.stdin.close()
+            p.wait()
 
-        # This should always be printed below any output written to page.
-        # It avoid to have a '%' char at the end when user pipe to cat for
-        # example
-        print("")
+            # This should always be printed below any output written to page.
+            # It avoid to have a '%' char at the end when user pipe to cat for
+            # example
+            print("")
+        except UserCancelException:
+            # Exit quietly on CTRL-C
+            p.send_signal(signal.SIGTSTP)

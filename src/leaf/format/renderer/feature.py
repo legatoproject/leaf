@@ -17,6 +17,8 @@ class FeatureListRenderer(Renderer):
     '''
     Renderer for feature list command
     '''
+    def __init__(self):
+        Renderer.__init__(self)
 
     def _toStringDefault(self):
         '''

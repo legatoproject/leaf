@@ -15,6 +15,8 @@ class RemoteListRenderer(Renderer):
     '''
     Renderer for remote list command
     '''
+    def __init__(self):
+        Renderer.__init__(self)
 
     def _toStringDefault(self):
         '''

@@ -22,6 +22,7 @@ class ManifestListRenderer(Renderer):
         '''
         Store the pkgFilter to show it in the table header
         '''
+        Renderer.__init__(self)
         self.pkgFilter = pkgFilter
 
     def _toStringDefault(self):

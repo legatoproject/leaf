@@ -10,6 +10,7 @@ from builtins import sorted
 
 from leaf.format.alignment import HAlign
 from leaf.format.renderer.profile import ProfileListRenderer
+from leaf.format.renderer.renderer import Renderer
 from leaf.format.table import Table
 
 
@@ -19,6 +20,7 @@ class StatusRenderer(ProfileListRenderer):
     '''
 
     def __init__(self, workspaceRootFolder, currentProfile, sync, includedPackagesMap, dependenciesMap, otherProfiles):
+        Renderer.__init__(self)
         self.workspaceRootFolder = workspaceRootFolder
         self.currentProfile = currentProfile
         self.sync = sync
