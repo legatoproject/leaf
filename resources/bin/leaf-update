@@ -121,7 +121,5 @@ if __name__ == '__main__':
             workspaceManager.updateProfile(profile)
             workspaceManager.provisionProfile(profile)
     except Exception as e:
-        logger.printError(e)
-        if logger.isVerbose():
-            traceback.print_exc()
+        workspaceManager.printException(e)
         exit(1)
