@@ -2,7 +2,7 @@
 This module describe how colors and style applies to each kind of printed element
 
 @author:    Legato Tooling Team <letools@sierrawireless.com>
-@copyright: 2018 Sierra Wireless. All rights reserved.
+@copyright: Sierra Wireless. All rights reserved.
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
