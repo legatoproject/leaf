@@ -47,10 +47,10 @@ class RepositoryPackSubCommand(LeafCommand):
                             type=Path,
                             dest='outputFile',
                             help='output file')
-        parser.add_argument('--no-hash',
+        parser.add_argument('--no-info',
                             action='store_false',
-                            dest='storeExtenalHash',
-                            help='do not store hash in a separate file')
+                            dest='storeExtenalInfo',
+                            help='do not store artifact info in a separate file')
         parser.add_argument('--compression',
                             metavar='COMPRESSION',
                             dest='compression',
@@ -83,7 +83,7 @@ class RepositoryPackSubCommand(LeafCommand):
             pkgFolder = args.pkgFolder.parent
 
         rm.createPackage(pkgFolder, args.outputFile,
-                         storeExtenalHash=args.storeExtenalHash,
+                         storeExtenalInfo=args.storeExtenalInfo,
                          forceTimestamp=args.timestamp,
                          compression=args.compression)
 
@@ -111,10 +111,10 @@ class RepositoryIndexSubCommand(LeafCommand):
                             metavar='STRING',
                             dest='index_description',
                             help='description of the repository')
-        parser.add_argument('--no-hash',
+        parser.add_argument('--no-info',
                             action='store_false',
-                            dest='useExternalHash',
-                            help='do not use pre-hashed files (*.hash), hash will be recomputed, THIS MAY SLOW THE INDEX GENERATION')
+                            dest='useExternalInfo',
+                            help='do not use info files (*.info), THIS MAY SLOW THE INDEX GENERATION')
         parser.add_argument('--prettyprint',
                             action='store_true',
                             dest='prettyprint',
@@ -131,7 +131,7 @@ class RepositoryIndexSubCommand(LeafCommand):
                          args.artifacts,
                          name=args.index_name,
                          description=args.index_description,
-                         useExternalHash=args.useExternalHash,
+                         useExternalInfo=args.useExternalInfo,
                          prettyprint=args.prettyprint)
 
 

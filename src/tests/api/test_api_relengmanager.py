@@ -10,6 +10,7 @@ from leaf.constants import JsonConstants, LeafFiles
 from leaf.core.error import LeafException
 from leaf.core.relengmanager import RelengManager
 from leaf.format.logger import Verbosity
+from leaf.model.package import AvailablePackage
 from leaf.utils import computeHash, jsonLoadFile, jsonWriteFile
 from tests.testutils import AbstractTestWithRepo, RESOURCE_FOLDER, checkMime
 
@@ -46,28 +47,27 @@ class TestRelengManager(AbstractTestWithRepo):
         checkAllCompressions('.tar.xz', 'x-xz')
         checkAllCompressions('.leaf', 'x-xz')
 
-    def testExternalHashFile(self):
+    def testExternalInfoFile(self):
         pkgFolder = RESOURCE_FOLDER / "install_1.0"
         artifactFile = self.getWorkspaceFolder() / "myPackage.leaf"
-        hashFile = self.getWorkspaceFolder() / "myPackage.leaf.hash"
+        infoFile = self.getWorkspaceFolder() / "myPackage.leaf.info"
 
         self.rm.createPackage(pkgFolder, artifactFile,
-                              storeExtenalHash=False)
+                              storeExtenalInfo=False)
         self.assertTrue(artifactFile.exists())
-        self.assertFalse(hashFile.exists())
+        self.assertFalse(infoFile.exists())
 
         self.rm.createPackage(pkgFolder, artifactFile,
-                              storeExtenalHash=True)
+                              storeExtenalInfo=True)
         self.assertTrue(artifactFile.exists())
-        self.assertTrue(hashFile.exists())
-        self.assertEquals(hashFile, self.rm.getExternalHashFile(artifactFile))
-        hashAsString = computeHash(artifactFile)
-        with open(str(hashFile), 'r') as fp:
-            self.assertEquals(hashAsString, fp.read())
+        self.assertTrue(infoFile.exists())
+        self.assertEquals(infoFile, self.rm._getExternalInfoFile(artifactFile))
+        self.assertEquals(computeHash(artifactFile),
+                          AvailablePackage(jsonLoadFile(infoFile), None).getHash())
 
         with self.assertRaises(LeafException):
             self.rm.createPackage(pkgFolder, artifactFile,
-                                  storeExtenalHash=False)
+                                  storeExtenalInfo=False)
 
     def testPackageWithTimestamp(self):
         TIMESTAMP = 946684800

@@ -48,23 +48,23 @@ class TestRelengManagerCli_Default(LeafCliWrapper):
     def testExternalHashFile(self):
         pkgFolder = RESOURCE_FOLDER / "install_1.0"
         outputFile = self.getWorkspaceFolder() / "myPackage.leaf"
-        hashFile = self.getWorkspaceFolder() / "myPackage.leaf.hash"
+        infoFile = self.getWorkspaceFolder() / "myPackage.leaf.info"
 
         self.leafExec(("repository", "pack"),
-                      "--no-hash",
+                      "--no-info",
                       "--output", outputFile,
                       pkgFolder)
         self.assertTrue(outputFile.exists())
-        self.assertFalse(hashFile.exists())
+        self.assertFalse(infoFile.exists())
 
         self.leafExec(("repository", "pack"),
                       "--output", outputFile,
                       pkgFolder)
         self.assertTrue(outputFile.exists())
-        self.assertTrue(hashFile.exists())
+        self.assertTrue(infoFile.exists())
 
         self.leafExec(("repository", "pack"),
-                      "--no-hash",
+                      "--no-info",
                       "--output", outputFile,
                       pkgFolder,
                       expectedRc=2)
@@ -186,7 +186,7 @@ class TestRelengManagerCli_Default(LeafCliWrapper):
                       '--output', indexFile,
                       '--name', "Name",
                       '--description', "Description here",
-                      '--no-hash',
+                      '--no-info',
                       self.getWorkspaceFolder() / 'a.leaf',
                       self.getWorkspaceFolder() / 'b.leaf')
         self.assertTrue(indexFile.exists())

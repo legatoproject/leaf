@@ -16,10 +16,10 @@ from leaf.constants import JsonConstants, LeafFiles
 from leaf.core.error import LeafException
 from leaf.core.packagemanager import LoggerManager
 from leaf.model.modelutils import layerModelUpdate
-from leaf.model.package import ConditionalPackageIdentifier, LeafArtifact, \
-    Manifest, PackageIdentifier
+from leaf.model.package import AvailablePackage, ConditionalPackageIdentifier, \
+    LeafArtifact, Manifest, PackageIdentifier
 from leaf.utils import computeHash, jsonLoadFile, jsonToString, jsonWriteFile, \
-    openOutputTarFile, parseHash
+    openOutputTarFile
 
 
 class RelengManager(LoggerManager):
@@ -45,8 +45,20 @@ class RelengManager(LoggerManager):
             jsonWriteFile(manifestFile, model.json, pp=True)
         return model
 
+    def _getExternalInfoFile(self, artifact):
+        return artifact.parent / (artifact.name + LeafFiles.EXTINFO_EXTENSION)
+
+    def _buildPackageNode(self, artifact, manifest=None):
+        out = OrderedDict()
+        out[JsonConstants.REMOTE_PACKAGE_HASH] = computeHash(artifact)
+        out[JsonConstants.REMOTE_PACKAGE_SIZE] = artifact.stat().st_size
+        if manifest is None:
+            manifest = LeafArtifact(artifact)
+        out[JsonConstants.INFO] = manifest.getNodeInfo()
+        return out
+
     def createPackage(self, pkgFolder, outputFile,
-                      storeExtenalHash=True,
+                      storeExtenalInfo=True,
                       forceTimestamp=None,
                       compression=None):
         '''
@@ -55,6 +67,8 @@ class RelengManager(LoggerManager):
         Output file can ends with tar.[gz,xz,bz2] of json
         '''
         manifestFile = pkgFolder / LeafFiles.MANIFEST
+        externalInfoFile = self._getExternalInfoFile(outputFile)
+
         if not manifestFile.exists():
             raise ValueError("Cannot find manifest: %s" % manifestFile)
 
@@ -62,6 +76,11 @@ class RelengManager(LoggerManager):
 
         self.logger.printDefault("Found package %s in %s" % (
             manifest.getIdentifier(), pkgFolder))
+
+        # Check if external info file exists
+        if not storeExtenalInfo and externalInfoFile.exists():
+            raise LeafException(msg="A previous info file (%s) exists for your package" % externalInfoFile,
+                                hints="You should remove it with 'rm %s'" % externalInfoFile)
 
         if forceTimestamp is not None:
             self.logger.printDefault(
@@ -83,18 +102,15 @@ class RelengManager(LoggerManager):
 
         self.logger.printDefault("Leaf package created: %s" % outputFile)
 
-        hashFile = self.getExternalHashFile(outputFile)
-        if storeExtenalHash:
-            line = computeHash(outputFile)
-            self.logger.printDefault("Write hash to %s" % (hashFile))
-            with open(str(hashFile), 'w') as fp:
-                fp.write(line)
-        elif hashFile.exists():
-            raise LeafException(msg="A previous hash file (%s) exists for your package" % hashFile,
-                                hints="You should remove it with 'rm %s'" % hashFile)
+        if storeExtenalInfo:
+            self.logger.printDefault("Write info to %s" % (externalInfoFile))
+            jsonWriteFile(
+                externalInfoFile,
+                self._buildPackageNode(outputFile, manifest=manifest),
+                pp=True)
 
     def generateIndex(self, indexFile, artifacts,
-                      name=None, description=None, useExternalHash=True, prettyprint=False):
+                      name=None, description=None, useExternalInfo=True, prettyprint=False):
         '''
         Create an index.json referencing all given artifacts
         '''
@@ -109,37 +125,34 @@ class RelengManager(LoggerManager):
 
         # Iterate over all artifacts
         packagesMap = OrderedDict()
-        for a in artifacts:
-            la = LeafArtifact(a)
-            pi = la.getIdentifier()
-            hash = None
+        for artifact in artifacts:
 
-            if useExternalHash:
-                ehf = self.getExternalHashFile(a)
-                if ehf.exists():
-                    hash = self.readExternalHash(a)
-                    self.logger.printDefault("Reading hash from %s" % ehf)
+            artifactNode = None
 
-            if hash is None:
-                self.logger.printDefault("Compute hash for %s" % a)
-                hash = computeHash(a)
+            if useExternalInfo:
+                externalInfoFile = self._getExternalInfoFile(artifact)
+                if externalInfoFile.exists():
+                    self.logger.printDefault(
+                        "Reading info from %s" % externalInfoFile)
+                    artifactNode = jsonLoadFile(externalInfoFile)
+
+            if artifactNode is None:
+                self.logger.printDefault("Compute info for %s" % artifact)
+                artifactNode = self._buildPackageNode(artifact)
+
+            ap = AvailablePackage(artifactNode, None)
+            pi = ap.getIdentifier()
 
             if pi in packagesMap:
-                previousHash = packagesMap[pi][JsonConstants.REMOTE_PACKAGE_HASH]
-                self.logger.printDefault(
-                    "Artifact already present: %s (%s)" % (pi, previousHash))
-                if hash != previousHash:
+                self.logger.printDefault("Artifact already present: %s" % (pi))
+                if ap.getHash() != AvailablePackage(packagesMap[pi]).getHash():
                     raise ValueError(
                         "Artifact %s has multiple different artifacts for same version" % pi)
             else:
                 self.logger.printDefault("Add package %s" % pi)
-                packageNode = OrderedDict()
-                relPath = Path(a).relative_to(indexFile.parent)
-                packageNode[JsonConstants.REMOTE_PACKAGE_FILE] = str(relPath)
-                packageNode[JsonConstants.REMOTE_PACKAGE_HASH] = hash
-                packageNode[JsonConstants.REMOTE_PACKAGE_SIZE] = a.stat().st_size
-                packageNode[JsonConstants.INFO] = la.getNodeInfo()
-                packagesMap[pi] = packageNode
+                relPath = Path(artifact).relative_to(indexFile.parent)
+                artifactNode[JsonConstants.REMOTE_PACKAGE_FILE] = str(relPath)
+                packagesMap[pi] = artifactNode
 
         # Create the json structure
         rootNode = OrderedDict()
@@ -149,21 +162,13 @@ class RelengManager(LoggerManager):
         jsonWriteFile(indexFile, rootNode, pp=prettyprint)
         self.logger.printDefault("Index created:", indexFile)
 
-    def getExternalHashFile(self, artifact):
-        return artifact.parent / (artifact.name + LeafFiles.HASHFILE_EXTENSION)
-
-    def readExternalHash(self, artifact):
-        ehf = self.getExternalHashFile(artifact)
-        if ehf.exists():
-            with ehf.open() as fp:
-                out = fp.readline().strip()
-                parseHash(out)
-                return out
-
     def generateManifest(self, outputFile,
                          fragmentFiles=None,
                          infoMap=None,
                          resolveEnvVariables=False):
+        '''
+        Used to create a manifest.json file
+        '''
 
         model = OrderedDict()
 

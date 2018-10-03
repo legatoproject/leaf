@@ -74,7 +74,7 @@ class LeafFiles():
             USER_HOME / '.local' / 'share' / 'leaf' / THEMES_FILENAME],
     }
     # Releng
-    HASHFILE_EXTENSION = '.hash'
+    EXTINFO_EXTENSION = '.info'
 
 
 class JsonConstants(object):

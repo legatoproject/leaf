@@ -10,10 +10,11 @@ from unittest.case import TestCase
 
 from _io import StringIO
 from leaf.cli.cli import LeafCli
-from leaf.constants import EnvConstants, LeafFiles
+from leaf.constants import EnvConstants, JsonConstants, LeafFiles
 from leaf.core.relengmanager import RelengManager
 from leaf.format.logger import Verbosity
 from leaf.model.package import Manifest, PackageIdentifier
+from leaf.utils import jsonLoadFile, jsonWriteFile
 
 
 TestCase.maxDiff = None
@@ -350,14 +351,14 @@ def generateRepo(sourceFolder, outputFolder):
                     artifactsList.append(outputFile)
                 # Create a problem with failure-badhash package
                 if manifest.getName() == "failure-badhash":
-                    ehf = rm.getExternalHashFile(outputFile)
-                    if not ehf.exists():
-                        raise ValueError()
-                    with open(str(ehf), 'w') as fp:
-                        # chosen by fair dice roll.
-                        # garanteed to be random.
-                        fp.write(
-                            "sha384:d1083143b5c4cf7f1ddaadc391b2d0102fc9fffeb0951ec51020b512ef9548d40cd1af079a1221133faa949fdc304c41")
+                    infoNode = jsonLoadFile(
+                        rm._getExternalInfoFile(outputFile))
+                    # chosen by fair dice roll.
+                    # garanteed to be random.
+                    infoNode[JsonConstants.REMOTE_PACKAGE_HASH] = \
+                        "sha384:d1083143b5c4cf7f1ddaadc391b2d0102fc9fffeb0951ec51020b512ef9548d40cd1af079a1221133faa949fdc304c41"
+                    jsonWriteFile(rm._getExternalInfoFile(
+                        outputFile), infoNode, pp=True)
 
     rm.generateIndex(outputFolder / "index.json",
                      artifactsList,
