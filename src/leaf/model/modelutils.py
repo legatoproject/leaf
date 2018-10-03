@@ -11,7 +11,7 @@ Leaf Package Manager
 from collections import OrderedDict
 
 
-def layerModelUpdate(left, right):
+def layerModelUpdate(left, right, listAppend=False):
     '''
     Update the *left* model with values from *right*
     Both left & right have to be dict objects
@@ -28,7 +28,10 @@ def layerModelUpdate(left, right):
                 del left[key]
             elif isinstance(left[key], dict) and isinstance(right[key], dict):
                 # Reccursive update
-                layerModelUpdate(left[key], right[key])
+                layerModelUpdate(left[key], right[key], listAppend=listAppend)
+            elif listAppend and isinstance(left[key], list) and isinstance(right[key], list):
+                # Handle list append if option is set
+                left[key] += right[key]
             else:
                 # Replace
                 left[key] = right[key]

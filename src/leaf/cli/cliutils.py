@@ -7,15 +7,16 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
+from builtins import ValueError
 from collections import OrderedDict
 from pathlib import Path
 
-from leaf.core.packagemanager import PackageManager, LoggerManager
+from leaf.core.error import LeafException
+from leaf.core.packagemanager import LoggerManager, PackageManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.format.logger import Verbosity
 from leaf.model.base import Scope
-from leaf.core.error import LeafException
 
 
 def initCommonArgs(parser,
@@ -254,3 +255,12 @@ class LeafCommandGenerator():
             command += list(map(str, arguments))
 
         return command
+
+
+def stringToBoolean(value):
+    if value.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif value.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise ValueError('Boolean value expected.')

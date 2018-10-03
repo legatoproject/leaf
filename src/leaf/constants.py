@@ -30,12 +30,11 @@ class LeafConstants():
     '''
     MIN_PYTHON_VERSION = (3, 4)
     DOWNLOAD_TIMEOUT = int(os.environ.get(EnvConstants.DOWNLOAD_TIMEOUT, "5"))
-    LEAF_COMPRESSION = {'.leaf': 'xz',
-                        '.tar': '',
-                        '.xz': 'xz',
-                        '.bz2': 'bz2',
-                        '.tgz': 'gz',
-                        '.gz': 'gz'}
+    LEAF_COMPRESSION = {'tar': '',
+                        'xz': 'xz',
+                        'bz2': 'bz2',
+                        'tgz': 'gz',
+                        'gz': 'gz'}
     DEFAULT_PROFILE = "default"
     CACHE_DELTA = timedelta(days=1)
     CACHE_SIZE_MAX = 5 * 1024 * 1024 * 1024  # 5GB

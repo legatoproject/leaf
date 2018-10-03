@@ -42,7 +42,7 @@ class JsonObject():
         '''
         if key not in self.json:
             if mandatory:
-                raise ValueError("Missing mandatory json field %s" % key)
+                raise ValueError("Missing mandatory json field '%s'" % key)
             if default is not None:
                 self.json[key] = default
         return self.json.get(key)
@@ -60,7 +60,7 @@ class JsonObject():
         child = self.jsonget(path[0], mandatory=mandatory)
         if not isinstance(child, dict):
             raise ValueError()
-        return JsonObject(child).jsonpath(path[1:], default)
+        return JsonObject(child).jsonpath(path[1:], default=default, mandatory=mandatory)
 
 
 class ConfigFileWithLayer(JsonObject):

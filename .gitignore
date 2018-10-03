@@ -5,6 +5,7 @@
 
 # VS Code
 /.vscode/
+/.env
 
 # Python
 __pycache__
@@ -24,4 +25,3 @@ __pycache__
 /flake-report/
 /nosetests_*.xml
 /.tox/
-/.pytest_cache/

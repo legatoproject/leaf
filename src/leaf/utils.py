@@ -12,9 +12,9 @@ import json
 import os
 import random
 import re
+import tempfile
 import string
 import sys
-import tempfile
 import time
 import urllib
 from collections import OrderedDict
@@ -28,6 +28,8 @@ from leaf import __version__
 from leaf.constants import LeafConstants
 from leaf.core.error import InvalidHashException
 
+
+TAR_COMPRESSIONS = ['tar', 'gz', 'bz2', 'xz']
 
 _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
 _VERSION_SEPARATOR = re.compile("[-_.~]")
@@ -128,15 +130,30 @@ def markFolderAsIgnored(folder):
     return out
 
 
-def openOutputTarFile(path):
+def openOutputTarFile(path, mode="w", compression=None):
     '''
-    Opens a tar file with the correct compression given its extension
+    Open a tar file with the correct compression
+    If @compression is None, guess compression given the file extension, default is xz
+    Correct values for @compression are:
+    - None: auto mode given file extenion (default is 'xz')
+    - 'tar', 'xz', 'bz2', 'gz': Common compressions
     '''
-    suffix = LeafConstants.LEAF_COMPRESSION.get(path.suffix, 'xz')
-    mode = "w"
-    if len(suffix) > 0:
-        mode += ":" + suffix
-    return TarFile.open(str(path), mode)
+    if compression is None:
+        # Guess compression given the extension
+        if path.suffix == ".tar":
+            compression = "tar"
+        elif path.suffix == ".gz" or path.suffix == ".tgz":
+            compression = "gz"
+        elif path.suffix == ".bz2":
+            compression = "bz2"
+        elif path.suffix == ".xz":
+            compression = "xz"
+        else:
+            # Default compression is XZ
+            compression = "xz"
+    elif compression not in TAR_COMPRESSIONS:
+        raise ValueError("Invalid tar compression: %s" % compression)
+    return TarFile.open(str(path), mode + ':' + compression)
 
 
 def downloadData(url, outputFile=None, timeout=LeafConstants.DOWNLOAD_TIMEOUT):
@@ -208,13 +225,17 @@ def envListToMap(envList):
     return out
 
 
-def jsonWriteFile(file, data, pp=False):
+def jsonToString(data, pp=False):
     kw = {}
     if pp:
         kw.update({'indent': 4,
                    'separators': (',', ': ')})
+    return json.dumps(data, **kw)
+
+
+def jsonWriteFile(file, data, pp=False):
     with open(str(file), 'w') as fp:
-        json.dump(data, fp, **kw)
+        fp.write(jsonToString(data, pp=pp))
 
 
 def jsonLoadFile(file):

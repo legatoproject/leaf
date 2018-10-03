@@ -1,54 +1,55 @@
 {
-  "info": {
-    "name": "install",
-    "version": "1.0",
-    "description": "this is a description"
-  },
-  "install": [
-    {
-      "command": [
-        "touch",
-        "postinstall.log"
-      ]
+    "info": {
+        "name": "install",
+        "version": "1.0",
+        "description": "this is a description",
+        "date": "2018-09-24 12:05:22"
     },
-    {
-      "command": [
-        "sh",
-        "-c",
-        "echo @{DIR} > ${LEAF_TARGET_FILE}"
-      ],
-      "env": {
-        "LEAF_TARGET_FILE": "targetFileFromEnv"
-      }
-    },
-    {
-      "command": [
-        "env"
-      ],
-      "env": {
-        "LEAF_FOO": "BAR"
-      }
-    },
-    {
-      "command": [
-        "mkdir",
-        "folder2"
-      ]
-    },
-    {
-      "command": [
-        "sh",
-        "-c",
-        "env > dump.env"
-      ]
-    }
-  ],
-  "uninstall": [
-    {
-      "command": [
-        "touch",
-        "@{DIR}/../uninstall.log"
-      ]
-    }
-  ]
+    "install": [
+        {
+            "command": [
+                "touch",
+                "postinstall.log"
+            ]
+        },
+        {
+            "command": [
+                "sh",
+                "-c",
+                "echo @{DIR} > ${LEAF_TARGET_FILE}"
+            ],
+            "env": {
+                "LEAF_TARGET_FILE": "targetFileFromEnv"
+            }
+        },
+        {
+            "command": [
+                "env"
+            ],
+            "env": {
+                "LEAF_FOO": "BAR"
+            }
+        },
+        {
+            "command": [
+                "mkdir",
+                "folder2"
+            ]
+        },
+        {
+            "command": [
+                "sh",
+                "-c",
+                "env > dump.env"
+            ]
+        }
+    ],
+    "uninstall": [
+        {
+            "command": [
+                "touch",
+                "@{DIR}/../uninstall.log"
+            ]
+        }
+    ]
 }

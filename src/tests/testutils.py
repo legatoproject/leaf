@@ -27,11 +27,11 @@ EXPECTED_OUTPUT_FOLDER = ROOT_FOLDER / "src" / "tests" / "expected_ouput"
 EXTENSIONS_FOLDER = ROOT_FOLDER / "resources" / "bin"
 
 SEPARATOR = "--------------------"
-ALT_FILENAMES = {
-    "compress-tar_1.0": 'compress-tar_1.0.tar',
-    "compress-xz_1.0": 'compress-xz_1.0.tar.xz',
-    "compress-bz2_1.0": 'compress-bz2_1.0.tar.bz2',
-    "compress-gz_1.0": 'compress-gz_1.0.tar.gz'
+ALT_COMPRESSION = {
+    "compress-tar_1.0": 'tar',
+    "compress-xz_1.0": 'xz',
+    "compress-bz2_1.0": 'bz2',
+    "compress-gz_1.0": 'gz'
 }
 
 TEST_GPG_FINGERPRINT = "E35D6817397359074160F68952ECE808A2BC372C"
@@ -324,7 +324,7 @@ def generateRepo(sourceFolder, outputFolder):
     artifactsList = []
     artifactsList2 = []
 
-    rm = RelengManager(Verbosity.DEFAULT, True)
+    rm = RelengManager(Verbosity.QUIET, True)
     for packageFolder in sourceFolder.iterdir():
         if packageFolder.is_dir():
             manifestFile = packageFolder / LeafFiles.MANIFEST
@@ -333,11 +333,16 @@ def generateRepo(sourceFolder, outputFolder):
                 if str(manifest.getIdentifier()) != packageFolder.name:
                     raise ValueError("Naming error: %s != %s" % (
                         str(manifest.getIdentifier()), packageFolder.name))
-                filename = ALT_FILENAMES.get(str(manifest.getIdentifier()),
-                                             str(manifest.getIdentifier()) + ".leaf")
+                filename = str(manifest.getIdentifier()) + ".leaf"
                 outputFile = outputFolder / filename
-                rm.pack(manifestFile, outputFile, updateDate=False)
-                checkArchiveFormat(str(outputFile))
+                rm.createPackage(
+                    packageFolder,
+                    outputFile,
+                    compression=ALT_COMPRESSION.get(str(manifest.getIdentifier())))
+                # Check that the generated archive is OK
+                checkArchiveFormat(
+                    outputFile,
+                    ALT_COMPRESSION.get(str(manifest.getIdentifier())))
                 # Create multi index.json
                 if manifest.getName() == "install":
                     artifactsList2.append(outputFile)
@@ -354,8 +359,16 @@ def generateRepo(sourceFolder, outputFolder):
                         fp.write(
                             "sha384:d1083143b5c4cf7f1ddaadc391b2d0102fc9fffeb0951ec51020b512ef9548d40cd1af079a1221133faa949fdc304c41")
 
-    rm.index(outputFolder / "index.json", artifactsList)
-    rm.index(outputFolder / "index2.json", artifactsList2)
+    rm.generateIndex(outputFolder / "index.json",
+                     artifactsList,
+                     name="First repository",
+                     description="First repository description")
+    rm.generateIndex(outputFolder / "index2.json",
+                     artifactsList2,
+                     name="Second repository",
+                     description="Second repository description")
+
+    # Sign with GPG
     subprocess.check_call(["gpg",
                            "--homedir", str(TEST_GPG_HOMEDIR),
                            "--detach-sign", "--armor",
@@ -366,15 +379,15 @@ def generateRepo(sourceFolder, outputFolder):
                            str(outputFolder / "index2.json")])
 
 
-def checkArchiveFormat(file):
-    if (file.endswith(".tar")):
-        checkMime(file, "x-tar")
-    elif (file.endswith(".tar.gz")):
-        checkMime(file, "gzip")
-    elif (file.endswith(".tar.bz2")):
-        checkMime(file, "x-bzip2")
-    elif (file.endswith(".tar.xz")):
+def checkArchiveFormat(file, compression):
+    if compression == "xz":
         checkMime(file, "x-xz")
+    elif compression == "tar":
+        checkMime(file, "x-tar")
+    elif compression == "gz":
+        checkMime(file, "gzip")
+    elif compression == "bz2":
+        checkMime(file, "x-bzip2")
     else:
         checkMime(file, "x-xz")
 

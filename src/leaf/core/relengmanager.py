@@ -6,6 +6,8 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
+import os
+import re
 from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
@@ -13,8 +15,10 @@ from pathlib import Path
 from leaf.constants import JsonConstants, LeafFiles
 from leaf.core.error import LeafException
 from leaf.core.packagemanager import LoggerManager
-from leaf.model.package import LeafArtifact, Manifest
-from leaf.utils import computeHash, jsonLoadFile, jsonWriteFile, \
+from leaf.model.modelutils import layerModelUpdate
+from leaf.model.package import ConditionalPackageIdentifier, LeafArtifact, \
+    Manifest, PackageIdentifier
+from leaf.utils import computeHash, jsonLoadFile, jsonToString, jsonWriteFile, \
     openOutputTarFile, parseHash
 
 
@@ -41,21 +45,43 @@ class RelengManager(LoggerManager):
             jsonWriteFile(manifestFile, model.json, pp=True)
         return model
 
-    def pack(self, manifestFile, outputFile, updateDate=None, storeExtenalHash=True):
+    def createPackage(self, pkgFolder, outputFile,
+                      storeExtenalHash=True,
+                      forceTimestamp=None,
+                      compression=None):
         '''
         Create a leaf artifact from given the manifest.
         if the output file ands with .json, a *manifest only* package will be generated.
         Output file can ends with tar.[gz,xz,bz2] of json
         '''
-        manifest = self._updateManifest(manifestFile, updateDate)
+        manifestFile = pkgFolder / LeafFiles.MANIFEST
+        if not manifestFile.exists():
+            raise ValueError("Cannot find manifest: %s" % manifestFile)
 
-        self.logger.printDefault("Found:", manifest.getIdentifier())
-        self.logger.printDefault(
-            "Create tar:", manifestFile, "-->", outputFile)
-        with openOutputTarFile(outputFile) as tf:
-            for file in manifestFile.parent.glob('*'):
+        manifest = Manifest.parse(manifestFile)
+
+        self.logger.printDefault("Found package %s in %s" % (
+            manifest.getIdentifier(), pkgFolder))
+
+        if forceTimestamp is not None:
+            self.logger.printDefault(
+                "Force timestamps to %lf" % forceTimestamp)
+
+        def infoTweaker(ti):
+            if forceTimestamp is not None:
+                ti.mtime = forceTimestamp
+            self.logger.printDefault("  Adding", ti.name)
+            return ti
+
+        with openOutputTarFile(outputFile,
+                               mode="w",
+                               compression=compression) as tf:
+            for file in pkgFolder.glob('*'):
                 tf.add(str(file),
-                       str(file.relative_to(manifestFile.parent)))
+                       arcname=str(file.relative_to(pkgFolder)),
+                       filter=infoTweaker)
+
+        self.logger.printDefault("Leaf package created: %s" % outputFile)
 
         hashFile = self.getExternalHashFile(outputFile)
         if storeExtenalHash:
@@ -67,10 +93,13 @@ class RelengManager(LoggerManager):
             raise LeafException(msg="A previous hash file (%s) exists for your package" % hashFile,
                                 hints="You should remove it with 'rm %s'" % hashFile)
 
-    def index(self, outputFile, artifacts, name=None, description=None, useExternalHash=True):
+    def generateIndex(self, indexFile, artifacts,
+                      name=None, description=None, useExternalHash=True, prettyprint=False):
         '''
         Create an index.json referencing all given artifacts
         '''
+
+        # Create the "info" node
         infoNode = OrderedDict()
         if name is not None:
             infoNode[JsonConstants.REMOTE_NAME] = name
@@ -78,12 +107,8 @@ class RelengManager(LoggerManager):
             infoNode[JsonConstants.REMOTE_DESCRIPTION] = description
         infoNode[JsonConstants.REMOTE_DATE] = self._getNowDate()
 
-        rootNode = OrderedDict()
-        rootNode[JsonConstants.INFO] = infoNode
-
-        hashMap = {}
-        packagesNode = []
-        rootNode[JsonConstants.REMOTE_PACKAGES] = packagesNode
+        # Iterate over all artifacts
+        packagesMap = OrderedDict()
         for a in artifacts:
             la = LeafArtifact(a)
             pi = la.getIdentifier()
@@ -99,24 +124,30 @@ class RelengManager(LoggerManager):
                 self.logger.printDefault("Compute hash for %s" % a)
                 hash = computeHash(a)
 
-            if pi in hashMap:
-                if hash != hashMap[pi]:
+            if pi in packagesMap:
+                previousHash = packagesMap[pi][JsonConstants.REMOTE_PACKAGE_HASH]
+                self.logger.printDefault(
+                    "Artifact already present: %s (%s)" % (pi, previousHash))
+                if hash != previousHash:
                     raise ValueError(
-                        "Artifact %s has multiple artifacts for same version" % pi)
-                self.logger.printDefault("Artifact already present, skip:", pi)
+                        "Artifact %s has multiple different artifacts for same version" % pi)
             else:
-                hashMap[pi] = hash
                 self.logger.printDefault("Add package %s" % pi)
-                fileNode = OrderedDict()
-                fileNode[JsonConstants.REMOTE_PACKAGE_FILE] = str(
-                    Path(a).relative_to(outputFile.parent))
-                fileNode[JsonConstants.REMOTE_PACKAGE_HASH] = str(hash)
-                fileNode[JsonConstants.REMOTE_PACKAGE_SIZE] = a.stat().st_size
-                fileNode[JsonConstants.INFO] = la.getNodeInfo()
-                packagesNode.append(fileNode)
+                packageNode = OrderedDict()
+                relPath = Path(a).relative_to(indexFile.parent)
+                packageNode[JsonConstants.REMOTE_PACKAGE_FILE] = str(relPath)
+                packageNode[JsonConstants.REMOTE_PACKAGE_HASH] = hash
+                packageNode[JsonConstants.REMOTE_PACKAGE_SIZE] = a.stat().st_size
+                packageNode[JsonConstants.INFO] = la.getNodeInfo()
+                packagesMap[pi] = packageNode
 
-        jsonWriteFile(outputFile, rootNode, pp=True)
-        self.logger.printDefault("Index created:", outputFile)
+        # Create the json structure
+        rootNode = OrderedDict()
+        rootNode[JsonConstants.INFO] = infoNode
+        rootNode[JsonConstants.REMOTE_PACKAGES] = list(packagesMap.values())
+
+        jsonWriteFile(indexFile, rootNode, pp=prettyprint)
+        self.logger.printDefault("Index created:", indexFile)
 
     def getExternalHashFile(self, artifact):
         return artifact.parent / (artifact.name + LeafFiles.HASHFILE_EXTENSION)
@@ -128,3 +159,75 @@ class RelengManager(LoggerManager):
                 out = fp.readline().strip()
                 parseHash(out)
                 return out
+
+    def generateManifest(self, outputFile,
+                         fragmentFiles=None,
+                         infoMap=None,
+                         resolveEnvVariables=False):
+
+        model = OrderedDict()
+
+        # Load fragments
+        if fragmentFiles is not None:
+            for ff in fragmentFiles:
+                self.logger.printDefault("Use json fragment: %s" % ff)
+                layerModelUpdate(model, jsonLoadFile(ff), listAppend=True)
+
+        # Load model
+        manifest = Manifest(model)
+        info = manifest.jsonget(JsonConstants.INFO, default=OrderedDict())
+
+        # Set the common info
+        if infoMap is not None:
+            for key in (JsonConstants.INFO_NAME,
+                        JsonConstants.INFO_VERSION,
+                        JsonConstants.INFO_DESCRIPTION,
+                        JsonConstants.INFO_MASTER,
+                        JsonConstants.INFO_DATE,
+                        JsonConstants.INFO_REQUIRES,
+                        JsonConstants.INFO_DEPENDS,
+                        JsonConstants.INFO_TAGS):
+                if key in infoMap:
+                    value = infoMap[key]
+                    if value is not None:
+                        if key in (JsonConstants.INFO_REQUIRES,
+                                   JsonConstants.INFO_DEPENDS,
+                                   JsonConstants.INFO_TAGS):
+                            # Handle lists
+                            modelList = manifest.jsonpath(
+                                [JsonConstants.INFO, key],
+                                default=[])
+                            for motif in value:
+                                if motif not in modelList:
+                                    if key == JsonConstants.INFO_DEPENDS:
+                                        # Try to parse as a conditional package identifier
+                                        ConditionalPackageIdentifier.fromString(
+                                            motif)
+                                    elif key == JsonConstants.INFO_REQUIRES:
+                                        # Try to parse as a package identifier
+                                        PackageIdentifier.fromString(motif)
+
+                                    self.logger.printVerbose(
+                                        "Add '%s' to '%s' list" % (motif, key))
+                                    modelList.append(motif)
+                        else:
+                            self.logger.printVerbose(
+                                "Set '%s' = '%s'" % (key, value))
+                            info[key] = value
+
+        # String replacement
+        jsonString = jsonToString(manifest.json, pp=True)
+        if resolveEnvVariables:
+            for var in set(re.compile('#\{([a-zA-Z0-9_]+)\}').findall(jsonString)):
+                value = os.environ.get(var)
+                if value is None:
+                    raise LeafException("Cannot find '%s' in env" % var,
+                                        hints="Set the variable with 'export %s=xxx'" % var)
+                self.logger.printDefault("Replace %s --> %s" % (var, value))
+                jsonString = jsonString.replace("#{%s}" % var, value)
+
+        self.logger.printDefault("Save '%s' manifest to %s" % (
+            manifest.getIdentifier(), outputFile))
+
+        with open(str(outputFile), 'w') as fp:
+            fp.write(jsonString)
