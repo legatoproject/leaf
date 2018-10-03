@@ -17,9 +17,9 @@ def layerModelUpdate(left, right):
     Both left & right have to be dict objects
     '''
     if not isinstance(left, dict):
-        raise ValueError()
+        raise ValueError("Problem with json layer")
     if not isinstance(right, dict):
-        raise ValueError()
+        raise ValueError("Problem with json layer")
 
     for key in list(left.keys()):
         if key in right:
@@ -45,11 +45,13 @@ def layerModelDiff(left, right):
     Both left & right have to be dict objects
     '''
     if not isinstance(left, dict):
-        raise ValueError()
+        raise ValueError("Problem with json layer")
     if not isinstance(right, dict):
-        raise ValueError()
+        raise ValueError("Problem with json layer")
+    # Special case, diff is empty
     if left == right:
-        return None
+        return OrderedDict()
+
     out = OrderedDict()
     for key in left.keys():
         if key in right:

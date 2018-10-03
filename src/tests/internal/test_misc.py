@@ -2,16 +2,13 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
-import json
 import unittest
-from collections import OrderedDict
 from tempfile import mktemp
 
 from leaf.cli.external import grepDescription
 from leaf.constants import JsonConstants
 from leaf.core.coreutils import groupPackageIdentifiersByName
 from leaf.model.base import JsonObject
-from leaf.model.modelutils import layerModelDiff, layerModelUpdate
 from leaf.model.package import Feature, PackageIdentifier
 from leaf.utils import checkSupportedLeaf, jsonLoadFile, jsonWriteFile
 from tests.testutils import EXTENSIONS_FOLDER, RESOURCE_FOLDER
@@ -234,38 +231,6 @@ class TestMisc(unittest.TestCase):
         testFeature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
         with self.assertRaises(ValueError):
             testFeature.addAlias(otherFeature)
-
-    def testModelUpdate(self):
-        def json2model(s):
-            return json.loads(s, object_pairs_hook=OrderedDict)
-
-        def assertJson(left, diff, right):
-            if diff is None:
-                self.assertEqual(json2model(left), json2model(right))
-            else:
-                self.assertEqual(
-                    layerModelUpdate(json2model(left), json2model(diff)),
-                    json2model(right))
-                self.assertEqual(
-                    layerModelDiff(json2model(left), json2model(right)),
-                    json2model(diff))
-
-        assertJson(
-            '{}',
-            None,
-            '{}')
-        assertJson(
-            '{"number":1,"string":"A","object":{"list":[1,2,3],"object":{"number":42,"string":"foo","boolean":true}}}',
-            None,
-            '{"number":1,"string":"A","object":{"list":[1,2,3],"object":{"number":42,"string":"foo","boolean":true}}}')
-        assertJson(
-            '{"number":1,"string":"A","object":{"list":[1,2,3],"object":{"number":42,"string":"foo","boolean":true}}}',
-            '{"object":{"object":{"number":1,"boolean":false}}}',
-            '{"number":1,"string":"A","object":{"list":[1,2,3],"object":{"number":1,"string":"foo","boolean":false}}}')
-        assertJson(
-            '{"number":1,"string":"A","object":{"list":[1,2,3],"object":{"number":42,"string":"foo","boolean":true}}}',
-            '{"string":null,"object":{"object":{"number":1,"boolean":false}},"string2":"A"}',
-            '{"number":1,"object":{"list":[1,2,3],"object":{"number":1,"string":"foo","boolean":false}},"string2":"A"}')
 
     def testSortPi(self):
         a10 = PackageIdentifier.fromString("a_1.0")
