@@ -10,11 +10,11 @@ leaf-remote - configure remote package repository locations
 
 *leaf* *remote* *add* _ALIAS_ _URL_ *--insecure*|*--gpg* _GPGKEY_
 
-*leaf* *remote* *remove* _ALIAS_
+*leaf* *remote* *remove* _ALIAS_...
 
-*leaf* *remote* *enable* _ALIAS_
+*leaf* *remote* *enable* _ALIAS_...
 
-*leaf* *remote* *disable* _ALIAS_
+*leaf* *remote* *disable* _ALIAS_...
 
 *leaf* *remote* *fetch*
 
@@ -48,16 +48,16 @@ Adds a remote to the user configuration (you also must specify):
 
 *remove*::
 
-Removes the _ALIAS_ remote from the user configuration.
+Removes the _ALIAS_ remote(s) from the user configuration.
 
 *enable*::
 
-Enables the _ALIAS_ remote in the user configuration; Enabled remotes will be queried in all
+Enables the _ALIAS_ remote(s) in the user configuration; Enabled remotes will be queried in all
 fetch operations.
 
 *disable*::
 
-Disables the _ALIAS_ remote in the user configuration; Disabled remotes will _NOT_ be queried in any
+Disables the _ALIAS_ remote(s) in the user configuration; Disabled remotes will _NOT_ be queried in any
 fetch operation.
 
 *fetch*::

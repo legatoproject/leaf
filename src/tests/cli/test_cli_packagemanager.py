@@ -34,6 +34,31 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
         self.leafExec(["remote", "enable"], "alt",
                       expectedRc=2)
 
+        self.leafExec(["remote", "add"], "--insecure",
+                      "remote1", self.getRemoteUrl())
+
+        self.leafExec(["remote", "add"], "--insecure",
+                      "remote2", self.getRemoteUrl())
+
+        self.leafExec(["remote", "add"], "--insecure",
+                      "remote3", self.getRemoteUrl())
+
+        self.leafExec(["remote", "disable"],
+                      "remote1", "remote2", "remote3")
+
+        self.leafExec(["remote", "enable"],
+                      "remote1", "remote2", "remote3")
+
+        self.leafExec(["remote", "remove"],
+                      "remote1", "remote2")
+
+        self.leafExec(["remote", "enable"],
+                      "remote1", "remote2",
+                      expectedRc=2)
+
+        self.leafExec(["remote", "enable"],
+                      "remote3")
+
     def testSearch(self):
         self.leafExec("search")
         self.leafExec("search", "--all")

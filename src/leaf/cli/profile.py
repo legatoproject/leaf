@@ -6,7 +6,6 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-import argparse
 from leaf.cli.cliutils import LeafCommand, initCommonArgs, LeafMetaCommand
 from leaf.core.coreutils import retrievePackageIdentifier
 from leaf.format.renderer.profile import ProfileListRenderer
@@ -33,30 +32,28 @@ class ProfileMetaCommand(LeafMetaCommand):
 
 
 class AbstractProfileCommand(LeafCommand):
-    def __init__(self, name, description, profileRequired=None):
+    def __init__(self, name, description, profileNargs=None):
         LeafCommand.__init__(self, name, description)
-        self.profileRequired = profileRequired
+        self.profileNargs = profileNargs
 
     def getProfileName(self, args, defaultProvider=None):
-        out = None
         if hasattr(args, 'profiles'):
-            if self.profileRequired is True:
-                out = args.profiles[0]
-            elif self.profileRequired is False:
-                out = args.profiles
+            if isinstance(args.profiles, list):
+                if len(args.profiles) == 1:
+                    return args.profiles[0]
+            elif isinstance(args.profiles, str):
+                return args.profiles
 
-        if out is None and defaultProvider is not None:
-            out = defaultProvider()
-        return out
+        if defaultProvider is not None:
+            return defaultProvider()
 
     def initArgs(self, parser):
         super().initArgs(parser)
-        if self.profileRequired is False:
-            parser.add_argument('profiles', nargs=argparse.OPTIONAL,
-                                metavar='PROFILE', help='the profile name')
-        elif self.profileRequired is True:
-            parser.add_argument('profiles', nargs=1,
-                                metavar='PROFILE', help='the profile name')
+        if self.profileNargs is not None:
+            parser.add_argument('profiles',
+                                nargs=self.profileNargs,
+                                metavar='PROFILE',
+                                help='the profile name')
 
 
 class ProfileListCommand(AbstractProfileCommand):
@@ -65,16 +62,18 @@ class ProfileListCommand(AbstractProfileCommand):
             self,
             "list",
             "list profiles",
-            profileRequired=False)
+            profileNargs='*')
 
     def execute(self, args):
         wm = self.getWorkspaceManager(args)
         name = self.getProfileName(args)
         profileList = []
-        if name is None:
-            profileList.extend(wm.listProfiles().values())
+        if len(args.profiles) > 0:
+            for name in args.profiles:
+                profileList.append(wm.getProfile(name))
         else:
-            profileList.append(wm.getProfile(name))
+            profileList.extend(wm.listProfiles().values())
+
         profilesInfoMap = dict([(p, computeProfileInfo(wm, p))
                                 for p in profileList])
         rend = ProfileListRenderer(
@@ -113,7 +112,7 @@ class ProfileCreateCommand(AbstractProfileCommand):
             self,
             "create",
             "create a profile",
-            profileRequired=True)
+            profileNargs=1)
 
     def execute(self, args):
         wm = self.getWorkspaceManager(args)
@@ -129,12 +128,14 @@ class ProfileRenameCommand(AbstractProfileCommand):
             self,
             "rename",
             "rename current profile",
-            profileRequired=None)
+            profileNargs=None)
 
     def initArgs(self, parser):
         super().initArgs(parser)
-        parser.add_argument('profiles', nargs=1,
-                            metavar='NEWNAME', help='the new profile name')
+        parser.add_argument('profiles',
+                            nargs=1,
+                            metavar='NEWNAME',
+                            help='the new profile name')
 
     def execute(self, args):
         wm = self.getWorkspaceManager(args)
@@ -150,15 +151,20 @@ class ProfileDeleteCommand(AbstractProfileCommand):
         AbstractProfileCommand.__init__(
             self,
             "delete",
-            "delete profile",
-            profileRequired=False)
+            "delete profile(s)",
+            profileNargs='*')
 
     def execute(self, args):
         wm = self.getWorkspaceManager(args)
 
-        pfname = self.getProfileName(args, wm.getCurrentProfileName)
-        wm.deleteProfile(pfname)
-        wm.logger.printDefault("Profile %s deleted" % pfname)
+        if len(args.profiles) > 0:
+            for pfname in args.profiles:
+                wm.deleteProfile(pfname)
+                wm.logger.printDefault("Profile %s deleted" % pfname)
+        else:
+            pfname = wm.getCurrentProfileName()
+            wm.deleteProfile(pfname)
+            wm.logger.printDefault("Profile %s deleted" % pfname)
 
 
 class ProfileSwitchCommand(AbstractProfileCommand):
@@ -167,7 +173,7 @@ class ProfileSwitchCommand(AbstractProfileCommand):
             self,
             "switch",
             "set current profile",
-            profileRequired=True)
+            profileNargs=1)
 
     def execute(self, args):
         wm = self.getWorkspaceManager(args)
@@ -183,7 +189,7 @@ class ProfileSyncCommand(AbstractProfileCommand):
             self,
             "sync",
             "install packages needed for current or given profile",
-            profileRequired=False)
+            profileNargs='?')
 
     def execute(self, args):
         wm = self.getWorkspaceManager(args)
@@ -199,7 +205,7 @@ class ProfileConfigCommand(AbstractProfileCommand):
             self,
             "config",
             "configure profile to add and remove packages",
-            profileRequired=False)
+            profileNargs='?')
 
     def initArgs(self, parser):
         super().initArgs(parser)

@@ -37,6 +37,25 @@ class TestProfileCli_Default(LeafCliWrapper):
         self.leafExec(("profile", "sync"))
         self.leafExec(("env", "print"))
 
+    def testProfileMultiDelete(self):
+        self.leafExec("init")
+        self.leafExec(('profile', 'create'), "A")
+        self.checkProfileContent("A", [])
+        self.leafExec(('profile', 'create'), "B")
+        self.checkProfileContent("B", [])
+        self.leafExec(('profile', 'create'), "C")
+        self.checkProfileContent("C", [])
+        self.leafExec(('profile', 'create'), "D")
+        self.checkProfileContent("D", [])
+
+        self.leafExec(('profile', 'list'), "A", "B", "C")
+
+        self.leafExec(('profile', 'delete'), "A", "B", "C", "D")
+        self.checkProfileContent("A", None)
+        self.checkProfileContent("B", None)
+        self.checkProfileContent("C", None)
+        self.checkProfileContent("D", None)
+
     def testWorkspaceNotInit(self):
         self.leafExec(("profile", "sync"), expectedRc=2)
         self.leafExec("status")

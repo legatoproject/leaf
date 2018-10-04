@@ -85,13 +85,15 @@ class RemoteRemoveCommand(LeafCommand):
 
     def initArgs(self, parser):
         LeafCommand.initArgs(self, parser)
-        parser.add_argument('alias', metavar='ALIAS', nargs=1,
-                            help='the alias of the remote to remove')
+        parser.add_argument('aliases',
+                            metavar='ALIAS',
+                            nargs='+',
+                            help='the alias(es) of the remote(s) to remove')
 
     def execute(self, args):
         pm = self.getPackageManager(args)
-
-        pm.deleteRemote(args.alias[0])
+        for alias in args.aliases:
+            pm.deleteRemote(alias)
 
 
 class RemoteEnableCommand(LeafCommand):
@@ -103,17 +105,20 @@ class RemoteEnableCommand(LeafCommand):
 
     def initArgs(self, parser):
         LeafCommand.initArgs(self, parser)
-        parser.add_argument('alias', metavar='ALIAS', nargs=1,
-                            help='the alias of the remote to enable')
+        parser.add_argument('aliases',
+                            metavar='ALIAS',
+                            nargs='+',
+                            help='the alias(es) of the remote(s) to enable')
 
     def execute(self, args):
         pm = self.getPackageManager(args)
 
-        remote = pm.listRemotes().get(args.alias[0])
-        if remote is None:
-            raise ValueError("Cannot find remote %s" % args.alias[0])
-        remote.setEnabled(True)
-        pm.updateRemote(remote)
+        for alias in args.aliases:
+            remote = pm.listRemotes().get(alias)
+            if remote is None:
+                raise ValueError("Cannot find remote %s" % alias)
+            remote.setEnabled(True)
+            pm.updateRemote(remote)
 
 
 class RemoteDisableCommand(LeafCommand):
@@ -125,17 +130,20 @@ class RemoteDisableCommand(LeafCommand):
 
     def initArgs(self, parser):
         LeafCommand.initArgs(self, parser)
-        parser.add_argument('alias', metavar='ALIAS', nargs=1,
-                            help='the alias of the remote to disable')
+        parser.add_argument('aliases',
+                            metavar='ALIAS',
+                            nargs='+',
+                            help='the alias(es) of the remote(s) to disable')
 
     def execute(self, args):
         pm = self.getPackageManager(args)
 
-        remote = pm.listRemotes().get(args.alias[0])
-        if remote is None:
-            raise ValueError("Cannot find remote %s" % args.alias[0])
-        remote.setEnabled(False)
-        pm.updateRemote(remote)
+        for alias in args.aliases:
+            remote = pm.listRemotes().get(alias)
+            if remote is None:
+                raise ValueError("Cannot find remote %s" % alias)
+            remote.setEnabled(False)
+            pm.updateRemote(remote)
 
 
 class RemoteFetchCommand(LeafCommand):
