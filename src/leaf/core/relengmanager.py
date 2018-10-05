@@ -33,18 +33,6 @@ class RelengManager(LoggerManager):
     def _getNowDate(self):
         return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
-    def _updateManifest(self, manifestFile, updateDate=None):
-        model = Manifest(jsonLoadFile(manifestFile))
-        modelUpdated = False
-        if updateDate is True or (updateDate is None and model.getDate() is None):
-            self.logger.printDefault("Update date for %s" % manifestFile)
-            model.getNodeInfo()[JsonConstants.INFO_DATE] = self._getNowDate()
-            modelUpdated = True
-
-        if modelUpdated:
-            jsonWriteFile(manifestFile, model.json, pp=True)
-        return model
-
     def _getExternalInfoFile(self, artifact):
         return artifact.parent / (artifact.name + LeafFiles.EXTINFO_EXTENSION)
 
@@ -145,7 +133,7 @@ class RelengManager(LoggerManager):
 
             if pi in packagesMap:
                 self.logger.printDefault("Artifact already present: %s" % (pi))
-                if ap.getHash() != AvailablePackage(packagesMap[pi]).getHash():
+                if ap.getHash() != AvailablePackage(packagesMap[pi], None).getHash():
                     raise ValueError(
                         "Artifact %s has multiple different artifacts for same version" % pi)
             else:

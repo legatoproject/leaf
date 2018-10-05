@@ -264,3 +264,43 @@ class TestRelengManager(AbstractTestWithRepo):
             prettyprint=False)
         indexContent = jsonLoadFile(indexFile)
         self.assertEquals(11, len(indexContent[JsonConstants.REMOTE_PACKAGES]))
+
+    def testIndexSameArtifactDifferentHash(self):
+        (self.getWorkspaceFolder() / 'a').mkdir()
+        (self.getWorkspaceFolder() / 'b').mkdir()
+
+        self.rm.generateManifest(
+            self.getWorkspaceFolder() / 'a' / LeafFiles.MANIFEST,
+            infoMap={JsonConstants.INFO_NAME: "foo",
+                     JsonConstants.INFO_VERSION: "1",
+                     JsonConstants.INFO_DESCRIPTION: "Some description"})
+
+        self.rm.generateManifest(
+            self.getWorkspaceFolder() / 'b' / LeafFiles.MANIFEST,
+            infoMap={JsonConstants.INFO_NAME: "foo",
+                     JsonConstants.INFO_VERSION: "1",
+                     JsonConstants.INFO_DESCRIPTION: "Different description"})
+
+        self.rm.createPackage(
+            self.getWorkspaceFolder() / 'a',
+            self.getWorkspaceFolder() / 'a.leaf')
+        self.rm.createPackage(
+            self.getWorkspaceFolder() / 'b',
+            self.getWorkspaceFolder() / 'b.leaf')
+
+        self.rm.generateIndex(
+            self.getWorkspaceFolder() / 'indexA.json',
+            [self.getWorkspaceFolder() / 'a.leaf',
+             self.getWorkspaceFolder() / 'a.leaf'],
+            prettyprint=True)
+        self.rm.generateIndex(
+            self.getWorkspaceFolder() / 'indexB.json',
+            [self.getWorkspaceFolder() / 'b.leaf',
+             self.getWorkspaceFolder() / 'b.leaf'],
+            prettyprint=True)
+        with self.assertRaises(ValueError):
+            self.rm.generateIndex(
+                self.getWorkspaceFolder() / 'indexAB.json',
+                [self.getWorkspaceFolder() / 'a.leaf',
+                 self.getWorkspaceFolder() / 'b.leaf'],
+                prettyprint=True)
