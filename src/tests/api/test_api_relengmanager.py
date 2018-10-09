@@ -4,7 +4,10 @@
 
 import json
 import os
+import time
 from tarfile import TarFile
+
+from tests.testutils import AbstractTestWithRepo, RESOURCE_FOLDER, checkMime
 
 from leaf.constants import JsonConstants, LeafFiles
 from leaf.core.error import LeafException
@@ -12,7 +15,6 @@ from leaf.core.relengmanager import RelengManager
 from leaf.format.logger import Verbosity
 from leaf.model.package import AvailablePackage
 from leaf.utils import computeHash, jsonLoadFile, jsonWriteFile
-from tests.testutils import AbstractTestWithRepo, RESOURCE_FOLDER, checkMime
 
 
 VERBOSITY = Verbosity.DEFAULT
@@ -304,3 +306,50 @@ class TestRelengManager(AbstractTestWithRepo):
                 [self.getWorkspaceFolder() / 'a.leaf',
                  self.getWorkspaceFolder() / 'b.leaf'],
                 prettyprint=True)
+
+    def testReproductibleBuild(self):
+        # Build some packages
+        pis = "install_1.0"
+        pkgFolder = RESOURCE_FOLDER / pis
+        manifest = pkgFolder / LeafFiles.MANIFEST
+        self.assertTrue(manifest.exists())
+
+        def touchManifest():
+            time.sleep(1)
+            os.utime(str(manifest), None)
+
+        for compression in ("tar", "xz", "bz2"):
+            outputFileA1 = self.getWorkspaceFolder() / ('%s.%s.%d' %
+                                                        (pis, compression, 1))
+            outputFileA2 = self.getWorkspaceFolder() / ('%s.%s.%d' %
+                                                        (pis, compression, 2))
+            outputFileB1 = self.getWorkspaceFolder() / ('%s.%s.%d' %
+                                                        (pis, compression, 3))
+            outputFileB2 = self.getWorkspaceFolder() / ('%s.%s.%d' %
+                                                        (pis, compression, 4))
+
+            self.rm.createPackage(pkgFolder, outputFileA1,
+                                  compression=compression, storeExtenalInfo=False)
+            touchManifest()
+            self.rm.createPackage(pkgFolder, outputFileA2,
+                                  compression=compression, storeExtenalInfo=False)
+            touchManifest()
+            self.rm.createPackage(pkgFolder, outputFileB1,
+                                  compression=compression, storeExtenalInfo=False,
+                                  forceTimestamp=1234, forceRootOwner=True)
+            touchManifest()
+            self.rm.createPackage(pkgFolder, outputFileB2,
+                                  compression=compression, storeExtenalInfo=False,
+                                  forceTimestamp=1234, forceRootOwner=True)
+
+            self.assertTrue(outputFileA1.exists())
+            self.assertTrue(outputFileA2.exists())
+            self.assertTrue(outputFileB1.exists())
+            self.assertTrue(outputFileB2.exists())
+
+            self.assertNotEquals(computeHash(outputFileA1),
+                                 computeHash(outputFileA2))
+            self.assertNotEquals(computeHash(outputFileA1),
+                                 computeHash(outputFileB1))
+            self.assertEquals(computeHash(outputFileB1),
+                              computeHash(outputFileB2))

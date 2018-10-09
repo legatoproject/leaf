@@ -48,6 +48,7 @@ class RelengManager(LoggerManager):
     def createPackage(self, pkgFolder, outputFile,
                       storeExtenalInfo=True,
                       forceTimestamp=None,
+                      forceRootOwner=False,
                       compression=None):
         '''
         Create a leaf artifact from given the manifest.
@@ -73,20 +74,37 @@ class RelengManager(LoggerManager):
         if forceTimestamp is not None:
             self.logger.printDefault(
                 "Force timestamps to %lf" % forceTimestamp)
+        if forceRootOwner:
+            self.logger.printDefault("Force user/group to root(0)")
 
         def infoTweaker(ti):
             if forceTimestamp is not None:
                 ti.mtime = forceTimestamp
-            self.logger.printDefault("  Adding", ti.name)
+            if forceRootOwner:
+                ti.uid = 0
+                ti.gid = 0
+                ti.uname = ""
+                ti.gname = ""
             return ti
 
         with openOutputTarFile(outputFile,
                                mode="w",
                                compression=compression) as tf:
-            for file in pkgFolder.glob('*'):
-                tf.add(str(file),
-                       arcname=str(file.relative_to(pkgFolder)),
+            def addToTar(item, reccursive=False):
+                relpath = item.relative_to(pkgFolder)
+                self.logger.printDefault("  Adding", relpath)
+                tf.add(str(item),
+                       arcname=str(relpath),
+                       recursive=reccursive,
                        filter=infoTweaker)
+
+            def visit(item):
+                if item.is_dir():
+                    for i in sorted(item.iterdir()):
+                        addToTar(i)
+                        visit(i)
+
+            visit(pkgFolder)
 
         self.logger.printDefault("Leaf package created: %s" % outputFile)
 

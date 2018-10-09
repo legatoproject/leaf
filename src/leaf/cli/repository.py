@@ -62,6 +62,10 @@ class RepositoryPackSubCommand(LeafCommand):
                             type=float,
                             dest='timestamp',
                             help='force the timestamp for files in the generated tar archive (current: %lf)' % (time.time()))
+        parser.add_argument('--root-owner',
+                            action='store_true',
+                            dest='root_owner',
+                            help='force root as user/group in the generated tar file')
 
         parser.add_argument('pkgFolder',
                             metavar='PKGFOLDER',
@@ -85,7 +89,8 @@ class RepositoryPackSubCommand(LeafCommand):
         rm.createPackage(pkgFolder, args.outputFile,
                          storeExtenalInfo=args.storeExtenalInfo,
                          forceTimestamp=args.timestamp,
-                         compression=args.compression)
+                         compression=args.compression,
+                         forceRootOwner=args.root_owner)
 
 
 class RepositoryIndexSubCommand(LeafCommand):
