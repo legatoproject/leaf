@@ -120,6 +120,10 @@ class RepositoryIndexSubCommand(LeafCommand):
                             action='store_false',
                             dest='useExternalInfo',
                             help='do not use info files (*.info), THIS MAY SLOW THE INDEX GENERATION')
+        parser.add_argument('--no-extra-tags',
+                            action='store_false',
+                            dest='useExtraTags',
+                            help='do not use extra tags in "*.tags" files')
         parser.add_argument('--prettyprint',
                             action='store_true',
                             dest='prettyprint',
@@ -137,6 +141,7 @@ class RepositoryIndexSubCommand(LeafCommand):
                          name=args.index_name,
                          description=args.index_description,
                          useExternalInfo=args.useExternalInfo,
+                         useExtraTags=args.useExtraTags,
                          prettyprint=args.prettyprint)
 
 

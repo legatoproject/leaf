@@ -193,6 +193,55 @@ class TestRelengManagerCli_Default(LeafCliWrapper):
         self.assertEquals(
             2, len(jsonLoadFile(indexFile)[JsonConstants.REMOTE_PACKAGES]))
 
+    def testIndexGenerationWithExtraTags(self):
+        indexFile1 = self.getWorkspaceFolder() / "index1.json"
+        indexFile2 = self.getWorkspaceFolder() / "index2.json"
+        pkgFolder = RESOURCE_FOLDER / "container-A_1.0"
+        leafFile = self.getWorkspaceFolder() / 'a.leaf'
+        tagsFiles = self.getWorkspaceFolder() / 'a.leaf.tags'
+
+        with tagsFiles.open('w') as fp:
+            fp.write("foo\n")
+            fp.write("bar\n")
+            fp.write("  foo  \n")
+            fp.write("  bar  \n")
+            fp.write("\n")
+            fp.write("   \n")
+            fp.write("foo\n")
+            fp.write("  hello\n")
+            fp.write("bar\n")
+            fp.write("world  \n")
+
+        # Build some packages
+        self.leafExec(('repository', 'pack'),
+                      '--output', leafFile,
+                      pkgFolder)
+
+        self.leafExec(('repository', 'index'),
+                      '--output', indexFile1,
+                      '--prettyprint',
+                      leafFile)
+        self.assertTrue(indexFile1.exists())
+        self.leafExec(('repository', 'index'),
+                      '--output', indexFile2,
+                      '--no-extra-tags',
+                      '--prettyprint',
+                      leafFile)
+        self.assertTrue(indexFile2.exists())
+
+        self.assertEquals(
+            1, len(jsonLoadFile(indexFile1)[JsonConstants.REMOTE_PACKAGES]))
+        self.assertEquals(
+            1, len(jsonLoadFile(indexFile2)[JsonConstants.REMOTE_PACKAGES]))
+
+        self.assertEquals(["foo",
+                           "bar",
+                           "hello",
+                           "world"],
+                          jsonLoadFile(indexFile1)[JsonConstants.REMOTE_PACKAGES][0]['info']['tags'])
+        self.assertEquals(["foo"],
+                          jsonLoadFile(indexFile2)[JsonConstants.REMOTE_PACKAGES][0]['info']['tags'])
+
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
 class TestPackageManagerCli_Verbose(TestRelengManagerCli_Default):

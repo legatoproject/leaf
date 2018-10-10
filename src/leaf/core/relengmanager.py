@@ -116,7 +116,9 @@ class RelengManager(LoggerManager):
                 pp=True)
 
     def generateIndex(self, indexFile, artifacts,
-                      name=None, description=None, useExternalInfo=True, prettyprint=False):
+                      name=None, description=None,
+                      useExternalInfo=True, useExtraTags=True,
+                      prettyprint=False):
         '''
         Create an index.json referencing all given artifacts
         '''
@@ -132,7 +134,6 @@ class RelengManager(LoggerManager):
         # Iterate over all artifacts
         packagesMap = OrderedDict()
         for artifact in artifacts:
-
             artifactNode = None
 
             if useExternalInfo:
@@ -155,6 +156,16 @@ class RelengManager(LoggerManager):
                     raise ValueError(
                         "Artifact %s has multiple different artifacts for same version" % pi)
             else:
+                # Read extra tags
+                extraTagsFile = artifact.parent / (artifact.name + ".tags")
+                if useExtraTags and extraTagsFile.exists():
+                    with extraTagsFile.open('r') as fp:
+                        for tag in filter(None, map(str.strip, fp.read().splitlines())):
+                            if tag not in ap.getTags():
+                                ap.getTags().append(tag)
+                                self.logger.printDefault(
+                                    "Add extra tag %s" % tag)
+
                 self.logger.printDefault("Add package %s" % pi)
                 relPath = Path(artifact).relative_to(indexFile.parent)
                 artifactNode[JsonConstants.REMOTE_PACKAGE_FILE] = str(relPath)
