@@ -607,10 +607,10 @@ class PackageManager(RemoteManager):
                         env=env)
 
                 # Download ap list
+                self.logger.printDefault(
+                    "Downloading %d package(s)" % len(apToInstall))
                 laList = []
                 for ap in apToInstall:
-                    self.logger.printDefault(
-                        "Downloading %d package(s)" % len(apToInstall))
                     la = self.downloadAvailablePackage(ap)
                     laList.append(la)
 
