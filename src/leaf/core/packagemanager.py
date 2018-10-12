@@ -597,6 +597,7 @@ class PackageManager(RemoteManager):
                                                          env=env)
 
                 if len(prereqApList) > 0:
+                    self.logger.printDefault("Check required packages")
                     prereqRootFolder = mkTmpLeafRootDir()
                     self.installPrereqFromRemotes(
                         [prereqAp.getIdentifier()
@@ -605,28 +606,23 @@ class PackageManager(RemoteManager):
                         availablePackages=availablePackages,
                         env=env)
 
-                self.logger.progressWorked(message="Required packages checked",
-                                           worked=1,
-                                           total=len(apToInstall) * 2 + 1)
-
                 # Download ap list
                 laList = []
                 for ap in apToInstall:
+                    self.logger.printDefault(
+                        "Downloading %d package(s)" % len(apToInstall))
                     la = self.downloadAvailablePackage(ap)
                     laList.append(la)
-                    self.logger.progressWorked(message="Downloaded %s" % ap.getIdentifier(),
-                                               worked=len(laList) + 1,
-                                               total=len(apToInstall) * 2 + 1)
 
                 # Extract la list
                 for la in laList:
-                    ip = self.extractLeafArtifact(la, env,
-                                                  keepFolderOnError=keepFolderOnError)
+                    self.logger.printDefault(
+                        "[%d/%d] Installing %s" % (
+                            len(out) + 1, len(laList), la.getIdentifier()))
+                    ip = self.extractLeafArtifact(
+                        la, env,
+                        keepFolderOnError=keepFolderOnError)
                     out.append(ip)
-                    self.logger.progressWorked(message="Installed %s" % la.getIdentifier(),
-                                               worked=len(laList) +
-                                               len(out) + 1,
-                                               total=len(apToInstall) * 2 + 1)
 
         finally:
             if not keepFolderOnError and prereqRootFolder is not None:

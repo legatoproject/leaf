@@ -12,9 +12,9 @@ import json
 import os
 import random
 import re
-import tempfile
 import string
 import sys
+import tempfile
 import time
 import urllib
 from collections import OrderedDict
@@ -168,7 +168,7 @@ def downloadData(url, outputFile=None, timeout=LeafConstants.DOWNLOAD_TIMEOUT):
             fp.write(stream.read())
 
 
-def downloadFile(url, folder, logger, filename=None, hash=None):
+def downloadFile(url, folder, logger, filename=None, hash=None, bufferSize=256 * 1024):
     '''
     Download an artifact and check its hash if given
     '''
@@ -190,27 +190,39 @@ def downloadFile(url, folder, logger, filename=None, hash=None):
         else:
             logger.printVerbose("File %s is already in cache" %
                                 targetFile.name)
+
     if not targetFile.exists():
-        if parsedUrl.scheme.startswith("http"):
-            req = requests.get(url,
-                               stream=True,
-                               timeout=LeafConstants.DOWNLOAD_TIMEOUT)
-            size = int(req.headers.get('content-length', -1))
-            currentSize = 0
-            with open(str(targetFile), 'wb') as fp:
-                for data in req.iter_content(1024 * 1024):
-                    currentSize += len(data)
-                    logger.progressWorked("Downloading %s" % targetFile.name,
-                                          worked=currentSize,
-                                          total=size,
-                                          sameLine=True)
-                    fp.write(data)
-        else:
-            urllib.request.urlretrieve(url, str(targetFile))
-        logger.printDefault("[100%%] Downloading %s" % targetFile.name)
+        try:
+            message = "Downloading " + targetFile.name
+            printProgress(logger.printDefault, message, 0, 1)
+            if parsedUrl.scheme.startswith("http"):
+                req = requests.get(url,
+                                   stream=True,
+                                   timeout=LeafConstants.DOWNLOAD_TIMEOUT)
+                size = int(req.headers.get('content-length', -1))
+                currentSize = 0
+                with open(str(targetFile), 'wb') as fp:
+                    for data in req.iter_content(bufferSize):
+                        currentSize += len(data)
+                        printProgress(logger.printDefault,
+                                      message,
+                                      currentSize, size)
+                        fp.write(data)
+            else:
+                urllib.request.urlretrieve(url, str(targetFile))
+            printProgress(logger.printDefault, message, 1, 1)
+        finally:
+            # End line since all progress message are on the same line
+            logger.printDefault("")
         if hash is not None:
             checkHash(targetFile, hash, raiseException=True)
     return targetFile
+
+
+def printProgress(printFunction, message, worked, total, end=''):
+    printFunction("\r[%d%%] %s" %
+                  (worked * 100 / total, message),
+                  end=end, flush=True)
 
 
 def envListToMap(envList):

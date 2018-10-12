@@ -29,7 +29,7 @@ class LeafConstants():
     Constants needed by Leaf
     '''
     MIN_PYTHON_VERSION = (3, 4)
-    DOWNLOAD_TIMEOUT = int(os.environ.get(EnvConstants.DOWNLOAD_TIMEOUT, "5"))
+    DOWNLOAD_TIMEOUT = int(os.environ.get(EnvConstants.DOWNLOAD_TIMEOUT, "10"))
     DEFAULT_PROFILE = "default"
     CACHE_DELTA = timedelta(days=1)
     CACHE_SIZE_MAX = 5 * 1024 * 1024 * 1024  # 5GB

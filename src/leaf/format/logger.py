@@ -54,10 +54,6 @@ class ILogger(ABC):
         pass
 
     @abstractmethod
-    def progressWorked(self, message=None, worked=0, total=100, sameLine=False):
-        pass
-
-    @abstractmethod
     def confirm(self,
                 question="Do you want to continue?",
                 yes=["y"],
@@ -90,14 +86,6 @@ class TextLogger (ILogger):
     def printError(self, *message):
         print(*message, file=sys.stderr)
         printTrace()
-
-    def progressWorked(self, message=None, worked=0, total=100, sameLine=False):
-        if message is not None:
-            if total > 100 and worked <= total:
-                message = "[%d%%] %s" % (worked * 100 / total, message)
-            else:
-                message = "[%d/%d] %s" % (worked, total, message)
-            self.printDefault(message, end='\r' if sameLine else '\n')
 
     def confirm(self,
                 question="Do you want to continue?",

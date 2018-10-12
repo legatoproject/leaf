@@ -88,7 +88,7 @@ A warning message will be regularly displayed as soon as this cache size exceeds
 
 === _LEAF_TIMEOUT_
 
-Duration (in seconds) of the download timeout. Default value is *5*
+Duration (in seconds) of the download timeout. Default value is *10*
 
 Timeout that leaf waits to download data when the remote falls into an inactive state.
 
