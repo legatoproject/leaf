@@ -6,7 +6,6 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-import argcomplete
 from argparse import RawDescriptionHelpFormatter, ArgumentParser
 from pathlib import Path
 from signal import signal, SIGINT
@@ -87,7 +86,11 @@ class LeafCli():
         subparsers.required = True
         for command in self.commands:
             command.create(subparsers)
-        argcomplete.autocomplete(self.parser)
+        try:
+            import argcomplete
+            argcomplete.autocomplete(self.parser)
+        except ImportError:
+            pass
 
     def catchSigInt(self):
         # Catch CTRL-C

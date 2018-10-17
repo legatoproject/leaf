@@ -16,8 +16,6 @@ import os
 from argparse import ArgumentParser
 from pathlib import Path
 
-import argcomplete
-
 from leaf.constants import LeafConstants
 from leaf.core.coreutils import groupPackageIdentifiersByName
 from leaf.core.error import InvalidPackageNameException
@@ -57,7 +55,11 @@ if __name__ == '__main__':
                         action='append',
                         metavar='PKG_NAME',
                         help="specific packages to update")
-    argcomplete.autocomplete(parser)
+    try:
+        import argcomplete
+        argcomplete.autocomplete(parser)
+    except ImportError:
+        pass
     args = parser.parse_args()
 
     try:

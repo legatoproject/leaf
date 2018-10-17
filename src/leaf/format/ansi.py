@@ -7,7 +7,11 @@ Fake Ansi module to manage the lack of colorama module
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 import re
+
+from leaf.constants import LeafConstants
 from leaf.format.formatutils import isatty
+from leaf.utils import versionComparator_lt
+
 
 # Ansi chars regex
 ansiCharsRegex = re.compile(r'\x1b[^m]*m')
@@ -83,12 +87,18 @@ class _Ansi():
         self._fakeFore = _FakeAnsiFore()
         self._fakeBack = _FakeAnsiBack()
         self._fakeStyle = _FakeAnsiStyle()
+        self.moduleLoaded = False
         try:
-            from colorama import Fore as ColoramaFore, Back as ColoramaBack, Style as ColoramaStyle
-            self._coloramaFore = ColoramaFore
-            self._coloramaBack = ColoramaBack
-            self._coloramaStyle = ColoramaStyle
+            import colorama
             self.moduleLoaded = True
+            if '__version__' in dir(colorama) and versionComparator_lt(colorama.__version__, LeafConstants.COLORAMA_MIN_VERSION):
+                self.moduleLoaded = False
+            elif 'VERSION' in dir(colorama) and versionComparator_lt(colorama.VERSION, LeafConstants.COLORAMA_MIN_VERSION):
+                self.moduleLoaded = False
+            if self.moduleLoaded:
+                self._coloramaFore = colorama.Fore
+                self._coloramaBack = colorama.Back
+                self._coloramaStyle = colorama.Style
         except ImportError:
             self.moduleLoaded = False
 

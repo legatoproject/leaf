@@ -14,7 +14,6 @@
 import os
 import sys
 
-import argcomplete as ac
 import argparse as ap
 import pathlib as pl
 
@@ -41,7 +40,11 @@ def ProcessArguments():
                         default=[],
                         help='run a command in the given shell and exit')
 
-    ac.autocomplete(parser)
+    try:
+        import argcomplete
+        argcomplete.autocomplete(parser)
+    except ImportError:
+        pass
 
     return parser.parse_args()
 
