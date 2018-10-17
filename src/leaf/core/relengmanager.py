@@ -208,7 +208,8 @@ class RelengManager(LoggerManager):
                         JsonConstants.INFO_DATE,
                         JsonConstants.INFO_REQUIRES,
                         JsonConstants.INFO_DEPENDS,
-                        JsonConstants.INFO_TAGS):
+                        JsonConstants.INFO_TAGS,
+                        JsonConstants.INFO_LEAF_MINVER):
                 if key in infoMap:
                     value = infoMap[key]
                     if value is not None:

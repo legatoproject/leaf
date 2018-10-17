@@ -188,6 +188,10 @@ class RepositoryManifestSubCommand(LeafCommand):
                                  metavar='DATE',
                                  dest=JsonConstants.INFO + "_" + JsonConstants.INFO_DATE,
                                  help='set the date')
+        commonGroup.add_argument('--minver',
+                                 metavar='MINIMUM_VERSION',
+                                 dest=JsonConstants.INFO + "_" + JsonConstants.INFO_LEAF_MINVER,
+                                 help='set leaf minimum version to use the package')
         commonGroup.add_argument('--master',
                                  metavar='BOOLEAN',
                                  dest=JsonConstants.INFO + "_" + JsonConstants.INFO_MASTER,
