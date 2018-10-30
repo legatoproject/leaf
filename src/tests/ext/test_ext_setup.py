@@ -8,7 +8,7 @@ from leaf.constants import LeafFiles
 from tests.testutils import LEAF_UT_SKIP, LeafCliWrapper
 
 
-class TestSetupCli_Default(LeafCliWrapper):
+class TestExtSetup(LeafCliWrapper):
 
     def __init__(self, methodName):
         LeafCliWrapper.__init__(self, methodName)
@@ -19,11 +19,11 @@ class TestSetupCli_Default(LeafCliWrapper):
         self.leafExec("setup", "-p", "container-A")
         self.assertTrue(wsConfigFile.is_file())
 
-    def testProfileAlreadyExist(self):
+    def testSetupProfileAlreadyExist(self):
         self.leafExec("setup", "foo", "-p", "container-A")
         self.leafExec("setup", "foo", "-p", "container-A", expectedRc=2)
 
-    def testWithPackageIdentifier(self):
+    def testSetupWithPackageIdentifier(self):
         self.leafExec("setup", "A",
                       "-p", "container-A_1.0")
         self.checkCurrentProfile("A")
@@ -41,7 +41,7 @@ class TestSetupCli_Default(LeafCliWrapper):
                                   "container-C",
                                   "container-D"])
 
-    def testWithPackageName(self):
+    def testSetupWithPackageName(self):
         self.leafExec("setup", "A",
                       "-p", "container-A")
         self.checkCurrentProfile("A")
@@ -50,7 +50,7 @@ class TestSetupCli_Default(LeafCliWrapper):
                                   "container-C",
                                   "container-D"])
 
-    def testProfileContent(self):
+    def testSetupProfileContent(self):
         self.leafExec("setup", "foo1",
                       "-p", "condition")
         self.checkCurrentProfile("foo1")
@@ -97,14 +97,14 @@ class TestSetupCli_Default(LeafCliWrapper):
 
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
-class TestProfileCli_Verbose(TestSetupCli_Default):
+class TestExtSetupVerbose(TestExtSetup):
     def __init__(self, methodName):
-        TestSetupCli_Default.__init__(self, methodName)
+        TestExtSetup.__init__(self, methodName)
         self.postVerbArgs.append("--verbose")
 
 
 @unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
-class TestProfileCli_Quiet(TestSetupCli_Default):
+class TestExtSetupQuiet(TestExtSetup):
     def __init__(self, methodName):
-        TestSetupCli_Default.__init__(self, methodName)
+        TestExtSetup.__init__(self, methodName)
         self.postVerbArgs.append("--quiet")

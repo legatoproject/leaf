@@ -8,11 +8,11 @@ from leaf.model.filtering import MetaPackageFilter
 from tests.testutils import AbstractTestWithRepo
 
 
-class FilteringTest(AbstractTestWithRepo):
+class TestApiFiltering(AbstractTestWithRepo):
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
-        pm = PackageManager(Verbosity.DEFAULT, True)
+        pm = PackageManager(Verbosity.DEFAULT)
         pm.createRemote("default", self.getRemoteUrl(), insecure=True)
         pm.fetchRemotes()
         self.content = pm.listAvailablePackages().values()

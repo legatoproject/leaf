@@ -131,7 +131,7 @@ class ManifestListRenderer(Renderer):
         # Tags
         tagCount = len(inputElt.getAllTags())
         if tagCount > 0:
-            labels.append("Tags:" if tagCount > 1 else "Tag:")
+            labels.append("Tag%s:" % ('s' if tagCount > 1 else ''))
             values.append(self._getTagList(inputElt))
 
         # Release date
@@ -148,7 +148,7 @@ class ManifestListRenderer(Renderer):
             # Sources
             remoteCount = len(inputElt.sourceRemotes)
             if remoteCount > 0:
-                labels.append("Source:" if remoteCount <= 1 else "Sources:")
+                labels.append("Source%s:" % ('s' if remoteCount > 1 else ''))
                 values.append(",".join(remote.alias
                                        for remote in inputElt.sourceRemotes))
 
@@ -164,9 +164,9 @@ class ManifestListRenderer(Renderer):
 
         # Included packages
         if depCount > 0:
-            labels.append("Included Packages:" if depCount >
-                          1 else "Included Package:")
-            values.append("\n".join(self._getCpis(inclPack)
+            labels.append("Included Package%s:" %
+                          ('s' if depCount > 1 else ''))
+            values.append('\n'.join(self._getCpis(inclPack)
                                     for inclPack in inputElt.getLeafDepends()))
 
         return map(self.tm.LABEL, labels), values
@@ -182,7 +182,7 @@ class ManifestListRenderer(Renderer):
         title = "{count} {labeltheme}{featureLabel} - Filter:{resettheme} {filter}".format(
             count=inputCount,
             labeltheme=self.tm.LABEL,
-            featureLabel="package" if inputCount <= 1 else "packages",
+            featureLabel="packages" if inputCount > 1 else "package",
             resettheme=self.tm.RESET,
             filter=self.pkgFilter)
         table.newHeader(title, tableSize)

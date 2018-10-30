@@ -8,7 +8,7 @@ from leaf.model.package import ConditionalPackageIdentifier, \
     PackageIdentifier
 
 
-class ConditionsTest(unittest.TestCase):
+class TestConditions(unittest.TestCase):
 
     def testRegex(self):
         pi = PackageIdentifier.fromString("foo_1.2-beta")

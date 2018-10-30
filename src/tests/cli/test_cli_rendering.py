@@ -10,7 +10,7 @@ from tests.testutils import AbstractTestWithRepo, LEAF_UT_SKIP, \
     LeafCliWrapper
 
 
-class TestRenderingCli_Default(LeafCliWrapper):
+class TestCliRendering(LeafCliWrapper):
 
     def __init__(self, methodName):
         LeafCliWrapper.__init__(self, methodName)
@@ -102,14 +102,14 @@ class TestRenderingCli_Default(LeafCliWrapper):
 
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
-class TestRenderingCli_Verbose(TestRenderingCli_Default):
+class TestCliRenderingVerbose(TestCliRendering):
     def __init__(self, methodName):
-        TestRenderingCli_Default.__init__(self, methodName)
+        TestCliRendering.__init__(self, methodName)
         self.postVerbArgs.append("--verbose")
 
 
 @unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
-class TestRenderingCli_Quiet(TestRenderingCli_Default):
+class TestCliRenderingQuiet(TestCliRendering):
     def __init__(self, methodName):
-        TestRenderingCli_Default.__init__(self, methodName)
+        TestCliRendering.__init__(self, methodName)
         self.postVerbArgs.append("--quiet")

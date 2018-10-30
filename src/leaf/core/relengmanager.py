@@ -27,8 +27,8 @@ class RelengManager(LoggerManager):
     Methods needed for releng, ie generate packages and maintain repository
     '''
 
-    def __init__(self, verbosity, nonInteractive):
-        LoggerManager.__init__(self, verbosity, nonInteractive)
+    def __init__(self, verbosity):
+        LoggerManager.__init__(self, verbosity)
 
     def _getNowDate(self):
         return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
@@ -241,7 +241,7 @@ class RelengManager(LoggerManager):
         # String replacement
         jsonString = jsonToString(manifest.json, pp=True)
         if resolveEnvVariables:
-            for var in set(re.compile('#\{([a-zA-Z0-9_]+)\}').findall(jsonString)):
+            for var in set(re.compile(r'#\{([a-zA-Z0-9_]+)\}').findall(jsonString)):
                 value = os.environ.get(var)
                 if value is None:
                     raise LeafException("Cannot find '%s' in env" % var,

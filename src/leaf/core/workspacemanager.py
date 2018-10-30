@@ -35,11 +35,7 @@ class WorkspaceManager(PackageManager):
         return folder is not None and (folder / LeafFiles.WS_CONFIG_FILENAME).is_file()
 
     @staticmethod
-    def findRoot(customPath=None, checkEnv=True, checkParents=True):
-        # If custom path is given, use it as is
-        if customPath is not None:
-            return customPath
-
+    def findRoot(checkEnv=True, checkParents=True):
         # Check env if no custom path given
         if checkEnv and EnvConstants.WORKSPACE_ROOT in os.environ:
             return Path(os.environ[EnvConstants.WORKSPACE_ROOT])
@@ -57,8 +53,8 @@ class WorkspaceManager(PackageManager):
         # Use PWD
         return Path(os.getcwd())
 
-    def __init__(self, workspaceRootFolder, verbosity, nonInteractive):
-        PackageManager.__init__(self, verbosity, nonInteractive)
+    def __init__(self, workspaceRootFolder, verbosity):
+        PackageManager.__init__(self, verbosity)
         self.workspaceRootFolder = workspaceRootFolder
         self.workspaceConfigFile = workspaceRootFolder / LeafFiles.WS_CONFIG_FILENAME
         self.workspaceDataFolder = workspaceRootFolder / LeafFiles.WS_DATA_FOLDERNAME

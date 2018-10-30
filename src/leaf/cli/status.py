@@ -21,13 +21,12 @@ class StatusCommand(LeafCommand):
                              "print leaf status")
 
     def execute(self, args):
-        wsRoot = WorkspaceManager.findRoot(customPath=args.workspace)
+        wsRoot = WorkspaceManager.findRoot()
         if not WorkspaceManager.isWorkspaceRoot(wsRoot):
             self.getLoggerManager(args).logger.printDefault(
                 "Not in a workspace, use 'leaf init' to create one")
         else:
-            loggerAttr = self.getLoggerAttr(args)
-            wm = WorkspaceManager(wsRoot, loggerAttr[0], loggerAttr[1])
+            wm = WorkspaceManager(wsRoot, self.getVerbosity(args))
 
             pfs = wm.listProfiles().values()
             pfsCount = len(pfs)

@@ -11,7 +11,7 @@ from tests.testutils import LEAF_UT_SKIP, LeafCliWrapper, envFileToMap, \
     getLines
 
 
-class TestProfileCli_Default(LeafCliWrapper):
+class TestCliWorkspaceManager(LeafCliWrapper):
 
     def __init__(self, methodName):
         LeafCliWrapper.__init__(self, methodName)
@@ -589,14 +589,14 @@ class TestProfileCli_Default(LeafCliWrapper):
 
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
-class TestProfileCli_Verbose(TestProfileCli_Default):
+class TestCliWorkspaceManagerVerbose(TestCliWorkspaceManager):
     def __init__(self, methodName):
-        TestProfileCli_Default.__init__(self, methodName)
+        TestCliWorkspaceManager.__init__(self, methodName)
         self.postVerbArgs.append("--verbose")
 
 
 @unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
-class TestProfileCli_Quiet(TestProfileCli_Default):
+class TestCliWorkspaceManagerQuiet(TestCliWorkspaceManager):
     def __init__(self, methodName):
-        TestProfileCli_Default.__init__(self, methodName)
+        TestCliWorkspaceManager.__init__(self, methodName)
         self.postVerbArgs.append("--quiet")

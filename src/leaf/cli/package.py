@@ -167,8 +167,9 @@ class PackageInstallCommand(LeafCommand):
             raise PackageInstallInterruptedException(args.packages, e)
 
         if len(items) > 0:
-            pm.logger.printQuiet("Packages installed: " +
-                                 ' '.join([str(p.getIdentifier()) for p in items]))
+            pm.logger.printQuiet(
+                "Packages installed:",
+                ' '.join([str(p.getIdentifier()) for p in items]))
 
 
 class PackagePrereqCommand(LeafCommand):

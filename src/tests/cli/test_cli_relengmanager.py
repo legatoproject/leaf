@@ -13,7 +13,7 @@ from tests.testutils import LEAF_UT_SKIP, LeafCliWrapper, RESOURCE_FOLDER, \
     checkMime
 
 
-class TestRelengManagerCli_Default(LeafCliWrapper):
+class TestCliRelengManager(LeafCliWrapper):
 
     def __init__(self, methodName):
         LeafCliWrapper.__init__(self, methodName)
@@ -84,22 +84,22 @@ class TestRelengManagerCli_Default(LeafCliWrapper):
                       "--output", outputFile2,
                       pkgFolder)
 
-        self.assertNotEquals(computeHash(outputFile1),
-                             computeHash(outputFile2))
+        self.assertNotEqual(computeHash(outputFile1),
+                            computeHash(outputFile2))
 
         outputFolder1 = self.getWorkspaceFolder() / "extract1"
         with tarfile.TarFile.open(str(outputFile1)) as tf:
             tf.extractall(str(outputFolder1))
         manifestFile1 = outputFolder1 / LeafFiles.MANIFEST
         self.assertTrue(manifestFile1.exists())
-        self.assertNotEquals(TIMESTAMP, manifestFile1.stat().st_mtime)
+        self.assertNotEqual(TIMESTAMP, manifestFile1.stat().st_mtime)
 
         outputFolder2 = self.getWorkspaceFolder() / "extract2"
         with tarfile.TarFile.open(str(outputFile2)) as tf:
             tf.extractall(str(outputFolder2))
         manifestFile2 = outputFolder2 / LeafFiles.MANIFEST
         self.assertTrue(manifestFile2.exists())
-        self.assertEquals(TIMESTAMP, manifestFile2.stat().st_mtime)
+        self.assertEqual(TIMESTAMP, manifestFile2.stat().st_mtime)
 
     def testManifestGeneration(self):
         manifestFile = self.getWorkspaceFolder() / LeafFiles.MANIFEST
@@ -147,7 +147,7 @@ class TestRelengManagerCli_Default(LeafCliWrapper):
 
         self.assertTrue(manifestFile.exists())
         with open(str(manifestFile), 'r') as fp:
-            self.assertEquals({
+            self.assertEqual({
                 'hello': 'hello',
                 'a': 2,
                 'b': True,
@@ -181,7 +181,7 @@ class TestRelengManagerCli_Default(LeafCliWrapper):
                       '--prettyprint',
                       self.getWorkspaceFolder() / 'a.leaf')
         self.assertTrue(indexFile.exists())
-        self.assertEquals(
+        self.assertEqual(
             1, len(jsonLoadFile(indexFile)[JsonConstants.REMOTE_PACKAGES]))
 
         self.leafExec(('repository', 'index'),
@@ -192,7 +192,7 @@ class TestRelengManagerCli_Default(LeafCliWrapper):
                       self.getWorkspaceFolder() / 'a.leaf',
                       self.getWorkspaceFolder() / 'b.leaf')
         self.assertTrue(indexFile.exists())
-        self.assertEquals(
+        self.assertEqual(
             2, len(jsonLoadFile(indexFile)[JsonConstants.REMOTE_PACKAGES]))
 
     def testIndexGenerationWithExtraTags(self):
@@ -231,29 +231,29 @@ class TestRelengManagerCli_Default(LeafCliWrapper):
                       leafFile)
         self.assertTrue(indexFile2.exists())
 
-        self.assertEquals(
+        self.assertEqual(
             1, len(jsonLoadFile(indexFile1)[JsonConstants.REMOTE_PACKAGES]))
-        self.assertEquals(
+        self.assertEqual(
             1, len(jsonLoadFile(indexFile2)[JsonConstants.REMOTE_PACKAGES]))
 
-        self.assertEquals(["foo",
-                           "bar",
-                           "hello",
-                           "world"],
-                          jsonLoadFile(indexFile1)[JsonConstants.REMOTE_PACKAGES][0]['info']['tags'])
-        self.assertEquals(["foo"],
-                          jsonLoadFile(indexFile2)[JsonConstants.REMOTE_PACKAGES][0]['info']['tags'])
+        self.assertEqual(["foo",
+                          "bar",
+                          "hello",
+                          "world"],
+                         jsonLoadFile(indexFile1)[JsonConstants.REMOTE_PACKAGES][0]['info']['tags'])
+        self.assertEqual(["foo"],
+                         jsonLoadFile(indexFile2)[JsonConstants.REMOTE_PACKAGES][0]['info']['tags'])
 
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
-class TestPackageManagerCli_Verbose(TestRelengManagerCli_Default):
+class TestCliRelengManagerVerbose(TestCliRelengManager):
     def __init__(self, methodName):
-        TestRelengManagerCli_Default.__init__(self, methodName)
+        TestCliRelengManager.__init__(self, methodName)
         self.postVerbArgs.append("--verbose")
 
 
 @unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
-class TestPackageManagerCli_Quiet(TestRelengManagerCli_Default):
+class TestCliRelengManagerQuiet(TestCliRelengManager):
     def __init__(self, methodName):
-        TestRelengManagerCli_Default.__init__(self, methodName)
+        TestCliRelengManager.__init__(self, methodName)
         self.postVerbArgs.append("--quiet")

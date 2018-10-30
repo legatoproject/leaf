@@ -57,4 +57,4 @@ class TestJsonLayers(unittest.TestCase):
     def testEmptyModel(self):
         a = TestJsonLayers.json2model('{"a":1}')
         b = TestJsonLayers.json2model('{"a":1}')
-        self.assertEquals(layerModelDiff(a, b), {})
+        self.assertEqual(layerModelDiff(a, b), {})

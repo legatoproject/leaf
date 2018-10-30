@@ -17,6 +17,8 @@ from leaf.model.package import Manifest, PackageIdentifier
 from leaf.utils import jsonLoadFile, jsonWriteFile
 
 
+os.environ[EnvConstants.NON_INTERACTIVE] = "1"
+
 TestCase.maxDiff = None
 LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
 LEAF_UT_SKIP = os.environ.get("LEAF_UT_SKIP", "")
@@ -161,6 +163,8 @@ class AbstractTestWithRepo(AbstractTestWithChecker):
 
     @classmethod
     def setUpClass(cls):
+        AbstractTestWithChecker.setUpClass()
+
         if LEAF_UT_DEBUG is not None:
             AbstractTestWithRepo.ROOT_FOLDER = Path("/tmp/leaf")
         else:
@@ -325,7 +329,7 @@ def generateRepo(sourceFolder, outputFolder):
     artifactsList = []
     artifactsList2 = []
 
-    rm = RelengManager(Verbosity.QUIET, True)
+    rm = RelengManager(Verbosity.QUIET)
     for packageFolder in sourceFolder.iterdir():
         if packageFolder.is_dir():
             manifestFile = packageFolder / LeafFiles.MANIFEST

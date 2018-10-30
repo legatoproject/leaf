@@ -61,8 +61,7 @@ class PackageIdentifier ():
         return self.name + PackageIdentifier.SEPARATOR + self.version
 
     def _is_valid_operand(self, other):
-        return (hasattr(other, "name") and
-                hasattr(other, "version"))
+        return hasattr(other, "name") and hasattr(other, "version")
 
     def __hash__(self):
         return hash((self.name, self.version))
@@ -88,7 +87,7 @@ class PackageIdentifier ():
 
 class ConditionalPackageIdentifier(PackageIdentifier):
 
-    CONDITION_PATTERN = '\((.+?)\)'
+    CONDITION_PATTERN = r'\((.+?)\)'
     COND_SET = "(!)?([A-Za-z0-9_]+)"
     COND_EQ = "([A-Za-z0-9_]+)(=|!=|~|!~)(.+)"
 

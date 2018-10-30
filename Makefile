@@ -40,9 +40,14 @@ test:
 	chmod 700 src/tests/gpg/
 	tox $(LEAF_TEST_TOX_ARGS)
 
+flake:
+	tox -e clean,flake
+
 sdist:
 	rm -rf $(DIST)
 	python3 setup.py sdist
 
-flake:
-	tox -e clean,flake
+install:
+	test -n "$(VIRTUAL_ENV)"
+	python3 setup.py install
+	python3 setup.py install_data

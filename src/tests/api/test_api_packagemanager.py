@@ -33,7 +33,7 @@ HTTP_PORT = os.environ.get("LEAF_HTTP_PORT", "54940")
 sys.path.insert(0, os.path.abspath('../..'))
 
 
-class TestPackageManager_File(AbstractTestWithRepo):
+class TestApiPackageManager(AbstractTestWithRepo):
 
     def __init__(self, methodName):
         AbstractTestWithRepo.__init__(self, methodName)
@@ -41,7 +41,7 @@ class TestPackageManager_File(AbstractTestWithRepo):
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
 
-        self.pm = PackageManager(VERBOSITY, True)
+        self.pm = PackageManager(VERBOSITY)
 
         if EnvConstants.DOWNLOAD_TIMEOUT not in os.environ:
             # Fix CI timeout
@@ -617,27 +617,27 @@ def startHttpServer(rootFolder):
     httpd.serve_forever()
 
 
-class TestPackageManager_Http(TestPackageManager_File):
+class TestApiPackageManagerHttp(TestApiPackageManager):
 
     def __init__(self, methodName):
-        TestPackageManager_File.__init__(self, methodName)
+        TestApiPackageManager.__init__(self, methodName)
 
     @classmethod
     def setUpClass(cls):
-        TestPackageManager_File.setUpClass()
+        TestApiPackageManager.setUpClass()
         print("Using http port %s" % HTTP_PORT, file=sys.stderr)
-        TestPackageManager_Http.process = Process(target=startHttpServer,
-                                                  args=(AbstractTestWithRepo.REPO_FOLDER,))
-        TestPackageManager_Http.process.start()
+        TestApiPackageManagerHttp.process = Process(target=startHttpServer,
+                                                    args=(AbstractTestWithRepo.REPO_FOLDER,))
+        TestApiPackageManagerHttp.process.start()
         # Wait 10 seconds for the http server to start
         sleep(10)
 
     @classmethod
     def tearDownClass(cls):
-        TestPackageManager_File.tearDownClass()
+        TestApiPackageManager.tearDownClass()
         print("Stopping http server ...", file=sys.stderr)
-        TestPackageManager_Http.process.terminate()
-        TestPackageManager_Http.process.join()
+        TestApiPackageManagerHttp.process.terminate()
+        TestApiPackageManagerHttp.process.join()
         print("Stopping http server ... done", file=sys.stderr)
 
     def getRemoteUrl(self):

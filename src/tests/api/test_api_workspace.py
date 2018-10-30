@@ -19,21 +19,15 @@ import leaf
 VERBOSITY = Verbosity.VERBOSE
 
 
-class TestProfile(AbstractTestWithRepo):
+class TestApiWorkspaceManager(AbstractTestWithRepo):
 
     def __init__(self, methodName):
         AbstractTestWithRepo.__init__(self, methodName)
-        self.logger = TextLogger(VERBOSITY, True)
+        self.logger = TextLogger(VERBOSITY)
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
-        self.wm = WorkspaceManager(
-            WorkspaceManager.findRoot(
-                customPath=self.getWorkspaceFolder(),
-                checkEnv=False,
-                checkParents=False),
-            VERBOSITY,
-            True)
+        self.wm = WorkspaceManager(self.getWorkspaceFolder(), VERBOSITY)
         self.wm.setInstallFolder(self.getInstallFolder())
         self.wm.createRemote("default", self.getRemoteUrl(), insecure=True)
 

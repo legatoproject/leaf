@@ -9,7 +9,6 @@ Leaf Package Manager
 
 from abc import ABC, abstractmethod
 from builtins import ValueError
-from collections import OrderedDict
 from pathlib import Path
 
 from leaf.core.error import LeafException
@@ -17,6 +16,21 @@ from leaf.core.packagemanager import LoggerManager, PackageManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.format.logger import Verbosity
 from leaf.model.base import Scope
+
+
+def addVerboseQuietArgs(parser):
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-v", "--verbose",
+                       dest="verbosity",
+                       action='store_const',
+                       const=Verbosity.VERBOSE,
+                       default=Verbosity.DEFAULT,
+                       help="increase output verbosity")
+    group.add_argument("-q", "--quiet",
+                       dest="verbosity",
+                       action='store_const',
+                       const=Verbosity.QUIET,
+                       help="decrease output verbosity")
 
 
 def initCommonArgs(parser,
@@ -94,28 +108,20 @@ class GenericCommand(ABC):
                                        help=self.cmdHelp)
         self.initArgs(parser)
 
-    def getLoggerAttr(self, args):
-        nonInteractive = False
-        verbosity = Verbosity.DEFAULT
+    def getVerbosity(self, args, default=Verbosity.DEFAULT):
         if hasattr(args, 'verbosity'):
-            verbosity = getattr(args, 'verbosity')
-        if hasattr(args, 'nonInteractive'):
-            nonInteractive = getattr(args, 'nonInteractive')
-        return (verbosity, nonInteractive)
+            return getattr(args, 'verbosity')
+        return default
 
     def getLoggerManager(self, args):
-        loggerAttr = self.getLoggerAttr(args)
-        return LoggerManager(loggerAttr[0], loggerAttr[1])
+        return LoggerManager(self.getVerbosity(args))
 
     def getPackageManager(self, args):
-        loggerAttr = self.getLoggerAttr(args)
-        return PackageManager(loggerAttr[0], loggerAttr[1])
+        return PackageManager(self.getVerbosity(args))
 
     def getWorkspaceManager(self, args, autoFindWorkspace=True, checkInitialized=True):
-        loggerAttr = self.getLoggerAttr(args)
-        wsRoot = WorkspaceManager.findRoot(customPath=args.workspace,
-                                           checkParents=autoFindWorkspace)
-        out = WorkspaceManager(wsRoot, loggerAttr[0], loggerAttr[1])
+        wsRoot = WorkspaceManager.findRoot(checkParents=autoFindWorkspace)
+        out = WorkspaceManager(wsRoot, self.getVerbosity(args))
         if checkInitialized and not out.isWorkspaceInitialized():
             raise ValueError("Workspace is not initialized")
         return out
@@ -128,19 +134,19 @@ class GenericCommand(ABC):
     def execute(self, args):
         pass
 
-    def doExecute(self, args, catchException=False):
+    def doExecute(self, args):
         try:
             out = self.execute(args)
             return 0 if out is None else out
         except Exception as e:
-            if not catchException:
-                raise e
+            exitCode = 2
             lm = self.getLoggerManager(args)
             if isinstance(e, LeafException):
                 lm.printException(e)
+                exitCode = e.exitCode
             else:
                 lm.logger.printError(e)
-            return 2
+            return exitCode
 
 
 class LeafMetaCommand(GenericCommand):
@@ -199,62 +205,7 @@ class LeafCommand(GenericCommand):
 
     def initArgs(self, parser):
         super().initArgs(parser)
-        group = parser.add_mutually_exclusive_group()
-        group.add_argument("-v", "--verbose",
-                           dest="verbosity",
-                           action='store_const',
-                           const=Verbosity.VERBOSE,
-                           default=Verbosity.DEFAULT,
-                           help="increase output verbosity")
-        group.add_argument("-q", "--quiet",
-                           dest="verbosity",
-                           action='store_const',
-                           const=Verbosity.QUIET,
-                           help="decrease output verbosity")
-
-
-class LeafCommandGenerator():
-
-    def __init__(self):
-        self.preVerbArgs = OrderedDict()
-        self.postVerbArgs = OrderedDict()
-
-    def initCommonArgs(self, args):
-        # Alt config/ws
-        if args.workspace is not None:
-            self.preVerbArgs["--workspace"] = args.workspace
-        if args.nonInteractive:
-            self.preVerbArgs["--non-interactive"] = None
-        # Verbose, Quiet
-        if args.verbosity == Verbosity.VERBOSE:
-            self.postVerbArgs["--verbose"] = None
-        elif args.verbosity == Verbosity.QUIET:
-            self.postVerbArgs["--quiet"] = None
-
-    def genCommand(self, verb, arguments=None):
-        command = []
-
-        for k, v in self.preVerbArgs.items():
-            if v is None:
-                command.append(k)
-            else:
-                command += [k, str(v)]
-
-        if isinstance(verb, (list, tuple)):
-            command += verb
-        else:
-            command.append(verb)
-
-        for k, v in self.postVerbArgs.items():
-            if v is None:
-                command.append(k)
-            else:
-                command += [k, str(v)]
-
-        if arguments is not None:
-            command += list(map(str, arguments))
-
-        return command
+        addVerboseQuietArgs(parser)
 
 
 def stringToBoolean(value):

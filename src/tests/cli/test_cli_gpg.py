@@ -29,7 +29,7 @@ class TestGPG(LeafCliWrapper):
         del os.environ[EnvConstants.GPG_KEYSERVER]
 
     def testSimple(self):
-        gpg = GPGManager(Verbosity.VERBOSE, True)
+        gpg = GPGManager(Verbosity.VERBOSE)
         print("GPG Home:", gpg.gpgHome)
         data = downloadData(self.getRemoteUrl())
 

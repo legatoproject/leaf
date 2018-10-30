@@ -7,10 +7,12 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
+import sys
 from abc import ABC, abstractmethod
 from enum import IntEnum, unique
-import sys
+
 from leaf.core.error import printTrace
+from leaf.utils import isNotInteractive
 
 
 @unique
@@ -67,9 +69,8 @@ class TextLogger (ILogger):
     Prints a lot of information
     '''
 
-    def __init__(self, verbosity, nonInteractive=True):
+    def __init__(self, verbosity):
         ILogger.__init__(self, verbosity)
-        self.nonInteractive = nonInteractive
 
     def printQuiet(self, *message, **kwargs):
         if self.verbosity >= Verbosity.QUIET:
@@ -97,7 +98,7 @@ class TextLogger (ILogger):
             "/".join(map(str.lower, no)))
         while True:
             print(question, label)
-            if self.nonInteractive:
+            if isNotInteractive():
                 return True
             answer = input().strip()
             if answer == "":

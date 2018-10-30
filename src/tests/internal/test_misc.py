@@ -244,12 +244,12 @@ class TestMisc(unittest.TestCase):
 
         pkgMap = groupPackageIdentifiersByName(
             [a20, a10, b11, b21, a21])
-        self.assertEquals(pkgMap,
-                          {'a': [a10, a20, a21],
-                           'b': [b11, b21]})
+        self.assertEqual(pkgMap,
+                         {'a': [a10, a20, a21],
+                          'b': [b11, b21]})
 
         pkgMap = groupPackageIdentifiersByName(
             [b10, a11, b20, a20], pkgMap=pkgMap)
-        self.assertEquals(pkgMap,
-                          {'a': [a10, a11, a20, a21],
-                           'b': [b10, b11, b20, b21]})
+        self.assertEqual(pkgMap,
+                         {'a': [a10, a11, a20, a21],
+                          'b': [b10, b11, b20, b21]})

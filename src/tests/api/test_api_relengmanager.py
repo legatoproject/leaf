@@ -20,14 +20,14 @@ from leaf.utils import computeHash, jsonLoadFile, jsonWriteFile
 VERBOSITY = Verbosity.DEFAULT
 
 
-class TestRelengManager(AbstractTestWithRepo):
+class TestApiRelengManager(AbstractTestWithRepo):
 
     def __init__(self, methodName):
         AbstractTestWithRepo.__init__(self, methodName)
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
-        self.rm = RelengManager(VERBOSITY, True)
+        self.rm = RelengManager(VERBOSITY)
 
     def testPackageCompression(self):
         pkgFolder = RESOURCE_FOLDER / "install_1.0"
@@ -63,9 +63,9 @@ class TestRelengManager(AbstractTestWithRepo):
                               storeExtenalInfo=True)
         self.assertTrue(artifactFile.exists())
         self.assertTrue(infoFile.exists())
-        self.assertEquals(infoFile, self.rm._getExternalInfoFile(artifactFile))
-        self.assertEquals(computeHash(artifactFile),
-                          AvailablePackage(jsonLoadFile(infoFile), None).getHash())
+        self.assertEqual(infoFile, self.rm._getExternalInfoFile(artifactFile))
+        self.assertEqual(computeHash(artifactFile),
+                         AvailablePackage(jsonLoadFile(infoFile), None).getHash())
 
         with self.assertRaises(LeafException):
             self.rm.createPackage(pkgFolder, artifactFile,
@@ -87,26 +87,26 @@ class TestRelengManager(AbstractTestWithRepo):
         self.rm.createPackage(pkgFolder, outputFile2b,
                               forceTimestamp=TIMESTAMP)
 
-        self.assertEquals(computeHash(outputFile1a),
-                          computeHash(outputFile1b))
-        self.assertEquals(computeHash(outputFile2a),
-                          computeHash(outputFile2b))
-        self.assertNotEquals(computeHash(outputFile1a),
-                             computeHash(outputFile2a))
+        self.assertEqual(computeHash(outputFile1a),
+                         computeHash(outputFile1b))
+        self.assertEqual(computeHash(outputFile2a),
+                         computeHash(outputFile2b))
+        self.assertNotEqual(computeHash(outputFile1a),
+                            computeHash(outputFile2a))
 
         outputFolder1 = self.getWorkspaceFolder() / "extract1"
         with TarFile.open(str(outputFile1a)) as tf:
             tf.extractall(str(outputFolder1))
         manifestFile1 = outputFolder1 / LeafFiles.MANIFEST
         self.assertTrue(manifestFile1.exists())
-        self.assertNotEquals(TIMESTAMP, manifestFile1.stat().st_mtime)
+        self.assertNotEqual(TIMESTAMP, manifestFile1.stat().st_mtime)
 
         outputFolder2 = self.getWorkspaceFolder() / "extract2"
         with TarFile.open(str(outputFile2a)) as tf:
             tf.extractall(str(outputFolder2))
         manifestFile2 = outputFolder2 / LeafFiles.MANIFEST
         self.assertTrue(manifestFile2.exists())
-        self.assertEquals(TIMESTAMP, manifestFile2.stat().st_mtime)
+        self.assertEqual(TIMESTAMP, manifestFile2.stat().st_mtime)
 
     def testManifestInfoMap(self):
         manifestFile = self.getWorkspaceFolder() / LeafFiles.MANIFEST
@@ -126,7 +126,7 @@ class TestRelengManager(AbstractTestWithRepo):
             })
         self.assertTrue(manifestFile.exists())
         with open(str(manifestFile), 'r') as fp:
-            self.assertEquals({
+            self.assertEqual({
                 JsonConstants.INFO: {
                     JsonConstants.INFO_NAME: "foo",
                     JsonConstants.INFO_VERSION: "1.0",
@@ -181,7 +181,7 @@ class TestRelengManager(AbstractTestWithRepo):
             })
         self.assertTrue(manifestFile.exists())
         with open(str(manifestFile), 'r') as fp:
-            self.assertEquals(
+            self.assertEqual(
                 {
                     JsonConstants.INFO: {
                         JsonConstants.INFO_NAME: "foo",
@@ -219,7 +219,7 @@ class TestRelengManager(AbstractTestWithRepo):
             self.assertTrue(manifestFile.exists())
             with open(str(manifestFile), 'r') as fp:
                 motif = 'hello hello' if resolveEnv else '#{LEAF_TEST_VARIABLE} #{LEAF_TEST_VARIABLE}'
-                self.assertEquals(
+                self.assertEqual(
                     {
                         JsonConstants.INFO: {
                             JsonConstants.INFO_NAME: "foo",
@@ -260,14 +260,14 @@ class TestRelengManager(AbstractTestWithRepo):
             self.getWorkspaceFolder().glob("condition*.leaf"),
             prettyprint=True)
         indexContent = jsonLoadFile(indexFile)
-        self.assertEquals(10, len(indexContent[JsonConstants.REMOTE_PACKAGES]))
+        self.assertEqual(10, len(indexContent[JsonConstants.REMOTE_PACKAGES]))
 
         self.rm.generateIndex(
             indexFile,
             self.getWorkspaceFolder().glob("*.leaf"),
             prettyprint=False)
         indexContent = jsonLoadFile(indexFile)
-        self.assertEquals(11, len(indexContent[JsonConstants.REMOTE_PACKAGES]))
+        self.assertEqual(11, len(indexContent[JsonConstants.REMOTE_PACKAGES]))
 
     def testIndexSameArtifactDifferentHash(self):
         (self.getWorkspaceFolder() / 'a').mkdir()
@@ -349,9 +349,9 @@ class TestRelengManager(AbstractTestWithRepo):
             self.assertTrue(outputFileB1.exists())
             self.assertTrue(outputFileB2.exists())
 
-            self.assertNotEquals(computeHash(outputFileA1),
-                                 computeHash(outputFileA2))
-            self.assertNotEquals(computeHash(outputFileA1),
-                                 computeHash(outputFileB1))
-            self.assertEquals(computeHash(outputFileB1),
-                              computeHash(outputFileB2))
+            self.assertNotEqual(computeHash(outputFileA1),
+                                computeHash(outputFileA2))
+            self.assertNotEqual(computeHash(outputFileA1),
+                                computeHash(outputFileB1))
+            self.assertEqual(computeHash(outputFileB1),
+                             computeHash(outputFileB2))

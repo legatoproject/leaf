@@ -12,10 +12,10 @@ import json
 import os
 import random
 import re
+import time
 import string
 import sys
 import tempfile
-import time
 import urllib
 from collections import OrderedDict
 from pathlib import Path
@@ -25,7 +25,7 @@ from urllib.parse import urlparse, urlunparse
 import requests
 
 from leaf import __version__
-from leaf.constants import LeafConstants
+from leaf.constants import EnvConstants, LeafConstants
 from leaf.core.error import InvalidHashException
 
 
@@ -332,3 +332,7 @@ def getTotalSize(item):
     for sub in item.iterdir():
         out += getTotalSize(sub)
     return out
+
+
+def isNotInteractive():
+    return os.getenv(EnvConstants.NON_INTERACTIVE, "0") != "0"

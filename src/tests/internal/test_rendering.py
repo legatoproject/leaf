@@ -39,11 +39,11 @@ class AvailablePackageWithFakeSize(AvailablePackage):
         return 0
 
 
-class TestRendering_Default(AbstractTestWithChecker):
+class TestRendering(AbstractTestWithChecker):
 
     def __init__(self, methodName):
         AbstractTestWithChecker.__init__(self, methodName)
-        self.loggerManager = LoggerManager(Verbosity.DEFAULT, True)
+        self.loggerManager = LoggerManager(Verbosity.DEFAULT)
 
     def getRemoteUrl(self):
         return "http://fakeUrl"
@@ -98,7 +98,7 @@ class TestRendering_Default(AbstractTestWithChecker):
             self.loggerManager.printRenderer(rend)
 
     def testEnvironment(self):
-        pm = PackageManager(self.loggerManager.logger, nonInteractive=True)
+        pm = PackageManager(self.loggerManager.logger)
         env = Environment.build(pm.getLeafEnvironment(),
                                 pm.getUserEnvironment(),
                                 Environment("test", {"FOO": "BAR"}))
@@ -300,14 +300,14 @@ class TestRendering_Default(AbstractTestWithChecker):
 
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
-class TestRendering_Verbose(TestRendering_Default):
+class TestRenderingVerbose(TestRendering):
     def __init__(self, methodName):
-        TestRendering_Default.__init__(self, methodName)
-        self.loggerManager = LoggerManager(Verbosity.VERBOSE, True)
+        TestRendering.__init__(self, methodName)
+        self.loggerManager = LoggerManager(Verbosity.VERBOSE)
 
 
 @unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
-class TestRendering_Quiet(TestRendering_Default):
+class TestRenderingQuiet(TestRendering):
     def __init__(self, methodName):
-        TestRendering_Default.__init__(self, methodName)
-        self.loggerManager = LoggerManager(Verbosity.QUIET, True)
+        TestRendering.__init__(self, methodName)
+        self.loggerManager = LoggerManager(Verbosity.QUIET)

@@ -6,10 +6,11 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from argparse import RawDescriptionHelpFormatter, ArgumentParser
-from pathlib import Path
-from signal import signal, SIGINT
 import sys
+import os
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from pathlib import Path
+from signal import SIGINT, signal
 
 from leaf import __help_description__, __version__
 from leaf.cli.config import ConfigCommand
@@ -22,11 +23,11 @@ from leaf.cli.remote import RemoteMetaCommand
 from leaf.cli.repository import RepositoryMetaCommand
 from leaf.cli.search import SearchCommand
 from leaf.cli.select import SelectCommand
-from leaf.cli.setup import SetupCommand
 from leaf.cli.status import StatusCommand
 from leaf.cli.workspace import WorkspaceInitCommand
-from leaf.utils import checkPythonVersion
+from leaf.constants import EnvConstants
 from leaf.core.error import UserCancelException
+from leaf.utils import checkPythonVersion
 
 
 class LeafCli():
@@ -38,7 +39,6 @@ class LeafCli():
             # Common commands
             StatusCommand(),
             SearchCommand(),
-            SetupCommand(),
             SelectCommand(),
             # Env
             EnvMetaCommand(),
@@ -98,11 +98,14 @@ class LeafCli():
             raise UserCancelException()
         signal(SIGINT, signal_handler)
 
-    def run(self, argv, handleExceptions=True):
-        if handleExceptions:
-            self.catchSigInt()
+    def run(self, argv):
+        self.catchSigInt()
         args = self.parser.parse_args(argv)
+        if args.workspace is not None:
+            os.environ[EnvConstants.WORKSPACE_ROOT] = str(args.workspace)
+        if args.nonInteractive:
+            os.environ[EnvConstants.NON_INTERACTIVE] = "1"
         for cmd in self.commands:
             if cmd.isHandled(args.command):
-                return cmd.doExecute(args, catchException=handleExceptions)
+                return cmd.doExecute(args)
         raise ValueError("Cannot find command for %s" % args.command)

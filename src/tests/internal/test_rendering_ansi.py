@@ -6,35 +6,35 @@ import unittest
 from leaf.core.packagemanager import LoggerManager
 from leaf.format.ansi import ANSI
 from leaf.format.logger import Verbosity
-from tests.internal.test_rendering import TestRendering_Default
+from tests.internal.test_rendering import TestRendering
 from tests.testutils import LEAF_UT_SKIP
 
 
-class TestAnsi_Default(TestRendering_Default):
+class TestRenderingAnsi(TestRendering):
 
     @classmethod
     def setUpClass(cls):
         ANSI.force = True
-        TestRendering_Default.setUpClass()
+        TestRendering.setUpClass()
 
     def __init__(self, methodName):
-        TestRendering_Default.__init__(self, methodName)
+        TestRendering.__init__(self, methodName)
 
     @classmethod
     def tearDownClass(cls):
-        TestRendering_Default.tearDownClass()
+        TestRendering.tearDownClass()
         ANSI.force = False
 
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
-class TestAnsi_Verbose(TestAnsi_Default):
+class TestRenderingAnsiVerbose(TestRenderingAnsi):
     def __init__(self, methodName):
-        TestAnsi_Default.__init__(self, methodName)
-        self.loggerManager = LoggerManager(Verbosity.VERBOSE, True)
+        TestRenderingAnsi.__init__(self, methodName)
+        self.loggerManager = LoggerManager(Verbosity.VERBOSE)
 
 
 @unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
-class TestAnsi_Quiet(TestAnsi_Default):
+class TestRenderingAnsiQuiet(TestRenderingAnsi):
     def __init__(self, methodName):
-        TestAnsi_Default.__init__(self, methodName)
-        self.loggerManager = LoggerManager(Verbosity.QUIET, True)
+        TestRenderingAnsi.__init__(self, methodName)
+        self.loggerManager = LoggerManager(Verbosity.QUIET)

@@ -74,8 +74,7 @@ class RepositoryPackSubCommand(LeafCommand):
                             help='the package folder (if no specified, use current directory)')
 
     def execute(self, args):
-        loggerAttr = self.getLoggerAttr(args)
-        rm = RelengManager(loggerAttr[0], loggerAttr[1])
+        rm = RelengManager(self.getVerbosity(args))
 
         pkgFolder = None
         if args.pkgFolder is None:
@@ -134,8 +133,7 @@ class RepositoryIndexSubCommand(LeafCommand):
                             help='leaf artifacts')
 
     def execute(self, args):
-        loggerAttr = self.getLoggerAttr(args)
-        rm = RelengManager(loggerAttr[0], loggerAttr[1])
+        rm = RelengManager(self.getVerbosity(args))
         rm.generateIndex(args.outputFile,
                          args.artifacts,
                          name=args.index_name,
@@ -214,8 +212,7 @@ class RepositoryManifestSubCommand(LeafCommand):
                                  help='add a tag')
 
     def execute(self, args):
-        loggerAttr = self.getLoggerAttr(args)
-        rm = RelengManager(loggerAttr[0], loggerAttr[1])
+        rm = RelengManager(self.getVerbosity(args))
 
         # Guess output file
         outputFile = LeafFiles.MANIFEST

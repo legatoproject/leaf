@@ -79,7 +79,7 @@ class _LeafBase():
 
 class LoggerManager(_LeafBase):
 
-    def __init__(self, verbosity, nonInteractive):
+    def __init__(self, verbosity):
         _LeafBase.__init__(self)
         themesFile = self.getConfigurationFile(
             LeafFiles.THEMES_FILENAME, checkExists=True)
@@ -88,8 +88,7 @@ class LoggerManager(_LeafBase):
             themesFile = self._getSkelConfigurationFile(
                 LeafFiles.THEMES_FILENAME)
         self.themeManager = ThemeManager(themesFile)
-        self.logger = TextLogger(verbosity, nonInteractive)
-        self.nonInteractive = nonInteractive
+        self.logger = TextLogger(verbosity)
 
     def printHints(self, *hints):
         tr = HintsRenderer()
@@ -110,8 +109,8 @@ class LoggerManager(_LeafBase):
 
 class GPGManager(LoggerManager):
 
-    def __init__(self, verbosity, nonInteractive):
-        LoggerManager.__init__(self, verbosity, nonInteractive)
+    def __init__(self, verbosity):
+        LoggerManager.__init__(self, verbosity)
         self.gpgHome = self.configurationFolder / LeafFiles.GPG_DIRNAME
         if not self.gpgHome.is_dir():
             self.gpgHome.mkdir(mode=0o700)
@@ -157,8 +156,8 @@ class GPGManager(LoggerManager):
 
 class RemoteManager(GPGManager):
 
-    def __init__(self, verbosity, nonInteractive):
-        GPGManager.__init__(self, verbosity, nonInteractive)
+    def __init__(self, verbosity):
+        GPGManager.__init__(self, verbosity)
         '''
         Constructor
         '''
@@ -318,11 +317,11 @@ class PackageManager(RemoteManager):
     Main API for using Leaf package manager
     '''
 
-    def __init__(self, verbosity, nonInteractive):
+    def __init__(self, verbosity):
         '''
         Constructor
         '''
-        RemoteManager.__init__(self, verbosity, nonInteractive)
+        RemoteManager.__init__(self, verbosity)
         self.downloadCacheFolder = self.cacheFolder / \
             LeafFiles.CACHE_DOWNLOAD_FOLDERNAME
         self._checkCacheFolderSize()
@@ -360,8 +359,9 @@ class PackageManager(RemoteManager):
         out.env.append(("LEAF_PLATFORM_SYSTEM", platform.system()))
         out.env.append(("LEAF_PLATFORM_MACHINE", platform.machine()))
         out.env.append(("LEAF_PLATFORM_RELEASE", platform.release()))
-        if self.nonInteractive:
-            out.env.append(("LEAF_NON_INTERACTIVE", "1"))
+        if EnvConstants.NON_INTERACTIVE in os.environ:
+            out.env.append((EnvConstants.NON_INTERACTIVE,
+                            os.getenv(EnvConstants.NON_INTERACTIVE)))
         return out
 
     def getUserEnvironment(self):
@@ -391,8 +391,7 @@ class PackageManager(RemoteManager):
                         ap2.sourceRemotes.append(remote)
                         if ap.getHash() != ap2.getHash():
                             self.logger.printError(
-                                ("Package %s is available in several remotes " +
-                                 "with same version but different content!") %
+                                "Package %s is available in several remotes with same version but different content!" %
                                 ap.getIdentifier())
                             raise ValueError(
                                 "Package %s has multiple artifacts for the same version" %

@@ -8,7 +8,7 @@ import unittest
 from tests.testutils import LEAF_UT_SKIP, RESOURCE_FOLDER, LeafCliWrapper
 
 
-class TestPackageManagerCli_Default(LeafCliWrapper):
+class TestCliPackageManager(LeafCliWrapper):
 
     def __init__(self, methodName):
         LeafCliWrapper.__init__(self, methodName)
@@ -177,14 +177,14 @@ class TestPackageManagerCli_Default(LeafCliWrapper):
 
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
-class TestPackageManagerCli_Verbose(TestPackageManagerCli_Default):
+class TestCliPackageManagerVerbose(TestCliPackageManager):
     def __init__(self, methodName):
-        TestPackageManagerCli_Default.__init__(self, methodName)
+        TestCliPackageManager.__init__(self, methodName)
         self.postVerbArgs.append("--verbose")
 
 
 @unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
-class TestPackageManagerCli_Quiet(TestPackageManagerCli_Default):
+class TestCliPackageManagerQuiet(TestCliPackageManager):
     def __init__(self, methodName):
-        TestPackageManagerCli_Default.__init__(self, methodName)
+        TestCliPackageManager.__init__(self, methodName)
         self.postVerbArgs.append("--quiet")

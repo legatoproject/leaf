@@ -37,7 +37,9 @@ def getLatestAvailablePackage(motif, piList):
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser(description='update packages from current profile')
+    parser = ArgumentParser(
+        prog="leaf update",
+        description='update packages from current profile')
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-v", "--verbose",
                        dest="verbosity",
@@ -63,11 +65,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     try:
-        nonInteractive = os.environ.get("LEAF_NON_INTERACTIVE") is not None
         workspaceManager = WorkspaceManager(
             WorkspaceManager.findRoot(),
-            args.verbosity,
-            nonInteractive)
+            args.verbosity)
         logger = workspaceManager.logger
 
         profileName = workspaceManager.getCurrentProfileName()

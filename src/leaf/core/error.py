@@ -27,7 +27,7 @@ class LeafException(Exception):
     Base class for exceptions in leaf app
     '''
 
-    def __init__(self, msg=None, cause=None, hints=None):
+    def __init__(self, msg=None, cause=None, hints=None, exitCode=2):
         '''
         Constructor
         '''
@@ -35,6 +35,7 @@ class LeafException(Exception):
         self.msg = msg
         self.cause = cause
         self.hints = []
+        self.exitCode = exitCode
         if isinstance(hints, str):
             self.hints.append(hints)
         elif hints is not None:

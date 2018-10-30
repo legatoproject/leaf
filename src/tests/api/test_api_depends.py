@@ -18,7 +18,7 @@ def deps2strlist(deps):
     return list(map(str, map(Manifest.getIdentifier, deps)))
 
 
-class TestDepends(unittest.TestCase):
+class TestApiDepends(unittest.TestCase):
 
     MANIFEST_MAP = {}
 
@@ -32,13 +32,13 @@ class TestDepends(unittest.TestCase):
             if manifestFile.exists():
                 try:
                     mf = Manifest.parse(manifestFile)
-                    TestDepends.MANIFEST_MAP[mf.getIdentifier()] = mf
+                    TestApiDepends.MANIFEST_MAP[mf.getIdentifier()] = mf
                 except Exception:
                     pass
-        print("Found", len(TestDepends.MANIFEST_MAP), LeafFiles.MANIFEST)
+        print("Found", len(TestApiDepends.MANIFEST_MAP), LeafFiles.MANIFEST)
 
     def testForInstall(self):
-        availablePackages = TestDepends.MANIFEST_MAP
+        availablePackages = TestApiDepends.MANIFEST_MAP
         installedPackages = {}
         deps = DependencyManager.compute(
             PackageIdentifier.fromStringList(["container-A_1.0",
@@ -56,7 +56,7 @@ class TestDepends(unittest.TestCase):
                          deps2strlist(deps))
 
         pi = PackageIdentifier.fromString('container-E_1.0')
-        installedPackages[pi] = TestDepends.MANIFEST_MAP.get(pi)
+        installedPackages[pi] = TestApiDepends.MANIFEST_MAP.get(pi)
 
         deps = DependencyManager.compute(
             PackageIdentifier.fromStringList(["container-A_1.0",
@@ -74,7 +74,7 @@ class TestDepends(unittest.TestCase):
 
     def testForUninstall(self):
 
-        availablePackages = TestDepends.MANIFEST_MAP
+        availablePackages = TestApiDepends.MANIFEST_MAP
         installedPackages = OrderedDict()
 
         for ap in DependencyManager.compute(
@@ -104,7 +104,7 @@ class TestDepends(unittest.TestCase):
                          deps2strlist(deps))
 
     def testConditionalInstall(self):
-        availablePackages = TestDepends.MANIFEST_MAP
+        availablePackages = TestApiDepends.MANIFEST_MAP
         installedPackages = {}
 
         def _getDeps(env):
@@ -162,7 +162,7 @@ class TestDepends(unittest.TestCase):
                          deps2strlist(deps))
 
         pi = PackageIdentifier.fromString('condition-C_1.0')
-        installedPackages[pi] = TestDepends.MANIFEST_MAP.get(pi)
+        installedPackages[pi] = TestApiDepends.MANIFEST_MAP.get(pi)
 
         env = Environment(content={"FOO": "BAR",
                                    "FOO2": "BAR2",
@@ -175,7 +175,7 @@ class TestDepends(unittest.TestCase):
                          deps2strlist(deps))
 
     def testConditionalTree(self):
-        availablePackages = TestDepends.MANIFEST_MAP
+        availablePackages = TestApiDepends.MANIFEST_MAP
 
         def _getDeps(env):
             return DependencyManager.compute(
@@ -242,7 +242,7 @@ class TestDepends(unittest.TestCase):
                          deps2strlist(deps))
 
     def testPrereq(self):
-        availablePackages = TestDepends.MANIFEST_MAP
+        availablePackages = TestApiDepends.MANIFEST_MAP
 
         self.assertEqual(
             availablePackages[PackageIdentifier.fromString(
@@ -260,7 +260,7 @@ class TestDepends(unittest.TestCase):
              "prereq-false_1.0"])
 
     def testPrereqOrder(self):
-        availablePackages = TestDepends.MANIFEST_MAP
+        availablePackages = TestApiDepends.MANIFEST_MAP
         pi = "prereq-D_1.0"
 
         prereqs = availablePackages[PackageIdentifier.fromString(
@@ -278,7 +278,7 @@ class TestDepends(unittest.TestCase):
                          list(map(str, map(Manifest.getIdentifier, prereqs))))
 
     def testLatest(self):
-        availablePackages = TestDepends.MANIFEST_MAP
+        availablePackages = TestApiDepends.MANIFEST_MAP
 
         deps = DependencyManager.compute(
             PackageIdentifier.fromStringList(["container-A_1.0",

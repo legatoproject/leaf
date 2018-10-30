@@ -19,7 +19,6 @@ class WorkspaceInitCommand(LeafCommand):
         wm = self.getWorkspaceManager(args,
                                       autoFindWorkspace=False,
                                       checkInitialized=False)
-
         if wm.workspaceConfigFile.exists():
             raise ValueError("File %s already exist" %
                              str(wm.workspaceConfigFile))
