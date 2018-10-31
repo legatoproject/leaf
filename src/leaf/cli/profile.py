@@ -68,7 +68,7 @@ class ProfileListCommand(AbstractProfileCommand):
         wm = self.getWorkspaceManager(args)
         name = self.getProfileName(args)
         profileList = []
-        if len(args.profiles) > 0:
+        if 'profiles' in vars(args) and len(args.profiles) > 0:
             for name in args.profiles:
                 profileList.append(wm.getProfile(name))
         else:
