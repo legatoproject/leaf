@@ -37,7 +37,7 @@ class WorkspaceManager(PackageManager):
     @staticmethod
     def findRoot(checkEnv=True, checkParents=True):
         # Check env if no custom path given
-        if checkEnv and EnvConstants.WORKSPACE_ROOT in os.environ:
+        if checkEnv and os.getenv(EnvConstants.WORKSPACE_ROOT, "") != "":
             return Path(os.environ[EnvConstants.WORKSPACE_ROOT])
 
         # Check parents

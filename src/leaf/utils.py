@@ -335,4 +335,4 @@ def getTotalSize(item):
 
 
 def isNotInteractive():
-    return os.getenv(EnvConstants.NON_INTERACTIVE, "0") != "0"
+    return os.getenv(EnvConstants.NON_INTERACTIVE, "") != ""
