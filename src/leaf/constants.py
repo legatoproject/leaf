@@ -37,6 +37,7 @@ class LeafConstants():
     CACHE_SIZE_MAX = 5 * 1024 * 1024 * 1024  # 5GB
     GPG_SIG_EXTENSION = '.asc'
     DEFAULT_GPG_KEYSERVER = 'subset.pool.sks-keyservers.net'
+    LATEST = "latest"
 
 
 class LeafFiles():

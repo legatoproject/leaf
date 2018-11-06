@@ -14,6 +14,7 @@ class TestApiFiltering(AbstractTestWithRepo):
         AbstractTestWithRepo.setUp(self)
         pm = PackageManager(Verbosity.DEFAULT)
         pm.createRemote("default", self.getRemoteUrl(), insecure=True)
+        pm.createRemote("default2", self.getRemoteUrl2(), insecure=True)
         pm.fetchRemotes()
         self.content = pm.listAvailablePackages().values()
         self.assertTrue(len(self.content) > 0)

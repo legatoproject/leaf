@@ -243,10 +243,15 @@ class WorkspaceManager(PackageManager):
         profile.folder.mkdir()
 
         # Check if all needed packages are installed
-        try:
-            self.getProfileDependencies(profile)
+        notInstalledPackages = DependencyManager.compute(
+            PackageIdentifier.fromStringList(profile.getPackages()),
+            DependencyType.INSTALL,
+            apMap=self.listAvailablePackages(),
+            ipMap=self.listInstalledPackages(),
+            env=self._getSkelEnvironement(profile))
+        if len(notInstalledPackages) == 0:
             self.logger.printVerbose("All packages are already installed")
-        except Exception:
+        else:
             self.logger.printDefault("Profile is out of sync")
             try:
                 self.installFromRemotes(

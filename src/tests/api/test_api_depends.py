@@ -277,7 +277,7 @@ class TestApiDepends(unittest.TestCase):
                           "prereq-true_1.0"],
                          list(map(str, map(Manifest.getIdentifier, prereqs))))
 
-    def testLatest(self):
+    def testLatestStrategy(self):
         availablePackages = TestApiDepends.MANIFEST_MAP
 
         deps = DependencyManager.compute(
@@ -305,4 +305,42 @@ class TestApiDepends(unittest.TestCase):
         self.assertEqual(['container-C_1.0',
                           'container-D_1.0',
                           'container-A_2.0'],
+                         list(map(str, map(Manifest.getIdentifier, deps))))
+
+    def testResolveLatest(self):
+        pi10 = PackageIdentifier.fromString("version_1.0")
+        pi20 = PackageIdentifier.fromString("version_2.0")
+
+        deps = DependencyManager.compute(
+            PackageIdentifier.fromStringList(["testlatest_1.0"]),
+            depType=DependencyType.INSTALL,
+            apMap=TestApiDepends.MANIFEST_MAP,
+            ipMap={})
+        self.assertEqual(['version_2.0',
+                          'testlatest_1.0'],
+                         list(map(str, map(Manifest.getIdentifier, deps))))
+
+        deps = DependencyManager.compute(
+            PackageIdentifier.fromStringList(["testlatest_1.0"]),
+            depType=DependencyType.INSTALL,
+            apMap=TestApiDepends.MANIFEST_MAP,
+            ipMap={pi10: TestApiDepends.MANIFEST_MAP[pi10]})
+        self.assertEqual(['version_2.0',
+                          'testlatest_1.0'],
+                         list(map(str, map(Manifest.getIdentifier, deps))))
+
+        deps = DependencyManager.compute(
+            PackageIdentifier.fromStringList(["testlatest_1.0"]),
+            depType=DependencyType.INSTALL,
+            apMap=TestApiDepends.MANIFEST_MAP,
+            ipMap={pi20: TestApiDepends.MANIFEST_MAP[pi20]})
+        self.assertEqual(['testlatest_1.0'],
+                         list(map(str, map(Manifest.getIdentifier, deps))))
+
+        deps = DependencyManager.compute(
+            PackageIdentifier.fromStringList(["testlatest_2.0"]),
+            depType=DependencyType.PREREQ,
+            apMap=TestApiDepends.MANIFEST_MAP,
+            ipMap={})
+        self.assertEqual(['version_2.0'],
                          list(map(str, map(Manifest.getIdentifier, deps))))

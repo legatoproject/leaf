@@ -33,9 +33,14 @@ class PackageIdentifier ():
         if isinstance(pis, str):
             split = pis.partition(PackageIdentifier.SEPARATOR)
             if len(split) == 3:
+                # NAME & VERSION
                 if re.compile(PackageIdentifier.NAME_PATTERN).fullmatch(split[0]) is not None:
                     if re.compile(PackageIdentifier.VERSION_PATTERN).fullmatch(split[2]) is not None:
                         return True
+            elif len(split) == 1:
+                # ONLY NAME, 'latest' mode
+                if re.compile(PackageIdentifier.NAME_PATTERN).fullmatch(split[0]) is not None:
+                    return True
         return False
 
     @staticmethod

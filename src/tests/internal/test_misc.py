@@ -2,16 +2,18 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
-import unittest
 from tempfile import mktemp
 
-from leaf.cli.external import grepDescription
-from leaf.constants import JsonConstants
-from leaf.core.coreutils import groupPackageIdentifiersByName
-from leaf.model.base import JsonObject
-from leaf.model.package import Feature, PackageIdentifier
-from leaf.utils import checkSupportedLeaf, jsonLoadFile, jsonWriteFile
+import unittest
 from tests.testutils import EXTENSIONS_FOLDER, RESOURCE_FOLDER
+
+from leaf.cli.external import grepDescription
+from leaf.constants import JsonConstants, LeafFiles
+from leaf.core.coreutils import VariableResolver, \
+    groupPackageIdentifiersByName
+from leaf.model.base import JsonObject
+from leaf.model.package import Feature, InstalledPackage, PackageIdentifier
+from leaf.utils import checkSupportedLeaf, jsonLoadFile, jsonWriteFile
 
 
 class TestMisc(unittest.TestCase):
@@ -253,3 +255,48 @@ class TestMisc(unittest.TestCase):
         self.assertEqual(pkgMap,
                          {'a': [a10, a11, a20, a21],
                           'b': [b10, b11, b20, b21]})
+
+    def testVariableResolver(self):
+
+        ip1 = InstalledPackage(
+            RESOURCE_FOLDER / "version_1.0" / LeafFiles.MANIFEST)
+        ip2 = InstalledPackage(
+            RESOURCE_FOLDER / "version_1.1" / LeafFiles.MANIFEST)
+        ip3 = InstalledPackage(
+            RESOURCE_FOLDER / "version_2.0" / LeafFiles.MANIFEST)
+
+        vr = VariableResolver(ip1, [ip1, ip2, ip3])
+
+        self.assertEqual("version",
+                         vr.resolve("@{NAME}"))
+        self.assertEqual("1.0",
+                         vr.resolve("@{VERSION}"))
+        self.assertEqual(str(RESOURCE_FOLDER / "version_1.0"),
+                         vr.resolve("@{DIR}"))
+
+        self.assertEqual("version",
+                         vr.resolve("@{NAME:version_1.0}"))
+        self.assertEqual("1.0",
+                         vr.resolve("@{VERSION:version_1.0}"))
+        self.assertEqual(str(RESOURCE_FOLDER / "version_1.0"),
+                         vr.resolve("@{DIR:version_1.0}"))
+
+        self.assertEqual("version",
+                         vr.resolve("@{NAME:version_2.0}"))
+        self.assertEqual("2.0",
+                         vr.resolve("@{VERSION:version_2.0}"))
+        self.assertEqual(str(RESOURCE_FOLDER / "version_2.0"),
+                         vr.resolve("@{DIR:version_2.0}"))
+
+        self.assertEqual("version",
+                         vr.resolve("@{NAME:version_latest}"))
+        self.assertEqual("2.0",
+                         vr.resolve("@{VERSION:version_latest}"))
+        self.assertEqual(str(RESOURCE_FOLDER / "version_2.0"),
+                         vr.resolve("@{DIR:version_latest}"))
+
+        self.assertEqual("version 1.1 " + str(RESOURCE_FOLDER / "version_2.0"),
+                         vr.resolve("@{NAME} @{VERSION:version_1.1} @{DIR:version_latest}"))
+
+        with self.assertRaises(ValueError):
+            vr.resolve("@{NAME} @{VERSION:version_1.2} @{DIR:version_latest}")

@@ -12,7 +12,8 @@ from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
 
-from leaf.constants import JsonConstants, LeafFiles
+from leaf.constants import JsonConstants, LeafConstants, LeafFiles
+from leaf.core.dependencies import DependencyManager
 from leaf.core.error import LeafException
 from leaf.core.packagemanager import LoggerManager
 from leaf.model.modelutils import layerModelUpdate
@@ -62,6 +63,10 @@ class RelengManager(LoggerManager):
             raise ValueError("Cannot find manifest: %s" % manifestFile)
 
         manifest = Manifest.parse(manifestFile)
+
+        if DependencyManager.isLatestPackage(manifest.getIdentifier()):
+            raise LeafException("Invalid version for manifest %s (%s is a reserved keyword)" % (
+                manifestFile, LeafConstants.LATEST))
 
         self.logger.printDefault("Found package %s in %s" % (
             manifest.getIdentifier(), pkgFolder))
@@ -149,6 +154,9 @@ class RelengManager(LoggerManager):
 
             ap = AvailablePackage(artifactNode, None)
             pi = ap.getIdentifier()
+            if DependencyManager.isLatestPackage(pi):
+                raise LeafException("Invalid version for package %s (%s is a reserved keyword)" % (
+                    artifact, LeafConstants.LATEST))
 
             if pi in packagesMap:
                 self.logger.printDefault("Artifact already present: %s" % (pi))
@@ -248,6 +256,10 @@ class RelengManager(LoggerManager):
                                         hints="Set the variable with 'export %s=xxx'" % var)
                 self.logger.printDefault("Replace %s --> %s" % (var, value))
                 jsonString = jsonString.replace("#{%s}" % var, value)
+
+        if DependencyManager.isLatestPackage(manifest.getIdentifier()):
+            raise LeafException(
+                "Invalid version (%s is a reserved keyword)" % LeafConstants.LATEST)
 
         self.logger.printDefault("Save '%s' manifest to %s" % (
             manifest.getIdentifier(), outputFile))

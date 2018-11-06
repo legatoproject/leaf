@@ -8,6 +8,7 @@ Leaf Package Manager
 '''
 from enum import IntEnum, unique
 
+from leaf.constants import LeafConstants
 from leaf.core.error import InvalidPackageNameException
 from leaf.model.package import Manifest, PackageIdentifier
 
@@ -33,20 +34,36 @@ class DependencyManager():
     '''
 
     @staticmethod
-    def _find(pi, mfMap,
-              latestVersions=None,
-              ignoreUnknown=False):
+    def isLatestPackage(pi):
+        return pi.version == LeafConstants.LATEST
+
+    @staticmethod
+    def findLatestPackage(piName, piList):
+        out = None
+        for pi in [pi for pi in piList if pi.name == piName]:
+            if out is None or pi > out:
+                out = pi
+        if out is None:
+            raise InvalidPackageNameException(piName)
+        return out
+
+    @staticmethod
+    def _findManifest(pi, mfMap,
+                      latestVersions=None,
+                      ignoreUnknown=False):
         '''
         Return a Manifest given a PackageIdentifier
         '''
         if latestVersions is not None and pi.name in latestVersions:
             pi = latestVersions[pi.name]
+        if DependencyManager.isLatestPackage(pi):
+            pi = DependencyManager.findLatestPackage(pi.name, mfMap.keys())
         if pi not in mfMap and not ignoreUnknown:
             raise InvalidPackageNameException(pi)
         return mfMap.get(pi)
 
     @staticmethod
-    def _getLatestVersions(piList):
+    def _buildLatestVersionsMap(piList):
         '''
         Build a dist of name/pi of the latest versions of given pi list
         '''
@@ -74,9 +91,9 @@ class DependencyManager():
         for pi in piList:
             if pi not in ignoredPiList:
                 ignoredPiList.append(pi)
-                mf = DependencyManager._find(pi, mfMap,
-                                             latestVersions=latestVersions,
-                                             ignoreUnknown=ignoreUnknown)
+                mf = DependencyManager._findManifest(pi, mfMap,
+                                                     latestVersions=latestVersions,
+                                                     ignoreUnknown=ignoreUnknown)
                 if mf is not None and mf not in out:
                     # Begin by adding dependencies
                     DependencyManager._buildTree(mf.getLeafDependsFromEnv(env),
@@ -91,7 +108,7 @@ class DependencyManager():
 
         if strategy == DependencyStrategy.LATEST_VERSION and latestVersions is None:
             # Ignore all 'non-latest versions'
-            latestVersions = DependencyManager._getLatestVersions(
+            latestVersions = DependencyManager._buildLatestVersionsMap(
                 map(Manifest.getIdentifier, out))
             # Reset out
             del out[:]
@@ -170,7 +187,8 @@ class DependencyManager():
                 prereqPiList.update(map(PackageIdentifier.fromString,
                                         ap.getLeafRequires()))
             # return a list of AP
-            out = [DependencyManager._find(pi, apMap) for pi in prereqPiList]
+            out = [DependencyManager._findManifest(
+                pi, apMap) for pi in prereqPiList]
             # sort alphabetically
             out = list(sorted(out, key=Manifest.getIdentifier))
         else:

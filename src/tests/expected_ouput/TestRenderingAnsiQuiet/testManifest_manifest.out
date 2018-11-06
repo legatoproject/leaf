@@ -39,6 +39,8 @@ prereq-false_1.0
 prereq-true_1.0
 source_1.0
 sync_1.0
+testlatest_1.0
+testlatest_2.0
 version_1.0
 version_1.1
 version_2.0
@@ -83,6 +85,8 @@ prereq-false_1.0
 prereq-true_1.0
 source_1.0
 sync_1.0
+testlatest_1.0
+testlatest_2.0
 version_1.0
 version_1.1
 version_2.0

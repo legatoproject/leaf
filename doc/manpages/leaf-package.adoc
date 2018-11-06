@@ -110,7 +110,14 @@ Note: The *latest* and *installed* dynamic tags are *not* created by the *leaf p
 
 _PACKAGE_::
 
-The package identifier
+The package identifier.
+A package identifier uses the NAME_VERSION format.
++
+Note that the *latest* reserved keyword may be used instead of a specific _VERSION_ (i.e., use PACKAGE_latest as a package identifier).
+In this case the behavior depends on the command:
++
+  - for commands dealing with _available_ packages (e.g., *leaf package install*), it will be mapped to the latest _available_ package
+  - for commands dealing with _installed_ packages (e.g., *leaf package deps --installed*), it will be mapped to the latest _installed_ package
 
 *-k|--keep*::
 

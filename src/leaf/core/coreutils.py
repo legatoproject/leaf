@@ -1,9 +1,11 @@
 
 import os
+import re
 import subprocess
 from builtins import sorted
 
-from leaf.constants import JsonConstants
+from leaf.constants import JsonConstants, LeafConstants
+from leaf.core.dependencies import DependencyManager
 from leaf.core.error import InvalidPackageNameException
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
@@ -65,30 +67,50 @@ def packageListToEnvironnement(ipList, ipMap, env=None):
 
 class VariableResolver():
 
+    _PATTERN = "@{(NAME|VERSION|DIR)(?::((%s)%s(%s)))?}" % (PackageIdentifier.NAME_PATTERN,
+                                                            PackageIdentifier.SEPARATOR,
+                                                            PackageIdentifier.VERSION_PATTERN)
+
     def __init__(self, currentPkg=None, otherPkgList=None):
-        self.content = {}
-        if currentPkg is not None:
-            self.useInstalledPackage(currentPkg, True)
+        self.currentPackage = currentPkg
+        self.allPackages = {}
         if otherPkgList is not None:
             for pkg in otherPkgList:
-                self.useInstalledPackage(pkg)
+                self.allPackages[pkg.getIdentifier()] = pkg
+        if currentPkg is not None:
+            self.allPackages[currentPkg.getIdentifier()] = currentPkg
 
-    def useInstalledPackage(self, pkg, isCurrentPkg=False):
-        suffix = "" if isCurrentPkg else (":%s" % pkg.getIdentifier())
-        self.addVariable("DIR" + suffix, pkg.folder)
-        self.addVariable("NAME" + suffix, pkg.getIdentifier().name)
-        self.addVariable("VERSION" + suffix, pkg.getIdentifier().version)
+    def getValue(self, var, pis):
+        pkg = None
+        if pis is None:
+            # No PI specified means current package
+            pkg = self.currentPackage
+        else:
+            pi = PackageIdentifier.fromString(pis)
+            if pi.version == LeafConstants.LATEST:
+                # Retrieve latest
+                latestPi = DependencyManager.findLatestPackage(
+                    pi.name, self.allPackages.keys())
+                pkg = self.allPackages[latestPi]
+            else:
+                pkg = self.allPackages.get(pi)
+        if pkg is not None:
+            if var == 'NAME':
+                return pkg.getIdentifier().name
+            if var == 'VERSION':
+                return pkg.getIdentifier().version
+            if var == 'DIR':
+                return str(pkg.folder)
 
-    def addVariable(self, k, v):
-        self.content["@{%s}" % k] = v
+    def resolve(self, value):
+        def myReplace(m):
+            out = self.getValue(m.group(1), m.group(2))
+            if out is None:
+                raise ValueError(
+                    "Cannot resolve variable: %s" % m.group(0))
+            return out
 
-    def resolve(self, value, failOnUnknownVariable=True):
-        out = value
-        for k, v in self.content.items():
-            out = out.replace(k, str(v))
-        if failOnUnknownVariable and '@{' in out:
-            raise ValueError("Cannot resolve all variables in: %s" % out)
-        return out
+        return re.sub(VariableResolver._PATTERN, myReplace, value)
 
 
 class StepExecutor():
@@ -155,11 +177,8 @@ class StepExecutor():
                 raise ValueError("Error during %s step for %s" %
                                  (label, self.package.getIdentifier()))
 
-    def resolve(self, value,
-                failOnUnknownVariable=True, prefixWithFolder=False):
-        out = self.variableResolver.resolve(
-            value,
-            failOnUnknownVariable=failOnUnknownVariable)
+    def resolve(self, value, prefixWithFolder=False):
+        out = self.variableResolver.resolve(value)
         if prefixWithFolder:
             return str(self.targetFolder / out)
         return out

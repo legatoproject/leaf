@@ -349,7 +349,7 @@ def generateRepo(sourceFolder, outputFolder):
                     outputFile,
                     ALT_COMPRESSION.get(str(manifest.getIdentifier())))
                 # Create multi index.json
-                if manifest.getName() == "install":
+                if manifest.getName() == "version" and manifest.getVersion() == "2.0":
                     artifactsList2.append(outputFile)
                 else:
                     artifactsList.append(outputFile)
@@ -363,6 +363,9 @@ def generateRepo(sourceFolder, outputFolder):
                         "sha384:d1083143b5c4cf7f1ddaadc391b2d0102fc9fffeb0951ec51020b512ef9548d40cd1af079a1221133faa949fdc304c41"
                     jsonWriteFile(rm._getExternalInfoFile(
                         outputFile), infoNode, pp=True)
+
+    if len(artifactsList) == 0 or len(artifactsList2) == 0:
+        raise ValueError("Empty index!")
 
     rm.generateIndex(outputFolder / "index.json",
                      artifactsList,

@@ -7,10 +7,10 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-import json
 import os
 import platform
 import shutil
+import json
 from builtins import Exception
 from collections import OrderedDict
 from datetime import datetime
@@ -20,27 +20,27 @@ from tempfile import NamedTemporaryFile
 import gnupg
 
 from leaf import __version__
-from leaf.constants import (EnvConstants, JsonConstants, LeafConstants,
-                            LeafFiles)
-from leaf.core.coreutils import StepExecutor, VariableResolver, retrievePackage
+from leaf.constants import EnvConstants, JsonConstants, LeafConstants, \
+    LeafFiles
+from leaf.core.coreutils import StepExecutor, VariableResolver, \
+    retrievePackage
 from leaf.core.dependencies import DependencyManager, DependencyType
-from leaf.core.error import (BadRemoteUrlException, LeafException,
-                             NoEnabledRemoteException,
-                             NoPackagesInCacheException, NoRemoteException,
-                             UserCancelException)
+from leaf.core.error import BadRemoteUrlException, LeafException, \
+    NoEnabledRemoteException, NoPackagesInCacheException, NoRemoteException, \
+    UserCancelException
 from leaf.format.formatutils import sizeof_fmt
 from leaf.format.logger import TextLogger
 from leaf.format.renderer.error import HintsRenderer, LeafExceptionRenderer
 from leaf.format.theme import ThemeManager
 from leaf.model.config import UserConfiguration
 from leaf.model.environment import Environment
-from leaf.model.package import (AvailablePackage, InstalledPackage,
-                                LeafArtifact, PackageIdentifier)
+from leaf.model.package import AvailablePackage, InstalledPackage, \
+    LeafArtifact, PackageIdentifier
 from leaf.model.remote import Remote
-from leaf.utils import (downloadData, downloadFile, getAltEnvPath,
-                        getCachedArtifactName, getTotalSize, isFolderIgnored,
-                        jsonLoadFile, jsonWriteFile, markFolderAsIgnored,
-                        mkTmpLeafRootDir, versionComparator_lt)
+from leaf.utils import downloadData, downloadFile, getAltEnvPath, \
+    getCachedArtifactName, getTotalSize, isFolderIgnored, jsonLoadFile, \
+    jsonWriteFile, markFolderAsIgnored, mkTmpLeafRootDir, \
+    versionComparator_lt
 
 
 class _LeafBase():
@@ -695,6 +695,9 @@ class PackageManager(RemoteManager):
             if isinstance(item, InstalledPackage):
                 ip = item
             elif isinstance(item, PackageIdentifier):
+                if DependencyManager.isLatestPackage(item):
+                    item = DependencyManager.findLatestPackage(
+                        item.name, installedPackages.keys())
                 ip = installedPackages.get(item)
                 if ip is None:
                     raise ValueError("Cannot find package %s" % item)

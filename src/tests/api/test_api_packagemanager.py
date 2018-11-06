@@ -8,9 +8,12 @@ import sys
 import time
 from builtins import ValueError
 from datetime import datetime, timedelta
-from http.server import SimpleHTTPRequestHandler
 from multiprocessing import Process
 from time import sleep
+
+import unittest
+from http.server import SimpleHTTPRequestHandler
+from tests.testutils import AbstractTestWithRepo, envFileToMap, getLines, LEAF_UT_SKIP
 
 from leaf.constants import EnvConstants
 from leaf.core.dependencies import DependencyType
@@ -23,7 +26,6 @@ from leaf.model.environment import Environment
 from leaf.model.package import AvailablePackage, InstalledPackage, \
     PackageIdentifier
 from leaf.utils import isFolderIgnored
-from tests.testutils import AbstractTestWithRepo, envFileToMap, getLines
 
 
 VERBOSITY = Verbosity.VERBOSE
@@ -606,6 +608,45 @@ class TestApiPackageManager(AbstractTestWithRepo):
                           "MYOTHERVALUE"],
                          getLines(syncFile))
 
+    def testResolveLatest(self):
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["version_1.0"]))
+        self.checkContent(
+            self.pm.listInstalledPackages(),
+            ["version_1.0"])
+        self.checkInstalledPackages(
+            ["version_1.0"])
+
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["version_1.1"]))
+        self.checkContent(
+            self.pm.listInstalledPackages(),
+            ["version_1.0",
+             "version_1.1"])
+        self.checkInstalledPackages(
+            ["version_1.0",
+             "version_1.1"])
+
+        env = self.pm.getPackagesEnvironment(
+            PackageIdentifier.fromStringList(["version_latest"]))
+        self.assertEqual("1.1", env.findValue("TEST_VERSION"))
+
+        self.pm.installFromRemotes(
+            PackageIdentifier.fromStringList(["version_latest"]))
+        self.checkContent(
+            self.pm.listInstalledPackages(),
+            ["version_1.0",
+             "version_1.1",
+             "version_2.0"])
+        self.checkInstalledPackages(
+            ["version_1.0",
+             "version_1.1",
+             "version_2.0"])
+
+        env = self.pm.getPackagesEnvironment(
+            PackageIdentifier.fromStringList(["version_latest"]))
+        self.assertEqual("2.0", env.findValue("TEST_VERSION"))
+
 
 def startHttpServer(rootFolder):
     print("Start http server for %s on port %s" %
@@ -617,6 +658,7 @@ def startHttpServer(rootFolder):
     httpd.serve_forever()
 
 
+@unittest.skipIf("HTTP" in LEAF_UT_SKIP, "Test disabled")
 class TestApiPackageManagerHttp(TestApiPackageManager):
 
     def __init__(self, methodName):

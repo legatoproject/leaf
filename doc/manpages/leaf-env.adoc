@@ -105,7 +105,7 @@ Profile name to work with, instead of working with *current* profile
 
 _PACKAGE_::
 
-Package ID from which to display the environment
+Installed package identifier from which to display the environment. See *leaf help package* for more details on package identifiers syntax.
 
 *--activate-script* _FILE_::
 

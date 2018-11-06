@@ -2,18 +2,18 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
-from collections import OrderedDict
 import platform
+from collections import OrderedDict
 
+from tests.testutils import AbstractTestWithRepo
+
+import leaf
+from leaf.core.error import InvalidProfileNameException, NoProfileSelected, \
+    ProfileNameAlreadyExistException
 from leaf.core.features import FeatureManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.format.logger import TextLogger, Verbosity
-from leaf.model.package import PackageIdentifier, Manifest
-
-from leaf.core.error import InvalidProfileNameException,\
-    ProfileNameAlreadyExistException, NoProfileSelected
-from tests.testutils import AbstractTestWithRepo
-import leaf
+from leaf.model.package import Manifest, PackageIdentifier
 
 
 VERBOSITY = Verbosity.VERBOSE
@@ -30,6 +30,7 @@ class TestApiWorkspaceManager(AbstractTestWithRepo):
         self.wm = WorkspaceManager(self.getWorkspaceFolder(), VERBOSITY)
         self.wm.setInstallFolder(self.getInstallFolder())
         self.wm.createRemote("default", self.getRemoteUrl(), insecure=True)
+        self.wm.createRemote("other", self.getRemoteUrl2(), insecure=True)
 
     def testInit(self):
         with self.assertRaises(Exception):
@@ -379,3 +380,36 @@ class TestApiWorkspaceManager(AbstractTestWithRepo):
             fm.toggleUserFeature("featureWithDups", "enum2", self.wm)
         with self.assertRaises(ValueError):
             fm.toggleUserFeature("featureWithMultipleKeys", "enum1", self.wm)
+
+    def testResolveLatest(self):
+        self.assertEqual(2, len(self.wm.listRemotes(True)))
+        remote2 = self.wm.listRemotes()["other"]
+        remote2.setEnabled(False)
+        self.wm.updateRemote(remote2)
+        self.assertEqual(1, len(self.wm.listRemotes(True)))
+
+        self.wm.initializeWorkspace()
+        profile = self.wm.createProfile("myprofile")
+        profile.addPackages(
+            PackageIdentifier.fromStringList(["testlatest_1.0"]))
+        profile = self.wm.updateProfile(profile)
+        self.wm.provisionProfile(profile)
+        self.checkInstalledPackages(["testlatest_1.0",
+                                     "version_1.1"])
+        self.checkProfileContent("myprofile",
+                                 ["testlatest",
+                                  "version"])
+
+        remote2 = self.wm.listRemotes()["other"]
+        remote2.setEnabled(True)
+        self.wm.updateRemote(remote2)
+        self.assertEqual(2, len(self.wm.listRemotes(True)))
+        self.wm.fetchRemotes()
+
+        self.wm.provisionProfile(profile)
+        self.checkInstalledPackages(["testlatest_1.0",
+                                     "version_1.1",
+                                     "version_2.0"])
+        self.checkProfileContent("myprofile",
+                                 ["testlatest",
+                                  "version"])
