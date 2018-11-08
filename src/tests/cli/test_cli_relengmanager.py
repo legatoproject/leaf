@@ -4,13 +4,14 @@
 
 import json
 import os
-import tarfile
-import unittest
+import time
 
-from leaf.constants import JsonConstants, LeafFiles
-from leaf.utils import computeHash, jsonWriteFile, jsonLoadFile
+import unittest
 from tests.testutils import LEAF_UT_SKIP, LeafCliWrapper, RESOURCE_FOLDER, \
     checkMime
+
+from leaf.constants import JsonConstants, LeafFiles
+from leaf.utils import computeHash, jsonLoadFile, jsonWriteFile
 
 
 class TestCliRelengManager(LeafCliWrapper):
@@ -24,26 +25,22 @@ class TestCliRelengManager(LeafCliWrapper):
 
         def checkAllCompressions(extension, defaultMime):
             outputFile = self.getWorkspaceFolder() / ("myPackage" + extension)
-            for compression, mime in (('tar', 'x-tar'),
-                                      ('gz', 'gzip'),
-                                      ('bz2', 'x-bzip2'),
-                                      ('xz', 'x-xz')):
+            for compression, mime in (('-z', 'gzip'),
+                                      ('-j', 'x-bzip2'),
+                                      ('-J', 'x-xz'),
+                                      ('-a', defaultMime)):
                 self.leafExec(("repository", "pack"),
-                              "--compression", compression,
                               "--output", outputFile,
-                              pkgFolder)
+                              "--input", pkgFolder,
+                              '--', compression, '.')
                 checkMime(outputFile, mime)
-            self.leafExec(("repository", "pack"),
-                          "--output", outputFile,
-                          pkgFolder)
-            checkMime(outputFile, defaultMime)
 
-        checkAllCompressions('.bin', 'x-xz')
+        checkAllCompressions('.bin', 'x-tar')
         checkAllCompressions('.tar', 'x-tar')
         checkAllCompressions('.tar.gz', 'gzip')
         checkAllCompressions('.tar.bz2', 'x-bzip2')
         checkAllCompressions('.tar.xz', 'x-xz')
-        checkAllCompressions('.leaf', 'x-xz')
+        checkAllCompressions('.leaf', 'x-tar')
 
     def testExternalHashFile(self):
         pkgFolder = RESOURCE_FOLDER / "install_1.0"
@@ -53,53 +50,21 @@ class TestCliRelengManager(LeafCliWrapper):
         self.leafExec(("repository", "pack"),
                       "--no-info",
                       "--output", outputFile,
-                      pkgFolder)
+                      "--input", pkgFolder)
         self.assertTrue(outputFile.exists())
         self.assertFalse(infoFile.exists())
 
         self.leafExec(("repository", "pack"),
                       "--output", outputFile,
-                      pkgFolder)
+                      "--input", pkgFolder)
         self.assertTrue(outputFile.exists())
         self.assertTrue(infoFile.exists())
 
         self.leafExec(("repository", "pack"),
                       "--no-info",
                       "--output", outputFile,
-                      pkgFolder,
+                      "--input", pkgFolder,
                       expectedRc=2)
-
-    def testPackageWithTimestamp(self):
-        TIMESTAMP = 946684800
-
-        pkgFolder = RESOURCE_FOLDER / "install_1.0"
-        outputFile1 = self.getWorkspaceFolder() / "myPackage1.tar"
-        outputFile2 = self.getWorkspaceFolder() / "myPackage2.tar"
-
-        self.leafExec(("repository", "pack"),
-                      "--output", outputFile1,
-                      pkgFolder)
-        self.leafExec(("repository", "pack"),
-                      "--timestamp", TIMESTAMP,
-                      "--output", outputFile2,
-                      pkgFolder)
-
-        self.assertNotEqual(computeHash(outputFile1),
-                            computeHash(outputFile2))
-
-        outputFolder1 = self.getWorkspaceFolder() / "extract1"
-        with tarfile.TarFile.open(str(outputFile1)) as tf:
-            tf.extractall(str(outputFolder1))
-        manifestFile1 = outputFolder1 / LeafFiles.MANIFEST
-        self.assertTrue(manifestFile1.exists())
-        self.assertNotEqual(TIMESTAMP, manifestFile1.stat().st_mtime)
-
-        outputFolder2 = self.getWorkspaceFolder() / "extract2"
-        with tarfile.TarFile.open(str(outputFile2)) as tf:
-            tf.extractall(str(outputFolder2))
-        manifestFile2 = outputFolder2 / LeafFiles.MANIFEST
-        self.assertTrue(manifestFile2.exists())
-        self.assertEqual(TIMESTAMP, manifestFile2.stat().st_mtime)
 
     def testManifestGeneration(self):
         manifestFile = self.getWorkspaceFolder() / LeafFiles.MANIFEST
@@ -169,10 +134,10 @@ class TestCliRelengManager(LeafCliWrapper):
         # Build some packages
         self.leafExec(('repository', 'pack'),
                       '--output', self.getWorkspaceFolder() / 'a.leaf',
-                      RESOURCE_FOLDER / "install_1.0")
+                      '--input', RESOURCE_FOLDER / "install_1.0")
         self.leafExec(('repository', 'pack'),
                       '--output', self.getWorkspaceFolder() / 'b.leaf',
-                      RESOURCE_FOLDER / "condition_1.0")
+                      '--input', RESOURCE_FOLDER / "condition_1.0")
 
         self.leafExec(('repository', 'index'),
                       '--output', indexFile,
@@ -217,7 +182,7 @@ class TestCliRelengManager(LeafCliWrapper):
         # Build some packages
         self.leafExec(('repository', 'pack'),
                       '--output', leafFile,
-                      pkgFolder)
+                      '--input', pkgFolder)
 
         self.leafExec(('repository', 'index'),
                       '--output', indexFile1,
@@ -243,6 +208,64 @@ class TestCliRelengManager(LeafCliWrapper):
                          jsonLoadFile(indexFile1)[JsonConstants.REMOTE_PACKAGES][0]['info']['tags'])
         self.assertEqual(["foo"],
                          jsonLoadFile(indexFile2)[JsonConstants.REMOTE_PACKAGES][0]['info']['tags'])
+
+    def testReproductibleBuild(self):
+        # Build some packages
+        pis = "install_1.0"
+        pkgFolder = RESOURCE_FOLDER / pis
+        manifest = pkgFolder / LeafFiles.MANIFEST
+        self.assertTrue(manifest.exists())
+
+        def touchManifest():
+            time.sleep(1)
+            os.utime(str(manifest), None)
+
+        def buildPackage(output, args):
+            self.leafExec(('repository', 'pack'),
+                          '-i', pkgFolder,
+                          '-o', output,
+                          '--no-info',
+                          '--', *args)
+
+        for extension, arg, mime in (('tar', '-v', 'x-tar'),
+                                     ('bz2', '-j', 'x-bzip2'),
+                                     ('xz', '-J', 'x-xz')):
+            outputFile1 = self.getWorkspaceFolder() / ('%s.%s.%d' %
+                                                       (pis, extension, 1))
+            outputFile2 = self.getWorkspaceFolder() / ('%s.%s.%d' %
+                                                       (pis, extension, 2))
+            outputFile3 = self.getWorkspaceFolder() / ('%s.%s.%d' %
+                                                       (pis, extension, 3))
+            outputFile4 = self.getWorkspaceFolder() / ('%s.%s.%d' %
+                                                       (pis, extension, 4))
+
+            buildPackage(outputFile1, (arg, '.'))
+            touchManifest()
+            buildPackage(outputFile2, (arg, '.'))
+            touchManifest()
+            buildPackage(outputFile3, ('--mtime=2018-11-01 00:00:00',
+                                       '--sort=name',
+                                       '--owner=0', '--group=0', '--numeric-owner',
+                                       arg, '.'))
+            touchManifest()
+            buildPackage(outputFile4, ('--mtime=2018-11-01 00:00:00',
+                                       '--sort=name',
+                                       '--owner=0', '--group=0', '--numeric-owner',
+                                       arg, '.'))
+
+            checkMime(outputFile1, mime)
+            checkMime(outputFile2, mime)
+            checkMime(outputFile3, mime)
+            checkMime(outputFile4, mime)
+
+            self.assertNotEqual(computeHash(outputFile1),
+                                computeHash(outputFile2))
+            self.assertNotEqual(computeHash(outputFile1),
+                                computeHash(outputFile3))
+            self.assertNotEqual(computeHash(outputFile2),
+                                computeHash(outputFile3))
+            self.assertEqual(computeHash(outputFile3),
+                             computeHash(outputFile4))
 
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")

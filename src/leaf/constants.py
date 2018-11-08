@@ -23,6 +23,7 @@ class EnvConstants():
     DEBUG_MODE = 'LEAF_DEBUG'
     GPG_KEYSERVER = "LEAF_GPG_KEYSERVER"
     NON_INTERACTIVE = 'LEAF_NON_INTERACTIVE'
+    CUSTOM_TAR = 'LEAF_TAR_BIN'
 
 
 class LeafConstants():

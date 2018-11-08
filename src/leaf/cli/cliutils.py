@@ -8,6 +8,7 @@ Leaf Package Manager
 '''
 
 from abc import ABC, abstractmethod
+from argparse import RawTextHelpFormatter
 from builtins import ValueError
 from pathlib import Path
 
@@ -96,16 +97,27 @@ class GenericCommand(ABC):
     Generic command used by leaf
     '''
 
-    def __init__(self, cmdName, cmdHelp):
+    def __init__(self, cmdName, cmdHelp, cmdExamples=None):
         self.cmdName = cmdName
         self.cmdHelp = cmdHelp
+        self.cmdExamples = cmdExamples
 
     def isHandled(self, cmd):
         return cmd == self.cmdName
 
+    def _buildExampleText(self):
+        out = None
+        if self.cmdExamples is not None:
+            out = "example%s: " % ("s" if len(self.cmdExamples) > 1 else "")
+            for command, text in self.cmdExamples:
+                out += "\n  %s\n    $ %s" % (text, command)
+        return out
+
     def create(self, subparsers):
         parser = subparsers.add_parser(self.cmdName,
-                                       help=self.cmdHelp)
+                                       help=self.cmdHelp,
+                                       epilog=self._buildExampleText(),
+                                       formatter_class=RawTextHelpFormatter)
         self.initArgs(parser)
 
     def getVerbosity(self, args, default=Verbosity.DEFAULT):
@@ -154,8 +166,9 @@ class LeafMetaCommand(GenericCommand):
     Generic class to represent commands that have subcommands
     '''
 
-    def __init__(self, cmdName, cmdHelp):
-        GenericCommand.__init__(self, cmdName, cmdHelp)
+    def __init__(self, cmdName, cmdHelp, cmdExamples=None):
+        GenericCommand.__init__(self, cmdName, cmdHelp,
+                                cmdExamples=cmdExamples)
 
     def initArgs(self, parser):
         super().initArgs(parser)
@@ -200,8 +213,9 @@ class LeafCommand(GenericCommand):
     Define a leaf commands which uses -v/-q to set the logger verbosity
     '''
 
-    def __init__(self, cmdName, cmdHelp):
-        GenericCommand.__init__(self, cmdName, cmdHelp)
+    def __init__(self, cmdName, cmdHelp, cmdExamples=None):
+        GenericCommand.__init__(self, cmdName, cmdHelp,
+                                cmdExamples=cmdExamples)
 
     def initArgs(self, parser):
         super().initArgs(parser)

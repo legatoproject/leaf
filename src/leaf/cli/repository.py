@@ -8,14 +8,12 @@ Leaf Package Manager
 '''
 
 import argparse
-import time
 from builtins import ValueError
 from pathlib import Path
 
 from leaf.cli.cliutils import LeafCommand, LeafMetaCommand, stringToBoolean
 from leaf.constants import JsonConstants, LeafFiles
 from leaf.core.relengmanager import RelengManager
-from leaf.utils import TAR_COMPRESSIONS
 
 
 class RepositoryMetaCommand(LeafMetaCommand):
@@ -37,7 +35,9 @@ class RepositoryPackSubCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(self,
                              "pack",
-                             "create a package")
+                             "create a package",
+                             cmdExamples=[('leaf repository pack -i path/to/packageFolder/ -o package.leaf -- -z .',
+                                           'Build an GZIP compressed archive')])
 
     def initArgs(self, parser):
         super().initArgs(parser)
@@ -47,49 +47,37 @@ class RepositoryPackSubCommand(LeafCommand):
                             type=Path,
                             dest='outputFile',
                             help='output file')
+        parser.add_argument('-i', '--input',
+                            metavar='FOLDER',
+                            type=Path,
+                            dest='inputFolder',
+                            help='package folder')
         parser.add_argument('--no-info',
                             action='store_false',
                             dest='storeExtenalInfo',
                             help='do not store artifact info in a separate file')
-        parser.add_argument('--compression',
-                            metavar='COMPRESSION',
-                            dest='compression',
-                            choices=TAR_COMPRESSIONS,
-                            help='configure compression (%s)' % (
-                                '|'.join(TAR_COMPRESSIONS)))
-        parser.add_argument('--timestamp',
-                            metavar='TIMESTAMP',
-                            type=float,
-                            dest='timestamp',
-                            help='force the timestamp for files in the generated tar archive (current: %lf)' % (time.time()))
-        parser.add_argument('--root-owner',
-                            action='store_true',
-                            dest='root_owner',
-                            help='force root as user/group in the generated tar file')
-
-        parser.add_argument('pkgFolder',
-                            metavar='PKGFOLDER',
-                            nargs='?',
-                            type=Path,
-                            help='the package folder (if no specified, use current directory)')
+        parser.add_argument('tarExtraArgs',
+                            metavar='TAR_ARGS',
+                            nargs='*',
+                            help="extra arguments given to tar command line\n(must start with '--')")
 
     def execute(self, args):
         rm = RelengManager(self.getVerbosity(args))
 
         pkgFolder = None
-        if args.pkgFolder is None:
+        if args.inputFolder is None:
             pkgFolder = Path('.')
-        elif args.pkgFolder.is_dir():
-            pkgFolder = args.pkgFolder
-        elif args.pkgFolder.is_file() and args.pkgFolder.name == LeafFiles.MANIFEST:
+        elif args.inputFolder.is_dir():
+            pkgFolder = args.inputFolder
+        elif args.inputFolder.is_file() and args.inputFolder.name == LeafFiles.MANIFEST:
             # Handles legacy, arg is not the folder but the manifest
-            pkgFolder = args.pkgFolder.parent
+            pkgFolder = args.inputFolder.parent
+        else:
+            raise ValueError("Invalid input folder")
 
         rm.createPackage(pkgFolder, args.outputFile,
                          storeExtenalInfo=args.storeExtenalInfo,
-                         forceTimestamp=args.timestamp,
-                         compression=args.compression,
-                         forceRootOwner=args.root_owner)
+                         tarExtraArgs=args.tarExtraArgs)
 
 
 class RepositoryIndexSubCommand(LeafCommand):

@@ -19,7 +19,6 @@ import tempfile
 import urllib
 from collections import OrderedDict
 from pathlib import Path
-from tarfile import TarFile
 from urllib.parse import urlparse, urlunparse
 
 import requests
@@ -28,8 +27,6 @@ from leaf import __version__
 from leaf.constants import EnvConstants, LeafConstants
 from leaf.core.error import InvalidHashException
 
-
-TAR_COMPRESSIONS = ['tar', 'gz', 'bz2', 'xz']
 
 _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
 _VERSION_SEPARATOR = re.compile("[-_.~]")
@@ -128,32 +125,6 @@ def markFolderAsIgnored(folder):
     out = folder.parent / newname
     folder.rename(out)
     return out
-
-
-def openOutputTarFile(path, mode="w", compression=None):
-    '''
-    Open a tar file with the correct compression
-    If @compression is None, guess compression given the file extension, default is xz
-    Correct values for @compression are:
-    - None: auto mode given file extenion (default is 'xz')
-    - 'tar', 'xz', 'bz2', 'gz': Common compressions
-    '''
-    if compression is None:
-        # Guess compression given the extension
-        if path.suffix == ".tar":
-            compression = "tar"
-        elif path.suffix == ".gz" or path.suffix == ".tgz":
-            compression = "gz"
-        elif path.suffix == ".bz2":
-            compression = "bz2"
-        elif path.suffix == ".xz":
-            compression = "xz"
-        else:
-            # Default compression is XZ
-            compression = "xz"
-    elif compression not in TAR_COMPRESSIONS:
-        raise ValueError("Invalid tar compression: %s" % compression)
-    return TarFile.open(str(path), mode + ':' + compression)
 
 
 def downloadData(url, outputFile=None, timeout=LeafConstants.DOWNLOAD_TIMEOUT):

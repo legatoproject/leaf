@@ -4,8 +4,6 @@
 
 import json
 import os
-import time
-from tarfile import TarFile
 
 from tests.testutils import AbstractTestWithRepo, RESOURCE_FOLDER, checkMime
 
@@ -34,20 +32,21 @@ class TestApiRelengManager(AbstractTestWithRepo):
 
         def checkAllCompressions(extension, defaultMime):
             outputFile = self.getWorkspaceFolder() / ("myPackage" + extension)
-            for compression, mime in (('tar', 'x-tar'),
-                                      ('gz', 'gzip'),
-                                      ('bz2', 'x-bzip2'),
-                                      ('xz', 'x-xz'),
-                                      (None, defaultMime)):
+            for args, mime in ((None, 'x-tar'),
+                               (('.'), 'x-tar'),
+                               (('-z', '.'), 'gzip'),
+                               (('-j', '.'), 'x-bzip2'),
+                               (('-J', '.'), 'x-xz'),
+                               (('-a', '.'), defaultMime)):
                 self.rm.createPackage(pkgFolder, outputFile,
-                                      compression=compression)
+                                      tarExtraArgs=args)
                 checkMime(outputFile, mime)
-        checkAllCompressions('.bin', 'x-xz')
+        checkAllCompressions('.bin', 'x-tar')
         checkAllCompressions('.tar', 'x-tar')
+        checkAllCompressions('.leaf', 'x-tar')
         checkAllCompressions('.tar.gz', 'gzip')
         checkAllCompressions('.tar.bz2', 'x-bzip2')
         checkAllCompressions('.tar.xz', 'x-xz')
-        checkAllCompressions('.leaf', 'x-xz')
 
     def testExternalInfoFile(self):
         pkgFolder = RESOURCE_FOLDER / "install_1.0"
@@ -70,43 +69,6 @@ class TestApiRelengManager(AbstractTestWithRepo):
         with self.assertRaises(LeafException):
             self.rm.createPackage(pkgFolder, artifactFile,
                                   storeExtenalInfo=False)
-
-    def testPackageWithTimestamp(self):
-        TIMESTAMP = 946684800
-
-        pkgFolder = RESOURCE_FOLDER / "install_1.0"
-        outputFile1a = self.getWorkspaceFolder() / "myPackage1a.tar"
-        outputFile1b = self.getWorkspaceFolder() / "myPackage1b.tar"
-        outputFile2a = self.getWorkspaceFolder() / "myPackage2a.tar"
-        outputFile2b = self.getWorkspaceFolder() / "myPackage2b.tar"
-
-        self.rm.createPackage(pkgFolder, outputFile1a)
-        self.rm.createPackage(pkgFolder, outputFile1b)
-        self.rm.createPackage(pkgFolder, outputFile2a,
-                              forceTimestamp=TIMESTAMP)
-        self.rm.createPackage(pkgFolder, outputFile2b,
-                              forceTimestamp=TIMESTAMP)
-
-        self.assertEqual(computeHash(outputFile1a),
-                         computeHash(outputFile1b))
-        self.assertEqual(computeHash(outputFile2a),
-                         computeHash(outputFile2b))
-        self.assertNotEqual(computeHash(outputFile1a),
-                            computeHash(outputFile2a))
-
-        outputFolder1 = self.getWorkspaceFolder() / "extract1"
-        with TarFile.open(str(outputFile1a)) as tf:
-            tf.extractall(str(outputFolder1))
-        manifestFile1 = outputFolder1 / LeafFiles.MANIFEST
-        self.assertTrue(manifestFile1.exists())
-        self.assertNotEqual(TIMESTAMP, manifestFile1.stat().st_mtime)
-
-        outputFolder2 = self.getWorkspaceFolder() / "extract2"
-        with TarFile.open(str(outputFile2a)) as tf:
-            tf.extractall(str(outputFolder2))
-        manifestFile2 = outputFolder2 / LeafFiles.MANIFEST
-        self.assertTrue(manifestFile2.exists())
-        self.assertEqual(TIMESTAMP, manifestFile2.stat().st_mtime)
 
     def testManifestInfoMap(self):
         manifestFile = self.getWorkspaceFolder() / LeafFiles.MANIFEST
@@ -308,50 +270,3 @@ class TestApiRelengManager(AbstractTestWithRepo):
                 [self.getWorkspaceFolder() / 'a.leaf',
                  self.getWorkspaceFolder() / 'b.leaf'],
                 prettyprint=True)
-
-    def testReproductibleBuild(self):
-        # Build some packages
-        pis = "install_1.0"
-        pkgFolder = RESOURCE_FOLDER / pis
-        manifest = pkgFolder / LeafFiles.MANIFEST
-        self.assertTrue(manifest.exists())
-
-        def touchManifest():
-            time.sleep(1)
-            os.utime(str(manifest), None)
-
-        for compression in ("tar", "xz", "bz2"):
-            outputFileA1 = self.getWorkspaceFolder() / ('%s.%s.%d' %
-                                                        (pis, compression, 1))
-            outputFileA2 = self.getWorkspaceFolder() / ('%s.%s.%d' %
-                                                        (pis, compression, 2))
-            outputFileB1 = self.getWorkspaceFolder() / ('%s.%s.%d' %
-                                                        (pis, compression, 3))
-            outputFileB2 = self.getWorkspaceFolder() / ('%s.%s.%d' %
-                                                        (pis, compression, 4))
-
-            self.rm.createPackage(pkgFolder, outputFileA1,
-                                  compression=compression, storeExtenalInfo=False)
-            touchManifest()
-            self.rm.createPackage(pkgFolder, outputFileA2,
-                                  compression=compression, storeExtenalInfo=False)
-            touchManifest()
-            self.rm.createPackage(pkgFolder, outputFileB1,
-                                  compression=compression, storeExtenalInfo=False,
-                                  forceTimestamp=1234, forceRootOwner=True)
-            touchManifest()
-            self.rm.createPackage(pkgFolder, outputFileB2,
-                                  compression=compression, storeExtenalInfo=False,
-                                  forceTimestamp=1234, forceRootOwner=True)
-
-            self.assertTrue(outputFileA1.exists())
-            self.assertTrue(outputFileA2.exists())
-            self.assertTrue(outputFileB1.exists())
-            self.assertTrue(outputFileB2.exists())
-
-            self.assertNotEqual(computeHash(outputFileA1),
-                                computeHash(outputFileA2))
-            self.assertNotEqual(computeHash(outputFileA1),
-                                computeHash(outputFileB1))
-            self.assertEqual(computeHash(outputFileB1),
-                             computeHash(outputFileB2))

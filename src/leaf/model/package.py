@@ -221,11 +221,20 @@ class LeafArtifact(Manifest):
     Represent a tar/xz or a single manifest.json file
     '''
 
+    @staticmethod
+    def _findManifest(tarfile):
+        for prefix in ('', './'):
+            manifestMemberNane = prefix + LeafFiles.MANIFEST
+            if manifestMemberNane in tarfile.getnames():
+                return manifestMemberNane
+        raise ValueError("Cannot find %s in package" % LeafFiles.MANIFEST)
+
     def __init__(self, path):
         self.path = path
         with TarFile.open(str(self.path), 'r') as tarfile:
-            Manifest.__init__(self, jsonLoad(io.TextIOWrapper(
-                tarfile.extractfile(LeafFiles.MANIFEST))))
+            mf = LeafArtifact._findManifest(tarfile)
+            Manifest.__init__(self, jsonLoad(
+                io.TextIOWrapper(tarfile.extractfile(mf))))
 
 
 class AvailablePackage(Manifest):

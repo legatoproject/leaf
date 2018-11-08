@@ -41,7 +41,8 @@ test:
 	tox $(LEAF_TEST_TOX_ARGS)
 
 flake:
-	tox -e clean,flake
+	rm -rf flake-report/
+	tox --recreate -e flake
 
 sdist:
 	rm -rf $(DIST)

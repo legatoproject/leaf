@@ -8,19 +8,19 @@ Leaf Package Manager
 '''
 import os
 import re
+import subprocess
 from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
 
-from leaf.constants import JsonConstants, LeafConstants, LeafFiles
+from leaf.constants import EnvConstants, JsonConstants, LeafConstants, LeafFiles
 from leaf.core.dependencies import DependencyManager
 from leaf.core.error import LeafException
 from leaf.core.packagemanager import LoggerManager
 from leaf.model.modelutils import layerModelUpdate
 from leaf.model.package import AvailablePackage, ConditionalPackageIdentifier, \
     LeafArtifact, Manifest, PackageIdentifier
-from leaf.utils import computeHash, jsonLoadFile, jsonToString, jsonWriteFile, \
-    openOutputTarFile
+from leaf.utils import computeHash, jsonLoadFile, jsonToString, jsonWriteFile
 
 
 class RelengManager(LoggerManager):
@@ -48,13 +48,9 @@ class RelengManager(LoggerManager):
 
     def createPackage(self, pkgFolder, outputFile,
                       storeExtenalInfo=True,
-                      forceTimestamp=None,
-                      forceRootOwner=False,
-                      compression=None):
+                      tarExtraArgs=None):
         '''
-        Create a leaf artifact from given the manifest.
-        if the output file ands with .json, a *manifest only* package will be generated.
-        Output file can ends with tar.[gz,xz,bz2] of json
+        Create a leaf artifact from given folder containing a manifest.json
         '''
         manifestFile = pkgFolder / LeafFiles.MANIFEST
         externalInfoFile = self._getExternalInfoFile(outputFile)
@@ -76,40 +72,8 @@ class RelengManager(LoggerManager):
             raise LeafException(msg="A previous info file (%s) exists for your package" % externalInfoFile,
                                 hints="You should remove it with 'rm %s'" % externalInfoFile)
 
-        if forceTimestamp is not None:
-            self.logger.printDefault(
-                "Force timestamps to %lf" % forceTimestamp)
-        if forceRootOwner:
-            self.logger.printDefault("Force user/group to root(0)")
-
-        def infoTweaker(ti):
-            if forceTimestamp is not None:
-                ti.mtime = forceTimestamp
-            if forceRootOwner:
-                ti.uid = 0
-                ti.gid = 0
-                ti.uname = ""
-                ti.gname = ""
-            return ti
-
-        with openOutputTarFile(outputFile,
-                               mode="w",
-                               compression=compression) as tf:
-            def addToTar(item, reccursive=False):
-                relpath = item.relative_to(pkgFolder)
-                self.logger.printDefault("  Adding", relpath)
-                tf.add(str(item),
-                       arcname=str(relpath),
-                       recursive=reccursive,
-                       filter=infoTweaker)
-
-            def visit(item):
-                if item.is_dir():
-                    for i in sorted(item.iterdir()):
-                        addToTar(i)
-                        visit(i)
-
-            visit(pkgFolder)
+        self.executeTarProcess(outputFile, pkgFolder,
+                               tarExtraArgs=tarExtraArgs)
 
         self.logger.printDefault("Leaf package created: %s" % outputFile)
 
@@ -266,3 +230,37 @@ class RelengManager(LoggerManager):
 
         with open(str(outputFile), 'w') as fp:
             fp.write(jsonString)
+
+    def executeTarProcess(self, outputFile, workingFolder, tar="tar", tarExtraArgs=None):
+
+        command = [os.getenv(EnvConstants.CUSTOM_TAR, "tar"), "-c"]
+        command += ['-f', str(outputFile)]
+        command += ['-C', str(workingFolder)]
+
+        if tarExtraArgs is None or len(tarExtraArgs) == 0:
+            command += ['.']
+        else:
+            forbiddenArgs = [arg for arg
+                             in tarExtraArgs
+                             if arg in ('-A', '--catenate', '--concatenate',
+                                        '-c', '--create',
+                                        '-d', '--diff', '--compare',
+                                        '--delete',
+                                        '-r', '--append',
+                                        '-t', '--list',
+                                        '--test-label',
+                                        '-u', '--update',
+                                        '-x', '--extract', '--get',
+                                        '-C', '--directory',
+                                        '-f', '--file')]
+            if len(forbiddenArgs) > 0:
+                raise LeafException(
+                    "You should not use tar extra arguments: " + ''.join(forbiddenArgs))
+            command += tarExtraArgs
+
+        self.logger.printDefault("Executing command:", ' '.join(command))
+        rc = subprocess.call(command,
+                             stdout=None,
+                             stderr=subprocess.STDOUT)
+        if rc != 0:
+            raise LeafException("Error executing: %s" % ' '.join(command))

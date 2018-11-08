@@ -30,11 +30,10 @@ EXPECTED_OUTPUT_FOLDER = ROOT_FOLDER / "src" / "tests" / "expected_ouput"
 EXTENSIONS_FOLDER = ROOT_FOLDER / "resources" / "bin"
 
 SEPARATOR = "--------------------"
-ALT_COMPRESSION = {
-    "compress-tar_1.0": 'tar',
-    "compress-xz_1.0": 'xz',
-    "compress-bz2_1.0": 'bz2',
-    "compress-gz_1.0": 'gz'
+TAR_EXTRA_ARGS = {
+    PackageIdentifier.fromString("compress-xz_1.0"): ('-z', '.'),
+    PackageIdentifier.fromString("compress-bz2_1.0"): ('-j', '.'),
+    PackageIdentifier.fromString("compress-gz_1.0"): ('-J', '.')
 }
 
 TEST_GPG_FINGERPRINT = "E35D6817397359074160F68952ECE808A2BC372C"
@@ -340,14 +339,15 @@ def generateRepo(sourceFolder, outputFolder):
                         str(manifest.getIdentifier()), packageFolder.name))
                 filename = str(manifest.getIdentifier()) + ".leaf"
                 outputFile = outputFolder / filename
+                tarExtraArgs = TAR_EXTRA_ARGS.get(manifest.getIdentifier())
                 rm.createPackage(
                     packageFolder,
                     outputFile,
-                    compression=ALT_COMPRESSION.get(str(manifest.getIdentifier())))
+                    tarExtraArgs=tarExtraArgs)
                 # Check that the generated archive is OK
                 checkArchiveFormat(
                     outputFile,
-                    ALT_COMPRESSION.get(str(manifest.getIdentifier())))
+                    tarExtraArgs[0] if tarExtraArgs is not None else None)
                 # Create multi index.json
                 if manifest.getName() == "version" and manifest.getVersion() == "2.0":
                     artifactsList2.append(outputFile)
@@ -388,16 +388,14 @@ def generateRepo(sourceFolder, outputFolder):
 
 
 def checkArchiveFormat(file, compression):
-    if compression == "xz":
+    if compression == "-J":
         checkMime(file, "x-xz")
-    elif compression == "tar":
-        checkMime(file, "x-tar")
-    elif compression == "gz":
+    elif compression == "-z":
         checkMime(file, "gzip")
-    elif compression == "bz2":
+    elif compression == "-j":
         checkMime(file, "x-bzip2")
     else:
-        checkMime(file, "x-xz")
+        checkMime(file, "x-tar")
 
 
 def checkMime(file, expectedMime):
