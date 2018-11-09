@@ -20,7 +20,7 @@ from leaf.cli.feature import FeatureMetaCommand
 from leaf.cli.package import PackageMetaCommand
 from leaf.cli.profile import ProfileMetaCommand
 from leaf.cli.remote import RemoteMetaCommand
-from leaf.cli.repository import RepositoryMetaCommand
+from leaf.cli.build import BuildMetaCommand
 from leaf.cli.search import SearchCommand
 from leaf.cli.select import SelectCommand
 from leaf.cli.status import StatusCommand
@@ -53,7 +53,7 @@ class LeafCli():
             # Packages
             PackageMetaCommand(),
             # Releng
-            RepositoryMetaCommand()
+            BuildMetaCommand()
         ]
         self.commands += findLeafExternalCommands(
             blacklistCommands=[cmd.cmdName for cmd in self.commands])

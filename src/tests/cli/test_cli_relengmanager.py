@@ -29,7 +29,7 @@ class TestCliRelengManager(LeafCliWrapper):
                                       ('-j', 'x-bzip2'),
                                       ('-J', 'x-xz'),
                                       ('-a', defaultMime)):
-                self.leafExec(("repository", "pack"),
+                self.leafExec(("build", "pack"),
                               "--output", outputFile,
                               "--input", pkgFolder,
                               '--', compression, '.')
@@ -47,20 +47,20 @@ class TestCliRelengManager(LeafCliWrapper):
         outputFile = self.getWorkspaceFolder() / "myPackage.leaf"
         infoFile = self.getWorkspaceFolder() / "myPackage.leaf.info"
 
-        self.leafExec(("repository", "pack"),
+        self.leafExec(("build", "pack"),
                       "--no-info",
                       "--output", outputFile,
                       "--input", pkgFolder)
         self.assertTrue(outputFile.exists())
         self.assertFalse(infoFile.exists())
 
-        self.leafExec(("repository", "pack"),
+        self.leafExec(("build", "pack"),
                       "--output", outputFile,
                       "--input", pkgFolder)
         self.assertTrue(outputFile.exists())
         self.assertTrue(infoFile.exists())
 
-        self.leafExec(("repository", "pack"),
+        self.leafExec(("build", "pack"),
                       "--no-info",
                       "--output", outputFile,
                       "--input", pkgFolder,
@@ -86,7 +86,7 @@ class TestCliRelengManager(LeafCliWrapper):
 
         try:
             os.environ["LEAF_TEST_VARIABLE"] = "hello"
-            self.leafExec(("repository", "manifest"),
+            self.leafExec(("build", "manifest"),
                           '--output', self.getWorkspaceFolder(),
                           '--append', fragmentA,
                           '--append', fragmentB,
@@ -132,14 +132,14 @@ class TestCliRelengManager(LeafCliWrapper):
         indexFile = self.getWorkspaceFolder() / "index.json"
 
         # Build some packages
-        self.leafExec(('repository', 'pack'),
+        self.leafExec(("build", 'pack'),
                       '--output', self.getWorkspaceFolder() / 'a.leaf',
                       '--input', RESOURCE_FOLDER / "install_1.0")
-        self.leafExec(('repository', 'pack'),
+        self.leafExec(("build", 'pack'),
                       '--output', self.getWorkspaceFolder() / 'b.leaf',
                       '--input', RESOURCE_FOLDER / "condition_1.0")
 
-        self.leafExec(('repository', 'index'),
+        self.leafExec(("build", 'index'),
                       '--output', indexFile,
                       '--name', "Name",
                       '--description', "Description here",
@@ -149,7 +149,7 @@ class TestCliRelengManager(LeafCliWrapper):
         self.assertEqual(
             1, len(jsonLoadFile(indexFile)[JsonConstants.REMOTE_PACKAGES]))
 
-        self.leafExec(('repository', 'index'),
+        self.leafExec(("build", 'index'),
                       '--output', indexFile,
                       '--name', "Name",
                       '--description', "Description here",
@@ -180,16 +180,16 @@ class TestCliRelengManager(LeafCliWrapper):
             fp.write("world  \n")
 
         # Build some packages
-        self.leafExec(('repository', 'pack'),
+        self.leafExec(("build", 'pack'),
                       '--output', leafFile,
                       '--input', pkgFolder)
 
-        self.leafExec(('repository', 'index'),
+        self.leafExec(("build", 'index'),
                       '--output', indexFile1,
                       '--prettyprint',
                       leafFile)
         self.assertTrue(indexFile1.exists())
-        self.leafExec(('repository', 'index'),
+        self.leafExec(("build", 'index'),
                       '--output', indexFile2,
                       '--no-extra-tags',
                       '--prettyprint',
@@ -221,7 +221,7 @@ class TestCliRelengManager(LeafCliWrapper):
             os.utime(str(manifest), None)
 
         def buildPackage(output, args):
-            self.leafExec(('repository', 'pack'),
+            self.leafExec(("build", 'pack'),
                           '-i', pkgFolder,
                           '-o', output,
                           '--no-info',

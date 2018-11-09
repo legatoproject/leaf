@@ -17,27 +17,27 @@ from leaf.core.error import LeafException
 from leaf.core.relengmanager import RelengManager
 
 
-class RepositoryMetaCommand(LeafMetaCommand):
+class BuildMetaCommand(LeafMetaCommand):
 
     def __init__(self):
         LeafMetaCommand.__init__(
             self,
-            "repository",
-            "commands to maintain a leaf repository")
+            "build",
+            "commands to build leaf artifacts (manifest, package or index)")
 
     def getSubCommands(self):
-        return [RepositoryPackSubCommand(),
-                RepositoryIndexSubCommand(),
-                RepositoryManifestSubCommand()]
+        return [BuildPackSubCommand(),
+                BuildIndexSubCommand(),
+                BuildManifestSubCommand()]
 
 
-class RepositoryPackSubCommand(LeafCommand):
+class BuildPackSubCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
                              "pack",
-                             "create a package",
-                             cmdExamples=[('leaf repository pack -i path/to/packageFolder/ -o package.leaf -- -z .',
+                             "build a package",
+                             cmdExamples=[('leaf build pack -i path/to/packageFolder/ -o package.leaf -- -z .',
                                            'Build an GZIP compressed archive')])
 
     def initArgs(self, parser):
@@ -81,7 +81,7 @@ class RepositoryPackSubCommand(LeafCommand):
                          tarExtraArgs=args.tarExtraArgs)
 
 
-class RepositoryIndexSubCommand(LeafCommand):
+class BuildIndexSubCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
@@ -132,7 +132,7 @@ class RepositoryIndexSubCommand(LeafCommand):
                          prettyprint=args.prettyprint)
 
 
-class RepositoryManifestSubCommand(LeafCommand):
+class BuildManifestSubCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(self,
