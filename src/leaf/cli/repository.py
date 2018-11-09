@@ -13,6 +13,7 @@ from pathlib import Path
 
 from leaf.cli.cliutils import LeafCommand, LeafMetaCommand, stringToBoolean
 from leaf.constants import JsonConstants, LeafFiles
+from leaf.core.error import LeafException
 from leaf.core.relengmanager import RelengManager
 
 
@@ -206,7 +207,8 @@ class RepositoryManifestSubCommand(LeafCommand):
         outputFile = LeafFiles.MANIFEST
         if args.outputFolder is not None:
             if not args.outputFolder.is_dir():
-                raise ValueError("Invalid output folder: " % args.outputFolder)
+                raise LeafException("Invalid output folder: %s" %
+                                    args.outputFolder)
             outputFile = args.outputFolder / LeafFiles.MANIFEST
 
         # Build the info map
