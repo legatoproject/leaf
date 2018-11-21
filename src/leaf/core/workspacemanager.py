@@ -233,6 +233,7 @@ class WorkspaceManager(PackageManager):
             self.currentLink.unlink()
         if name is not None:
             self.currentLink.symlink_to(name)
+            self.workspaceConfigFile.touch(exist_ok=True)
 
     def provisionProfile(self, profile):
         # Ensure FS clean
