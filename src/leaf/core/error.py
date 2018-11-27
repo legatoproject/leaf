@@ -56,83 +56,82 @@ class UserCancelException(LeafException):
 
 class NoRemoteException(LeafException):
     def __init__(self):
-        LeafException.__init__(self, "No remote defined")
-        self.hints.append("try 'leaf remote add' to add some")
+        LeafException.__init__(self, "No remote defined",
+                               hints="try 'leaf remote add' to add some")
 
 
 class NoEnabledRemoteException(LeafException):
     def __init__(self):
-        LeafException.__init__(self, "All remotes are disabled")
-        self.hints.append(
-            "try 'leaf remote list' then 'leaf remote enable XXX' to enable some")
+        LeafException.__init__(self, "All remotes are disabled",
+                               hints="try 'leaf remote list' then 'leaf remote enable XXX' to enable some")
 
 
 class NoPackagesInCacheException(LeafException):
     def __init__(self):
-        LeafException.__init__(self, "No package in cache")
-        self.hints.append(
-            "try 'leaf remote fetch' to trigger packages information refresh")
+        LeafException.__init__(self, "No package in cache",
+                               hints="try 'leaf remote fetch' to trigger packages information refresh")
 
 
 class BadRemoteUrlException(LeafException):
     def __init__(self, remote, cause=None):
         LeafException.__init__(
-            self, "Can't reach remote {0}".format(remote.alias), cause)
-        self.hints.append("please check your network connection,")
-        self.hints.append("or check the remote URL in 'leaf remote list',")
-        self.hints.append(
-            "or you can disable the remote with 'leaf remote disable {0}'".format(remote.alias))
+            self, "Can't reach remote {0}".format(remote.alias),
+            cause=cause,
+            hints=["please check your network connection,",
+                   "or check the remote URL in 'leaf remote list',",
+                   "or you can disable the remote with 'leaf remote disable {0}'".format(remote.alias)])
 
 
 class PackageInstallInterruptedException(LeafException):
     def __init__(self, packages, cause=None):
-        LeafException.__init__(self, "Package install interrupted", cause)
-        self.hints.append(
-            "try 'leaf package install {0}' to resume".format(' '.join(packages)))
+        LeafException.__init__(self, "Package install interrupted",
+                               cause=cause,
+                               hints="try 'leaf package install {0}' to resume".format(' '.join(packages)))
 
 
 class ProfileProvisioningException(LeafException):
     def __init__(self, cause=None):
-        LeafException.__init__(self, "Profile provisioning interrupted", cause)
-        self.hints.append("try 'leaf profile sync' to resume")
+        LeafException.__init__(self, "Profile provisioning interrupted",
+                               cause=cause,
+                               hints="try 'leaf profile sync' to resume")
 
 
 class InvalidPackageNameException(LeafException):
     def __init__(self, unknownName):
-        LeafException.__init__(self, "Unknown package {0}".format(unknownName))
-        self.hints.append("check available packages with 'leaf search'")
+        LeafException.__init__(self, "Unknown package {0}".format(unknownName),
+                               hints="check available packages with 'leaf search'")
 
 
 class InvalidProfileNameException(LeafException):
     def __init__(self, unknownName):
-        LeafException.__init__(self, "Unknown profile {0}".format(unknownName))
-        self.hints.append("check available profiles with 'leaf profile list'")
+        LeafException.__init__(self, "Unknown profile {0}".format(unknownName),
+                               hints="check available profiles with 'leaf profile list'")
 
 
 class ProfileNameAlreadyExistException(LeafException):
     def __init__(self, unknownName):
         LeafException.__init__(
-            self, "Profile name {0} already exists in current workspace".format(unknownName))
-        self.hints.append(
-            "try 'leaf select {0} && leaf update -p xxx' if you want to update profile {0} with package xxx".format(unknownName))
-        self.hints.append(
-            "try 'leaf setup -p xxx {0}_1' if you want to create a new profile with package xxx".format(unknownName))
+            self, "Profile name {0} already exists in current workspace".format(
+                unknownName),
+            hints=[
+                "try 'leaf select {0} && leaf update -p xxx' if you want to update profile {0} with package xxx".format(
+                    unknownName),
+                "try 'leaf setup -p xxx {0}_1' if you want to create a new profile with package xxx".format(unknownName)])
 
 
 class NoProfileSelected(LeafException):
     def __init__(self):
-        LeafException.__init__(
-            self, "No current profile, you need to select to a profile first")
-        self.hints.append(
-            "try 'leaf select xxx' if you want to select profile xxx")
+        LeafException.__init__(self, "No current profile, you need to select to a profile first",
+                               hints="try 'leaf select xxx' if you want to select profile xxx")
 
 
 class InvalidHashException(LeafException):
     def __init__(self, file, actual, expected):
         LeafException.__init__(
-            self, "The file %s hash could not be verified, expecting %s but was %s" % (file, expected, actual))
-        self.hints.append(
-            "try to download the file again, or contact the package owner")
+            self,
+            "The file %s hash could not be verified, expecting %s but was %s" % (
+                file, expected, actual),
+            hints="try to download the file again, or contact the package owner")
 
 
 class LockException(LeafException):
@@ -140,3 +139,11 @@ class LockException(LeafException):
         LeafException.__init__(
             self,
             "leaf is already running another operation (lock: %s)" % lockfile)
+
+
+class LeafOutOfDateException(LeafException):
+    def __init__(self, message):
+        LeafException.__init__(
+            self,
+            message,
+            hints="You may want to update leaf with 'sudo apt-get install --only-upgrade leaf'")

@@ -8,9 +8,9 @@ Leaf Package Manager
 '''
 
 import json
-import os
 import platform
 import shutil
+import os
 from builtins import Exception
 from collections import OrderedDict
 from datetime import datetime
@@ -26,8 +26,8 @@ from leaf.core.coreutils import StepExecutor, VariableResolver, \
     retrievePackage
 from leaf.core.dependencies import DependencyManager, DependencyType
 from leaf.core.error import BadRemoteUrlException, LeafException, \
-    NoEnabledRemoteException, NoPackagesInCacheException, NoRemoteException, \
-    UserCancelException
+    LeafOutOfDateException, NoEnabledRemoteException, \
+    NoPackagesInCacheException, NoRemoteException, UserCancelException
 from leaf.core.lock import LockFile
 from leaf.format.formatutils import sizeof_fmt
 from leaf.format.logger import TextLogger
@@ -291,6 +291,8 @@ class RemoteManager(GPGManager):
                     content[indexUrl] = jsonData
                     self.logger.printDefault(
                         "Fetched content from %s" % alias)
+                except LeafOutOfDateException:
+                    raise
                 except Exception as e:
                     self.printException(BadRemoteUrlException(remote, e))
             if len(content) > 0:
@@ -307,7 +309,7 @@ class RemoteManager(GPGManager):
                 if leafMinVersion is None or versionComparator_lt(leafMinVersion, ap.getSupportedLeafVersion()):
                     leafMinVersion = ap.getSupportedLeafVersion()
         if leafMinVersion is not None:
-            raise ValueError(
+            raise LeafOutOfDateException(
                 "You need to upgrade leaf v%s to use packages from %s" % (leafMinVersion, alias))
 
 
