@@ -12,14 +12,16 @@ import json
 import os
 import random
 import re
-import time
 import string
 import sys
 import tempfile
+import time
 import urllib
 from collections import OrderedDict
 from pathlib import Path
+from shutil import copyfile
 from urllib.parse import urlparse, urlunparse
+from urllib.request import urlretrieve
 
 import requests
 
@@ -132,11 +134,19 @@ def downloadData(url, outputFile=None, timeout=LeafConstants.DOWNLOAD_TIMEOUT):
     Download data and write it to outputFile
     or return the data if outputFile is None
     '''
-    with urllib.request.urlopen(url, timeout=timeout) as stream:
-        if outputFile is None:
-            return stream.read()
-        with open(str(outputFile), 'wb') as fp:
-            fp.write(stream.read())
+    parsedUrl = urlparse(url)
+    if parsedUrl.scheme == '':
+        with open(parsedUrl.path, 'rb') as fp:
+            if outputFile is None:
+                return fp.read()
+            with open(str(outputFile), 'wb') as fp:
+                fp.write(fp.read())
+    else:
+        with urllib.request.urlopen(url, timeout=timeout) as stream:
+            if outputFile is None:
+                return stream.read()
+            with open(str(outputFile), 'wb') as fp:
+                fp.write(stream.read())
 
 
 def downloadFile(url, folder, logger, filename=None, hash=None, bufferSize=256 * 1024):
@@ -164,9 +174,15 @@ def downloadFile(url, folder, logger, filename=None, hash=None, bufferSize=256 *
 
     if not targetFile.exists():
         try:
-            message = "Downloading " + targetFile.name
+            message = "Getting " + targetFile.name
             printProgress(logger.printDefault, message, 0, 1)
-            if parsedUrl.scheme.startswith("http"):
+            if parsedUrl.scheme == '':
+                # file mode, simple file copy
+                message = "Copying " + targetFile.name
+                copyfile(parsedUrl.path, str(targetFile))
+            elif parsedUrl.scheme.startswith("http"):
+                # http/https mode, get file length before
+                message = "Downloading " + targetFile.name
                 req = requests.get(url,
                                    stream=True,
                                    timeout=LeafConstants.DOWNLOAD_TIMEOUT)
@@ -180,7 +196,8 @@ def downloadFile(url, folder, logger, filename=None, hash=None, bufferSize=256 *
                                       currentSize, size)
                         fp.write(data)
             else:
-                urllib.request.urlretrieve(url, str(targetFile))
+                # other scheme, use urllib
+                urlretrieve(url, str(targetFile))
             printProgress(logger.printDefault, message, 1, 1)
         finally:
             # End line since all progress message are on the same line

@@ -201,7 +201,7 @@ class AbstractTestWithRepo(AbstractTestWithChecker):
         return (AbstractTestWithRepo.REPO_FOLDER / "index.json").as_uri()
 
     def getRemoteUrl2(self):
-        return (AbstractTestWithRepo.REPO_FOLDER / "index2.json").as_uri()
+        return str(AbstractTestWithRepo.REPO_FOLDER / "index2.json")
 
     def getVolatileItem(self, name, mkdir=True):
         out = AbstractTestWithRepo.VOLATILE_FOLDER / name

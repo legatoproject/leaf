@@ -1,7 +1,7 @@
 Refreshing available packages...
 Fetched file://{ROOT_FOLDER}/repository/index.json
 Fetched content from default
-Fetched file://{ROOT_FOLDER}/repository/index2.json
+Fetched {ROOT_FOLDER}/repository/index2.json
 Fetched content from other
 [90m┌[0m[90m─────────────────────────[0m[90m─[0m[90m─────────────[0m[90m─────────────────────────[0m[90m┐[0m
 [90m│[0m                           5 [1mfeatures[0m                           [90m│[0m
