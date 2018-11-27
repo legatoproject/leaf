@@ -6,12 +6,12 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from collections import OrderedDict
-from os.path import pathsep
-from pathlib import Path
 import argparse
 import os
 import subprocess
+from collections import OrderedDict
+from os.path import pathsep
+from pathlib import Path
 
 from leaf.cli.cliutils import GenericCommand
 
@@ -49,9 +49,6 @@ class ExternalCommand(GenericCommand):
 
         env = dict(os.environ)
         env.update(wm.getLeafEnvironment().toMap())
-        env.update(wm.getUserEnvironment().toMap())
-        if wm.isWorkspaceInitialized():
-            env.update(wm.getWorkspaceEnvironment().toMap())
 
         # Use args to run the external command
         command = [str(self.executable)]
