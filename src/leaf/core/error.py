@@ -133,3 +133,10 @@ class InvalidHashException(LeafException):
             self, "The file %s hash could not be verified, expecting %s but was %s" % (file, expected, actual))
         self.hints.append(
             "try to download the file again, or contact the package owner")
+
+
+class LockException(LeafException):
+    def __init__(self, lockfile):
+        LeafException.__init__(
+            self,
+            "leaf is already running another operation (lock: %s)" % lockfile)

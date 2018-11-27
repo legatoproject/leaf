@@ -11,6 +11,8 @@ from leaf.cli.external import grepDescription
 from leaf.constants import JsonConstants, LeafFiles
 from leaf.core.coreutils import VariableResolver, \
     groupPackageIdentifiersByName
+from leaf.core.error import LeafException
+from leaf.core.lock import LockFile
 from leaf.model.base import JsonObject
 from leaf.model.package import Feature, InstalledPackage, PackageIdentifier
 from leaf.utils import checkSupportedLeaf, jsonLoadFile, jsonWriteFile
@@ -300,3 +302,49 @@ class TestMisc(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             vr.resolve("@{NAME} @{VERSION:version_1.2} @{DIR:version_latest}")
+
+    def testLockAdvisory(self):
+        advisory = True
+        lf = LockFile("/tmp/advisory.lock")
+
+        @lf.acquire(advisory=advisory)
+        def foo():
+            pass
+
+        lf.acquire(advisory=advisory)
+        with lf.acquire(advisory=advisory):
+            with lf.acquire(advisory=advisory):
+                with lf.acquire(advisory=advisory):
+                    foo()
+                foo()
+            with lf.acquire(advisory=advisory):
+                with lf.acquire(advisory=advisory):
+                    foo()
+                foo()
+            foo()
+
+    def testLockMandatory(self):
+        advisory = False
+        lf = LockFile("/tmp/mandatory.lock")
+
+        @lf.acquire(advisory=advisory)
+        def foo():
+            pass
+
+        lf.acquire(advisory=advisory)
+
+        with lf.acquire(advisory=advisory):
+            with self.assertRaises(LeafException):
+                with lf.acquire(advisory=advisory):
+                    pass
+            try:
+                with lf.acquire(advisory=advisory):
+                    self.fail()
+                self.fail()
+            except LeafException:
+                pass
+            with self.assertRaises(LeafException):
+                foo()
+
+        with lf.acquire(advisory=advisory):
+            pass

@@ -24,6 +24,7 @@ class EnvConstants():
     GPG_KEYSERVER = "LEAF_GPG_KEYSERVER"
     NON_INTERACTIVE = 'LEAF_NON_INTERACTIVE'
     CUSTOM_TAR = 'LEAF_TAR_BIN'
+    DISABLE_LOCKS = 'LEAF_DISABLE_LOCKS'
 
 
 class LeafConstants():
@@ -61,6 +62,7 @@ class LeafFiles():
     CACHE_REMOTES_FILENAME = 'remotes.json'
     THEMES_FILENAME = 'themes.ini'
     GPG_DIRNAME = 'gpg'
+    LOCK_FILENAME = 'lock'
     # Skeleton files
     SKEL_FILES = {
         CONFIG_FILENAME: [

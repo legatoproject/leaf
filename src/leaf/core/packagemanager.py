@@ -7,10 +7,10 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
+import json
 import os
 import platform
 import shutil
-import json
 from builtins import Exception
 from collections import OrderedDict
 from datetime import datetime
@@ -28,6 +28,7 @@ from leaf.core.dependencies import DependencyManager, DependencyType
 from leaf.core.error import BadRemoteUrlException, LeafException, \
     NoEnabledRemoteException, NoPackagesInCacheException, NoRemoteException, \
     UserCancelException
+from leaf.core.lock import LockFile
 from leaf.format.formatutils import sizeof_fmt
 from leaf.format.logger import TextLogger
 from leaf.format.renderer.error import HintsRenderer, LeafExceptionRenderer
@@ -48,14 +49,12 @@ class _LeafBase():
         '''
         Constructor
         '''
-        self.configurationFolder = getAltEnvPath(
-            EnvConstants.CUSTOM_CONFIG,
-            LeafFiles.DEFAULT_CONFIG_FOLDER,
-            mkdirIfNeeded=True)
-        self.cacheFolder = getAltEnvPath(
-            EnvConstants.CUSTOM_CACHE,
-            LeafFiles.DEFAULT_CACHE_FOLDER,
-            mkdirIfNeeded=True)
+        self.configurationFolder = getAltEnvPath(EnvConstants.CUSTOM_CONFIG,
+                                                 LeafFiles.DEFAULT_CONFIG_FOLDER,
+                                                 mkdirIfNeeded=True)
+        self.cacheFolder = getAltEnvPath(EnvConstants.CUSTOM_CACHE,
+                                         LeafFiles.DEFAULT_CACHE_FOLDER,
+                                         mkdirIfNeeded=True)
 
     def _getSkelConfigurationFile(self, filename):
         '''
@@ -322,8 +321,9 @@ class PackageManager(RemoteManager):
         Constructor
         '''
         RemoteManager.__init__(self, verbosity)
-        self.downloadCacheFolder = self.cacheFolder / \
-            LeafFiles.CACHE_DOWNLOAD_FOLDERNAME
+        self.downloadCacheFolder = self.cacheFolder / LeafFiles.CACHE_DOWNLOAD_FOLDERNAME
+        self.applicationLock = LockFile(
+            self.configurationFolder / LeafFiles.LOCK_FILENAME)
         self._checkCacheFolderSize()
 
     def _checkCacheFolderSize(self):
@@ -512,7 +512,6 @@ class PackageManager(RemoteManager):
         Install given prereg available package in alternative root folder
         @return: error count
         '''
-
         if availablePackages is None:
             availablePackages = self.listAvailablePackages()
 
@@ -552,120 +551,123 @@ class PackageManager(RemoteManager):
         Compute dependency tree, check compatibility, download from remotes and extract needed packages
         @return: InstalledPackage list
         '''
-        prereqRootFolder = None
-        installedPackages = self.listInstalledPackages()
-        availablePackages = self.listAvailablePackages()
-        out = []
+        with self.applicationLock.acquire():
+            prereqRootFolder = None
+            installedPackages = self.listInstalledPackages()
+            availablePackages = self.listAvailablePackages()
+            out = []
 
-        # Build env to resolve dynamic dependencies
-        if env is None:
-            env = Environment.build(self.getLeafEnvironment(),
-                                    self.getUserEnvironment())
+            # Build env to resolve dynamic dependencies
+            if env is None:
+                env = Environment.build(self.getLeafEnvironment(),
+                                        self.getUserEnvironment())
 
-        try:
-            apToInstall = DependencyManager.compute(piList,
-                                                    DependencyType.INSTALL,
-                                                    apMap=availablePackages,
-                                                    ipMap=installedPackages,
-                                                    env=env)
+            try:
+                apToInstall = DependencyManager.compute(piList,
+                                                        DependencyType.INSTALL,
+                                                        apMap=availablePackages,
+                                                        ipMap=installedPackages,
+                                                        env=env)
 
-            # Check nothing to do
-            if len(apToInstall) == 0:
-                self.logger.printDefault("All packages are installed")
-            else:
-                # Check ap list can be installed
-                self.checkPackagesForInstall(apToInstall)
+                # Check nothing to do
+                if len(apToInstall) == 0:
+                    self.logger.printDefault("All packages are installed")
+                else:
+                    # Check ap list can be installed
+                    self.checkPackagesForInstall(apToInstall)
 
-                # Confirm
-                self.logger.printQuiet("Packages to install:",
-                                       ", ".join([str(ap.getIdentifier())for ap in apToInstall]))
-                totalSize = 0
-                for ap in apToInstall:
-                    if ap.getSize() is not None:
-                        totalSize += ap.getSize()
-                if totalSize > 0:
+                    # Confirm
+                    self.logger.printQuiet("Packages to install:",
+                                           ", ".join([str(ap.getIdentifier())for ap in apToInstall]))
+                    totalSize = 0
+                    for ap in apToInstall:
+                        if ap.getSize() is not None:
+                            totalSize += ap.getSize()
+                    if totalSize > 0:
+                        self.logger.printDefault(
+                            "Total size:", sizeof_fmt(totalSize))
+                    if not self.logger.confirm():
+                        raise UserCancelException()
+
+                    # Install prereq
+                    prereqApList = DependencyManager.compute(piList, DependencyType.PREREQ,
+                                                             apMap=availablePackages,
+                                                             ipMap=installedPackages,
+                                                             env=env)
+
+                    if len(prereqApList) > 0:
+                        self.logger.printDefault("Check required packages")
+                        prereqRootFolder = mkTmpLeafRootDir()
+                        self.installPrereqFromRemotes(
+                            [prereqAp.getIdentifier()
+                             for prereqAp in prereqApList],
+                            prereqRootFolder,
+                            availablePackages=availablePackages,
+                            env=env)
+
+                    # Download ap list
                     self.logger.printDefault(
-                        "Total size:", sizeof_fmt(totalSize))
-                if not self.logger.confirm():
-                    raise UserCancelException()
+                        "Downloading %d package(s)" % len(apToInstall))
+                    laList = []
+                    for ap in apToInstall:
+                        la = self.downloadAvailablePackage(ap)
+                        laList.append(la)
 
-                # Install prereq
-                prereqApList = DependencyManager.compute(piList, DependencyType.PREREQ,
-                                                         apMap=availablePackages,
-                                                         ipMap=installedPackages,
-                                                         env=env)
+                    # Extract la list
+                    for la in laList:
+                        self.logger.printDefault(
+                            "[%d/%d] Installing %s" % (
+                                len(out) + 1, len(laList), la.getIdentifier()))
+                        ip = self.extractLeafArtifact(
+                            la, env,
+                            keepFolderOnError=keepFolderOnError)
+                        out.append(ip)
 
-                if len(prereqApList) > 0:
-                    self.logger.printDefault("Check required packages")
-                    prereqRootFolder = mkTmpLeafRootDir()
-                    self.installPrereqFromRemotes(
-                        [prereqAp.getIdentifier()
-                         for prereqAp in prereqApList],
-                        prereqRootFolder,
-                        availablePackages=availablePackages,
-                        env=env)
+            finally:
+                if not keepFolderOnError and prereqRootFolder is not None:
+                    self.logger.printVerbose("Remove prereq root folder %s" %
+                                             prereqRootFolder)
+                    shutil.rmtree(str(prereqRootFolder), True)
 
-                # Download ap list
-                self.logger.printDefault(
-                    "Downloading %d package(s)" % len(apToInstall))
-                laList = []
-                for ap in apToInstall:
-                    la = self.downloadAvailablePackage(ap)
-                    laList.append(la)
-
-                # Extract la list
-                for la in laList:
-                    self.logger.printDefault(
-                        "[%d/%d] Installing %s" % (
-                            len(out) + 1, len(laList), la.getIdentifier()))
-                    ip = self.extractLeafArtifact(
-                        la, env,
-                        keepFolderOnError=keepFolderOnError)
-                    out.append(ip)
-
-        finally:
-            if not keepFolderOnError and prereqRootFolder is not None:
-                self.logger.printVerbose("Remove prereq root folder %s" %
-                                         prereqRootFolder)
-                shutil.rmtree(str(prereqRootFolder), True)
-
-        return out
+            return out
 
     def uninstallPackages(self, piList):
         '''
         Remove given package
         '''
-        installedPackages = self.listInstalledPackages()
+        with self.applicationLock.acquire():
+            installedPackages = self.listInstalledPackages()
 
-        ipToRemove = DependencyManager.compute(
-            piList,
-            DependencyType.UNINSTALL,
-            ipMap=installedPackages)
+            ipToRemove = DependencyManager.compute(
+                piList,
+                DependencyType.UNINSTALL,
+                ipMap=installedPackages)
 
-        if len(ipToRemove) == 0:
-            self.logger.printDefault(
-                "No package to remove (to keep dependencies)")
-        else:
-            # Confirm
-            self.logger.printQuiet("Packages to uninstall:",
-                                   ", ".join([str(ip.getIdentifier()) for ip in ipToRemove]))
-            if not self.logger.confirm():
-                raise UserCancelException()
+            if len(ipToRemove) == 0:
+                self.logger.printDefault(
+                    "No package to remove (to keep dependencies)")
+            else:
+                # Confirm
+                self.logger.printQuiet("Packages to uninstall:",
+                                       ", ".join([str(ip.getIdentifier()) for ip in ipToRemove]))
+                if not self.logger.confirm():
+                    raise UserCancelException()
 
-            env = Environment.build(self.getLeafEnvironment(),
-                                    self.getUserEnvironment())
-            for ip in ipToRemove:
-                self.logger.printDefault("Removing", ip.getIdentifier())
-                vr = VariableResolver(
-                    ip,
-                    installedPackages.values())
-                stepExec = StepExecutor(self.logger, ip, vr, env=env)
-                stepExec.preUninstall()
-                self.logger.printVerbose("Remove folder:", ip.folder)
-                shutil.rmtree(str(ip.folder))
-                del installedPackages[ip.getIdentifier()]
+                env = Environment.build(self.getLeafEnvironment(),
+                                        self.getUserEnvironment())
+                for ip in ipToRemove:
+                    self.logger.printDefault("Removing", ip.getIdentifier())
+                    vr = VariableResolver(
+                        ip,
+                        installedPackages.values())
+                    stepExec = StepExecutor(self.logger, ip, vr, env=env)
+                    stepExec.preUninstall()
+                    self.logger.printVerbose("Remove folder:", ip.folder)
+                    shutil.rmtree(str(ip.folder))
+                    del installedPackages[ip.getIdentifier()]
 
-            self.logger.printDefault("%d package(s) removed" % len(ipToRemove))
+                self.logger.printDefault(
+                    "%d package(s) removed" % len(ipToRemove))
 
     def syncPackages(self, piList, env=None):
         '''
