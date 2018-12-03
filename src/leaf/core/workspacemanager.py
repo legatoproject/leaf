@@ -236,12 +236,16 @@ class WorkspaceManager(PackageManager):
             self.workspaceConfigFile.touch(exist_ok=True)
 
     def provisionProfile(self, profile):
-        # Ensure FS clean
-        if not self.workspaceDataFolder.is_dir():
-            self.workspaceDataFolder.mkdir()
-        elif profile.folder.is_dir():
-            shutil.rmtree(str(profile.folder))
-        profile.folder.mkdir()
+        if not profile.folder.is_dir():
+            # Create folder if needed
+            profile.folder.mkdir(parents=True)
+        else:
+            # Clean folder content
+            for item in profile.folder.glob("*"):
+                if item.is_symlink():
+                    item.unlink()
+                else:
+                    shutil.rmtree(str(item))
 
         # Check if all needed packages are installed
         notInstalledPackages = DependencyManager.compute(
@@ -263,6 +267,7 @@ class WorkspaceManager(PackageManager):
 
         # Do all needed links
         profilesDependencyList = self.getProfileDependencies(profile)
+        errorCount = 0
         for ip in profilesDependencyList:
             piFolder = profile.folder / ip.getIdentifier().name
             if piFolder.exists():
@@ -272,9 +277,14 @@ class WorkspaceManager(PackageManager):
                 self.syncPackages([ip.getIdentifier()], env=env)
                 piFolder.symlink_to(ip.folder)
             except Exception as e:
+                errorCount += 1
                 self.logger.printError(
                     "Error while sync operation on %s" % ip.getIdentifier())
                 self.logger.printError(str(e))
+
+        # Touch folder when provisionning is done without error
+        if errorCount == 0:
+            profile.folder.touch(exist_ok=True)
 
     def getFullEnvironment(self, profile):
         self.isProfileSync(profile, raiseIfNotSync=True)
