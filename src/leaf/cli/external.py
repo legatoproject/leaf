@@ -16,10 +16,6 @@ from pathlib import Path
 from leaf.cli.cliutils import GenericCommand
 
 
-MOTIF = 'LEAF_DESCRIPTION'
-HEADER_SIZE = 2048
-
-
 class ExternalCommand(GenericCommand):
     '''
     Wrapper to run external binaries as leaf subcommand.
@@ -57,41 +53,63 @@ class ExternalCommand(GenericCommand):
         return subprocess.call(command, env=env)
 
 
-def grepDescription(file):
-    try:
-        with open(str(file), 'rb') as fp:
-            header = fp.read(HEADER_SIZE)
-            if MOTIF.encode() in header:
-                for line in header.decode().splitlines():
-                    if MOTIF in line:
-                        return line.split(MOTIF, 1)[1].strip()
-    except Exception:
-        pass
-
-
-def findLeafExternalCommands(blacklistCommands=None):
+class ExternalCommandUtils():
     '''
     Find leaf-XXX binaries in $PATH to build external commands
-    @param blacklistCommands: do not use commands with name in list
-    @return: ExternalCommands list
     '''
-    out = OrderedDict()
-    pathFolderList = os.environ["PATH"].split(pathsep)
-    for pathFolder in map(Path, pathFolderList):
-        if pathFolder.is_dir():
-            for candidate in pathFolder.iterdir():
-                if candidate.is_file() \
-                        and candidate.name.startswith("leaf-") \
-                        and os.access(str(candidate), os.X_OK):
-                    name = candidate.name[5:]
-                    if name in out:
-                        # Command already found
-                        continue
-                    if blacklistCommands is not None and name in blacklistCommands:
-                        # Command is blacklisted
-                        continue
-                    description = grepDescription(candidate)
+
+    COMMANDS = None
+    MOTIF = 'LEAF_DESCRIPTION'
+    HEADER_SIZE = 2048
+
+    @staticmethod
+    def grepDescription(file):
+        try:
+            with open(str(file), 'rb') as fp:
+                header = fp.read(ExternalCommandUtils.HEADER_SIZE)
+                if ExternalCommandUtils.MOTIF.encode() in header:
+                    for line in header.decode().splitlines():
+                        if ExternalCommandUtils.MOTIF in line:
+                            return line.split(ExternalCommandUtils.MOTIF, 1)[1].strip()
+        except Exception:
+            pass
+
+    @staticmethod
+    def scanPath():
+        out = []
+        folderList = os.environ["PATH"].split(pathsep)
+        for folder in map(Path, folderList):
+            out += ExternalCommandUtils.scanFolder(folder)
+        return out
+
+    @staticmethod
+    def scanFolder(folder):
+        out = []
+        if isinstance(folder, Path) and folder.is_dir():
+            for candidate in folder.iterdir():
+                if candidate.is_file() and candidate.name.startswith("leaf-") and os.access(str(candidate), os.X_OK):
+                    segments = candidate.name.split('-')[1:]
+                    description = ExternalCommandUtils.grepDescription(
+                        candidate)
                     if description is not None:
-                        out[name] = ExternalCommand(
-                            name, description, candidate)
-    return out.values()
+                        out.append((segments, description, candidate))
+        return out
+
+    @staticmethod
+    def getCommands(prefix=(), ignoreList=None):
+        if ExternalCommandUtils.COMMANDS is None:
+            ExternalCommandUtils.COMMANDS = ExternalCommandUtils.scanPath()
+
+        out = OrderedDict()
+        for segments, description, binary in ExternalCommandUtils.COMMANDS:
+            # Filter leaf-PREFIX1-PREFIX2-XXX only, where XXX will be the name
+            if len(segments) == len(prefix) + 1 and segments[:len(prefix)] == list(prefix):
+                name = segments[-1]
+                if ignoreList is not None and name in ignoreList:
+                    # Ignore command
+                    continue
+                if name in out:
+                    # Command already found
+                    continue
+                out[name] = ExternalCommand(name, description, binary)
+        return out.values()

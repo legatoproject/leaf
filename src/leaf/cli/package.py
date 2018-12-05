@@ -23,7 +23,8 @@ class PackageMetaCommand(LeafMetaCommand):
     def __init__(self):
         LeafMetaCommand.__init__(self,
                                  "package",
-                                 "core package manager commands")
+                                 "core package manager commands",
+                                 externalCommandsPrefix=('package',))
 
     def getDefaultSubCommand(self):
         return PackageListCommand()

@@ -23,7 +23,8 @@ class BuildMetaCommand(LeafMetaCommand):
         LeafMetaCommand.__init__(
             self,
             "build",
-            "commands to build leaf artifacts (manifest, package or index)")
+            "commands to build leaf artifacts (manifest, package or index)",
+            externalCommandsPrefix=('build',))
 
     def getSubCommands(self):
         return [BuildPackSubCommand(),

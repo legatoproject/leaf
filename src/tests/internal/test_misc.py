@@ -7,7 +7,7 @@ from tempfile import mktemp
 import unittest
 from tests.testutils import EXTENSIONS_FOLDER, RESOURCE_FOLDER
 
-from leaf.cli.external import grepDescription
+from leaf.cli.external import ExternalCommandUtils
 from leaf.constants import JsonConstants, LeafFiles
 from leaf.core.coreutils import VariableResolver, \
     groupPackageIdentifiersByName
@@ -23,16 +23,16 @@ class TestMisc(unittest.TestCase):
     def testGrepDescription(self):
         file = RESOURCE_FOLDER / "leaf-foo.sh"
         self.assertTrue(file.exists())
-        description = grepDescription(file)
+        description = ExternalCommandUtils.grepDescription(file)
         self.assertEqual("The description of my command", description)
 
         file = RESOURCE_FOLDER / "install_1.0" / "manifest.json"
         self.assertTrue(file.exists())
-        description = grepDescription(file)
+        description = ExternalCommandUtils.grepDescription(file)
         self.assertIsNone(description)
 
         for extension in EXTENSIONS_FOLDER.iterdir():
-            description = grepDescription(extension)
+            description = ExternalCommandUtils.grepDescription(extension)
             print(extension, description)
             self.assertIsNotNone(description)
 

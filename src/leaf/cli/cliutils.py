@@ -166,9 +166,10 @@ class LeafMetaCommand(GenericCommand):
     Generic class to represent commands that have subcommands
     '''
 
-    def __init__(self, cmdName, cmdHelp, cmdExamples=None):
+    def __init__(self, cmdName, cmdHelp, cmdExamples=None, externalCommandsPrefix=None):
         GenericCommand.__init__(self, cmdName, cmdHelp,
                                 cmdExamples=cmdExamples)
+        self.externalCommandsPrefix = externalCommandsPrefix
 
     def initArgs(self, parser):
         super().initArgs(parser)
@@ -186,6 +187,12 @@ class LeafMetaCommand(GenericCommand):
             self.subCommands.append(self.defaultSubCommand)
 
         self.subCommands += self.getSubCommands()
+        if self.externalCommandsPrefix is not None:
+            from leaf.cli.external import ExternalCommandUtils
+            self.subCommands += ExternalCommandUtils.getCommands(
+                prefix=self.externalCommandsPrefix,
+                ignoreList=[cmd.cmdName for cmd in self.subCommands])
+
         for lc in self.subCommands:
             lc.create(subparsers)
 

@@ -2,10 +2,9 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
-import os
 import unittest
 
-from tests.testutils import LEAF_UT_SKIP, RESOURCE_FOLDER, LeafCliWrapper
+from tests.testutils import LEAF_UT_SKIP, LeafCliWrapper
 
 
 class TestCliPackageManager(LeafCliWrapper):
@@ -157,17 +156,6 @@ class TestCliPackageManager(LeafCliWrapper):
                       "prereq-true_1.0")
         self.assertTrue(
             (self.getAltWorkspaceFolder() / "prereq-true_1.0").is_dir())
-
-    def testExternalCommand(self):
-        with self.assertRaises(SystemExit):
-            self.leafExec("foo.sh")
-        oldPath = os.environ['PATH']
-        try:
-            self.assertTrue(RESOURCE_FOLDER.is_dir())
-            os.environ['PATH'] = oldPath + ":" + str(RESOURCE_FOLDER)
-            self.leafExec("foo.sh")
-        finally:
-            os.environ['PATH'] = oldPath
 
     def testInstallUnknownPackage(self):
         self.leafExec(["package", "install"], "unknwonPackage",

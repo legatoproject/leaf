@@ -16,7 +16,8 @@ class RemoteMetaCommand(LeafMetaCommand):
         LeafMetaCommand.__init__(
             self,
             "remote",
-            "display and manage remote repositories")
+            "display and manage remote repositories",
+            externalCommandsPrefix=('remote', ))
 
     def getDefaultSubCommand(self):
         return RemoteListCommand()

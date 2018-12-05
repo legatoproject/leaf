@@ -21,7 +21,8 @@ class EnvMetaCommand(LeafMetaCommand):
         LeafMetaCommand.__init__(
             self,
             "env",
-            "display environement variables")
+            "display environement variables",
+            externalCommandsPrefix=('env', ))
 
     def getSubCommands(self):
         return [EnvBuiltinCommand(),

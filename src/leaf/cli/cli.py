@@ -6,21 +6,21 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-import sys
 import os
+import sys
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from pathlib import Path
 from signal import SIGINT, signal
 
 from leaf import __help_description__, __version__
+from leaf.cli.build import BuildMetaCommand
 from leaf.cli.config import ConfigCommand
 from leaf.cli.env import EnvMetaCommand
-from leaf.cli.external import findLeafExternalCommands
+from leaf.cli.external import ExternalCommandUtils
 from leaf.cli.feature import FeatureMetaCommand
 from leaf.cli.package import PackageMetaCommand
 from leaf.cli.profile import ProfileMetaCommand
 from leaf.cli.remote import RemoteMetaCommand
-from leaf.cli.build import BuildMetaCommand
 from leaf.cli.search import SearchCommand
 from leaf.cli.select import SelectCommand
 from leaf.cli.status import StatusCommand
@@ -55,8 +55,9 @@ class LeafCli():
             # Releng
             BuildMetaCommand()
         ]
-        self.commands += findLeafExternalCommands(
-            blacklistCommands=[cmd.cmdName for cmd in self.commands])
+        self.commands += ExternalCommandUtils.getCommands(
+            prefix=(),
+            ignoreList=[cmd.cmdName for cmd in self.commands])
 
         # Setup argument parser
         apkw = {'description': __help_description__,

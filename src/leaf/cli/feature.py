@@ -19,7 +19,8 @@ class FeatureMetaCommand(LeafMetaCommand):
         LeafMetaCommand.__init__(
             self,
             "feature",
-            "manage features from available packages")
+            "manage features from available packages",
+            externalCommandsPrefix=('feature', ))
 
     def getDefaultSubCommand(self):
         return FeatureListCommand()

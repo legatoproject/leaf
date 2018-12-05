@@ -17,7 +17,8 @@ class ProfileMetaCommand(LeafMetaCommand):
         LeafMetaCommand.__init__(
             self,
             "profile",
-            "command to manage profiles")
+            "command to manage profiles",
+            externalCommandsPrefix=('profile', ))
 
     def getDefaultSubCommand(self):
         return ProfileListCommand()
