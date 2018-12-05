@@ -2,7 +2,7 @@
 │ 0 package - Filter: None │
 └──────────────────────────┘
 ┌───────────────────────────────────────────────────────────────────────┐
-│                       92 packages - Filter: None                      │
+│                       94 packages - Filter: None                      │
 ├─────────────────────────────────────┬───────────────────────┬─────────┤
 │              Identifier             │      Description      │   Tags  │
 ╞═════════════════════════════════════╪═══════════════════════╪═════════╡
@@ -49,6 +49,7 @@
 │ sync_1.0                            │                       │         │
 │ testlatest_1.0                      │                       │         │
 │ testlatest_2.0                      │                       │         │
+│ testlatest_2.1                      │                       │         │
 │ version_1.0                         │                       │         │
 │ version_1.1                         │                       │         │
 │ version_2.0                         │                       │         │
@@ -95,6 +96,7 @@
 │ sync_1.0                            │                       │         │
 │ testlatest_1.0                      │                       │         │
 │ testlatest_2.0                      │                       │         │
+│ testlatest_2.1                      │                       │         │
 │ version_1.0                         │                       │         │
 │ version_1.1                         │                       │         │
 │ version_2.0                         │                       │         │

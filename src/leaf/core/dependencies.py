@@ -181,16 +181,14 @@ class DependencyManager():
                                                apMap=apMap,
                                                ipMap=ipMap,
                                                env=env)
-            prereqPiList = set()
-            # Get all prereq PI
+            # Get all prereq PI and find corresponding AP
             for ap in apList:
-                prereqPiList.update(map(PackageIdentifier.fromString,
-                                        ap.getLeafRequires()))
-            # return a list of AP
-            out = [DependencyManager._findManifest(
-                pi, apMap) for pi in prereqPiList]
-            # sort alphabetically
-            out = list(sorted(out, key=Manifest.getIdentifier))
+                for pis in ap.getLeafRequires():
+                    pi = PackageIdentifier.fromString(pis)
+                    ap = DependencyManager._findManifest(pi, apMap)
+                    out.append(ap)
+            # sort alphabetically and ensure no dupplicates
+            out = list(sorted(set(out), key=Manifest.getIdentifier))
         else:
             raise ValueError()
         return out

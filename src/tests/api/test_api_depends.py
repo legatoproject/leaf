@@ -344,3 +344,12 @@ class TestApiDepends(unittest.TestCase):
             ipMap={})
         self.assertEqual(['version_2.0'],
                          list(map(str, map(Manifest.getIdentifier, deps))))
+
+        deps = DependencyManager.compute(
+            PackageIdentifier.fromStringList(["testlatest_2.0",
+                                              "testlatest_2.1"]),
+            depType=DependencyType.PREREQ,
+            apMap=TestApiDepends.MANIFEST_MAP,
+            ipMap={})
+        self.assertEqual(['version_2.0'],
+                         list(map(str, map(Manifest.getIdentifier, deps))))

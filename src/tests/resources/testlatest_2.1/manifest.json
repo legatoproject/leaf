@@ -1,0 +1,12 @@
+{
+    "info": {
+        "name": "testlatest",
+        "version": "2.1",
+        "depends": [
+            "version_2.0"
+        ],
+        "requires": [
+            "version_2.0"
+        ]
+    }
+}
