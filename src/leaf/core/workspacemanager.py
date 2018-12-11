@@ -13,8 +13,7 @@ from collections import OrderedDict
 from pathlib import Path
 
 from leaf.constants import EnvConstants, LeafFiles
-from leaf.core.dependencies import (DependencyManager, DependencyStrategy,
-                                    DependencyType)
+from leaf.core.dependencies import DependencyUtils
 from leaf.core.error import (InvalidProfileNameException,
                              ProfileNameAlreadyExistException,
                              ProfileProvisioningException, NoProfileSelected)
@@ -248,11 +247,10 @@ class WorkspaceManager(PackageManager):
                     shutil.rmtree(str(item))
 
         # Check if all needed packages are installed
-        notInstalledPackages = DependencyManager.compute(
+        notInstalledPackages = DependencyUtils.install(
             PackageIdentifier.fromStringList(profile.getPackages()),
-            DependencyType.INSTALL,
-            apMap=self.listAvailablePackages(),
-            ipMap=self.listInstalledPackages(),
+            self.listAvailablePackages(),
+            self.listInstalledPackages(),
             env=self._getSkelEnvironement(profile))
         if len(notInstalledPackages) == 0:
             self.logger.printVerbose("All packages are already installed")
@@ -304,9 +302,8 @@ class WorkspaceManager(PackageManager):
         '''
         Returns all latest packages needed by a profile
         '''
-        return DependencyManager.compute(
+        return DependencyUtils.installed(
             PackageIdentifier.fromStringList(profile.getPackages()),
-            DependencyType.INSTALLED,
-            strategy=DependencyStrategy.LATEST_VERSION,
-            ipMap=self.listInstalledPackages(),
+            self.listInstalledPackages(),
+            onlyKeepLatest=True,
             env=self._getSkelEnvironement(profile))

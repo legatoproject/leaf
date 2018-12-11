@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 from leaf.constants import EnvConstants, JsonConstants, LeafConstants, LeafFiles
-from leaf.core.dependencies import DependencyManager
+from leaf.core.dependencies import DependencyUtils
 from leaf.core.error import LeafException
 from leaf.core.packagemanager import LoggerManager
 from leaf.model.modelutils import layerModelUpdate
@@ -60,7 +60,7 @@ class RelengManager(LoggerManager):
 
         manifest = Manifest.parse(manifestFile)
 
-        if DependencyManager.isLatestPackage(manifest.getIdentifier()):
+        if DependencyUtils.isLatestPackage(manifest.getIdentifier()):
             raise LeafException("Invalid version for manifest %s (%s is a reserved keyword)" % (
                 manifestFile, LeafConstants.LATEST))
 
@@ -118,7 +118,7 @@ class RelengManager(LoggerManager):
 
             ap = AvailablePackage(artifactNode, None)
             pi = ap.getIdentifier()
-            if DependencyManager.isLatestPackage(pi):
+            if DependencyUtils.isLatestPackage(pi):
                 raise LeafException("Invalid version for package %s (%s is a reserved keyword)" % (
                     artifact, LeafConstants.LATEST))
 
@@ -181,7 +181,8 @@ class RelengManager(LoggerManager):
                         JsonConstants.INFO_REQUIRES,
                         JsonConstants.INFO_DEPENDS,
                         JsonConstants.INFO_TAGS,
-                        JsonConstants.INFO_LEAF_MINVER):
+                        JsonConstants.INFO_LEAF_MINVER,
+                        JsonConstants.INFO_AUTOUPGRADE):
                 if key in infoMap:
                     value = infoMap[key]
                     if value is not None:
@@ -221,7 +222,7 @@ class RelengManager(LoggerManager):
                 self.logger.printDefault("Replace %s --> %s" % (var, value))
                 jsonString = jsonString.replace("#{%s}" % var, value)
 
-        if DependencyManager.isLatestPackage(manifest.getIdentifier()):
+        if DependencyUtils.isLatestPackage(manifest.getIdentifier()):
             raise LeafException(
                 "Invalid version (%s is a reserved keyword)" % LeafConstants.LATEST)
 

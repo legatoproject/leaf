@@ -71,9 +71,12 @@ class TestCliPackageManager(LeafCliWrapper):
     def testDepends(self):
         self.leafExec(["package", "deps"], "--available", "container-A_1.0")
         self.leafExec(["package", "deps"], "--install", "container-A_1.0")
-        self.leafExec(["package", "deps"], "--installed", "container-A_1.0")
         self.leafExec(["package", "deps"], "--uninstall", "container-A_1.0")
         self.leafExec(["package", "deps"], "--prereq", "container-A_1.0")
+        self.leafExec(["package", "deps"], "--installed", "container-A_1.0",
+                      expectedRc=2)
+        self.leafExec(["package", "install"], "container-A_1.0")
+        self.leafExec(["package", "deps"], "--installed", "container-A_1.0")
 
     def testInstall(self):
         self.leafExec(["package", "install"], "container-A_2.1")
@@ -162,6 +165,25 @@ class TestCliPackageManager(LeafCliWrapper):
                       expectedRc=2)
         self.leafExec(["package", "install"], "container-A",
                       expectedRc=2)
+
+    def testUpgrade(self):
+        self.leafExec(["remote", "disable"], "other")
+
+        self.leafExec(["package", "install"], "upgrade_1.0")
+        self.checkInstalledPackages(["upgrade_1.0"])
+
+        self.leafExec(["package", "upgrade"])
+        self.checkInstalledPackages(["upgrade_1.0"])
+
+        self.leafExec(["package", "upgrade"], "upgrade")
+        self.checkInstalledPackages(["upgrade_1.0",
+                                     "upgrade_1.1"])
+
+        self.leafExec(["remote", "enable"], "other")
+
+        self.leafExec(["package", "upgrade"], "--clean")
+        self.checkInstalledPackages(["upgrade_1.0",
+                                     "upgrade_2.0"])
 
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")

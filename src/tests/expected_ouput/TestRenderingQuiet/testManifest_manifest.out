@@ -42,6 +42,10 @@ sync_1.0
 testlatest_1.0
 testlatest_2.0
 testlatest_2.1
+upgrade_1.0
+upgrade_1.1
+upgrade_1.2
+upgrade_2.0
 version_1.0
 version_1.1
 version_2.0
@@ -89,6 +93,10 @@ sync_1.0
 testlatest_1.0
 testlatest_2.0
 testlatest_2.1
+upgrade_1.0
+upgrade_1.1
+upgrade_1.2
+upgrade_2.0
 version_1.0
 version_1.1
 version_2.0

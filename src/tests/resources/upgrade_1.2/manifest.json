@@ -1,0 +1,7 @@
+{
+  "info": {
+    "name": "upgrade",
+    "version": "1.2",
+    "upgrade": true
+  }
+}

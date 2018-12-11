@@ -215,6 +215,9 @@ class Manifest(JsonObject):
             out[name] = Feature(name, json)
         return out
 
+    def isAutoUpgrade(self):
+        return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_AUTOUPGRADE])
+
 
 class LeafArtifact(Manifest):
     '''

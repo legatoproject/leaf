@@ -13,10 +13,11 @@ from time import sleep
 
 import unittest
 from http.server import SimpleHTTPRequestHandler
-from tests.testutils import AbstractTestWithRepo, envFileToMap, getLines, LEAF_UT_SKIP
+from tests.testutils import AbstractTestWithRepo, LEAF_UT_SKIP, envFileToMap, \
+    getLines, ALT_INDEX_CONTENT
 
 from leaf.constants import EnvConstants
-from leaf.core.dependencies import DependencyType
+from leaf.core.dependencies import DependencyUtils
 from leaf.core.error import InvalidHashException, InvalidPackageNameException, \
     NoEnabledRemoteException, NoRemoteException
 from leaf.core.features import FeatureManager
@@ -86,7 +87,8 @@ class TestApiPackageManager(AbstractTestWithRepo):
         self.pm.updateRemote(remote)
         self.assertEqual(2, len(self.pm.listRemotes(False)))
         self.assertEqual(1, len(self.pm.listRemotes(True)))
-        self.assertTrue(len(self.pm.listAvailablePackages()) == 1)
+        self.assertEqual(len(ALT_INDEX_CONTENT),
+                         len(self.pm.listAvailablePackages()))
 
         remote = self.pm.listRemotes()["other"]
         remote.setEnabled(False)
@@ -424,17 +426,21 @@ class TestApiPackageManager(AbstractTestWithRepo):
                          str(self.getAltWorkspaceFolder()))
 
     def testDependsAvailable(self):
+        deps = DependencyUtils.install(
+            PackageIdentifier.fromStringList([]),
+            self.pm.listAvailablePackages(),
+            self.pm.listInstalledPackages())
         self.assertDeps(
-            self.pm.listDependencies(
-                PackageIdentifier.fromStringList(["container-A_3.0"]),
-                DependencyType.AVAILABLE),
+            deps,
             [],
             AvailablePackage)
 
+        deps = DependencyUtils.install(
+            PackageIdentifier.fromStringList(["container-A_1.0"]),
+            self.pm.listAvailablePackages(),
+            self.pm.listInstalledPackages())
         self.assertDeps(
-            self.pm.listDependencies(
-                PackageIdentifier.fromStringList(["container-A_1.0"]),
-                DependencyType.AVAILABLE),
+            deps,
             ["container-E_1.0",
              "container-B_1.0",
              "container-C_1.0",
@@ -442,11 +448,17 @@ class TestApiPackageManager(AbstractTestWithRepo):
             AvailablePackage)
 
     def testDependsWithCustomEnv(self):
+        env = Environment.build(
+            self.pm.getLeafEnvironment(),
+            self.pm.getUserEnvironment(),
+            Environment("Custom env", {}))
+        deps = DependencyUtils.install(
+            PackageIdentifier.fromStringList(["condition_1.0"]),
+            self.pm.listAvailablePackages(),
+            self.pm.listInstalledPackages(),
+            env=env)
         self.assertDeps(
-            self.pm.listDependencies(
-                PackageIdentifier.fromStringList(["condition_1.0"]),
-                DependencyType.INSTALL,
-                envMap={}),
+            deps,
             ["condition-B_1.0",
              "condition-D_1.0",
              "condition-F_1.0",
@@ -455,11 +467,17 @@ class TestApiPackageManager(AbstractTestWithRepo):
             AvailablePackage)
 
         self.pm.updateUserEnv(setMap={'FOO': 'HELLO'})
+        env = Environment.build(
+            self.pm.getLeafEnvironment(),
+            self.pm.getUserEnvironment(),
+            Environment("Custom env", {}))
+        deps = DependencyUtils.install(
+            PackageIdentifier.fromStringList(["condition_1.0"]),
+            self.pm.listAvailablePackages(),
+            self.pm.listInstalledPackages(),
+            env=env)
         self.assertDeps(
-            self.pm.listDependencies(
-                PackageIdentifier.fromStringList(["condition_1.0"]),
-                DependencyType.INSTALL,
-                envMap={}),
+            deps,
             ["condition-A_1.0",
              "condition-D_1.0",
              "condition-F_1.0",
@@ -467,11 +485,18 @@ class TestApiPackageManager(AbstractTestWithRepo):
              "condition_1.0"],
             AvailablePackage)
 
+        self.pm.updateUserEnv(setMap={'FOO': 'HELLO'})
+        env = Environment.build(
+            self.pm.getLeafEnvironment(),
+            self.pm.getUserEnvironment(),
+            Environment("Custom env", {'FOO': 'BAR'}))
+        deps = DependencyUtils.install(
+            PackageIdentifier.fromStringList(["condition_1.0"]),
+            self.pm.listAvailablePackages(),
+            self.pm.listInstalledPackages(),
+            env=env)
         self.assertDeps(
-            self.pm.listDependencies(
-                PackageIdentifier.fromStringList(["condition_1.0"]),
-                DependencyType.INSTALL,
-                envMap={'FOO': 'BAR'}),
+            deps,
             ["condition-A_1.0",
              "condition-C_1.0",
              "condition-F_1.0",
@@ -479,10 +504,21 @@ class TestApiPackageManager(AbstractTestWithRepo):
             AvailablePackage)
 
     def testDependsInstall(self):
+        deps = DependencyUtils.install(
+            PackageIdentifier.fromStringList([]),
+            self.pm.listAvailablePackages(),
+            self.pm.listInstalledPackages())
         self.assertDeps(
-            self.pm.listDependencies(
-                PackageIdentifier.fromStringList(["container-A_1.0"]),
-                DependencyType.INSTALL),
+            deps,
+            [],
+            AvailablePackage)
+
+        deps = DependencyUtils.install(
+            PackageIdentifier.fromStringList(["container-A_1.0"]),
+            self.pm.listAvailablePackages(),
+            self.pm.listInstalledPackages())
+        self.assertDeps(
+            deps,
             ["container-E_1.0",
              "container-B_1.0",
              "container-C_1.0",
@@ -492,36 +528,43 @@ class TestApiPackageManager(AbstractTestWithRepo):
         self.pm.installFromRemotes(
             PackageIdentifier.fromStringList(["container-A_1.0"]))
 
+        deps = DependencyUtils.install(
+            PackageIdentifier.fromStringList(["container-A_1.0"]),
+            self.pm.listAvailablePackages(),
+            self.pm.listInstalledPackages())
         self.assertDeps(
-            self.pm.listDependencies(
-                PackageIdentifier.fromStringList(["container-A_1.0"]),
-                DependencyType.INSTALL),
+            deps,
             [],
             AvailablePackage)
 
+        deps = DependencyUtils.install(
+            PackageIdentifier.fromStringList(["container-A_2.0"]),
+            self.pm.listAvailablePackages(),
+            self.pm.listInstalledPackages())
         self.assertDeps(
-            self.pm.listDependencies(
-                PackageIdentifier.fromStringList(["container-A_2.0"]),
-                DependencyType.INSTALL),
+            deps,
             ["container-D_1.0",
              "container-A_2.0"],
             AvailablePackage)
 
     def testDependsInstalled(self):
+        deps = DependencyUtils.installed(
+            PackageIdentifier.fromStringList(["container-A_1.0"]),
+            self.pm.listInstalledPackages(),
+            ignoreUnknown=True)
         self.assertDeps(
-            self.pm.listDependencies(
-                PackageIdentifier.fromStringList(["container-A_1.0"]),
-                DependencyType.INSTALLED),
+            deps,
             [],
             InstalledPackage)
 
         self.pm.installFromRemotes(
             PackageIdentifier.fromStringList(["container-A_1.0"]))
 
+        deps = DependencyUtils.installed(
+            PackageIdentifier.fromStringList(["container-A_1.0"]),
+            self.pm.listInstalledPackages())
         self.assertDeps(
-            self.pm.listDependencies(
-                PackageIdentifier.fromStringList(["container-A_1.0"]),
-                DependencyType.INSTALLED),
+            deps,
             ["container-E_1.0",
              "container-B_1.0",
              "container-C_1.0",
@@ -529,20 +572,22 @@ class TestApiPackageManager(AbstractTestWithRepo):
             InstalledPackage)
 
     def testDependsUninstall(self):
+        deps = DependencyUtils.uninstall(
+            PackageIdentifier.fromStringList([]),
+            self.pm.listInstalledPackages())
         self.assertDeps(
-            self.pm.listDependencies(
-                PackageIdentifier.fromStringList(["container-A_1.0"]),
-                DependencyType.UNINSTALL),
+            deps,
             [],
-            AvailablePackage)
+            InstalledPackage)
 
         self.pm.installFromRemotes(
             PackageIdentifier.fromStringList(["container-A_1.0"]))
 
+        deps = DependencyUtils.uninstall(
+            PackageIdentifier.fromStringList(["container-A_1.0"]),
+            self.pm.listInstalledPackages())
         self.assertDeps(
-            self.pm.listDependencies(
-                PackageIdentifier.fromStringList(["container-A_1.0"]),
-                DependencyType.UNINSTALL),
+            deps,
             ["container-A_1.0",
              "container-C_1.0",
              "container-B_1.0",
@@ -550,10 +595,12 @@ class TestApiPackageManager(AbstractTestWithRepo):
             InstalledPackage)
 
     def testDependsPrereq(self):
+        deps = DependencyUtils.prereq(
+            PackageIdentifier.fromStringList(["prereq-D_1.0"]),
+            self.pm.listAvailablePackages(),
+            self.pm.listInstalledPackages())
         self.assertDeps(
-            self.pm.listDependencies(
-                PackageIdentifier.fromStringList(["prereq-D_1.0"]),
-                DependencyType.PREREQ),
+            deps,
             ["prereq-false_1.0",
              "prereq-true_1.0"],
             AvailablePackage)

@@ -4,8 +4,8 @@ import re
 import subprocess
 from builtins import sorted
 
-from leaf.constants import JsonConstants, LeafConstants
-from leaf.core.dependencies import DependencyManager
+from leaf.constants import JsonConstants
+from leaf.core.dependencies import DependencyUtils
 from leaf.core.error import InvalidPackageNameException
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
@@ -86,14 +86,10 @@ class VariableResolver():
             # No PI specified means current package
             pkg = self.currentPackage
         else:
-            pi = PackageIdentifier.fromString(pis)
-            if pi.version == LeafConstants.LATEST:
-                # Retrieve latest
-                latestPi = DependencyManager.findLatestPackage(
-                    pi.name, self.allPackages.keys())
-                pkg = self.allPackages[latestPi]
-            else:
-                pkg = self.allPackages.get(pi)
+            pkg = DependencyUtils.findManifest(
+                PackageIdentifier.fromString(pis),
+                self.allPackages,
+                ignoreUnknown=True)
         if pkg is not None:
             if var == 'NAME':
                 return pkg.getIdentifier().name

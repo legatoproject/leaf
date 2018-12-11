@@ -6,29 +6,13 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from enum import IntEnum, unique
 
 from leaf.constants import LeafConstants
 from leaf.core.error import InvalidPackageNameException
 from leaf.model.package import Manifest, PackageIdentifier
 
 
-@unique
-class DependencyType(IntEnum):
-    INSTALLED = 1
-    AVAILABLE = 2
-    INSTALL = 3
-    UNINSTALL = 4
-    PREREQ = 5
-
-
-@unique
-class DependencyStrategy(IntEnum):
-    ALL_VERSIONS = 0
-    LATEST_VERSION = 1
-
-
-class DependencyManager():
+class DependencyUtils():
     '''
     Used to build the dependency tree using dynamic conditions
     '''
@@ -38,50 +22,37 @@ class DependencyManager():
         return pi.version == LeafConstants.LATEST
 
     @staticmethod
-    def findLatestPackage(piName, piList):
+    def getLatestVersion(pi_or_piName, piList,
+                         ignoreUnknown=False):
         out = None
+        piName = pi_or_piName.name if isinstance(
+            pi_or_piName, PackageIdentifier) else str(pi_or_piName)
         for pi in [pi for pi in piList if pi.name == piName]:
             if out is None or pi > out:
                 out = pi
-        if out is None:
-            raise InvalidPackageNameException(piName)
+        if out is None and not ignoreUnknown:
+            raise InvalidPackageNameException(pi_or_piName)
         return out
 
     @staticmethod
-    def _findManifest(pi, mfMap,
-                      latestVersions=None,
-                      ignoreUnknown=False):
-        '''
-        Return a Manifest given a PackageIdentifier
-        '''
-        if latestVersions is not None and pi.name in latestVersions:
-            pi = latestVersions[pi.name]
-        if DependencyManager.isLatestPackage(pi):
-            pi = DependencyManager.findLatestPackage(pi.name, mfMap.keys())
-        if pi not in mfMap and not ignoreUnknown:
+    def findManifest(pi, mfMap,
+                     ignoreUnknown=False):
+        if not isinstance(mfMap, dict):
+            raise ValueError()
+        if DependencyUtils.isLatestPackage(pi):
+            pi = DependencyUtils.getLatestVersion(pi, mfMap.keys(),
+                                                  ignoreUnknown=True)
+        if pi in mfMap:
+            return mfMap[pi]
+        if not ignoreUnknown:
             raise InvalidPackageNameException(pi)
-        return mfMap.get(pi)
 
     @staticmethod
-    def _buildLatestVersionsMap(piList):
-        '''
-        Build a dist of name/pi of the latest versions of given pi list
-        '''
-        out = {}
-        for pi in piList:
-            if pi.name not in out or out[pi.name] < pi:
-                out[pi.name] = pi
-        return out
-
-    @staticmethod
-    def _buildTree(piList,
-                   mfMap,
-                   out,
-                   env=None,
-                   strategy=DependencyStrategy.ALL_VERSIONS,
-                   latestVersions=None,
-                   ignoredPiList=None,
-                   ignoreUnknown=False):
+    def __buildTree(piList, mfMap, out,
+                    env=None,
+                    onlyKeepLatest=False,
+                    ignoredPiList=None,
+                    ignoreUnknown=False):
         '''
         Build a manifest list of given PackageIdentifiers and its dependecies
         @return: Manifest list
@@ -91,104 +62,151 @@ class DependencyManager():
         for pi in piList:
             if pi not in ignoredPiList:
                 ignoredPiList.append(pi)
-                mf = DependencyManager._findManifest(pi, mfMap,
-                                                     latestVersions=latestVersions,
-                                                     ignoreUnknown=ignoreUnknown)
+                mf = DependencyUtils.findManifest(pi, mfMap,
+                                                  ignoreUnknown=ignoreUnknown)
                 if mf is not None and mf not in out:
                     # Begin by adding dependencies
-                    DependencyManager._buildTree(mf.getLeafDependsFromEnv(env),
-                                                 mfMap,
-                                                 out,
-                                                 env=env,
-                                                 strategy=strategy,
-                                                 latestVersions=latestVersions,
-                                                 ignoredPiList=ignoredPiList,
-                                                 ignoreUnknown=ignoreUnknown)
+                    DependencyUtils.__buildTree(mf.getLeafDependsFromEnv(env),
+                                                mfMap,
+                                                out,
+                                                env=env,
+                                                ignoredPiList=ignoredPiList,
+                                                ignoreUnknown=ignoreUnknown)
                     out.append(mf)
 
-        if strategy == DependencyStrategy.LATEST_VERSION and latestVersions is None:
-            # Ignore all 'non-latest versions'
-            latestVersions = DependencyManager._buildLatestVersionsMap(
-                map(Manifest.getIdentifier, out))
+        if onlyKeepLatest:
+            # Create a MF dict overriding package to latest version previously computed
+            altMfMap = {}
+            for pi in mfMap:
+                latestMf = None
+                for mf in out:
+                    if pi.name == mf.getIdentifier().name:
+                        if latestMf is None or mf.getIdentifier() > latestMf.getIdentifier():
+                            latestMf = mf
+                altMfMap[pi] = latestMf or mfMap[pi]
             # Reset out
             del out[:]
             # Reinvoke and give latest versions,
             # NB reset ignoredPiList to restart algo
-            DependencyManager._buildTree(piList,
-                                         mfMap,
-                                         out,
-                                         env=env,
-                                         strategy=strategy,
-                                         latestVersions=latestVersions,
-                                         ignoreUnknown=ignoreUnknown)
+            DependencyUtils.__buildTree(piList,
+                                        altMfMap,
+                                        out,
+                                        env=env,
+                                        ignoreUnknown=ignoreUnknown)
 
     @staticmethod
-    def compute(piList,
-                depType,
-                strategy=DependencyStrategy.ALL_VERSIONS,
-                apMap=None,
-                ipMap=None,
-                env=None,
-                ignoreUnknown=False):
+    def installed(piList, ipMap,
+                  env=None,
+                  onlyKeepLatest=False,
+                  ignoreUnknown=False):
+        '''
+        Build a dependency list of installed packages and dependencies.
+        Returns a list of InstalledPackage
+        '''
         out = []
-        if depType == DependencyType.AVAILABLE:
-            if apMap is None:
-                raise ValueError()
-            # In case of available, only build the list
-            DependencyManager._buildTree(piList, apMap, out,
-                                         env=env,
-                                         strategy=strategy,
-                                         ignoreUnknown=ignoreUnknown)
-        elif depType == DependencyType.INSTALLED:
-            if ipMap is None:
-                raise ValueError()
-            # In case of installed, only build the list
-            DependencyManager._buildTree(piList, ipMap, out,
-                                         env=env,
-                                         strategy=strategy,
-                                         ignoreUnknown=ignoreUnknown)
-        elif depType == DependencyType.INSTALL:
-            if ipMap is None or apMap is None:
-                raise ValueError()
-            # Build the list from available packages
-            DependencyManager._buildTree(piList, apMap, out,
-                                         env=env,
-                                         strategy=strategy,
-                                         ignoreUnknown=False)
-            # Remove already installed packages
-            out = [ap for ap in out if ap.getIdentifier() not in ipMap]
-        elif depType == DependencyType.UNINSTALL:
-            if ipMap is None:
-                raise ValueError()
-            # Build the list from available packages
-            DependencyManager._buildTree(piList, ipMap, out,
-                                         ignoreUnknown=True)
-            # for uninstall, reverse order
-            out = list(reversed(out))
-            # Maintain dependencies
-            for neededIp in DependencyManager.compute([ip.getIdentifier() for ip in ipMap.values() if ip not in out],
-                                                      DependencyType.INSTALLED,
-                                                      strategy=strategy,
-                                                      ipMap=ipMap,
-                                                      ignoreUnknown=True):
-                if neededIp in out:
-                    out.remove(neededIp)
-        elif depType == DependencyType.PREREQ:
-            # First get the install tree
-            apList = DependencyManager.compute(piList,
-                                               DependencyType.INSTALL,
-                                               strategy=strategy,
-                                               apMap=apMap,
-                                               ipMap=ipMap,
-                                               env=env)
-            # Get all prereq PI and find corresponding AP
-            for ap in apList:
-                for pis in ap.getLeafRequires():
-                    pi = PackageIdentifier.fromString(pis)
-                    ap = DependencyManager._findManifest(pi, apMap)
-                    out.append(ap)
-            # sort alphabetically and ensure no dupplicates
-            out = list(sorted(set(out), key=Manifest.getIdentifier))
-        else:
-            raise ValueError()
+        DependencyUtils.__buildTree(piList, ipMap, out,
+                                    env=env,
+                                    onlyKeepLatest=onlyKeepLatest,
+                                    ignoreUnknown=ignoreUnknown)
         return out
+
+    @staticmethod
+    def install(piList, apMap, ipMap,
+                env=None):
+        '''
+        Build the list of packages to install, with needed dependencies.
+        Already installed packages are removed for the list.
+        Packages are sorted for install order.
+        Returns a list of AvailablePackage
+        '''
+        out = []
+        # Build the list from available packages
+        DependencyUtils.__buildTree(piList, apMap, out,
+                                    env=env)
+        # Remove already installed packages
+        out = [ap for ap in out if ap.getIdentifier() not in ipMap]
+        return out
+
+    @staticmethod
+    def uninstall(piList, ipMap,
+                  env=None):
+        '''
+        Build the list of packages to uninstall.
+        Dependencies are preserved (ie dependencies needed by other installed packages are kept)
+        Packages are sorted for uninstall order.
+        Returns a list of InstalledPackage
+        '''
+        out = []
+        # Build the list from installed packages
+        DependencyUtils.__buildTree(piList, ipMap, out,
+                                    env=env,
+                                    ignoreUnknown=True)
+        # for uninstall, reverse order
+        out = list(reversed(out))
+        # Maintain dependencies
+        otherPiList = [ip.getIdentifier()
+                       for ip in ipMap.values()
+                       if ip not in out]
+        for neededIp in DependencyUtils.installed(otherPiList, ipMap,
+                                                  env=env):
+            if neededIp in out:
+                out.remove(neededIp)
+        return out
+
+    @staticmethod
+    def prereq(piList, apMap, ipMap,
+               env=None):
+        '''
+        Return the list of prereq packages to install
+        Packages are sorted in alpha order.
+        Returns a list of AvailablePackages
+        '''
+        out = []
+        # First get the install tree
+        apList = DependencyUtils.install(piList, apMap, ipMap,
+                                         env=env)
+        # Get all prereq PI and find corresponding AP
+        for ap in apList:
+            for pis in ap.getLeafRequires():
+                pi = PackageIdentifier.fromString(pis)
+                ap = DependencyUtils.findManifest(pi, apMap)
+                out.append(ap)
+        # sort alphabetically and ensure no dupplicates
+        out = list(sorted(set(out), key=Manifest.getIdentifier))
+        return out
+
+    @staticmethod
+    def upgrade(piNameList, apMap, ipMap,
+                env=None):
+        '''
+        Return a tuple of 2 lists:
+         - First contains the AvailablePackages  to install for an upgrade
+         - Second contains InstalledPackages that can be uninstalled
+        uninstalled after
+        '''
+
+        # Update all auto upgradable packages if no input given
+        if piNameList is None:
+            piNameList = set([pi.name for pi,
+                              ip in ipMap.items() if ip.isAutoUpgrade()])
+
+        # Compute the list of package to install
+        installList = []
+        for piName in piNameList:
+            latestInstalled = DependencyUtils.getLatestVersion(piName, ipMap)
+            latestAvailable = DependencyUtils.getLatestVersion(piName, apMap,
+                                                               ignoreUnknown=False)
+            if latestAvailable is not None and latestAvailable > latestInstalled:
+                ap = apMap[latestAvailable]
+                if ap not in installList:
+                    installList.append(ap)
+
+        # Compute the list of packages to uninstall
+        uninstallList = []
+        for ap in installList:
+            piToBeInstalled = ap.getIdentifier()
+            for installedPi, ip in ipMap.items():
+                if installedPi.name == piToBeInstalled.name and piToBeInstalled > installedPi and ip.isAutoUpgrade():
+                    uninstallList.append(ipMap[installedPi])
+        uninstallList = sorted(uninstallList, key=Manifest.getIdentifier)
+        return (installList, uninstallList)

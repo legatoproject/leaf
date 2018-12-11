@@ -12,11 +12,13 @@ leaf-package - manage packages at low level (out of any workspace)
 
 *leaf* *package* *uninstall* _PACKAGE_ ...
 
+*leaf* *package* *upgrade* [_PACKAGE_ ...] [*--clean*]
+
 *leaf* *package* *sync* _PACKAGE_ ...
 
 *leaf* *package* *prereq* _PACKAGE_ ... *--target* _PREREQROOTFOLDER_
 
-*leaf* *package* *deps* _PACKAGE_ ... [*--installed* | *--available* | *--install* | *--uninstall* | *--prereq*] [*--env* _KEY_=_VALUE_]
+*leaf* *package* *deps* _PACKAGE_ ... [*--installed* | *--available* | *--install* | *--uninstall* | *--prereq* | *--upgrade*] [*--env* _KEY_=_VALUE_]
 
 == DESCRIPTION
 
@@ -54,6 +56,14 @@ The uninstall process follows these steps:
   - Builds the dependency chain (see *deps* sub-command)
   - Pre-uninstall hooks are executed for any package to be removed (see *leaf help manifest*)
   - Packages are removed from the root folder
+
+*upgrade*::
+
+If no _PACKAGE_ is specified, looks for all installed _upgradable_ packages (see *leaf help manifest*),
+and installs the latest available version for each of them.
++
+If a _PACKAGE_ list is specified (only package names are supported), performs the upgrade operation only
+for the required packages (whatever they are _upgradable_ or not).
 
 *sync*::
 
@@ -93,7 +103,6 @@ values will be displayed. (*OR* filtering)
 The *-t* option can be specified several times. Only packages with tags that are matching *all*
 specified _TAG_ values will be displayed. (*AND* filtering)
 
-
 _KEYWORD_::
 
 Restrict the search output to only display packages matching with the given _KEYWORD_. A given
@@ -124,6 +133,10 @@ In this case the behavior depends on the command:
 Package install folder is renamed with *_ignored* suffix in the root folder and not deleted after a
 failed install. It can be useful to troubleshoot post install hooks behavior when designing package
 manifests (see *leaf help manifest*)
+
+*--clean*::
+
+If this option is specified when performing an upgrade operation, old versions of _upgradable_ packages will be proposed to be uninstalled
 
 *--target* _PREREQROOTFOLDER_::
 
@@ -159,6 +172,13 @@ safely uninstalled (not required anymore as a dependency of any other remaining 
 
 Builds the dependency chain of the available packages related to the specified _PACKAGE_ as
 prerequisites
+
+*--upgrade*::
+
+Builds the dependency chain of the available packages that would be installed for upgrading
+the specified _PACKAGE_
++
+With this option, _PACKAGE_ must be a package name (without version information)
 
 == EXAMPLES
 

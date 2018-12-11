@@ -7,8 +7,7 @@ from collections import OrderedDict
 from unittest.case import TestCase
 
 from leaf.constants import LeafFiles
-from leaf.core.dependencies import DependencyManager, DependencyStrategy, \
-    DependencyType
+from leaf.core.dependencies import DependencyUtils
 from leaf.model.environment import Environment
 from leaf.model.package import Manifest, PackageIdentifier
 from tests.testutils import RESOURCE_FOLDER
@@ -40,12 +39,11 @@ class TestApiDepends(unittest.TestCase):
     def testForInstall(self):
         availablePackages = TestApiDepends.MANIFEST_MAP
         installedPackages = {}
-        deps = DependencyManager.compute(
+        deps = DependencyUtils.install(
             PackageIdentifier.fromStringList(["container-A_1.0",
                                               "container-A_2.0"]),
-            DependencyType.INSTALL,
-            apMap=availablePackages,
-            ipMap=installedPackages,
+            availablePackages,
+            installedPackages,
             env=Environment())
         self.assertEqual(['container-E_1.0',
                           'container-B_1.0',
@@ -58,12 +56,11 @@ class TestApiDepends(unittest.TestCase):
         pi = PackageIdentifier.fromString('container-E_1.0')
         installedPackages[pi] = TestApiDepends.MANIFEST_MAP.get(pi)
 
-        deps = DependencyManager.compute(
+        deps = DependencyUtils.install(
             PackageIdentifier.fromStringList(["container-A_1.0",
                                               "container-A_2.0"]),
-            DependencyType.INSTALL,
-            apMap=availablePackages,
-            ipMap=installedPackages,
+            availablePackages,
+            installedPackages,
             env=Environment())
         self.assertEqual(['container-B_1.0',
                           'container-C_1.0',
@@ -77,12 +74,11 @@ class TestApiDepends(unittest.TestCase):
         availablePackages = TestApiDepends.MANIFEST_MAP
         installedPackages = OrderedDict()
 
-        for ap in DependencyManager.compute(
+        for ap in DependencyUtils.install(
                 PackageIdentifier.fromStringList(["container-A_1.0",
                                                   "container-A_2.0"]),
-                DependencyType.INSTALL,
-                ipMap=installedPackages,
-                apMap=availablePackages):
+                availablePackages,
+                installedPackages):
             installedPackages[ap.getIdentifier()] = ap
 
         self.assertEqual(['container-E_1.0',
@@ -93,10 +89,9 @@ class TestApiDepends(unittest.TestCase):
                           'container-A_2.0'],
                          deps2strlist(installedPackages.values()))
 
-        deps = DependencyManager.compute(
+        deps = DependencyUtils.uninstall(
             PackageIdentifier.fromStringList(["container-A_1.0"]),
-            DependencyType.UNINSTALL,
-            ipMap=installedPackages)
+            installedPackages)
 
         self.assertEqual(['container-A_1.0',
                           'container-B_1.0',
@@ -108,11 +103,10 @@ class TestApiDepends(unittest.TestCase):
         installedPackages = {}
 
         def _getDeps(env):
-            return DependencyManager.compute(
+            return DependencyUtils.install(
                 PackageIdentifier.fromStringList(["condition_1.0"]),
-                DependencyType.INSTALL,
-                apMap=availablePackages,
-                ipMap=installedPackages,
+                availablePackages,
+                installedPackages,
                 env=env)
 
         env = Environment()
@@ -178,10 +172,10 @@ class TestApiDepends(unittest.TestCase):
         availablePackages = TestApiDepends.MANIFEST_MAP
 
         def _getDeps(env):
-            return DependencyManager.compute(
+            return DependencyUtils.install(
                 PackageIdentifier.fromStringList(["condition_1.0"]),
-                DependencyType.AVAILABLE,
-                apMap=availablePackages,
+                availablePackages,
+                {},
                 env=env)
         env = Environment()
         deps = _getDeps(env)
@@ -268,25 +262,21 @@ class TestApiDepends(unittest.TestCase):
         self.assertEqual(["prereq-true_1.0",
                           "prereq-false_1.0"],
                          prereqs)
-        prereqs = DependencyManager.compute(
+        prereqs = DependencyUtils.prereq(
             PackageIdentifier.fromStringList([pi]),
-            DependencyType.PREREQ,
-            apMap=availablePackages,
-            ipMap={})
+            availablePackages,
+            {})
         self.assertEqual(["prereq-false_1.0",
                           "prereq-true_1.0"],
                          list(map(str, map(Manifest.getIdentifier, prereqs))))
 
     def testLatestStrategy(self):
-        availablePackages = TestApiDepends.MANIFEST_MAP
+        installedPackages = TestApiDepends.MANIFEST_MAP
 
-        deps = DependencyManager.compute(
+        deps = DependencyUtils.installed(
             PackageIdentifier.fromStringList(["container-A_1.0",
                                               "container-A_2.0"]),
-            depType=DependencyType.INSTALL,
-            strategy=DependencyStrategy.ALL_VERSIONS,
-            apMap=availablePackages,
-            ipMap={})
+            installedPackages)
         self.assertEqual(['container-E_1.0',
                           'container-B_1.0',
                           'container-C_1.0',
@@ -295,13 +285,11 @@ class TestApiDepends(unittest.TestCase):
                           'container-A_2.0'],
                          list(map(str, map(Manifest.getIdentifier, deps))))
 
-        deps = DependencyManager.compute(
+        deps = DependencyUtils.installed(
             PackageIdentifier.fromStringList(["container-A_1.0",
                                               "container-A_2.0"]),
-            depType=DependencyType.INSTALL,
-            strategy=DependencyStrategy.LATEST_VERSION,
-            apMap=availablePackages,
-            ipMap={})
+            installedPackages,
+            onlyKeepLatest=True)
         self.assertEqual(['container-C_1.0',
                           'container-D_1.0',
                           'container-A_2.0'],
@@ -311,45 +299,69 @@ class TestApiDepends(unittest.TestCase):
         pi10 = PackageIdentifier.fromString("version_1.0")
         pi20 = PackageIdentifier.fromString("version_2.0")
 
-        deps = DependencyManager.compute(
+        deps = DependencyUtils.install(
             PackageIdentifier.fromStringList(["testlatest_1.0"]),
-            depType=DependencyType.INSTALL,
-            apMap=TestApiDepends.MANIFEST_MAP,
-            ipMap={})
+            TestApiDepends.MANIFEST_MAP,
+            {})
         self.assertEqual(['version_2.0',
                           'testlatest_1.0'],
                          list(map(str, map(Manifest.getIdentifier, deps))))
 
-        deps = DependencyManager.compute(
+        deps = DependencyUtils.install(
             PackageIdentifier.fromStringList(["testlatest_1.0"]),
-            depType=DependencyType.INSTALL,
-            apMap=TestApiDepends.MANIFEST_MAP,
-            ipMap={pi10: TestApiDepends.MANIFEST_MAP[pi10]})
+            TestApiDepends.MANIFEST_MAP,
+            {pi10: TestApiDepends.MANIFEST_MAP[pi10]})
         self.assertEqual(['version_2.0',
                           'testlatest_1.0'],
                          list(map(str, map(Manifest.getIdentifier, deps))))
 
-        deps = DependencyManager.compute(
+        deps = DependencyUtils.install(
             PackageIdentifier.fromStringList(["testlatest_1.0"]),
-            depType=DependencyType.INSTALL,
-            apMap=TestApiDepends.MANIFEST_MAP,
-            ipMap={pi20: TestApiDepends.MANIFEST_MAP[pi20]})
+            TestApiDepends.MANIFEST_MAP,
+            {pi20: TestApiDepends.MANIFEST_MAP[pi20]})
         self.assertEqual(['testlatest_1.0'],
                          list(map(str, map(Manifest.getIdentifier, deps))))
 
-        deps = DependencyManager.compute(
+        deps = DependencyUtils.prereq(
             PackageIdentifier.fromStringList(["testlatest_2.0"]),
-            depType=DependencyType.PREREQ,
-            apMap=TestApiDepends.MANIFEST_MAP,
-            ipMap={})
+            TestApiDepends.MANIFEST_MAP,
+            {})
         self.assertEqual(['version_2.0'],
                          list(map(str, map(Manifest.getIdentifier, deps))))
 
-        deps = DependencyManager.compute(
+        deps = DependencyUtils.prereq(
             PackageIdentifier.fromStringList(["testlatest_2.0",
                                               "testlatest_2.1"]),
-            depType=DependencyType.PREREQ,
-            apMap=TestApiDepends.MANIFEST_MAP,
-            ipMap={})
+            TestApiDepends.MANIFEST_MAP,
+            {})
         self.assertEqual(['version_2.0'],
                          list(map(str, map(Manifest.getIdentifier, deps))))
+
+    def testUpgrade(self):
+        pi10 = PackageIdentifier.fromString("upgrade_1.0")
+        pi11 = PackageIdentifier.fromString("upgrade_1.1")
+        pi12 = PackageIdentifier.fromString("upgrade_1.2")
+
+        ideps, udeps = DependencyUtils.upgrade(
+            None,
+            TestApiDepends.MANIFEST_MAP,
+            {
+                pi10: TestApiDepends.MANIFEST_MAP[pi10]
+            })
+        self.assertEqual([],
+                         [str(mf.getIdentifier()) for mf in ideps])
+        self.assertEqual([],
+                         [str(mf.getIdentifier()) for mf in udeps])
+
+        ideps, udeps = DependencyUtils.upgrade(
+            None,
+            TestApiDepends.MANIFEST_MAP,
+            {
+                pi10: TestApiDepends.MANIFEST_MAP[pi10],
+                pi11: TestApiDepends.MANIFEST_MAP[pi11],
+                pi12: TestApiDepends.MANIFEST_MAP[pi12]
+            })
+        self.assertEqual(["upgrade_2.0"],
+                         [str(mf.getIdentifier()) for mf in ideps])
+        self.assertEqual(["upgrade_1.1", "upgrade_1.2"],
+                         [str(mf.getIdentifier()) for mf in udeps])

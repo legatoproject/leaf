@@ -106,7 +106,8 @@ class TestCliRelengManager(LeafCliWrapper):
                           '--depends', "a_1",
                           '--tag', 'foo',
                           '--tag', 'bar',
-                          '--tag', 'foo')
+                          '--tag', 'foo',
+                          '--upgradable', "true")
         finally:
             del os.environ["LEAF_TEST_VARIABLE"]
 
@@ -125,7 +126,8 @@ class TestCliRelengManager(LeafCliWrapper):
                     JsonConstants.INFO_LEAF_MINVER: "0.42",
                     JsonConstants.INFO_REQUIRES: ["a_1", "b_1"],
                     JsonConstants.INFO_DEPENDS: ["a_1", "b_1(FOO=BAR)"],
-                    JsonConstants.INFO_TAGS: ["tag1", "tag2", "foo", "bar"], }},
+                    JsonConstants.INFO_TAGS: ["tag1", "tag2", "foo", "bar"],
+                    JsonConstants.INFO_AUTOUPGRADE: True, }},
                 json.load(fp))
 
     def testIndexGeneration(self):

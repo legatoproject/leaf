@@ -35,6 +35,11 @@ TAR_EXTRA_ARGS = {
     PackageIdentifier.fromString("compress-bz2_1.0"): ('-j', '.'),
     PackageIdentifier.fromString("compress-gz_1.0"): ('-J', '.')
 }
+ALT_INDEX_CONTENT = [
+    "version_2.0",
+    "upgrade_1.2",
+    "upgrade_2.0"
+]
 
 TEST_GPG_FINGERPRINT = "E35D6817397359074160F68952ECE808A2BC372C"
 TEST_GPG_HOMEDIR = ROOT_FOLDER / 'src' / 'tests' / 'gpg'
@@ -349,7 +354,7 @@ def generateRepo(sourceFolder, outputFolder):
                     outputFile,
                     tarExtraArgs[0] if tarExtraArgs is not None else None)
                 # Create multi index.json
-                if manifest.getName() == "version" and manifest.getVersion() == "2.0":
+                if str(manifest.getIdentifier()) in ALT_INDEX_CONTENT:
                     artifactsList2.append(outputFile)
                 else:
                     artifactsList.append(outputFile)
@@ -370,11 +375,13 @@ def generateRepo(sourceFolder, outputFolder):
     rm.generateIndex(outputFolder / "index.json",
                      artifactsList,
                      name="First repository",
-                     description="First repository description")
+                     description="First repository description",
+                     prettyprint=True)
     rm.generateIndex(outputFolder / "index2.json",
                      artifactsList2,
                      name="Second repository",
-                     description="Second repository description")
+                     description="Second repository description",
+                     prettyprint=True)
 
     # Sign with GPG
     subprocess.check_call(["gpg",

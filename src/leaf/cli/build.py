@@ -185,6 +185,11 @@ class BuildManifestSubCommand(LeafCommand):
                                  dest=JsonConstants.INFO + "_" + JsonConstants.INFO_MASTER,
                                  type=stringToBoolean,
                                  help='set master package (true|false)')
+        commonGroup.add_argument('--upgradable',
+                                 metavar='BOOLEAN',
+                                 dest=JsonConstants.INFO + "_" + JsonConstants.INFO_AUTOUPGRADE,
+                                 type=stringToBoolean,
+                                 help='set package as upgradable (true|false)')
         commonGroup.add_argument('--requires',
                                  metavar='PKGID',
                                  action='append',

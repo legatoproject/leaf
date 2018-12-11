@@ -7,12 +7,14 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 import argparse
+from builtins import ValueError
 from pathlib import Path
 
 from leaf.cli.cliutils import LeafCommand, LeafMetaCommand
-from leaf.core.dependencies import DependencyType
+from leaf.core.dependencies import DependencyUtils
 from leaf.core.error import PackageInstallInterruptedException
 from leaf.format.renderer.manifest import ManifestListRenderer
+from leaf.model.environment import Environment
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import Manifest, PackageIdentifier
 from leaf.utils import envListToMap, mkTmpLeafRootDir
@@ -31,6 +33,7 @@ class PackageMetaCommand(LeafMetaCommand):
 
     def getSubCommands(self):
         return [PackageInstallCommand(),
+                PackageUpgradeCommand(),
                 PackageUninstallCommand(),
                 PackageSyncCommand(),
                 PackageDepsCommand(),
@@ -94,44 +97,88 @@ class PackageDepsCommand(LeafCommand):
         group.add_argument("--installed",
                            dest="dependencyType",
                            action="store_const",
-                           const=DependencyType.INSTALLED,
-                           default=DependencyType.INSTALLED,
+                           const="installed",
+                           default="installed",
                            help="build dependency list from installed packages")
         group.add_argument("--available",
                            dest="dependencyType",
                            action="store_const",
-                           const=DependencyType.AVAILABLE,
+                           const="available",
                            help="build dependency list from available packages")
         group.add_argument("--install",
                            dest="dependencyType",
                            action="store_const",
-                           const=DependencyType.INSTALL,
+                           const="install",
                            help="build dependency list to install")
         group.add_argument("--uninstall",
                            dest="dependencyType",
                            action="store_const",
-                           const=DependencyType.UNINSTALL,
+                           const="uninstall",
                            help="build dependency list to uninstall")
         group.add_argument("--prereq",
                            dest="dependencyType",
                            action="store_const",
-                           const=DependencyType.PREREQ,
+                           const="prereq",
                            help="build dependency list for prereq install")
+        group.add_argument("--upgrade",
+                           dest="dependencyType",
+                           action="store_const",
+                           const="upgrade",
+                           help="build dependency list for upgrade")
         parser.add_argument('--env',
                             dest='customEnvList',
                             action='append',
                             metavar='KEY=VALUE',
                             help='add given environment variable')
         parser.add_argument('packages', metavar='PKG_IDENTIFIER',
-                            nargs=argparse.ONE_OR_MORE,
+                            nargs=argparse.ZERO_OR_MORE,
                             help='package identifier')
 
     def execute(self, args):
         pm = self.getPackageManager(args)
+        env = Environment.build(
+            pm.getLeafEnvironment(),
+            pm.getUserEnvironment(),
+            Environment("Custom env", envListToMap(args.customEnvList)))
 
-        items = pm.listDependencies(PackageIdentifier.fromStringList(args.packages),
-                                    args.dependencyType,
-                                    envMap=envListToMap(args.customEnvList))
+        items = None
+        if args.dependencyType == 'available':
+            items = DependencyUtils.install(
+                PackageIdentifier.fromStringList(args.packages),
+                pm.listAvailablePackages(),
+                {},
+                env=env)
+        elif args.dependencyType == 'install':
+            items = DependencyUtils.install(
+                PackageIdentifier.fromStringList(args.packages),
+                pm.listAvailablePackages(),
+                pm.listInstalledPackages(),
+                env=env)
+        elif args.dependencyType == 'installed':
+            items = DependencyUtils.installed(
+                PackageIdentifier.fromStringList(args.packages),
+                pm.listInstalledPackages(),
+                env=env)
+        elif args.dependencyType == 'uninstall':
+            items = DependencyUtils.uninstall(
+                PackageIdentifier.fromStringList(args.packages),
+                pm.listInstalledPackages(),
+                env=env)
+        elif args.dependencyType == 'prereq':
+            items = DependencyUtils.prereq(
+                PackageIdentifier.fromStringList(args.packages),
+                pm.listAvailablePackages(),
+                pm.listInstalledPackages(),
+                env=env)
+        elif args.dependencyType == 'upgrade':
+            items, _uninstallList = DependencyUtils.upgrade(
+                None if len(args.packages) == 0 else args.packages,
+                pm.listAvailablePackages(),
+                pm.listInstalledPackages(),
+                env=env)
+        else:
+            raise ValueError()
+
         rend = ManifestListRenderer()
         rend.extend(items)
         pm.printRenderer(rend)
@@ -240,3 +287,52 @@ class PackageSyncCommand(LeafCommand):
         pm = self.getPackageManager(args)
 
         pm.syncPackages(PackageIdentifier.fromStringList(args.packages))
+
+
+class PackageUpgradeCommand(LeafCommand):
+
+    def __init__(self):
+        LeafCommand.__init__(self,
+                             "upgrade",
+                             "upgrade packages to latest version")
+
+    def initArgs(self, parser):
+        super().initArgs(parser)
+        parser.add_argument("--clean",
+                            dest="clean",
+                            action='store_true',
+                            help="also try to uninstall old versions of upgraded packages")
+        parser.add_argument('packages', metavar='PKGNAME',
+                            nargs=argparse.ZERO_OR_MORE,
+                            help='name of the packages to upgrade')
+
+    def execute(self, args):
+        pm = self.getPackageManager(args)
+
+        env = Environment.build(
+            pm.getLeafEnvironment(),
+            pm.getUserEnvironment())
+        installList, uninstallList = DependencyUtils.upgrade(
+            None if len(args.packages) == 0 else args.packages,
+            pm.listAvailablePackages(),
+            pm.listInstalledPackages(),
+            env=env)
+
+        pm.logger.printVerbose("%d package(s) to be upgraded: %s" %
+                               (len(installList), ' '.join([str(ap.getIdentifier()) for ap in installList])))
+        if args.clean:
+            pm.logger.printVerbose("%d package(s) to be removed: %s" %
+                                   (len(uninstallList), ' '.join([str(ip.getIdentifier()) for ip in uninstallList])))
+
+        if len(installList) == 0:
+            pm.logger.printDefault("No package to upgrade")
+        else:
+            pm.installFromRemotes(
+                map(Manifest.getIdentifier, installList), env=env)
+            if len(uninstallList) > 0:
+                if args.clean:
+                    pm.uninstallPackages(
+                        map(Manifest.getIdentifier, uninstallList))
+                else:
+                    pm.logger.printDefault(
+                        "These packages can be removed:", " ".join([str(ip.getIdentifier()) for ip in uninstallList]))

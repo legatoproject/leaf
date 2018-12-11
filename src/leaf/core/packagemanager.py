@@ -24,7 +24,7 @@ from leaf.constants import EnvConstants, JsonConstants, LeafConstants, \
     LeafFiles
 from leaf.core.coreutils import StepExecutor, VariableResolver, \
     retrievePackage
-from leaf.core.dependencies import DependencyManager, DependencyType
+from leaf.core.dependencies import DependencyUtils
 from leaf.core.error import BadRemoteUrlException, LeafException, \
     LeafOutOfDateException, NoEnabledRemoteException, \
     NoPackagesInCacheException, NoRemoteException, UserCancelException
@@ -417,22 +417,6 @@ class PackageManager(RemoteManager):
                     out[ip.getIdentifier()] = ip
         return out
 
-    def listDependencies(self, piList, depType, envMap=None):
-        '''
-        List all dependencies for given packages
-        @return: PackageIdentifier list
-        '''
-        env = Environment.build(self.getLeafEnvironment(),
-                                self.getUserEnvironment(),
-                                Environment("Custom env", envMap))
-        return DependencyManager.compute(
-            piList,
-            depType,
-            apMap=self.listAvailablePackages(),
-            ipMap=self.listInstalledPackages(),
-            env=env,
-            ignoreUnknown=True)
-
     def checkPackagesForInstall(self, mfList,
                                 bypassLeafMinVersion=False):
 
@@ -565,11 +549,10 @@ class PackageManager(RemoteManager):
                                         self.getUserEnvironment())
 
             try:
-                apToInstall = DependencyManager.compute(piList,
-                                                        DependencyType.INSTALL,
-                                                        apMap=availablePackages,
-                                                        ipMap=installedPackages,
-                                                        env=env)
+                apToInstall = DependencyUtils.install(piList,
+                                                      availablePackages,
+                                                      installedPackages,
+                                                      env=env)
 
                 # Check nothing to do
                 if len(apToInstall) == 0:
@@ -592,10 +575,10 @@ class PackageManager(RemoteManager):
                         raise UserCancelException()
 
                     # Install prereq
-                    prereqApList = DependencyManager.compute(piList, DependencyType.PREREQ,
-                                                             apMap=availablePackages,
-                                                             ipMap=installedPackages,
-                                                             env=env)
+                    prereqApList = DependencyUtils.prereq(piList,
+                                                          availablePackages,
+                                                          installedPackages,
+                                                          env=env)
 
                     if len(prereqApList) > 0:
                         self.logger.printDefault("Check required packages")
@@ -640,10 +623,8 @@ class PackageManager(RemoteManager):
         with self.applicationLock.acquire():
             installedPackages = self.listInstalledPackages()
 
-            ipToRemove = DependencyManager.compute(
-                piList,
-                DependencyType.UNINSTALL,
-                ipMap=installedPackages)
+            ipToRemove = DependencyUtils.uninstall(piList,
+                                                   installedPackages)
 
             if len(ipToRemove) == 0:
                 self.logger.printDefault(
@@ -699,10 +680,11 @@ class PackageManager(RemoteManager):
             if isinstance(item, InstalledPackage):
                 ip = item
             elif isinstance(item, PackageIdentifier):
-                if DependencyManager.isLatestPackage(item):
-                    item = DependencyManager.findLatestPackage(
-                        item.name, installedPackages.keys())
-                ip = installedPackages.get(item)
+                ip = None
+                if DependencyUtils.isLatestPackage(item):
+                    ip = DependencyUtils.findManifest(item, installedPackages)
+                else:
+                    ip = installedPackages.get(item)
                 if ip is None:
                     raise ValueError("Cannot find package %s" % item)
             else:
