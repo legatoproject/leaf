@@ -120,8 +120,13 @@ class DependencyUtils():
         Returns a list of AvailablePackage
         '''
         out = []
+
+        # Build a map containing all knwon packages
+        allKnownPackages = dict(apMap)
+        allKnownPackages.update(ipMap)
+
         # Build the list from available packages
-        DependencyUtils.__buildTree(piList, apMap, out,
+        DependencyUtils.__buildTree(piList, allKnownPackages, out,
                                     env=env)
         # Remove already installed packages
         out = [ap for ap in out if ap.getIdentifier() not in ipMap]

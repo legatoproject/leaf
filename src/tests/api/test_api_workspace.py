@@ -413,3 +413,31 @@ class TestApiWorkspaceManager(AbstractTestWithRepo):
         self.checkProfileContent("myprofile",
                                  ["testlatest",
                                   "version"])
+
+    def testSyncWithPackageNotAvailable(self):
+        self.wm.initializeWorkspace()
+
+        self.assertEqual(len(self.wm.listRemotes(onlyEnabled=True)), 2)
+        self.assertTrue(PackageIdentifier.fromString(
+            "container-A_1.0") in self.wm.listAvailablePackages())
+
+        profile = self.wm.createProfile("myprofile")
+        profile.addPackages(
+            PackageIdentifier.fromStringList(["container-A_1.0"]))
+        profile = self.wm.updateProfile(profile)
+        self.wm.provisionProfile(profile)
+        self.assertTrue(self.wm.isProfileSync(profile))
+
+        remote2 = self.wm.listRemotes()["default"]
+        remote2.setEnabled(False)
+        self.wm.updateRemote(remote2)
+        self.assertEqual(len(self.wm.listRemotes(onlyEnabled=True)), 1)
+        self.assertFalse(PackageIdentifier.fromString(
+            "container-A_1.0") in self.wm.listAvailablePackages())
+
+        profile = self.wm.createProfile("myprofile2")
+        profile.addPackages(
+            PackageIdentifier.fromStringList(["container-A_1.0"]))
+        profile = self.wm.updateProfile(profile)
+        self.wm.provisionProfile(profile)
+        self.assertTrue(self.wm.isProfileSync(profile))
