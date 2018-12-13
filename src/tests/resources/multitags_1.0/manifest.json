@@ -1,0 +1,10 @@
+{
+  "info": {
+    "name": "multitags",
+    "version": "1.0",
+    "tags": [
+      "staticTag1",
+      "staticTag2"
+    ]
+  }
+}

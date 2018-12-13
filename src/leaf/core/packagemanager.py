@@ -398,6 +398,9 @@ class PackageManager(RemoteManager):
                             raise ValueError(
                                 "Package %s has multiple artifacts for the same version" %
                                 ap.getIdentifier())
+                        for tag in ap.getTags():
+                            if tag not in ap2.getTags():
+                                ap2.getTags().append(tag)
 
         if len(out) == 0:
             raise NoPackagesInCacheException()

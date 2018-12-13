@@ -694,6 +694,38 @@ class TestApiPackageManager(AbstractTestWithRepo):
             PackageIdentifier.fromStringList(["version_latest"]))
         self.assertEqual("2.0", env.findValue("TEST_VERSION"))
 
+    def testMultipleVolatileTags(self):
+        def toggleRemote(name, enabled):
+            remote = self.pm.listRemotes()[name]
+            remote.setEnabled(enabled)
+            self.pm.updateRemote(remote)
+
+        pi = PackageIdentifier.fromString("multitags_1.0")
+
+        toggleRemote("other", False)
+        self.assertEqual(["staticTag1",
+                          "staticTag2",
+                          "volatileTag1",
+                          "volatileTag2"],
+                         self.pm.listAvailablePackages()[pi].getTags())
+
+        toggleRemote("other", True)
+        toggleRemote("default", False)
+        self.assertEqual(["staticTag1",
+                          "staticTag2",
+                          "volatileTag3",
+                          "volatileTag4"],
+                         self.pm.listAvailablePackages()[pi].getTags())
+
+        toggleRemote("default", True)
+        self.assertEqual(["staticTag1",
+                          "staticTag2",
+                          "volatileTag1",
+                          "volatileTag2",
+                          "volatileTag3",
+                          "volatileTag4"],
+                         self.pm.listAvailablePackages()[pi].getTags())
+
 
 def startHttpServer(rootFolder):
     print("Start http server for %s on port %s" %

@@ -85,8 +85,10 @@ class RelengManager(LoggerManager):
                 pp=True)
 
     def generateIndex(self, indexFile, artifacts,
-                      name=None, description=None,
-                      useExternalInfo=True, useExtraTags=True,
+                      name=None,
+                      description=None,
+                      useExternalInfo=True,
+                      useExtraTags=True,
                       prettyprint=False):
         '''
         Create an index.json referencing all given artifacts

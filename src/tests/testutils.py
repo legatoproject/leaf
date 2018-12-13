@@ -35,11 +35,12 @@ TAR_EXTRA_ARGS = {
     PackageIdentifier.fromString("compress-bz2_1.0"): ('-j', '.'),
     PackageIdentifier.fromString("compress-gz_1.0"): ('-J', '.')
 }
-ALT_INDEX_CONTENT = [
-    "version_2.0",
-    "upgrade_1.2",
-    "upgrade_2.0"
-]
+ALT_INDEX_CONTENT = {
+    "multitags_1.0": True,
+    "version_2.0": False,
+    "upgrade_1.2": False,
+    "upgrade_2.0": False
+}
 
 TEST_GPG_FINGERPRINT = "E35D6817397359074160F68952ECE808A2BC372C"
 TEST_GPG_HOMEDIR = ROOT_FOLDER / 'src' / 'tests' / 'gpg'
@@ -356,6 +357,8 @@ def generateRepo(sourceFolder, outputFolder):
                 # Create multi index.json
                 if str(manifest.getIdentifier()) in ALT_INDEX_CONTENT:
                     artifactsList2.append(outputFile)
+                    if ALT_INDEX_CONTENT[str(manifest.getIdentifier())]:
+                        artifactsList.append(outputFile)
                 else:
                     artifactsList.append(outputFile)
                 # Create a problem with failure-badhash package
@@ -372,11 +375,18 @@ def generateRepo(sourceFolder, outputFolder):
     if len(artifactsList) == 0 or len(artifactsList2) == 0:
         raise ValueError("Empty index!")
 
+    with open(str(outputFolder / "multitags_1.0.leaf.tags"), 'w') as fp:
+        fp.write("volatileTag1\n")
+        fp.write("volatileTag2")
     rm.generateIndex(outputFolder / "index.json",
                      artifactsList,
                      name="First repository",
                      description="First repository description",
                      prettyprint=True)
+
+    with open(str(outputFolder / "multitags_1.0.leaf.tags"), 'w') as fp:
+        fp.write("volatileTag3\n")
+        fp.write("volatileTag4")
     rm.generateIndex(outputFolder / "index2.json",
                      artifactsList2,
                      name="Second repository",
