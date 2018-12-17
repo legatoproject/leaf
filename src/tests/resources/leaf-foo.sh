@@ -5,4 +5,9 @@
 #
 
 echo "Hello World ;)"
+if test -n "$1"; then
+    exit $1
+fi
+
 python3 -m leaf --version
+

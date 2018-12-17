@@ -97,8 +97,10 @@ function lsh_HandleChangedDir
 # Run the original Leaf command, and then reload the environment in case if anything had changed.
 function lsh_HandleLeafExecution
 {
-    \leaf $@
+    \leaf "$@"
+    OUT=$?
     lsh_LoadEnvironment
+    return $OUT
 }
 
 # Generate the string to append to the user's prompt.

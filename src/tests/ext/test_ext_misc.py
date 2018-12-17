@@ -32,3 +32,21 @@ class TestExtMisc(LeafCliWrapper):
         finally:
             os.environ['PATH'] = oldPath
             ExternalCommandUtils.COMMANDS = None
+
+    def testReturnCode(self):
+        oldPath = os.environ['PATH']
+        try:
+            self.assertTrue(RESOURCE_FOLDER.is_dir())
+            os.environ['PATH'] = oldPath + ":" + str(RESOURCE_FOLDER)
+            ExternalCommandUtils.COMMANDS = None
+            self.leafExec("foo.sh")
+            for i in range(0, 255):
+                self.leafExec("foo.sh", i, expectedRc=i)
+
+            self.leafExec("build", "bar.sh")
+            for i in range(0, 255):
+                self.leafExec("build", "bar.sh", i, expectedRc=i)
+
+        finally:
+            os.environ['PATH'] = oldPath
+            ExternalCommandUtils.COMMANDS = None
