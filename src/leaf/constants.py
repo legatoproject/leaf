@@ -25,6 +25,7 @@ class EnvConstants():
     NON_INTERACTIVE = 'LEAF_NON_INTERACTIVE'
     CUSTOM_TAR = 'LEAF_TAR_BIN'
     DISABLE_LOCKS = 'LEAF_DISABLE_LOCKS'
+    CUSTOM_THEME = 'LEAF_THEME'
 
 
 class LeafConstants():

@@ -1,9 +1,9 @@
 --------- Production mode ---------
 ---- Rendered error ----
 ERROR:
-Random message for this exception
+  Random message for this exception
 CAUSED BY:
-division by zero
+  division by zero
 HINTS:
 this is a first hint with a 'command'
 another one with 'a first command' and 'a second one'
@@ -12,9 +12,9 @@ Random message for this exception
 --------- Debug mode ---------
 ---- Rendered error ----
 ERROR:
-Random message for this exception
+  Random message for this exception
 CAUSED BY:
-division by zero
+  division by zero
 HINTS:
 this is a first hint with a 'command'
 another one with 'a first command' and 'a second one'

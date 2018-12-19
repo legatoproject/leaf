@@ -10,8 +10,8 @@ Leaf Package Manager
 '''
 
 import argparse
-import os
 import subprocess
+import os
 from argparse import ArgumentParser
 from collections import OrderedDict
 
@@ -137,9 +137,8 @@ if __name__ == '__main__':
 
         # Find or create workspace
         if not wm.isWorkspaceInitialized():
-            wm.logger.confirm(
-                question="Cannot find workspace, initialize one in %s?" % wm.workspaceRootFolder,
-                failOnDecline=True)
+            wm.confirm("Cannot find workspace, initialize one in %s?" % wm.workspaceRootFolder,
+                       raiseOnDecline=True)
             leafExec(cmdGenerator, wm.logger, "init")
 
         # Profile name

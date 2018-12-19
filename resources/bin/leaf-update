@@ -9,18 +9,12 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-import argparse
-import sys
-import traceback
-import os
 from argparse import ArgumentParser
-from pathlib import Path
 
-from leaf.constants import LeafConstants
 from leaf.core.coreutils import groupPackageIdentifiersByName
 from leaf.core.error import InvalidPackageNameException
 from leaf.core.workspacemanager import WorkspaceManager
-from leaf.format.logger import TextLogger, Verbosity
+from leaf.format.logger import Verbosity
 from leaf.model.package import PackageIdentifier
 
 
@@ -104,13 +98,13 @@ if __name__ == '__main__':
                 previousPi = profilePackageMap.get(pi.name)
                 if previousPi is None:
                     # Package not in profile yet, add it
-                    if logger.confirm(question="Do you want to add package %s?" % pi):
+                    if workspaceManager.confirm("Do you want to add package %s?" % pi):
                         updatePiList.append(pi)
                 elif previousPi != pi:
                     # Package already in profile with a different version, update it
-                    if logger.confirm(
-                            question="Do you want to update package %s from %s to %s?" % (
-                                pi.name, previousPi.version, pi.version)):
+                    if workspaceManager.confirm("Do you want to update package %s from %s to %s?" % (pi.name,
+                                                                                                     previousPi.version,
+                                                                                                     pi.version)):
                         updatePiList.append(pi)
                 else:
                     # Package already in profile with same version, do nothing

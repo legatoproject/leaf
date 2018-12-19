@@ -8,11 +8,14 @@ This module describe how colors and style applies to each kind of printed elemen
 '''
 
 import configparser
+import os
 import sys
+from _io import StringIO
 from collections import OrderedDict
 
-from _io import StringIO
+from leaf.constants import EnvConstants
 from leaf.format.ansi import ANSI
+
 
 '''
 Map between configuration file and actual code
@@ -103,7 +106,8 @@ class ThemedIOWrapper(StringIO):
         self.theme = theme
 
     def write(self, txt):
-        self.stream.write(self.theme(txt))
+        for line in txt.splitlines():
+            self.stream.write(self.theme(line) + '\n')
 
 
 class ThemeManager():
@@ -116,23 +120,17 @@ class ThemeManager():
         '''
         Write configuration file if it does'nt exist the load it
         '''
-        self.theme = None
+        self.theme = self._getDefaultTheme()
         if themesFile is not None and themesFile.exists():
             themeConfig = configparser.ConfigParser()
             themeConfig.read(str(themesFile))
-            # Pick the default theme
-            self.theme = themeConfig["DEFAULT"]
-            # if a selected entry is detected
-            if "selected" in self.theme:
-                selThemeName = themeConfig["DEFAULT"]["selected"]
-                # check if it have it's own section
-                if selThemeName in themeConfig:
-                    # Get the corresponding theme
-                    self.theme = themeConfig[selThemeName]
-
-        if self.theme is None:
-            self.theme = self._getDefaultTheme()
-
+            customeThemeName = os.getenv(EnvConstants.CUSTOM_THEME)
+            if customeThemeName is not None and customeThemeName in themeConfig:
+                # Apply custom theme
+                self.theme.update(themeConfig[customeThemeName])
+            elif 'DEFAULT' in themeConfig:
+                # Apply default theme
+                self.theme.update(themeConfig['DEFAULT'])
         self._createThemes()
 
         # Let's set the right theme on all stderr
@@ -175,9 +173,12 @@ class ThemeManager():
         Write default theme configuration file
         '''
         return OrderedDict((
-            ("error", "BRIGHT + F_RED"),
+            ("question", "F_YELLOW"),
+            ("error", "F_RED"),
+            ("error_title", "F_RED"),
+            ("error_message", "F_RED + BRIGHT"),
             ("hints", "F_GREEN"),
-            ("hints_commands", "BRIGHT + B_GREEN"),
+            ("hints_commands", "BRIGHT + F_GREEN"),
             ("label", "BRIGHT"),
             ("table_separator", "F_LIGHTBLACK"),
             ("tag.current", "F_GREEN"),
@@ -191,7 +192,9 @@ class ThemeManager():
         self.RESET = _Theme(self, "reset")  # Used to end a theme
 
         # Error messages
-        self.ERROR = _Theme(self, "error")  # Used for error messages
+        self.ERROR = _Theme(self, "error")  # Used for the syserr wrapper
+        self.ERROR_TITLE = _Theme(self, "error_title")
+        self.ERROR_MESSAGE = _Theme(self, "error_message")
         self.HINTS = _Theme(self, "hints")  # Used for hints
         self.HINTS_COMMANDS = _Theme(
             self, "hints_commands")  # Used for commands in hints
@@ -205,3 +208,6 @@ class ThemeManager():
 
         # Profile
         self.PROFILE_CURRENT = _Theme(self, "profile_current")
+
+        # Question
+        self.QUESTION = _Theme(self, "question")

@@ -8,11 +8,9 @@ Leaf Package Manager
 '''
 
 import sys
-from abc import ABC, abstractmethod
 from enum import IntEnum, unique
 
 from leaf.core.error import printTrace
-from leaf.utils import isNotInteractive
 
 
 @unique
@@ -22,10 +20,7 @@ class Verbosity(IntEnum):
     VERBOSE = 2
 
 
-class ILogger(ABC):
-    '''
-    Logger interface
-    '''
+class TextLogger ():
 
     def __init__(self, verbosity):
         self.verbosity = verbosity
@@ -38,39 +33,6 @@ class ILogger(ABC):
 
     def isVerbose(self):
         return self.getVerbosity() == Verbosity.VERBOSE
-
-    @abstractmethod
-    def printQuiet(self, *message, **kwargs):
-        pass
-
-    @abstractmethod
-    def printDefault(self, *message, **kwargs):
-        pass
-
-    @abstractmethod
-    def printVerbose(self, *message, **kwargs):
-        pass
-
-    @abstractmethod
-    def printError(self, *message):
-        pass
-
-    @abstractmethod
-    def confirm(self,
-                question="Do you want to continue?",
-                yes=["y"],
-                no=["n"],
-                failOnDecline=False):
-        pass
-
-
-class TextLogger (ILogger):
-    '''
-    Prints a lot of information
-    '''
-
-    def __init__(self, verbosity):
-        ILogger.__init__(self, verbosity)
 
     def printQuiet(self, *message, **kwargs):
         if self.verbosity >= Verbosity.QUIET:
@@ -87,25 +49,3 @@ class TextLogger (ILogger):
     def printError(self, *message):
         print(*message, file=sys.stderr)
         printTrace()
-
-    def confirm(self,
-                question="Do you want to continue?",
-                yes=["y"],
-                no=["n"],
-                failOnDecline=False):
-        label = " (%s/%s) " % (
-            "/".join(map(str.upper, yes)),
-            "/".join(map(str.lower, no)))
-        while True:
-            print(question, label)
-            if isNotInteractive():
-                return True
-            answer = input().strip()
-            if answer == "":
-                return True
-            if answer.lower() in map(str.lower, yes):
-                return True
-            if answer.lower() in map(str.lower, no):
-                if failOnDecline:
-                    raise ValueError("Operation aborted")
-                return False

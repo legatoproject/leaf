@@ -8,9 +8,9 @@ Leaf Package Manager
 '''
 
 import json
+import os
 import platform
 import shutil
-import os
 from builtins import Exception
 from collections import OrderedDict
 from datetime import datetime
@@ -32,6 +32,7 @@ from leaf.core.lock import LockFile
 from leaf.format.formatutils import sizeof_fmt
 from leaf.format.logger import TextLogger
 from leaf.format.renderer.error import HintsRenderer, LeafExceptionRenderer
+from leaf.format.renderer.question import QuestionRenderer
 from leaf.format.theme import ThemeManager
 from leaf.model.config import UserConfiguration
 from leaf.model.environment import Environment
@@ -39,8 +40,8 @@ from leaf.model.package import AvailablePackage, InstalledPackage, \
     LeafArtifact, PackageIdentifier
 from leaf.model.remote import Remote
 from leaf.utils import downloadData, downloadFile, getAltEnvPath, \
-    getCachedArtifactName, getTotalSize, isFolderIgnored, jsonLoadFile, \
-    jsonWriteFile, markFolderAsIgnored, mkTmpLeafRootDir, \
+    getCachedArtifactName, getTotalSize, isFolderIgnored, isNotInteractive, \
+    jsonLoadFile, jsonWriteFile, markFolderAsIgnored, mkTmpLeafRootDir, \
     versionComparator_lt
 
 
@@ -104,6 +105,22 @@ class LoggerManager(_LeafBase):
         renderer.verbosity = self.logger.getVerbosity()
         renderer.tm = self.themeManager
         renderer.print()
+
+    def confirm(self, question="Do you want to continue?", raiseOnDecline=False):
+        out = None
+        while out is None:
+            self.printRenderer(QuestionRenderer(question + ' (Y/n)'))
+            if isNotInteractive():
+                out = True
+            else:
+                answer = input().strip()
+                if answer == '' or answer.lower() == 'y':
+                    out = True
+                elif answer.lower() == 'n':
+                    out = False
+        if not out and raiseOnDecline:
+            raise UserCancelException()
+        return out
 
 
 class GPGManager(LoggerManager):
@@ -574,8 +591,7 @@ class PackageManager(RemoteManager):
                     if totalSize > 0:
                         self.logger.printDefault(
                             "Total size:", sizeof_fmt(totalSize))
-                    if not self.logger.confirm():
-                        raise UserCancelException()
+                    self.confirm(raiseOnDecline=True)
 
                     # Install prereq
                     prereqApList = DependencyUtils.prereq(piList,
@@ -636,8 +652,7 @@ class PackageManager(RemoteManager):
                 # Confirm
                 self.logger.printQuiet("Packages to uninstall:",
                                        ", ".join([str(ip.getIdentifier()) for ip in ipToRemove]))
-                if not self.logger.confirm():
-                    raise UserCancelException()
+                self.confirm(raiseOnDecline=True)
 
                 env = Environment.build(self.getLeafEnvironment(),
                                         self.getUserEnvironment())

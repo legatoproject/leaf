@@ -26,7 +26,7 @@ class HintsRenderer(Renderer):
         if not ANSI.isEnabled():
             return hints
         isCmd = hints.startswith(HINTS_CMD_DELIMITER)
-        out = ""
+        out = '  '
         for elt in hints.split(HINTS_CMD_DELIMITER):
             if isCmd:
                 out += self.tm.HINTS_COMMANDS(elt)
@@ -37,7 +37,7 @@ class HintsRenderer(Renderer):
 
     def _formatHints(self, hints):
         if len(hints) > 0:
-            out = [self.tm.HINTS("HINTS:" if len(hints) > 1 else "HINT:")]
+            out = [self.tm.HINTS('HINTS:' if len(hints) > 1 else 'HINT:')]
             out.extend(map(self._colorizeHints, hints))
             return out
         return []
@@ -64,11 +64,13 @@ class LeafExceptionRenderer(HintsRenderer):
         printTrace()
 
     def _formatError(self, errmsg):
-        return ("ERROR:", errmsg)
+        return (self.tm.ERROR_TITLE('ERROR:'),
+                self.tm.ERROR_MESSAGE("  " + errmsg))
 
     def _formatCause(self, cause):
         if cause is not None:
-            return ("CAUSED BY:", str(cause))
+            return (self.tm.ERROR_TITLE('CAUSED BY:'),
+                    self.tm.ERROR_MESSAGE("  " + str(cause)))
         return []
 
     def _toStringDefault(self):
