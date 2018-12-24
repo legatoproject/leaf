@@ -26,4 +26,4 @@ class QuestionRenderer(Renderer):
         return self.tm.QUESTION(self.message)
 
     def _toStringVerbose(self):
-        return self.message
+        return self.tm.QUESTION(self.message)
