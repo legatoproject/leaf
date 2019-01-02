@@ -150,6 +150,14 @@ class TestCliPackageManager(LeafCliWrapper):
         self.leafExec(["package", "uninstall"], "condition_1.0")
         self.checkInstalledPackages([])
 
+    def testConditionalUninstall(self):
+        self.leafExec(["env", "user"], "--set", "FOO=BAR")
+        self.leafExec(["package", "install"], "condition_1.0")
+        self.leafExec(["env", "user"], "--unset", "FOO")
+        self.leafExec(["package", "install"], "install_1.0")
+        # condition_1.0 is not 'consistent' since env has changed
+        self.leafExec(["package", "uninstall"], "install_1.0")
+
     def testPrereq(self):
         self.leafExec(["package", "prereq"], "prereq-true_1.0")
         self.assertFalse(

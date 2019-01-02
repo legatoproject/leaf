@@ -152,8 +152,10 @@ class DependencyUtils():
         otherPiList = [ip.getIdentifier()
                        for ip in ipMap.values()
                        if ip not in out]
+        # Keep all configurations (ie env=None) for all other installed packages
         for neededIp in DependencyUtils.installed(otherPiList, ipMap,
-                                                  env=env):
+                                                  env=None,
+                                                  ignoreUnknown=True):
             if neededIp in out:
                 out.remove(neededIp)
         return out
