@@ -45,7 +45,7 @@ from leaf.utils import downloadData, downloadFile, getAltEnvPath, \
     versionComparator_lt
 
 
-class _LeafBase():
+class ConfigurationManager():
     def __init__(self):
         '''
         Constructor
@@ -56,6 +56,14 @@ class _LeafBase():
         self.cacheFolder = getAltEnvPath(EnvConstants.CUSTOM_CACHE,
                                          LeafFiles.DEFAULT_CACHE_FOLDER,
                                          mkdirIfNeeded=True)
+        self.initLeafSettings()
+
+    def initLeafSettings(self, force=False):
+        userEnvMap = self.readConfiguration().getEnvMap()
+        for k in EnvConstants.LEAF_SETTINGS:
+            if k in userEnvMap:
+                if force or k not in os.environ:
+                    os.environ[k] = userEnvMap[k]
 
     def _getSkelConfigurationFile(self, filename):
         '''
@@ -76,11 +84,48 @@ class _LeafBase():
             return None
         return out
 
+    def readConfiguration(self):
+        '''
+        Read the configuration if it exists, else return the the default configuration
+        '''
+        return UserConfiguration(
+            self._getSkelConfigurationFile(LeafFiles.CONFIG_FILENAME),
+            self.getConfigurationFile(LeafFiles.CONFIG_FILENAME))
 
-class LoggerManager(_LeafBase):
+    def writeConfiguration(self, usrc):
+        '''
+        Write the given configuration
+        '''
+        skelFile = self._getSkelConfigurationFile(LeafFiles.CONFIG_FILENAME)
+        usrc.writeLayerToFile(
+            self.getConfigurationFile(LeafFiles.CONFIG_FILENAME),
+            previousLayerFile=skelFile,
+            pp=True)
+
+    def getLeafEnvironment(self):
+        out = Environment("Leaf built-in variables")
+        out.env.append(("LEAF_VERSION", str(__version__)))
+        out.env.append(("LEAF_PLATFORM_SYSTEM", platform.system()))
+        out.env.append(("LEAF_PLATFORM_MACHINE", platform.machine()))
+        out.env.append(("LEAF_PLATFORM_RELEASE", platform.release()))
+        if EnvConstants.NON_INTERACTIVE in os.environ:
+            out.env.append((EnvConstants.NON_INTERACTIVE,
+                            os.getenv(EnvConstants.NON_INTERACTIVE)))
+        return out
+
+    def getUserEnvironment(self):
+        return self.readConfiguration().getEnvironment()
+
+    def updateUserEnv(self, setMap=None, unsetList=None):
+        usrc = self.readConfiguration()
+        usrc.updateEnv(setMap, unsetList)
+        self.writeConfiguration(usrc)
+
+
+class LoggerManager(ConfigurationManager):
 
     def __init__(self, verbosity):
-        _LeafBase.__init__(self)
+        ConfigurationManager.__init__(self)
         themesFile = self.getConfigurationFile(
             LeafFiles.THEMES_FILENAME, checkExists=True)
         # If the theme file does not exists, try to find a skeleton
@@ -179,24 +224,6 @@ class RemoteManager(GPGManager):
         '''
         self.remoteCacheFile = self.cacheFolder / \
             LeafFiles.CACHE_REMOTES_FILENAME
-
-    def readConfiguration(self):
-        '''
-        Read the configuration if it exists, else return the the default configuration
-        '''
-        return UserConfiguration(
-            self._getSkelConfigurationFile(LeafFiles.CONFIG_FILENAME),
-            self.getConfigurationFile(LeafFiles.CONFIG_FILENAME))
-
-    def writeConfiguration(self, usrc):
-        '''
-        Write the given configuration
-        '''
-        skelFile = self._getSkelConfigurationFile(LeafFiles.CONFIG_FILENAME)
-        usrc.writeLayerToFile(
-            self.getConfigurationFile(LeafFiles.CONFIG_FILENAME),
-            previousLayerFile=skelFile,
-            pp=True)
 
     def cleanRemotesCacheFile(self):
         if self.remoteCacheFile.exists():
@@ -370,25 +397,6 @@ class PackageManager(RemoteManager):
     def setInstallFolder(self, folder):
         usrc = self.readConfiguration()
         usrc.setRootFolder(folder)
-        self.writeConfiguration(usrc)
-
-    def getLeafEnvironment(self):
-        out = Environment("Leaf built-in variables")
-        out.env.append(("LEAF_VERSION", str(__version__)))
-        out.env.append(("LEAF_PLATFORM_SYSTEM", platform.system()))
-        out.env.append(("LEAF_PLATFORM_MACHINE", platform.machine()))
-        out.env.append(("LEAF_PLATFORM_RELEASE", platform.release()))
-        if EnvConstants.NON_INTERACTIVE in os.environ:
-            out.env.append((EnvConstants.NON_INTERACTIVE,
-                            os.getenv(EnvConstants.NON_INTERACTIVE)))
-        return out
-
-    def getUserEnvironment(self):
-        return self.readConfiguration().getEnvironment()
-
-    def updateUserEnv(self, setMap=None, unsetList=None):
-        usrc = self.readConfiguration()
-        usrc.updateEnv(setMap, unsetList)
         self.writeConfiguration(usrc)
 
     def listAvailablePackages(self, smartRefresh=True):

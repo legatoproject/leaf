@@ -46,12 +46,9 @@ class TestApiPackageManager(AbstractTestWithRepo):
 
         self.pm = PackageManager(VERBOSITY)
 
-        if EnvConstants.DOWNLOAD_TIMEOUT not in os.environ:
-            # Fix CI timeout
-            os.environ[EnvConstants.DOWNLOAD_TIMEOUT] = "30"
-            print("Override %s=%s" % (EnvConstants.DOWNLOAD_TIMEOUT,
-                                      os.environ[EnvConstants.DOWNLOAD_TIMEOUT]),
-                  file=sys.stderr)
+        # Fix CI timeout
+        self.pm.updateUserEnv(setMap={EnvConstants.DOWNLOAD_TIMEOUT: "30"})
+        self.pm.initLeafSettings()
 
         self.pm.setInstallFolder(self.getInstallFolder())
         with self.assertRaises(NoRemoteException):

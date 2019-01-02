@@ -129,7 +129,12 @@ def markFolderAsIgnored(folder):
     return out
 
 
-def downloadData(url, outputFile=None, timeout=LeafConstants.DOWNLOAD_TIMEOUT):
+def getLeafTimeout():
+    return int(os.getenv(EnvConstants.DOWNLOAD_TIMEOUT,
+                         LeafConstants.DEFAULT_DOWNLOAD_TIMEOUT))
+
+
+def downloadData(url, outputFile=None):
     '''
     Download data and write it to outputFile
     or return the data if outputFile is None
@@ -142,7 +147,7 @@ def downloadData(url, outputFile=None, timeout=LeafConstants.DOWNLOAD_TIMEOUT):
             with open(str(outputFile), 'wb') as fp:
                 fp.write(fp.read())
     else:
-        with urllib.request.urlopen(url, timeout=timeout) as stream:
+        with urllib.request.urlopen(url, timeout=getLeafTimeout()) as stream:
             if outputFile is None:
                 return stream.read()
             with open(str(outputFile), 'wb') as fp:
@@ -185,7 +190,7 @@ def downloadFile(url, folder, logger, filename=None, hash=None, bufferSize=256 *
                 message = "Downloading " + targetFile.name
                 req = requests.get(url,
                                    stream=True,
-                                   timeout=LeafConstants.DOWNLOAD_TIMEOUT)
+                                   timeout=getLeafTimeout())
                 size = int(req.headers.get('content-length', -1))
                 currentSize = 0
                 with open(str(targetFile), 'wb') as fp:
@@ -323,4 +328,4 @@ def getTotalSize(item):
 
 
 def isNotInteractive():
-    return os.getenv(EnvConstants.NON_INTERACTIVE, "") != ""
+    return os.getenv(EnvConstants.NON_INTERACTIVE, '') != ''

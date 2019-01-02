@@ -18,7 +18,7 @@ HINTS_CMD_DELIMITER = '\''
 
 
 def printTrace():
-    if EnvConstants.DEBUG_MODE in os.environ and sys.exc_info()[0] is not None:
+    if os.getenv(EnvConstants.DEBUG_MODE, "") != "" and sys.exc_info()[0] is not None:
         traceback.print_exc(file=sys.stderr)
 
 

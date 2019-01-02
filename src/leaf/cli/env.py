@@ -8,7 +8,8 @@ Leaf Package Manager
 '''
 import argparse
 
-from leaf.cli.cliutils import LeafMetaCommand, LeafCommand, initCommonArgs
+from leaf.cli.cliutils import LeafCommand, LeafMetaCommand, initCommonArgs
+from leaf.constants import EnvConstants
 from leaf.format.renderer.environment import EnvironmentRenderer
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
@@ -102,6 +103,9 @@ class EnvUserCommand(LeafCommand):
     def initArgs(self, parser):
         super().initArgs(parser)
         initCommonArgs(parser, addRemoveEnv=True, withEnvScripts=True)
+
+    def _buildExampleText(self):
+        return "note:\n  You can configure leaf settings with the user environment\n  List of settings: " + ', '.join(EnvConstants.LEAF_SETTINGS)
 
     def execute(self, args):
         pm = self.getPackageManager(args)

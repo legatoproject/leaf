@@ -28,9 +28,9 @@ Sets the location where packages are installed. A package named _myPackage_1.0_ 
 and installed in the _PACKAGES_ROOT/myPackage_1.0_ folder. Default value for this parameter is
 *$HOME/.leaf*
 
-== VARIABLES
+== FOLDER VARIABLES
 
-The following environment variables can be used to configure the leaf tool behavior.
+The following environment variables can be used to configure the different leaf folders.
 
 === _LEAF_CONFIG_
 
@@ -86,6 +86,17 @@ It may contain:
 The content of this folder can be deleted at any time to save disk space.
 A warning message will be regularly displayed as soon as this cache size exceeds 5 GB.
 
+=== _LEAF_WORKSPACE_
+
+Location of Leaf workspace. This is similar to main leaf *-w* option.
+Note that if both environment variable and *-w* option are set, the option value will be used.
+
+== OPTIONAL SETTINGS VARIABLES
+
+The following environment variables can be used to configure the leaf tool behavior.
+Note that these settings can be configured directly in your shell (using .bashrc for example) or
+in the *user* variables scope (see *leaf help env*)
+
 === _LEAF_TIMEOUT_
 
 Duration (in seconds) of the download timeout. Default value is *10*
@@ -95,6 +106,27 @@ Timeout that leaf waits to download data when the remote falls into an inactive 
 === _LEAF_DEBUG_
 
 When set, will print a stack trace to the screen when an error occurs
+
+=== _LEAF_GPG_KEYSERVER_
+
+Overrides default GPG server used to query public keys (see *leaf help remote*)
+
+=== _LEAF_NON_INTERACTIVE_
+
+When set, behaves as if the main leaf *--non-interactive* option was set
+(replies the default answer to every asked question)
+
+=== _LEAF_TAR_BIN_
+
+Allows to specify a custom tar program when building leaf packages (see *leaf help build*)
+
+=== _LEAF_DISABLE_LOCKS_
+
+When set, allows concurrent install/uninstall operations (not authorized by default)
+
+=== _LEAF_THEME_
+
+Allows to specific a custom color theme (see *leaf help colors*)
 
 == SEE ALSO
 

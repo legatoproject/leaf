@@ -7,18 +7,13 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
+import os
 from datetime import timedelta
 from pathlib import Path
-import os
 
 
 class EnvConstants():
-    '''
-    Leaf specific env vars
-    '''
-    WORKSPACE_ROOT = 'LEAF_WORKSPACE'
-    CUSTOM_CONFIG = 'LEAF_CONFIG'
-    CUSTOM_CACHE = 'LEAF_CACHE'
+    # Settings
     DOWNLOAD_TIMEOUT = 'LEAF_TIMEOUT'
     DEBUG_MODE = 'LEAF_DEBUG'
     GPG_KEYSERVER = "LEAF_GPG_KEYSERVER"
@@ -26,6 +21,26 @@ class EnvConstants():
     CUSTOM_TAR = 'LEAF_TAR_BIN'
     DISABLE_LOCKS = 'LEAF_DISABLE_LOCKS'
     CUSTOM_THEME = 'LEAF_THEME'
+    # Other env variables
+    WORKSPACE_ROOT = 'LEAF_WORKSPACE'
+    CUSTOM_CONFIG = 'LEAF_CONFIG'
+    CUSTOM_CACHE = 'LEAF_CACHE'
+
+    '''
+    Leaf settings are some env vars that user can configure either in is environment or in user scope
+    For example, LEAF_DEBUG can be set to 1 with:
+    $ LEAF_DEBUG=1 leaf search
+    --or--
+    $ leaf env user --set LEAF_DEBUG=1
+    $ leaf search
+    '''
+    LEAF_SETTINGS = (DOWNLOAD_TIMEOUT,
+                     DEBUG_MODE,
+                     GPG_KEYSERVER,
+                     NON_INTERACTIVE,
+                     CUSTOM_TAR,
+                     DISABLE_LOCKS,
+                     CUSTOM_THEME)
 
 
 class LeafConstants():
@@ -34,7 +49,7 @@ class LeafConstants():
     '''
     MIN_PYTHON_VERSION = (3, 4)
     COLORAMA_MIN_VERSION = "0.3.3"
-    DOWNLOAD_TIMEOUT = int(os.environ.get(EnvConstants.DOWNLOAD_TIMEOUT, "10"))
+    DEFAULT_DOWNLOAD_TIMEOUT = "10"
     DEFAULT_PROFILE = "default"
     CACHE_DELTA = timedelta(days=1)
     CACHE_SIZE_MAX = 5 * 1024 * 1024 * 1024  # 5GB

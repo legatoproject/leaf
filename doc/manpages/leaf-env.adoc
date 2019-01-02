@@ -64,7 +64,7 @@ Displays the built-in *LEAF_XX* variables:
 
 *user*::
 
-Displays and configurse variables in the global _user_ scope.
+Displays and configures variables in the global _user_ scope.
 Variables in this scope are common to all workspaces. The variables configuration is stored in the
 main *leaf* configuration file (see *leaf config*).
 +
