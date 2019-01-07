@@ -17,19 +17,18 @@ class ConfigCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "config",
+            'config',
             "update user configuration")
 
-    def initArgs(self, parser):
-        super().initArgs(parser)
-        parser.add_argument(
-            '--root',
-            dest='rootFolder',
-            metavar='DIR',
-            type=Path,
-            help="set the root folder, default: %s" % LeafFiles.DEFAULT_LEAF_ROOT)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
+        parser.add_argument('--root',
+                            dest='rootFolder',
+                            metavar='DIR',
+                            type=Path,
+                            help="set the root folder, default: %s" % LeafFiles.DEFAULT_LEAF_ROOT)
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         pm = self.getPackageManager(args)
         if args.rootFolder is not None:
             pm.setInstallFolder(args.rootFolder)

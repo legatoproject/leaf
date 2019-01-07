@@ -47,6 +47,7 @@ class LeafConstants():
     '''
     Constants needed by Leaf
     '''
+    DEFAULT_ERROR_RC = 2
     MIN_PYTHON_VERSION = (3, 4)
     COLORAMA_MIN_VERSION = "0.3.3"
     DEFAULT_DOWNLOAD_TIMEOUT = "10"

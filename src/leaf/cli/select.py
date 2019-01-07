@@ -11,16 +11,17 @@ from leaf.cli.cliutils import LeafCommand
 
 class SelectCommand(LeafCommand):
     def __init__(self):
-        LeafCommand.__init__(self,
-                             "select",
-                             "change current profile and install missing packages")
+        LeafCommand.__init__(
+            self,
+            'select',
+            "change current profile and install missing packages")
 
-    def initArgs(self, parser):
-        super().initArgs(parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         parser.add_argument('profiles', nargs=1,
                             metavar='PROFILE', help='the profile name'),
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         wm = self.getWorkspaceManager(args)
 
         name = args.profiles[0]

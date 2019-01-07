@@ -6,28 +6,11 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from leaf.cli.cliutils import LeafMetaCommand, LeafCommand, initCommonArgs
+from leaf.cli.cliutils import LeafCommand, initCommonArgs
 from leaf.core.features import FeatureManager
 from leaf.format.renderer.feature import FeatureListRenderer
 from leaf.model.base import Scope
 from leaf.model.environment import Environment
-
-
-class FeatureMetaCommand(LeafMetaCommand):
-
-    def __init__(self):
-        LeafMetaCommand.__init__(
-            self,
-            "feature",
-            "manage features from available packages",
-            externalCommandsPrefix=('feature', ))
-
-    def getDefaultSubCommand(self):
-        return FeatureListCommand()
-
-    def getSubCommands(self):
-        return [FeatureToggleCommand(),
-                FeatureQueryCommand()]
 
 
 class FeatureListCommand(LeafCommand):
@@ -35,13 +18,10 @@ class FeatureListCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "list",
+            'list',
             "list all available features")
 
-    def initArgs(self, parser):
-        LeafCommand.initArgs(self, parser)
-
-    def execute(self, args):
+    def execute(self, args, uargs):
         pm = self.getPackageManager(args)
 
         featureManager = FeatureManager(pm)
@@ -56,16 +36,16 @@ class FeatureQueryCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "query",
+            'query',
             "query feature status")
 
-    def initArgs(self, parser):
-        LeafCommand.initArgs(self, parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         parser.add_argument('featureName', metavar='FEATURE',
                             nargs=1,
                             help='the feature name')
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         pm = self.getPackageManager(args)
 
         featureManager = FeatureManager(pm)
@@ -99,11 +79,11 @@ class FeatureToggleCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "toggle",
+            'toggle',
             "toggle a feature")
 
-    def initArgs(self, parser):
-        LeafCommand.initArgs(self, parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         initCommonArgs(parser, withScope=True)
         parser.add_argument('featureName', metavar='FEATURE',
                             nargs=1,
@@ -112,7 +92,7 @@ class FeatureToggleCommand(LeafCommand):
                             nargs=1,
                             help='the feature value')
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         pm = self.getPackageManager(args)
 
         featureManager = FeatureManager(pm)

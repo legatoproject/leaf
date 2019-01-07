@@ -7,7 +7,7 @@ from tempfile import mktemp
 import unittest
 from tests.testutils import EXTENSIONS_FOLDER, RESOURCE_FOLDER
 
-from leaf.cli.external import ExternalCommandUtils
+from leaf.cli.cliutils import ExternalCommandUtils
 from leaf.constants import JsonConstants, LeafFiles
 from leaf.core.coreutils import VariableResolver, \
     groupPackageIdentifiersByName

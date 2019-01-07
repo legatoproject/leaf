@@ -16,11 +16,12 @@ from leaf.format.renderer.status import StatusRenderer
 
 class StatusCommand(LeafCommand):
     def __init__(self):
-        LeafCommand.__init__(self,
-                             "status",
-                             "print leaf status")
+        LeafCommand.__init__(
+            self,
+            'status',
+            "print leaf status")
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         wsRoot = WorkspaceManager.findRoot()
         if not WorkspaceManager.isWorkspaceRoot(wsRoot):
             self.getLoggerManager(args).logger.printDefault(

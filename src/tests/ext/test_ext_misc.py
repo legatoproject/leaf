@@ -6,7 +6,7 @@ import os
 
 from tests.testutils import LeafCliWrapper, RESOURCE_FOLDER
 
-from leaf.cli.external import ExternalCommandUtils
+from leaf.cli.cliutils import ExternalCommandUtils
 
 
 class TestExtMisc(LeafCliWrapper):

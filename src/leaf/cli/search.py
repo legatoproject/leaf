@@ -20,11 +20,11 @@ class SearchCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "search",
+            'search',
             "search for available packages")
 
-    def initArgs(self, parser):
-        super().initArgs(parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         parser.add_argument("-a", "--all",
                             dest="allPackages",
                             action="store_true",
@@ -37,7 +37,7 @@ class SearchCommand(LeafCommand):
         parser.add_argument('keywords', metavar="KEYWORD",
                             nargs=argparse.ZERO_OR_MORE)
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         pm = self.getPackageManager(args)
 
         pkgFilter = MetaPackageFilter()

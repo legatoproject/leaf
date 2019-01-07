@@ -2,12 +2,13 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
-from leaf.format.alignment import VAlign, HAlign
+from tests.testutils import AbstractTestWithChecker
+
+from leaf.format.alignment import HAlign, VAlign
 from leaf.format.chars import _SEPARATORS_ASCII
 from leaf.format.formatutils import sizeof_fmt
 from leaf.format.table import Table
-
-from tests.testutils import AbstractTestWithChecker
+from leaf.format.theme import ThemeManager
 
 
 class TestFormat(AbstractTestWithChecker):
@@ -19,7 +20,7 @@ class TestFormat(AbstractTestWithChecker):
         self.assertEqual(sizeof_fmt(456123789), "435.0 MB")
 
     def _createTable(self):
-        table = Table()
+        table = Table(ThemeManager())
         nbElt = 7
         table.newRow().newSep(nbElt)
         table.newRow().newSep() \

@@ -8,7 +8,7 @@ Support the followings features:
     - can be turned to a multiline string using str()
 
 Example:
-    table = Table()
+    table = Table(ThemeManager())
     nbElt = 7
     table.newRow().newSep(nbElt)
     table.newRow().newSep() \
@@ -53,7 +53,6 @@ from enum import unique, Enum
 from leaf.format.alignment import HAlign, VAlign
 from leaf.format.ansi import removeAnsiChars
 from leaf.format.chars import PADDING_CHAR, getSeparators
-from leaf.format.theme import ThemeManager
 
 
 class Table():
@@ -61,7 +60,7 @@ class Table():
     Represent the table
     '''
 
-    def __init__(self, themeManager=ThemeManager()):
+    def __init__(self, themeManager):
         self.tm = themeManager
         self.rows = []
         self.columns = []

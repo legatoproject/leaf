@@ -240,9 +240,7 @@ class RelengManager(LoggerManager):
         command += ['-f', str(outputFile)]
         command += ['-C', str(workingFolder)]
 
-        if tarExtraArgs is None or len(tarExtraArgs) == 0:
-            command += ['.']
-        else:
+        if tarExtraArgs is not None and len(tarExtraArgs) > 0:
             forbiddenArgs = [arg for arg
                              in tarExtraArgs
                              if arg in ('-A', '--catenate', '--concatenate',
@@ -260,6 +258,8 @@ class RelengManager(LoggerManager):
                 raise LeafException(
                     "You should not use tar extra arguments: " + ''.join(forbiddenArgs))
             command += tarExtraArgs
+        else:
+            command.append('.')
 
         self.logger.printDefault("Executing command:", ' '.join(command))
         rc = subprocess.call(command,

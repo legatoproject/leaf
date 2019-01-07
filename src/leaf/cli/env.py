@@ -8,7 +8,7 @@ Leaf Package Manager
 '''
 import argparse
 
-from leaf.cli.cliutils import LeafCommand, LeafMetaCommand, initCommonArgs
+from leaf.cli.cliutils import LeafCommand, initCommonArgs
 from leaf.constants import EnvConstants
 from leaf.format.renderer.environment import EnvironmentRenderer
 from leaf.model.environment import Environment
@@ -16,41 +16,23 @@ from leaf.model.package import PackageIdentifier
 from leaf.utils import envListToMap
 
 
-class EnvMetaCommand(LeafMetaCommand):
-
-    def __init__(self):
-        LeafMetaCommand.__init__(
-            self,
-            "env",
-            "display environement variables",
-            externalCommandsPrefix=('env', ))
-
-    def getSubCommands(self):
-        return [EnvBuiltinCommand(),
-                EnvUserCommand(),
-                EnvWorkspaceCommand(),
-                EnvProfileCommand(),
-                EnvPackageCommand()]
-
-    def getDefaultSubCommand(self):
-        return EnvPrintCommand()
-
-
 class EnvPrintCommand(LeafCommand):
 
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "print",
+            'print',
             "display all environment variables to use the current (or given) profile")
 
-    def initArgs(self, parser):
-        super().initArgs(parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         initCommonArgs(parser, withEnvScripts=True)
-        parser.add_argument('profiles', nargs=argparse.OPTIONAL,
-                            metavar='PROFILE', help='the profile name')
+        parser.add_argument('profiles',
+                            nargs=argparse.OPTIONAL,
+                            metavar='PROFILE',
+                            help='the profile name')
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         wm = self.getWorkspaceManager(args, checkInitialized=False)
 
         env = None
@@ -77,14 +59,14 @@ class EnvBuiltinCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "builtin",
+            'builtin',
             "display environment variables exported by leaf application")
 
-    def initArgs(self, parser):
-        super().initArgs(parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         initCommonArgs(parser, withEnvScripts=True)
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         pm = self.getPackageManager(args)
 
         env = pm.getLeafEnvironment()
@@ -97,17 +79,17 @@ class EnvUserCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "user",
+            'user',
             "display and update environment variables exported by user configuration")
 
-    def initArgs(self, parser):
-        super().initArgs(parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         initCommonArgs(parser, addRemoveEnv=True, withEnvScripts=True)
 
-    def _buildExampleText(self):
+    def _getEpilogText(self):
         return "note:\n  You can configure leaf settings with the user environment\n  List of settings: " + ', '.join(EnvConstants.LEAF_SETTINGS)
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         pm = self.getPackageManager(args)
 
         if args.envAddList is not None or args.envRmList is not None:
@@ -124,14 +106,14 @@ class EnvWorkspaceCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "workspace",
+            'workspace',
             "display and update environment variables exported by workspace")
 
-    def initArgs(self, parser):
-        super().initArgs(parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         initCommonArgs(parser, addRemoveEnv=True, withEnvScripts=True)
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         wm = self.getWorkspaceManager(args)
 
         if args.envAddList is not None or args.envRmList is not None:
@@ -148,16 +130,18 @@ class EnvProfileCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "profile",
+            'profile',
             "display and update environment variables exported by profile")
 
-    def initArgs(self, parser):
-        super().initArgs(parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         initCommonArgs(parser, addRemoveEnv=True, withEnvScripts=True)
-        parser.add_argument('profiles', nargs=argparse.OPTIONAL,
-                            metavar='PROFILE', help='the profile name')
+        parser.add_argument('profiles',
+                            nargs=argparse.OPTIONAL,
+                            metavar='PROFILE',
+                            help='the profile name')
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         wm = self.getWorkspaceManager(args)
 
         name = args.profiles if args.profiles is not None else wm.getCurrentProfileName()
@@ -178,17 +162,17 @@ class EnvPackageCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "package",
+            'package',
             "display environment variables exported by packages")
 
-    def initArgs(self, parser):
-        super().initArgs(parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         initCommonArgs(parser, withEnvScripts=True)
         parser.add_argument(dest='pisList',
                             metavar='PKGID',
                             nargs=argparse.REMAINDER)
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         pm = self.getPackageManager(args)
 
         env = pm.getPackagesEnvironment(

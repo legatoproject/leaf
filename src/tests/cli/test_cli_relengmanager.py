@@ -269,6 +269,44 @@ class TestCliRelengManager(LeafCliWrapper):
             self.assertEqual(computeHash(outputFile3),
                              computeHash(outputFile4))
 
+    def testPackageCustomContent(self):
+        pkgFolder = RESOURCE_FOLDER / "install_1.0"
+        artifact1 = self.getWorkspaceFolder() / "a.leaf"
+        artifact2 = self.getWorkspaceFolder() / "b.leaf"
+        self.leafExec(("build", "pack"),
+                      "--no-info",
+                      "--output", artifact1,
+                      "--input", pkgFolder,
+                      "--",
+                      '--mtime=2018-11-01 00:00:00',
+                      '--sort=name',
+                      '--owner=0', '--group=0', '--numeric-owner',
+                      "-J",
+                      ".")
+
+        self.leafExec(("build", "pack"),
+                      "--no-info",
+                      "--output", artifact2,
+                      "--input", pkgFolder,
+                      "--",
+                      '--mtime=2018-11-01 00:00:00',
+                      '--sort=name',
+                      '--owner=0', '--group=0', '--numeric-owner',
+                      "-J",
+                      "manifest.json")
+
+        self.assertGreater(artifact1.stat().st_size,
+                           artifact2.stat().st_size)
+
+        # Error cases
+        self.leafExec(("build", "pack"),
+                      "--no-info",
+                      "--output", self.getWorkspaceFolder() / "error.leaf",
+                      "--input", pkgFolder,
+                      "--",
+                      "-v",
+                      expectedRc=2)
+
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
 class TestCliRelengManagerVerbose(TestCliRelengManager):

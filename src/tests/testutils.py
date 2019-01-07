@@ -9,7 +9,7 @@ from tempfile import mkdtemp
 from unittest.case import TestCase
 
 from _io import StringIO
-from leaf.cli.cli import LeafCli
+from leaf.__main__ import runLeaf
 from leaf.constants import EnvConstants, JsonConstants, LeafFiles
 from leaf.core.relengmanager import RelengManager
 from leaf.format.logger import Verbosity
@@ -298,31 +298,26 @@ class LeafCliWrapper(AbstractTestWithRepo):
         self.leafExec(("remote", "add"), "--insecure",
                       "other", self.getRemoteUrl2())
 
-    def leafExec(self, verb, *args, altWorkspace=None, expectedRc=0):
+    def leafExec(self, verb, *args,
+                 altWorkspace=None, expectedRc=0):
         if altWorkspace is None:
             altWorkspace = self.getWorkspaceFolder()
-        self.eazyExecute(self.preVerbArgs + ["--non-interactive",
-                                             "--workspace", altWorkspace],
-                         verb,
-                         self.postVerbArgs,
-                         args,
-                         expectedRc)
 
-    def eazyExecute(self, preArgs, verb, postArgs, args, expectedRc):
         command = []
-        if preArgs is not None:
-            command += preArgs
-        if verb is not None:
-            if isinstance(verb, (list, tuple)):
-                command += verb
-            else:
-                command.append(verb)
-        if postArgs is not None:
-            command += postArgs
+        command += self.preVerbArgs
+        command += ("--non-interactive", "--workspace", altWorkspace)
+        if isinstance(verb, (list, tuple)):
+            command += verb
+        else:
+            command.append(verb)
+        command += self.postVerbArgs
         if args is not None:
             command += args
+        self.eazyExecute(command, expectedRc)
+
+    def eazyExecute(self, command, expectedRc):
         command = [str(i) for i in command]
-        out = LeafCli().run(command)
+        out = runLeaf(command)
         if expectedRc is not None:
             self.assertEqual(expectedRc, out, " ".join(command))
         return out

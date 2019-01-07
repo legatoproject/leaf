@@ -11,38 +11,37 @@ import argparse
 from builtins import ValueError
 from pathlib import Path
 
-from leaf.cli.cliutils import LeafCommand, LeafMetaCommand, stringToBoolean
+from leaf.cli.cliutils import LeafCommand, stringToBoolean
 from leaf.constants import JsonConstants, LeafFiles
 from leaf.core.error import LeafException
 from leaf.core.relengmanager import RelengManager
 
 
-class BuildMetaCommand(LeafMetaCommand):
-
-    def __init__(self):
-        LeafMetaCommand.__init__(
-            self,
-            "build",
-            "commands to build leaf artifacts (manifest, package or index)",
-            externalCommandsPrefix=('build',))
-
-    def getSubCommands(self):
-        return [BuildPackSubCommand(),
-                BuildIndexSubCommand(),
-                BuildManifestSubCommand()]
-
-
 class BuildPackSubCommand(LeafCommand):
 
     def __init__(self):
-        LeafCommand.__init__(self,
-                             "pack",
-                             "build a package",
-                             cmdExamples=[('leaf build pack -i path/to/packageFolder/ -o package.leaf -- -z .',
-                                           'Build an GZIP compressed archive')])
+        LeafCommand.__init__(
+            self,
+            'pack',
+            "build a package")
 
-    def initArgs(self, parser):
-        super().initArgs(parser)
+    def _getExamples(self):
+        return [('leaf build pack -i path/to/packageFolder/ -o package.leaf -- -z .',
+                 'Build an GZIP compressed archive'),
+                ('leaf build pack -i path/to/packageFolder/ -o package.leaf -- -v -J -X /tmp/exclude.list .',
+                 'Build an XZ compressed archive with some files excluded (from /tmp/exclude.list), tar will be verbose'),
+                ('leaf build pack -i path/to/packageFolder/ -o package.leaf -- manifest.json',
+                 'Build an XZ compressed archive containing only the manifest.json file')]
+
+    def _getEpilogText(self):
+        out = "notes: \n"
+        out += "  - extra tar options must begin with a '--'\n"
+        out += "  - if you specify extra tar options, you must specify the content to include (usually, end your command with a '.')\n"
+        out += '\n' + super()._getEpilogText()
+        return out
+
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         parser.add_argument('-o', '--output',
                             metavar='FILE',
                             required=True,
@@ -63,7 +62,7 @@ class BuildPackSubCommand(LeafCommand):
                             nargs='*',
                             help="extra arguments given to tar command line\n(must start with '--')")
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         rm = RelengManager(self.getVerbosity(args))
 
         pkgFolder = None
@@ -85,12 +84,13 @@ class BuildPackSubCommand(LeafCommand):
 class BuildIndexSubCommand(LeafCommand):
 
     def __init__(self):
-        LeafCommand.__init__(self,
-                             "index",
-                             "build a repository index.json")
+        LeafCommand.__init__(
+            self,
+            'index',
+            "build a repository index.json")
 
-    def initArgs(self, parser):
-        super().initArgs(parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         parser.add_argument('-o', '--output',
                             required=True,
                             metavar='FILE',
@@ -122,7 +122,7 @@ class BuildIndexSubCommand(LeafCommand):
                             nargs=argparse.REMAINDER,
                             help='leaf artifacts')
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         rm = RelengManager(self.getVerbosity(args))
         rm.generateIndex(args.outputFile,
                          args.artifacts,
@@ -136,12 +136,13 @@ class BuildIndexSubCommand(LeafCommand):
 class BuildManifestSubCommand(LeafCommand):
 
     def __init__(self):
-        LeafCommand.__init__(self,
-                             "manifest",
-                             "build a package manifest.json")
+        LeafCommand.__init__(
+            self,
+            'manifest',
+            "build a package manifest.json")
 
-    def initArgs(self, parser):
-        super().initArgs(parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         parser.add_argument('-o', '--output',
                             metavar='FOLDER',
                             type=Path,
@@ -158,55 +159,54 @@ class BuildManifestSubCommand(LeafCommand):
                             dest='resolveEnvVariables',
                             help='use environment variables to perform string replacement')
 
-        commonGroup = parser.add_argument_group(
-            title='Setup common attributes')
-        commonGroup.add_argument('--name',
-                                 metavar='NAME',
-                                 dest=JsonConstants.INFO + "_" + JsonConstants.INFO_NAME,
-                                 help='set the package name')
-        commonGroup.add_argument('--version',
-                                 metavar='VERSION',
-                                 dest=JsonConstants.INFO + "_" + JsonConstants.INFO_VERSION,
-                                 help='set the package version')
-        commonGroup.add_argument('--description',
-                                 metavar='DESCRIPTION',
-                                 dest=JsonConstants.INFO + "_" + JsonConstants.INFO_DESCRIPTION,
-                                 help='set the package description')
-        commonGroup.add_argument('--date',
-                                 metavar='DATE',
-                                 dest=JsonConstants.INFO + "_" + JsonConstants.INFO_DATE,
-                                 help='set the date')
-        commonGroup.add_argument('--minver',
-                                 metavar='MINIMUM_VERSION',
-                                 dest=JsonConstants.INFO + "_" + JsonConstants.INFO_LEAF_MINVER,
-                                 help='set leaf minimum version to use the package')
-        commonGroup.add_argument('--master',
-                                 metavar='BOOLEAN',
-                                 dest=JsonConstants.INFO + "_" + JsonConstants.INFO_MASTER,
-                                 type=stringToBoolean,
-                                 help='set master package (true|false)')
-        commonGroup.add_argument('--upgradable',
-                                 metavar='BOOLEAN',
-                                 dest=JsonConstants.INFO + "_" + JsonConstants.INFO_AUTOUPGRADE,
-                                 type=stringToBoolean,
-                                 help='set package as upgradable (true|false)')
-        commonGroup.add_argument('--requires',
-                                 metavar='PKGID',
-                                 action='append',
-                                 dest=JsonConstants.INFO + "_" + JsonConstants.INFO_REQUIRES,
-                                 help='add a required package')
-        commonGroup.add_argument('--depends',
-                                 metavar='PKGID',
-                                 action='append',
-                                 dest=JsonConstants.INFO + "_" + JsonConstants.INFO_DEPENDS,
-                                 help='add a dependency package')
-        commonGroup.add_argument('--tag',
-                                 metavar='TAG',
-                                 action='append',
-                                 dest=JsonConstants.INFO + "_" + JsonConstants.INFO_TAGS,
-                                 help='add a tag')
+        cg = parser.add_argument_group(title='Setup common attributes')
+        cg.add_argument('--name',
+                        metavar='NAME',
+                        dest=JsonConstants.INFO + "_" + JsonConstants.INFO_NAME,
+                        help='set the package name')
+        cg.add_argument('--version',
+                        metavar='VERSION',
+                        dest=JsonConstants.INFO + "_" + JsonConstants.INFO_VERSION,
+                        help='set the package version')
+        cg.add_argument('--description',
+                        metavar='DESCRIPTION',
+                        dest=JsonConstants.INFO + "_" + JsonConstants.INFO_DESCRIPTION,
+                        help='set the package description')
+        cg.add_argument('--date',
+                        metavar='DATE',
+                        dest=JsonConstants.INFO + "_" + JsonConstants.INFO_DATE,
+                        help='set the date')
+        cg.add_argument('--minver',
+                        metavar='MINIMUM_VERSION',
+                        dest=JsonConstants.INFO + "_" + JsonConstants.INFO_LEAF_MINVER,
+                        help='set leaf minimum version to use the package')
+        cg.add_argument('--master',
+                        metavar='BOOLEAN',
+                        dest=JsonConstants.INFO + "_" + JsonConstants.INFO_MASTER,
+                        type=stringToBoolean,
+                        help='set master package (true|false)')
+        cg.add_argument('--upgradable',
+                        metavar='BOOLEAN',
+                        dest=JsonConstants.INFO + "_" + JsonConstants.INFO_AUTOUPGRADE,
+                        type=stringToBoolean,
+                        help='set package as upgradable (true|false)')
+        cg.add_argument('--requires',
+                        metavar='PKGID',
+                        action='append',
+                        dest=JsonConstants.INFO + "_" + JsonConstants.INFO_REQUIRES,
+                        help='add a required package')
+        cg.add_argument('--depends',
+                        metavar='PKGID',
+                        action='append',
+                        dest=JsonConstants.INFO + "_" + JsonConstants.INFO_DEPENDS,
+                        help='add a dependency package')
+        cg.add_argument('--tag',
+                        metavar='TAG',
+                        action='append',
+                        dest=JsonConstants.INFO + "_" + JsonConstants.INFO_TAGS,
+                        help='add a tag')
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         rm = RelengManager(self.getVerbosity(args))
 
         # Guess output file

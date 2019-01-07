@@ -147,3 +147,12 @@ class LeafOutOfDateException(LeafException):
             self,
             message,
             hints="You may want to update leaf with 'sudo apt-get install --only-upgrade leaf'")
+
+
+class UnknownArgsException(LeafException):
+    def __init__(self, commandPath, uargs):
+        cmd = ' '.join(commandPath)
+        LeafException.__init__(
+            self,
+            "Unknwon arguments %s for command '%s'" % (' '.join(uargs), cmd),
+            hints="Use 'leaf %s --help' to get some help" % (cmd,))

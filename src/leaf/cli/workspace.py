@@ -11,11 +11,12 @@ from leaf.cli.cliutils import LeafCommand
 
 class WorkspaceInitCommand(LeafCommand):
     def __init__(self):
-        LeafCommand.__init__(self,
-                             "init",
-                             "initialize workspace")
+        LeafCommand.__init__(
+            self,
+            'init',
+            "initialize workspace")
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         wm = self.getWorkspaceManager(args,
                                       autoFindWorkspace=False,
                                       checkInitialized=False)

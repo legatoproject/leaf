@@ -9,8 +9,6 @@ This module describe how colors and style applies to each kind of printed elemen
 
 import configparser
 import os
-import sys
-from _io import StringIO
 from collections import OrderedDict
 
 from leaf.constants import EnvConstants
@@ -96,20 +94,6 @@ class _Theme():
         return lambda text: other(self(text))
 
 
-class ThemedIOWrapper(StringIO):
-    '''
-    Encapsulate stream with ansi chars of the give theme
-    '''
-
-    def __init__(self, stream, theme):
-        self.stream = stream
-        self.theme = theme
-
-    def write(self, txt):
-        for line in txt.splitlines():
-            self.stream.write(self.theme(line) + '\n')
-
-
 class ThemeManager():
     '''
     Manage theme configuration file and overriding behavior
@@ -132,9 +116,6 @@ class ThemeManager():
                 # Apply default theme
                 self.theme.update(themeConfig['DEFAULT'])
         self._createThemes()
-
-        # Let's set the right theme on all stderr
-        sys.stderr = ThemedIOWrapper(sys.stderr, self.ERROR)
 
     def _decorate(self, styleKey, text):
         '''

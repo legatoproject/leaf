@@ -6,38 +6,18 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from leaf.cli.cliutils import LeafMetaCommand, LeafCommand
+from leaf.cli.cliutils import LeafCommand
 from leaf.format.renderer.remote import RemoteListRenderer
-
-
-class RemoteMetaCommand(LeafMetaCommand):
-
-    def __init__(self):
-        LeafMetaCommand.__init__(
-            self,
-            "remote",
-            "display and manage remote repositories",
-            externalCommandsPrefix=('remote', ))
-
-    def getDefaultSubCommand(self):
-        return RemoteListCommand()
-
-    def getSubCommands(self):
-        return [RemoteAddCommand(),
-                RemoteRemoveCommand(),
-                RemoteEnableCommand(),
-                RemoteDisableCommand(),
-                RemoteFetchCommand()]
 
 
 class RemoteListCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "list",
+            'list',
             "list remote repositories")
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         pm = self.getPackageManager(args)
 
         rend = RemoteListRenderer()
@@ -49,11 +29,11 @@ class RemoteAddCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "add",
+            'add',
             "add a remote repository")
 
-    def initArgs(self, parser):
-        LeafCommand.initArgs(self, parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         parser.add_argument('alias', metavar='ALIAS', nargs=1,
                             help='the alias of the new remote')
         parser.add_argument('url', metavar='URL', nargs=1,
@@ -69,7 +49,7 @@ class RemoteAddCommand(LeafCommand):
                            action="store",
                            help="GPG fingerprint to verify signature")
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         pm = self.getPackageManager(args)
 
         pm.createRemote(args.alias[0], args.url[0],
@@ -81,17 +61,17 @@ class RemoteRemoveCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "remove",
+            'remove',
             "remove a remote repository")
 
-    def initArgs(self, parser):
-        LeafCommand.initArgs(self, parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         parser.add_argument('aliases',
                             metavar='ALIAS',
                             nargs='+',
                             help='the alias(es) of the remote(s) to remove')
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         pm = self.getPackageManager(args)
         for alias in args.aliases:
             pm.deleteRemote(alias)
@@ -101,17 +81,17 @@ class RemoteEnableCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "enable",
+            'enable',
             "enable a remote repository")
 
-    def initArgs(self, parser):
-        LeafCommand.initArgs(self, parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         parser.add_argument('aliases',
                             metavar='ALIAS',
                             nargs='+',
                             help='the alias(es) of the remote(s) to enable')
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         pm = self.getPackageManager(args)
 
         for alias in args.aliases:
@@ -126,17 +106,17 @@ class RemoteDisableCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(
             self,
-            "disable",
+            'disable',
             "disable a remote repository")
 
-    def initArgs(self, parser):
-        LeafCommand.initArgs(self, parser)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
         parser.add_argument('aliases',
                             metavar='ALIAS',
                             nargs='+',
                             help='the alias(es) of the remote(s) to disable')
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         pm = self.getPackageManager(args)
 
         for alias in args.aliases:
@@ -150,11 +130,12 @@ class RemoteDisableCommand(LeafCommand):
 class RemoteFetchCommand(LeafCommand):
 
     def __init__(self):
-        LeafCommand.__init__(self,
-                             "fetch",
-                             "fetch content from enabled remotes")
+        LeafCommand.__init__(
+            self,
+            'fetch',
+            "fetch content from enabled remotes")
 
-    def execute(self, args):
+    def execute(self, args, uargs):
         pm = self.getPackageManager(args)
 
         pm.fetchRemotes(smartRefresh=False)
