@@ -6,10 +6,12 @@ Utils to format logger output
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from math import log
-from shutil import which
 import os
 import sys
+from math import log
+import shlex
+
+from leaf.constants import EnvConstants, LeafConstants
 
 
 '''
@@ -44,19 +46,20 @@ def sizeof_fmt(num):
 def getPager():
     '''
     Return the appropriate pager
-    Check $PAGER env var, if not set use less with some args
-    If set to less without args; return less with args
-    If set to empty or less with args or anything else, return None
+    If the user uses a custom pager, use it.
+    If the user sets empty string, pager is disabled
+    Else use less as pager
     '''
-    pager = os.getenv("PAGER", "less").split(' ')
-    binName = pager[0]
-    if which(binName) is None:
+    pager = os.getenv(EnvConstants.PAGER)
+    if pager is None:
+        # Default pager
+        pager = LeafConstants.DEFAULT_PAGER
+    elif pager == '':
+        # Pager is disabled
         pager = None
-    elif len(pager) == 1:
-        if binName == "":
-            pager = None
-        if binName == "less":
-            pager = ("less", "-R", "-S", "-P", "Leaf -- Press q to exit")
+    elif ' ' in pager:
+        # Complex command
+        pager = shlex.split(pager)
     return pager
 
 

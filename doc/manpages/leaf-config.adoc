@@ -128,6 +128,12 @@ When set, allows concurrent install/uninstall operations (not authorized by defa
 
 Allows to specific a custom color theme (see *leaf help colors*)
 
+=== _LEAF_PAGER_
+
+For commands which print many lines like the *search* command, a pager is used to get a more 
+readable output. By default *less* is used as pager; you can use a custom pager by setting 
+_LEAF_PAGER_. Note that setting *LEAF_PAGER=""* (empty string) will disable paging.
+
 == SEE ALSO
 
 *leaf remote*, *leaf env*, *leaf help colors*

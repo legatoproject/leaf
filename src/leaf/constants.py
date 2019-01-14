@@ -21,6 +21,7 @@ class EnvConstants():
     CUSTOM_TAR = 'LEAF_TAR_BIN'
     DISABLE_LOCKS = 'LEAF_DISABLE_LOCKS'
     CUSTOM_THEME = 'LEAF_THEME'
+    PAGER = 'LEAF_PAGER'
     # Other env variables
     WORKSPACE_ROOT = 'LEAF_WORKSPACE'
     CUSTOM_CONFIG = 'LEAF_CONFIG'
@@ -40,7 +41,8 @@ class EnvConstants():
                      NON_INTERACTIVE,
                      CUSTOM_TAR,
                      DISABLE_LOCKS,
-                     CUSTOM_THEME)
+                     CUSTOM_THEME,
+                     PAGER)
 
 
 class LeafConstants():
@@ -57,6 +59,8 @@ class LeafConstants():
     GPG_SIG_EXTENSION = '.asc'
     DEFAULT_GPG_KEYSERVER = 'subset.pool.sks-keyservers.net'
     LATEST = "latest"
+    DEFAULT_PAGER = pager = ("less", "-R", "-S", "-P",
+                             "Leaf -- Press q to exit")
 
 
 class LeafFiles():

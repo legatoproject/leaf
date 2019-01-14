@@ -24,10 +24,6 @@ Output:
 Note: The displayed _PACKAGE_ identifiers are the values that can be used with *-p* option in
 *leaf setup* or *leaf update* commands.
 
-Depending on the current terminal size, if the output is too large to fit, it will be automatically
-displayed through a pager. *$PAGER* environment variable will be used to select the pager; if not
-set, the *less* pager will be used.
-
 == OPTIONS
 
 *-a|--all*::
