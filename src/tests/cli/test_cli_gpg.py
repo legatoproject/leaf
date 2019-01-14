@@ -3,12 +3,14 @@
 '''
 import os
 
-from leaf.constants import LeafConstants, LeafFiles, EnvConstants
+from tests.testutils import AbstractTestWithRepo, LeafCliWrapper, \
+    TEST_GPG_FINGERPRINT
+
+from leaf.constants import EnvConstants, LeafConstants, LeafFiles
+from leaf.core.error import LeafException
 from leaf.core.packagemanager import GPGManager
 from leaf.format.logger import Verbosity
 from leaf.utils import downloadData
-from tests.testutils import LeafCliWrapper, TEST_GPG_FINGERPRINT,\
-    AbstractTestWithRepo
 
 
 class TestGPG(LeafCliWrapper):
@@ -33,7 +35,7 @@ class TestGPG(LeafCliWrapper):
         print("GPG Home:", gpg.gpgHome)
         data = downloadData(self.getRemoteUrl())
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             gpg.gpgVerifyContent(
                 data,
                 self.getRemoteUrl() + LeafConstants.GPG_SIG_EXTENSION)
@@ -49,7 +51,7 @@ class TestGPG(LeafCliWrapper):
             data,
             self.getRemoteUrl() + LeafConstants.GPG_SIG_EXTENSION)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             gpg.gpgVerifyContent(
                 data,
                 self.getRemoteUrl() + LeafConstants.GPG_SIG_EXTENSION,

@@ -7,6 +7,7 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from leaf.cli.cliutils import LeafCommand
+from leaf.core.error import LeafException
 
 
 class WorkspaceInitCommand(LeafCommand):
@@ -21,10 +22,10 @@ class WorkspaceInitCommand(LeafCommand):
                                       autoFindWorkspace=False,
                                       checkInitialized=False)
         if wm.workspaceConfigFile.exists():
-            raise ValueError("File %s already exist" %
-                             str(wm.workspaceConfigFile))
+            raise LeafException("Workspace is already initialized (file %s already exists)" %
+                                wm.workspaceConfigFile)
         if wm.workspaceDataFolder.exists():
-            raise ValueError("Folder %s already exist" %
-                             str(wm.workspaceDataFolder))
+            raise LeafException("Workspace is already initialized (folder %s already exists" %
+                                wm.workspaceDataFolder)
         wm.readWorkspaceConfiguration(initIfNeeded=True)
         wm.logger.printDefault("Workspace initialized", wm.workspaceRootFolder)

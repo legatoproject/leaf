@@ -56,7 +56,7 @@ class RelengManager(LoggerManager):
         externalInfoFile = self._getExternalInfoFile(outputFile)
 
         if not manifestFile.exists():
-            raise ValueError("Cannot find manifest: %s" % manifestFile)
+            raise LeafException("Cannot find manifest: %s" % manifestFile)
 
         manifest = Manifest.parse(manifestFile)
 
@@ -127,7 +127,7 @@ class RelengManager(LoggerManager):
             if pi in packagesMap:
                 self.logger.printDefault("Artifact already present: %s" % (pi))
                 if ap.getHash() != AvailablePackage(packagesMap[pi], None).getHash():
-                    raise ValueError(
+                    raise LeafException(
                         "Artifact %s has multiple different artifacts for same version" % pi)
             else:
                 # Read extra tags

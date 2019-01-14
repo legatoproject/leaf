@@ -264,7 +264,7 @@ class TestApiRelengManager(AbstractTestWithRepo):
             [self.getWorkspaceFolder() / 'b.leaf',
              self.getWorkspaceFolder() / 'b.leaf'],
             prettyprint=True)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             self.rm.generateIndex(
                 self.getWorkspaceFolder() / 'indexAB.json',
                 [self.getWorkspaceFolder() / 'a.leaf',

@@ -10,8 +10,8 @@ Leaf Package Manager
 '''
 
 import argparse
-import subprocess
 import os
+import subprocess
 from argparse import ArgumentParser
 from collections import OrderedDict
 
@@ -129,7 +129,7 @@ if __name__ == '__main__':
 
         # Checks
         if args.packages is None:
-            raise ValueError(
+            raise LeafException(
                 "You need to add at least one package to your profile")
 
         # Compute PackageIdentifiers

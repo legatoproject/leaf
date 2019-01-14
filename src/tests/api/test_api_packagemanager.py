@@ -6,20 +6,19 @@ import os
 import socketserver
 import sys
 import time
-from builtins import ValueError
 from datetime import datetime, timedelta
 from multiprocessing import Process
 from time import sleep
 
 import unittest
 from http.server import SimpleHTTPRequestHandler
-from tests.testutils import AbstractTestWithRepo, LEAF_UT_SKIP, envFileToMap, \
-    getLines, ALT_INDEX_CONTENT
+from tests.testutils import ALT_INDEX_CONTENT, AbstractTestWithRepo, \
+    LEAF_UT_SKIP, envFileToMap, getLines
 
 from leaf.constants import EnvConstants
 from leaf.core.dependencies import DependencyUtils
 from leaf.core.error import InvalidHashException, InvalidPackageNameException, \
-    NoEnabledRemoteException, NoRemoteException
+    LeafException, NoEnabledRemoteException, NoRemoteException
 from leaf.core.features import FeatureManager
 from leaf.core.packagemanager import PackageManager
 from leaf.format.logger import Verbosity
@@ -406,7 +405,7 @@ class TestApiPackageManager(AbstractTestWithRepo):
                            "prereq-true_1.0"])
 
     def testPrereqD(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             self.pm.installFromRemotes(
                 PackageIdentifier.fromStringList(["prereq-D_1.0"]))
 
@@ -619,7 +618,7 @@ class TestApiPackageManager(AbstractTestWithRepo):
         fm.getFeature("myFeatureFoo").check()
         fm.getFeature("myFeatureHello").check()
         fm.getFeature("featureWithDups").check()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             fm.getFeature("featureWithMultipleKeys").check()
 
     def testSync(self):

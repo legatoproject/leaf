@@ -8,8 +8,9 @@ Leaf Package Manager
 '''
 
 from collections import OrderedDict
-from leaf.constants import JsonConstants, LeafFiles, LeafConstants
 
+from leaf.constants import JsonConstants, LeafConstants, LeafFiles
+from leaf.core.error import LeafException
 from leaf.model.base import JsonObject
 from leaf.model.environment import IEnvObject
 from leaf.model.package import InstalledPackage, PackageIdentifier
@@ -29,9 +30,11 @@ class Profile(JsonObject, IEnvObject):
     @staticmethod
     def checkValidName(name):
         if not isinstance(name, str):
-            raise ValueError("Profile name must be a string")
+            raise LeafException("Profile name must be a string")
         if name in ["", LeafFiles.CURRENT_PROFILE_LINKNAME]:
-            raise ValueError("'%s' is not a valid profile name" % name)
+            raise LeafException("'%s' is not a valid profile name" % name)
+        if ' ' in name:
+            raise LeafException("Profile cannot contain space")
         return name
 
     @staticmethod

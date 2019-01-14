@@ -27,7 +27,8 @@ import requests
 
 from leaf import __version__
 from leaf.constants import EnvConstants, LeafConstants
-from leaf.core.error import InvalidHashException
+from leaf.core.error import InvalidHashException, LeafException, \
+    LeafOutOfDateException
 
 
 _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
@@ -39,7 +40,7 @@ def checkSupportedLeaf(minVersion, currentVersion=__version__, exceptionMessage=
     if minVersion is not None:
         if versionComparator_lt(currentVersion, minVersion):
             if exceptionMessage is not None:
-                raise ValueError(exceptionMessage)
+                raise LeafOutOfDateException(exceptionMessage)
             return False
     return True
 
@@ -280,12 +281,12 @@ __HASH_BLOCKSIZE = 4096
 def parseHash(hash):
     parts = hash.split(':')
     if len(parts) != 2:
-        raise ValueError("Invalid hash format %s" % hash)
+        raise LeafException("Invalid hash format %s" % hash)
     if parts[0] != __HASH_NAME:
-        raise ValueError(
+        raise LeafException(
             "Unsupported hash method, expecting %s" % __HASH_NAME)
     if len(parts[1]) != __HASH_LEN:
-        raise ValueError(
+        raise LeafException(
             "Hash value '%s' has not the correct length, expecting %d" % (parts[1], __HASH_LEN))
     return parts
 

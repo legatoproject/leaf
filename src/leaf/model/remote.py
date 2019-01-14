@@ -7,6 +7,7 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from leaf.constants import JsonConstants
+from leaf.core.error import LeafException
 from leaf.model.base import JsonObject
 
 
@@ -34,7 +35,7 @@ class Remote(JsonObject):
 
     def getInfo(self):
         if not self.isFetched():
-            raise ValueError("Remote is not fetched")
+            raise LeafException("Remote is not fetched")
         return JsonObject(self.content).jsonget(JsonConstants.INFO, default={})
 
     def getInfoName(self):
@@ -51,5 +52,5 @@ class Remote(JsonObject):
 
     def getAvailablePackageList(self):
         if not self.isFetched():
-            raise ValueError("Remote is not fetched")
+            raise LeafException("Remote is not fetched")
         return JsonObject(self.content).jsonget(JsonConstants.REMOTE_PACKAGES, [])

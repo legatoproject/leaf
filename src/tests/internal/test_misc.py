@@ -40,7 +40,7 @@ class TestMisc(unittest.TestCase):
         self.assertTrue(checkSupportedLeaf(None))
         self.assertTrue(checkSupportedLeaf("2.0", "2.0"))
         self.assertFalse(checkSupportedLeaf("2.1", "2.0"))
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             self.assertFalse(checkSupportedLeaf("2.1", "2.0",
                                                 exceptionMessage="foo"))
 
@@ -198,13 +198,13 @@ class TestMisc(unittest.TestCase):
 
         testFeature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
         testFeature.check()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             testFeature.getValue("enum1")
 
         testFeature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
         testFeature.addAlias(feature)
         testFeature.check()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             testFeature.getValue("enum2")
 
         testFeature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
@@ -219,7 +219,7 @@ class TestMisc(unittest.TestCase):
         testFeature.addAlias(feature_newValue)
         testFeature.addAlias(feature_dupValue)
         testFeature.check()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             testFeature.getValue("enum1")
         self.assertEqual("value2", testFeature.getValue("enum2"))
         self.assertEqual(None, testFeature.getValue("enum3"))
@@ -229,11 +229,11 @@ class TestMisc(unittest.TestCase):
         testFeature.addAlias(feature_newValue)
         testFeature.addAlias(feature_dupValue)
         testFeature.addAlias(feature_altKey)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             testFeature.check()
 
         testFeature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             testFeature.addAlias(otherFeature)
 
     def testSortPi(self):
@@ -300,7 +300,7 @@ class TestMisc(unittest.TestCase):
         self.assertEqual("version 1.1 " + str(RESOURCE_FOLDER / "version_2.0"),
                          vr.resolve("@{NAME} @{VERSION:version_1.1} @{DIR:version_latest}"))
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             vr.resolve("@{NAME} @{VERSION:version_1.2} @{DIR:version_latest}")
 
     def testLockAdvisory(self):

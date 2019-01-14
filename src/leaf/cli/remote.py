@@ -7,6 +7,7 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from leaf.cli.cliutils import LeafCommand
+from leaf.core.error import LeafException
 from leaf.format.renderer.remote import RemoteListRenderer
 
 
@@ -97,7 +98,7 @@ class RemoteEnableCommand(LeafCommand):
         for alias in args.aliases:
             remote = pm.listRemotes().get(alias)
             if remote is None:
-                raise ValueError("Cannot find remote %s" % alias)
+                raise LeafException("Cannot find remote %s" % alias)
             remote.setEnabled(True)
             pm.updateRemote(remote)
 
@@ -122,7 +123,7 @@ class RemoteDisableCommand(LeafCommand):
         for alias in args.aliases:
             remote = pm.listRemotes().get(alias)
             if remote is None:
-                raise ValueError("Cannot find remote %s" % alias)
+                raise LeafException("Cannot find remote %s" % alias)
             remote.setEnabled(False)
             pm.updateRemote(remote)
 

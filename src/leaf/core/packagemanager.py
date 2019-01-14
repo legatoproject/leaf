@@ -7,10 +7,10 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-import json
 import os
 import platform
 import shutil
+import json
 from builtins import Exception
 from collections import OrderedDict
 from datetime import datetime
@@ -25,9 +25,10 @@ from leaf.constants import EnvConstants, JsonConstants, LeafConstants, \
 from leaf.core.coreutils import StepExecutor, VariableResolver, \
     retrievePackage
 from leaf.core.dependencies import DependencyUtils
-from leaf.core.error import BadRemoteUrlException, LeafException, \
-    LeafOutOfDateException, NoEnabledRemoteException, \
-    NoPackagesInCacheException, NoRemoteException, UserCancelException
+from leaf.core.error import BadRemoteUrlException, \
+    InvalidPackageNameException, LeafException, LeafOutOfDateException, \
+    NoEnabledRemoteException, NoPackagesInCacheException, NoRemoteException, \
+    UserCancelException
 from leaf.core.lock import LockFile
 from leaf.format.formatutils import sizeof_fmt
 from leaf.format.logger import TextLogger
@@ -190,10 +191,10 @@ class GPGManager(LoggerManager):
                     (verif.username, verif.pubkey_fingerprint))
                 if expectedKey is not None:
                     if expectedKey != verif.pubkey_fingerprint:
-                        raise ValueError(
+                        raise LeafException(
                             "Content is not signed with %s" % expectedKey)
             else:
-                raise ValueError("Signed content could not be verified")
+                raise LeafException("Signed content could not be verified")
 
     def gpgImportKeys(self, *keys, keyserver=None):
         if keyserver is None:
@@ -208,7 +209,7 @@ class GPGManager(LoggerManager):
                     self.logger.printVerbose(
                         "Received GPG key {fingerprint}".format(**result))
                 else:
-                    raise ValueError(
+                    raise LeafException(
                         "Error receiving GPG keys: {text}".format(**result))
 
 
@@ -252,7 +253,7 @@ class RemoteManager(GPGManager):
         usrc = self.readConfiguration()
         remotes = usrc.getRemotesMap()
         if alias in remotes:
-            raise ValueError("Remote %s already exists" % alias)
+            raise LeafException("Remote %s already exists" % alias)
         if insecure:
             remotes[alias] = {JsonConstants.CONFIG_REMOTE_URL: str(url),
                               JsonConstants.CONFIG_REMOTE_ENABLED: enabled}
@@ -261,7 +262,7 @@ class RemoteManager(GPGManager):
                               JsonConstants.CONFIG_REMOTE_ENABLED: enabled,
                               JsonConstants.CONFIG_REMOTE_GPGKEY: gpgKey}
         else:
-            raise ValueError("Invalid security for remote %s" % alias)
+            raise LeafException("Invalid security for remote %s" % alias)
         # Save and clean cache
         self.writeConfiguration(usrc)
         self.cleanRemotesCacheFile()
@@ -270,9 +271,9 @@ class RemoteManager(GPGManager):
         usrc = self.readConfiguration()
         remotes = usrc.getRemotesMap()
         if oldalias not in remotes:
-            raise ValueError("Cannot find remote %s" % oldalias)
+            raise LeafException("Cannot find remote %s" % oldalias)
         if newalias in remotes:
-            raise ValueError("Remote %s already exists" % newalias)
+            raise LeafException("Remote %s already exists" % newalias)
         remotes[newalias] = remotes[oldalias]
         del remotes[oldalias]
         self.writeConfiguration(usrc)
@@ -282,7 +283,7 @@ class RemoteManager(GPGManager):
         usrc = self.readConfiguration()
         remotes = usrc.getRemotesMap()
         if remote.alias not in remotes:
-            raise ValueError("Cannot find remote %s" % remote.alias)
+            raise LeafException("Cannot find remote %s" % remote.alias)
         remotes[remote.alias] = remote.json
         self.writeConfiguration(usrc)
         self.cleanRemotesCacheFile()
@@ -291,7 +292,7 @@ class RemoteManager(GPGManager):
         usrc = self.readConfiguration()
         remotes = usrc.getRemotesMap()
         if alias not in remotes:
-            raise ValueError("Cannot find remote %s" % alias)
+            raise LeafException("Cannot find remote %s" % alias)
         del remotes[alias]
         self.writeConfiguration(usrc)
         self.cleanRemotesCacheFile()
@@ -311,8 +312,7 @@ class RemoteManager(GPGManager):
             content = OrderedDict()
             remotes = self.listRemotes(onlyEnabled=True)
             if len(remotes) == 0:
-                raise ValueError(
-                    "No remote configured, first add or enable at least one remote (see 'leaf help remote')")
+                raise NoRemoteException()
             for alias, remote in remotes.items():
                 try:
                     indexUrl = remote.getUrl()
@@ -417,7 +417,7 @@ class PackageManager(RemoteManager):
                             self.logger.printError(
                                 "Package %s is available in several remotes with same version but different content!" %
                                 ap.getIdentifier())
-                            raise ValueError(
+                            raise LeafException(
                                 "Package %s has multiple artifacts for the same version" %
                                 ap.getIdentifier())
                         for tag in ap.getTags():
@@ -454,7 +454,7 @@ class PackageManager(RemoteManager):
             if len(incompatibleList) > 0:
                 self.logger.printError("These packages need a newer version: ",
                                        " ".join([str(mf.getIdentifier()) for mf in incompatibleList]))
-                raise ValueError(
+                raise LeafOutOfDateException(
                     "Some package require a newer version of leaf")
 
     def downloadAvailablePackage(self, ap):
@@ -482,7 +482,7 @@ class PackageManager(RemoteManager):
             altInstallFolder = self.getInstallFolder()
         targetFolder = altInstallFolder / str(la.getIdentifier())
         if targetFolder.is_dir():
-            raise ValueError("Folder already exists: " + str(targetFolder))
+            raise LeafException("Folder already exists: " + str(targetFolder))
 
         # Create folder
         targetFolder.mkdir(parents=True)
@@ -709,9 +709,9 @@ class PackageManager(RemoteManager):
                 else:
                     ip = installedPackages.get(item)
                 if ip is None:
-                    raise ValueError("Cannot find package %s" % item)
+                    raise InvalidPackageNameException(item)
             else:
-                raise ValueError("Invalid package %s" % item)
+                raise InvalidPackageNameException(item)
             ipEnv = Environment("Exported by package %s" % ip.getIdentifier())
             out.addSubEnv(ipEnv)
             vr = VariableResolver(ip, installedPackages.values())

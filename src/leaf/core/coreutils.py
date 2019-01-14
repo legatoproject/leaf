@@ -6,7 +6,7 @@ from builtins import sorted
 
 from leaf.constants import JsonConstants, LeafConstants
 from leaf.core.dependencies import DependencyUtils
-from leaf.core.error import InvalidPackageNameException
+from leaf.core.error import InvalidPackageNameException, LeafException
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
 
@@ -152,8 +152,7 @@ class VariableResolver():
         def myReplace(m):
             out = self.getValue(m.group(1), m.group(2))
             if out is None:
-                raise ValueError(
-                    "Cannot resolve variable: %s" % m.group(0))
+                raise LeafException("Cannot resolve variable: %s" % m.group(0))
             return out
 
         return re.sub(VariableResolver._PATTERN, myReplace, value)
@@ -217,8 +216,8 @@ class StepExecutor():
             if step.get(JsonConstants.STEP_IGNORE_FAIL, False):
                 self.logger.printVerbose("Step ignores failure")
             else:
-                raise ValueError("Error during %s step for %s" %
-                                 (label, self.package.getIdentifier()))
+                raise LeafException("Error during %s step for %s (command returned %d)" %
+                                    (label, self.package.getIdentifier(), rc))
 
     def resolve(self, value, prefixWithFolder=False):
         out = self.variableResolver.resolve(value)

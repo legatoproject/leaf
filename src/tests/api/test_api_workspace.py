@@ -8,8 +8,8 @@ from collections import OrderedDict
 from tests.testutils import AbstractTestWithRepo
 
 import leaf
-from leaf.core.error import InvalidProfileNameException, NoProfileSelected, \
-    ProfileNameAlreadyExistException
+from leaf.core.error import InvalidProfileNameException, LeafException, \
+    NoProfileSelected, ProfileNameAlreadyExistException
 from leaf.core.features import FeatureManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.format.logger import TextLogger, Verbosity
@@ -361,17 +361,17 @@ class TestApiWorkspaceManager(AbstractTestWithRepo):
         self.assertEqual("BAR",
                          self.wm.getProfile("myprofile").getEnvironment().findValue("FOO"))
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             fm.toggleUserFeature("unknwonFeature", "unknownValue", self.wm)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             fm.toggleUserFeature("myFeatureFoo", "unknownValue", self.wm)
 
         # Error cases
         fm.toggleUserFeature("featureWithDups", "enum1", self.wm)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             fm.toggleUserFeature("featureWithDups", "enum2", self.wm)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LeafException):
             fm.toggleUserFeature("featureWithMultipleKeys", "enum1", self.wm)
 
     def testResolveLatest(self):

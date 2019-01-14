@@ -8,6 +8,7 @@ Leaf Package Manager
 '''
 import operator
 
+from leaf.core.error import LeafException
 from leaf.model.package import Manifest
 
 
@@ -33,7 +34,7 @@ class FeatureManager():
 
     def getFeature(self, name):
         if name not in self.features:
-            raise ValueError("Cannot find feature %s" % name)
+            raise LeafException("Cannot find feature %s" % name)
         return self.features[name]
 
     def toggleUserFeature(self, name, enum, pm):

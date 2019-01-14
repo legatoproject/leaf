@@ -14,9 +14,10 @@ from pathlib import Path
 
 from leaf.constants import EnvConstants, LeafFiles
 from leaf.core.dependencies import DependencyUtils
-from leaf.core.error import InvalidProfileNameException, NoProfileSelected, \
-    ProfileNameAlreadyExistException, ProfileOutOfSyncException, \
-    ProfileProvisioningException
+from leaf.core.error import InvalidProfileNameException, LeafException, \
+    NoProfileSelected, ProfileNameAlreadyExistException, \
+    ProfileOutOfSyncException, ProfileProvisioningException, \
+    WorkspaceNotInitializedException
 from leaf.core.packagemanager import PackageManager
 from leaf.model.config import WorkspaceConfiguration
 from leaf.model.environment import Environment
@@ -64,7 +65,7 @@ class WorkspaceManager(PackageManager):
 
     def initializeWorkspace(self):
         if self.isWorkspaceInitialized():
-            raise ValueError("Workspace is already initialized")
+            raise LeafException("Workspace is already initialized")
         self.writeWorkspaceConfiguration(WorkspaceConfiguration())
 
     def readWorkspaceConfiguration(self, initIfNeeded=False):
@@ -73,7 +74,7 @@ class WorkspaceManager(PackageManager):
         '''
         if not self.isWorkspaceInitialized():
             if not initIfNeeded:
-                raise("Workspace is not initialized")
+                raise WorkspaceNotInitializedException()
             self.initializeWorkspace()
         return WorkspaceConfiguration(self.workspaceConfigFile)
 
@@ -115,7 +116,7 @@ class WorkspaceManager(PackageManager):
 
     def getProfile(self, name):
         if name is None:
-            raise ValueError("Cannot find profile")
+            raise LeafException("Cannot find profile")
         pfMap = self.listProfiles()
         if name not in pfMap:
             raise InvalidProfileNameException(name)
@@ -165,7 +166,7 @@ class WorkspaceManager(PackageManager):
         wsc = self.readWorkspaceConfiguration()
         pfMap = wsc.getProfilesMap()
         if profile.name not in pfMap:
-            raise ValueError("Cannot update profile %s" % profile.name)
+            raise LeafException("Cannot update profile %s" % profile.name)
         pfMap[profile.name] = profile.json
         self.writeWorkspaceConfiguration(wsc)
         return self.getProfile(profile.name)
@@ -194,10 +195,11 @@ class WorkspaceManager(PackageManager):
                             for ip in self.getProfileDependencies(profile)]
             for pi in neededPiList:
                 if pi not in linkedPiList:
-                    raise ValueError("Missing package link for %s" % pi)
+                    raise LeafException("Missing package link for %s" % pi)
             for pi in linkedPiList:
                 if pi not in neededPiList:
-                    raise ValueError("Package should not be linked: %s" % pi)
+                    raise LeafException(
+                        "Package should not be linked: %s" % pi)
         except Exception as e:
             if raiseIfNotSync:
                 raise ProfileOutOfSyncException(profile, cause=e)

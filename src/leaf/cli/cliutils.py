@@ -17,7 +17,8 @@ from pathlib import Path
 
 from leaf.constants import LeafConstants
 from leaf.core.coreutils import executeCommand
-from leaf.core.error import LeafException, UnknownArgsException
+from leaf.core.error import LeafException, UnknownArgsException, \
+    WorkspaceNotInitializedException
 from leaf.core.packagemanager import LoggerManager, PackageManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.format.logger import Verbosity
@@ -197,7 +198,7 @@ class LeafCommand(ABC):
         wsRoot = WorkspaceManager.findRoot(checkParents=autoFindWorkspace)
         out = WorkspaceManager(wsRoot, self.getVerbosity(args))
         if checkInitialized and not out.isWorkspaceInitialized():
-            raise ValueError("Workspace is not initialized")
+            raise WorkspaceNotInitializedException()
         return out
 
 

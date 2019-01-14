@@ -15,7 +15,7 @@ from pathlib import Path
 from tarfile import TarFile
 
 from leaf.constants import JsonConstants, LeafFiles
-from leaf.core.error import InvalidPackageNameException
+from leaf.core.error import InvalidPackageNameException, LeafException
 from leaf.model.base import JsonObject
 from leaf.utils import checkSupportedLeaf, jsonLoad, jsonLoadFile, resolveUrl, \
     stringToTuple, versionComparator_lt
@@ -299,7 +299,7 @@ class Feature(JsonObject):
         if not isinstance(other, Feature):
             raise ValueError()
         if self.name != other.name:
-            raise ValueError("Cannot alias feature with different name")
+            raise LeafException("Cannot alias feature with different name")
         if self != other and other not in self.aliases:
             self.aliases.append(other)
 
@@ -317,11 +317,11 @@ class Feature(JsonObject):
 
         visit(self)
         if len(values) == 0:
-            raise ValueError("Cannot find %s in feature %s" %
-                             (enum, self.name))
+            raise LeafException("Cannot find %s in feature %s" %
+                                (enum, self.name))
         if len(values) > 1:
-            raise ValueError("Multiple definition for %s in feature %s" %
-                             (enum, self.name))
+            raise LeafException("Multiple definition for %s in feature %s" %
+                                (enum, self.name))
         return values[0]
 
     def retrieveEnumsForValue(self, value):
@@ -342,7 +342,7 @@ class Feature(JsonObject):
 
         def visit(f):
             if f.getKey() != expectedKey:
-                raise ValueError("Invalid feature %s" % (self.name))
+                raise LeafException("Invalid feature %s" % (self.name))
             for alias in f.aliases:
                 visit(alias)
         visit(self)

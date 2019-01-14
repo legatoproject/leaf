@@ -11,6 +11,7 @@ import argparse
 from leaf.cli.cliutils import LeafCommand, initCommonArgs
 from leaf.constants import EnvConstants
 from leaf.core.dependencies import DependencyUtils
+from leaf.core.error import ProfileOutOfSyncException
 from leaf.format.renderer.environment import EnvironmentRenderer
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
@@ -48,8 +49,7 @@ class EnvPrintCommand(LeafCommand):
                 args) and args.profiles is not None else wm.getCurrentProfileName()
             profile = wm.getProfile(name)
             if not wm.isProfileSync(profile):
-                raise ValueError(
-                    "Profile %s is out of sync, please run 'leaf profile sync %s'" % (name, name))
+                raise ProfileOutOfSyncException(profile)
             env = wm.getFullEnvironment(profile)
         wm.printRenderer(EnvironmentRenderer(env))
         if 'activateScript' in vars(args):
