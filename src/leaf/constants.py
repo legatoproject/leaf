@@ -61,6 +61,7 @@ class LeafConstants():
     LATEST = "latest"
     DEFAULT_PAGER = pager = ("less", "-R", "-S", "-P",
                              "Leaf -- Press q to exit")
+    DEFAULT_SHELL = 'bash'
 
 
 class LeafFiles():
@@ -144,7 +145,12 @@ class JsonConstants(object):
     STEP_EXEC_ENV = 'env'
     STEP_EXEC_COMMAND = 'command'
     STEP_EXEC_VERBOSE = 'verbose'
+    STEP_EXEC_SHELL = 'shell'
     ENV = 'env'
+    ENTRYPOINTS = 'bin'
+    ENTRYPOINT_PATH = 'path'
+    ENTRYPOINT_DESCRIPTION = 'description'
+    ENTRYPOINT_SHELL = 'shell'
 
     # Profiles
     WS_PROFILES = "profiles"

@@ -3,7 +3,6 @@ export LEAF_VERSION="{LEAF_VERSION}";
 export LEAF_PLATFORM_SYSTEM="{PLATFORM_SYSTEM}";
 export LEAF_PLATFORM_MACHINE="{PLATFORM_MACHINE}";
 export LEAF_PLATFORM_RELEASE="{PLATFORM_RELEASE}";
-export LEAF_NON_INTERACTIVE="1";
 # Exported by workspace
 export LEAF_WORKSPACE="{ROOT_FOLDER}/volatile/workspace";
 # Exported by profile bar 
@@ -22,6 +21,12 @@ export LEAF_WORKSPACE="{ROOT_FOLDER}/volatile/workspace";
 export FOO="BAR";
 export HELLO="wOrlD";
 export FOO2="BAR2";
+# Exported by package env-B_1.0
+export LEAF_ENV_B="BAR";
+export LEAF_PATH_B="$PATH:{ROOT_FOLDER}/volatile/packages/env-B_1.0";
+# Exported by package env-A_1.0
+export LEAF_ENV_A="FOO";
+export LEAF_PATH_A="$PATH:{ROOT_FOLDER}/volatile/packages/env-A_1.0:{ROOT_FOLDER}/volatile/packages/env-B_1.0";
 # Exported by package env-A_1.0
 export LEAF_ENV_A="FOO";
 export LEAF_PATH_A="$PATH:{ROOT_FOLDER}/volatile/packages/env-A_1.0:{ROOT_FOLDER}/volatile/packages/env-B_1.0";
@@ -30,7 +35,6 @@ export LEAF_VERSION="{LEAF_VERSION}";
 export LEAF_PLATFORM_SYSTEM="{PLATFORM_SYSTEM}";
 export LEAF_PLATFORM_MACHINE="{PLATFORM_MACHINE}";
 export LEAF_PLATFORM_RELEASE="{PLATFORM_RELEASE}";
-export LEAF_NON_INTERACTIVE="1";
 # Exported by profile bar 
 export FOO="BAR";
 export FOO2="BAR2";

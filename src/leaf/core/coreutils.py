@@ -4,11 +4,61 @@ import re
 import subprocess
 from builtins import sorted
 
-from leaf.constants import JsonConstants
+from leaf.constants import JsonConstants, LeafConstants
 from leaf.core.dependencies import DependencyUtils
 from leaf.core.error import InvalidPackageNameException
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
+
+
+def executeCommand(*args, cwd=None, env=None, shell=True, displayStdout=False):
+    '''
+    Execute a process and returns the return code.
+    If 'shell' is set (true means bash, else set the string value), then the command is run in a $SHELL -c
+    and the env is set via multiple export commands to preserve variable overriding
+    '''
+
+    # Builds args
+    kwargs = {'stdout': subprocess.DEVNULL,
+              'stderr': subprocess.STDOUT}
+    if displayStdout:
+        kwargs['stdout'] = None
+        kwargs['stderr'] = None
+    if cwd is not None:
+        kwargs['cwd'] = str(cwd)
+
+    # Build the command line
+    command = None
+    if isinstance(shell, str) or shell is True:
+        # In shell mode, env is evaluated in the command line
+        shellCmd = ''
+        if isinstance(env, dict):
+            for k, v in env.items():
+                shellCmd += 'export %s="%s";' % (k, v)
+        elif isinstance(env, Environment):
+            for k, v in env.toList():
+                shellCmd += 'export %s="%s";' % (k, v)
+        for arg in args:
+            shellCmd += ' "%s"' % arg
+        if not isinstance(shell, str):
+            shell = LeafConstants.DEFAULT_SHELL
+        command = [shell, '-c', shellCmd]
+    else:
+        # invoke process directly
+        if isinstance(env, dict):
+            customEnv = dict(os.environ)
+            for k, v in env.items():
+                customEnv[k] = str(v)
+            kwargs['env'] = customEnv
+        elif isinstance(env, Environment):
+            customEnv = dict(os.environ)
+            for k, v in env.toList():
+                customEnv[k] = str(v)
+            kwargs['env'] = customEnv
+        command = args
+
+    # Execute the command
+    return subprocess.call(command, **kwargs)
 
 
 def retrievePackageIdentifier(motif, validPiList):
@@ -149,21 +199,18 @@ class StepExecutor():
         command = [self.resolve(arg)
                    for arg in step[JsonConstants.STEP_EXEC_COMMAND]]
         self.logger.printVerbose("Execute:", ' '.join(command))
-        env = dict(os.environ)
-        for k, v in step.get(JsonConstants.STEP_EXEC_ENV, {}).items():
-            v = self.resolve(v)
-            env[k] = v
-        if self.env is not None:
-            env.update(self.env.toMap())
-        stdout = subprocess.DEVNULL
-        if self.logger.isVerbose() or step.get(JsonConstants.STEP_EXEC_VERBOSE,
-                                               False):
-            stdout = None
-        rc = subprocess.call(command,
-                             cwd=str(self.targetFolder),
-                             env=env,
-                             stdout=stdout,
-                             stderr=subprocess.STDOUT)
+        env = Environment()
+        env.addSubEnv(self.env)
+        env.addSubEnv(Environment(
+            content=step.get(JsonConstants.STEP_EXEC_ENV)))
+        verbose = step.get(JsonConstants.STEP_EXEC_VERBOSE, False)
+        shell = step.get(JsonConstants.STEP_EXEC_SHELL, True)
+
+        rc = executeCommand(*command,
+                            cwd=self.targetFolder,
+                            env=env,
+                            displayStdout=verbose or self.logger.isVerbose(),
+                            shell=shell)
         if rc != 0:
             self.logger.printVerbose("Command '%s' exited with %s" %
                                      (" ".join(command), rc))

@@ -28,6 +28,7 @@ from leaf.cli.profile import ProfileConfigCommand, ProfileCreateCommand, \
 from leaf.cli.remote import RemoteAddCommand, RemoteDisableCommand, \
     RemoteEnableCommand, RemoteFetchCommand, RemoteListCommand, \
     RemoteRemoveCommand
+from leaf.cli.run import RunCommand
 from leaf.cli.search import SearchCommand
 from leaf.cli.select import SelectCommand
 from leaf.cli.status import StatusCommand
@@ -55,6 +56,8 @@ class LeafRootCommand(LeafMetaCommand):
                  EnvPackageCommand()],
                 acceptDefaultCommand=True
             ),
+            # Entry points
+            RunCommand(),
             # Features
             LeafMetaCommand(
                 'feature',

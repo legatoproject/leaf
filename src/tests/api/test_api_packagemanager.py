@@ -348,7 +348,7 @@ class TestApiPackageManager(AbstractTestWithRepo):
         self.pm.updateUserEnv(setMap={"FOO2": "BAR2",
                                       "HELLO": "WoRld"})
 
-        env = Environment.build(self.pm.getLeafEnvironment(),
+        env = Environment.build(self.pm.getBuiltinEnvironment(),
                                 self.pm.getUserEnvironment(),
                                 Environment("test", {"FOO": "BAR"}))
         self.pm.installFromRemotes(PackageIdentifier.fromStringList(["condition_1.0"]),
@@ -446,7 +446,7 @@ class TestApiPackageManager(AbstractTestWithRepo):
 
     def testDependsWithCustomEnv(self):
         env = Environment.build(
-            self.pm.getLeafEnvironment(),
+            self.pm.getBuiltinEnvironment(),
             self.pm.getUserEnvironment(),
             Environment("Custom env", {}))
         deps = DependencyUtils.install(
@@ -465,7 +465,7 @@ class TestApiPackageManager(AbstractTestWithRepo):
 
         self.pm.updateUserEnv(setMap={'FOO': 'HELLO'})
         env = Environment.build(
-            self.pm.getLeafEnvironment(),
+            self.pm.getBuiltinEnvironment(),
             self.pm.getUserEnvironment(),
             Environment("Custom env", {}))
         deps = DependencyUtils.install(
@@ -484,7 +484,7 @@ class TestApiPackageManager(AbstractTestWithRepo):
 
         self.pm.updateUserEnv(setMap={'FOO': 'HELLO'})
         env = Environment.build(
-            self.pm.getLeafEnvironment(),
+            self.pm.getBuiltinEnvironment(),
             self.pm.getUserEnvironment(),
             Environment("Custom env", {'FOO': 'BAR'}))
         deps = DependencyUtils.install(

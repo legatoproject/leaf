@@ -99,7 +99,7 @@ class TestRendering(AbstractTestWithChecker):
 
     def testEnvironment(self):
         pm = PackageManager(self.loggerManager.logger)
-        env = Environment.build(pm.getLeafEnvironment(),
+        env = Environment.build(pm.getBuiltinEnvironment(),
                                 pm.getUserEnvironment(),
                                 Environment("test", {"FOO": "BAR"}))
         rend = EnvironmentRenderer(env)

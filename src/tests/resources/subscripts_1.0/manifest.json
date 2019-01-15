@@ -1,0 +1,30 @@
+{
+  "info": {
+    "name": "subscripts",
+    "version": "1.0"
+  },
+  "env": {
+    "MY_CUSTOM_VAR1": "My value"
+  },
+  "bin": {
+    "mybin": {
+      "path": "@{DIR}/mybin.sh"
+    },
+    "foo": {
+      "path": "@{DIR}/foo.sh",
+      "shell": true
+    },
+    "foo-noshell": {
+      "path": "@{DIR}/foo.sh",
+      "shell": false
+    },
+    "touch": {
+      "path": "touch",
+      "description": "touch something"
+    },
+    "mytouch": {
+      "path": "@{DIR}/mytouch.sh",
+      "description": "touch something differently"
+    }
+  }
+}

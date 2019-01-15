@@ -96,6 +96,13 @@ class ProfileProvisioningException(LeafException):
                                hints="try 'leaf profile sync' to resume")
 
 
+class ProfileOutOfSyncException(LeafException):
+    def __init__(self, pf, cause=None):
+        LeafException.__init__(self, "Profile %s is not sync" % pf.name,
+                               cause=cause,
+                               hints="try 'leaf profile sync %s' to resume" % pf.name)
+
+
 class InvalidPackageNameException(LeafException):
     def __init__(self, unknownName):
         LeafException.__init__(self, "Unknown package {0}".format(unknownName),

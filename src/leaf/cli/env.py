@@ -10,6 +10,7 @@ import argparse
 
 from leaf.cli.cliutils import LeafCommand, initCommonArgs
 from leaf.constants import EnvConstants
+from leaf.core.dependencies import DependencyUtils
 from leaf.format.renderer.environment import EnvironmentRenderer
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
@@ -38,7 +39,7 @@ class EnvPrintCommand(LeafCommand):
         env = None
         if not wm.isWorkspaceInitialized():
             env = Environment.build(
-                self.getPackageManager(args).getLeafEnvironment(),
+                self.getPackageManager(args).getBuiltinEnvironment(),
                 self.getPackageManager(args).getUserEnvironment())
         else:
             # Get profile name, key could not exist if command is default
@@ -69,7 +70,7 @@ class EnvBuiltinCommand(LeafCommand):
     def execute(self, args, uargs):
         pm = self.getPackageManager(args)
 
-        env = pm.getLeafEnvironment()
+        env = pm.getBuiltinEnvironment()
         pm.printRenderer(EnvironmentRenderer(env))
         env.generateScripts(args.activateScript, args.deactivateScript)
 
@@ -168,6 +169,10 @@ class EnvPackageCommand(LeafCommand):
     def _configureParser(self, parser):
         super()._configureParser(parser)
         initCommonArgs(parser, withEnvScripts=True)
+        parser.add_argument('--nodeps',
+                            dest='resolveDeps',
+                            action='store_false',
+                            help="do not add dependencies environements")
         parser.add_argument(dest='pisList',
                             metavar='PKGID',
                             nargs=argparse.REMAINDER)
@@ -175,7 +180,13 @@ class EnvPackageCommand(LeafCommand):
     def execute(self, args, uargs):
         pm = self.getPackageManager(args)
 
-        env = pm.getPackagesEnvironment(
-            [PackageIdentifier.fromString(pis) for pis in args.pisList])
+        items = None
+        if args.resolveDeps:
+            items = DependencyUtils.installed(PackageIdentifier.fromStringList(args.pisList),
+                                              pm.listInstalledPackages(),
+                                              ignoreUnknown=True)
+        else:
+            items = PackageIdentifier.fromStringList(args.pisList)
+        env = pm.getPackagesEnvironment(items)
         pm.printRenderer(EnvironmentRenderer(env))
         env.generateScripts(args.activateScript, args.deactivateScript)

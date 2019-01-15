@@ -60,7 +60,7 @@ class FeatureQueryCommand(LeafCommand):
             profile = workspace.getProfile(workspace.getCurrentProfileName())
             env = workspace.getFullEnvironment(profile)
         else:
-            env = Environment.build(pm.getLeafEnvironment(),
+            env = Environment.build(pm.getBuiltinEnvironment(),
                                     pm.getUserEnvironment())
         envValue = env.findValue(feature.getKey())
         pm.logger.printVerbose("Found %s=%s in env" %

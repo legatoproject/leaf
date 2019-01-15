@@ -1,0 +1,69 @@
+= leaf-run(1)
+
+== NAME
+
+leaf-run - run binaries and tools bundled in leaf packages
+
+== SYNOPSIS
+
+*leaf* *run* [*-p* _PACKAGE_] [*--oneline*]
+
+*leaf* *run* [*-p* _PACKAGE_] _BINARY_ [*--*] [_OPTIONS_]
+
+== DESCRIPTION
+
+*leaf run* command allows users to execute binaries/tools bundled in installed leaf packages.
+
+If used without specifying any _BINARY_, the command will list all the installed binaries in current _scope_.
+
+If used with a _BINARY_ parameter, the command will execute the binary, loaded with the current _scope_ environment.
+
+== OPTIONS
+
+_BINARY_::
+
+Name of the binary to execute
+
+_PACKAGE_::
+
+Installed package identifier to use as _scope_. See *leaf help package* for more details on package identifiers syntax.
+
+*--oneline*::
+
+When listing binaries, use quiet and machine-readable output.
+
+_OPTIONS_::
+
+Options that will be passed to the executed binaries.
++
+The *--* separator may be used to send options usually known by leaf (e.g. *-h*, *--help*) to the executed binary.
+
+== EXAMPLES
+
+List all available binaries::
+
+*leaf run*
+
+Run binary::
+
+*leaf run myCommand*
+
+Get help for my command::
+
+*leaf run myCommand -- --help*
+
+== BEHAVIOR
+
+When the command is used in a directory which is *not* a leaf workspace, the _scope_ will be *all* installed leaf packages.
+
+When the command is used in a leaf workspace, the _scope_ will be the packages referenced by the current profile.
+
+When the *-p* option is specified to identify a package, the _scope_ will be only the specified package.
+
+If a same binary is exposed by several packages with the same name in a given _scope_, the *latest* package version will be used.
+
+If a same binary is exposed by packages with different names in a given _scope_, this will cause an error.
+
+== SEE ALSO
+
+*leaf package*

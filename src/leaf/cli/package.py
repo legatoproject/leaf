@@ -119,7 +119,7 @@ class PackageDepsCommand(LeafCommand):
     def execute(self, args, uargs):
         pm = self.getPackageManager(args)
         env = Environment.build(
-            pm.getLeafEnvironment(),
+            pm.getBuiltinEnvironment(),
             pm.getUserEnvironment(),
             Environment("Custom env", envListToMap(args.customEnvList)))
 
@@ -297,7 +297,7 @@ class PackageUpgradeCommand(LeafCommand):
         pm = self.getPackageManager(args)
 
         env = Environment.build(
-            pm.getLeafEnvironment(),
+            pm.getBuiltinEnvironment(),
             pm.getUserEnvironment())
         installList, uninstallList = DependencyUtils.upgrade(
             None if len(args.packages) == 0 else args.packages,

@@ -65,6 +65,7 @@ class TestCliRendering(LeafCliWrapper):
                           "--set", "FOO2=BAR2",
                           "--set", "HELLO=wOrlD")
             self.leafExec(["env", "package"], "env-A_1.0")
+            self.leafExec(["env", "package"], "--nodeps", "env-A_1.0")
             self.leafExec(["env", "builtin"])
             self.leafExec(("env", "profile"),
                           "--set", "FOO=BAR",

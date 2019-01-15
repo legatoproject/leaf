@@ -9,7 +9,6 @@ Leaf Package Manager
 
 import argparse
 import os
-import subprocess
 from abc import ABC, abstractmethod
 from builtins import ValueError
 from collections import OrderedDict
@@ -17,6 +16,7 @@ from os.path import pathsep
 from pathlib import Path
 
 from leaf.constants import LeafConstants
+from leaf.core.coreutils import executeCommand
 from leaf.core.error import LeafException, UnknownArgsException
 from leaf.core.packagemanager import LoggerManager, PackageManager
 from leaf.core.workspacemanager import WorkspaceManager
@@ -266,14 +266,14 @@ class ExternalCommand(LeafCommand):
     def execute(self, args, uargs):
         wm = self.getWorkspaceManager(args, checkInitialized=False)
 
-        env = dict(os.environ)
-        env.update(wm.getLeafEnvironment().toMap())
-
         # Use args to run the external command
         command = [str(self.executable)]
         command += args.ARGS
 
-        return subprocess.call(command, env=env)
+        return executeCommand(*command,
+                              env=wm.getBuiltinEnvironment(),
+                              shell=False,
+                              displayStdout=True)
 
 
 class ExternalCommandUtils():

@@ -50,6 +50,16 @@ Manage the repositories for your packages. (see also: *leaf help legato-workflow
 remote    Add, remove and manage the list of remote repositories
 
 
+Use tools and binaries
+[listing]
+run       List and execute binaries/tools bundled in installed packages
+
+
+Manage packages
+[listing]
+package   List, install, uninstall, upgrade packages (independently from any workspace)
+
+
 == OPTIONS
 [listing]
 leaf [--non-interactive] [-w <workspace>] <command> [-v|-q] [options...]

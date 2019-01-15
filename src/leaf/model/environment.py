@@ -52,10 +52,12 @@ class Environment():
     def build(*envList):
         out = Environment()
         for env in envList:
-            if env is not None:
-                if not isinstance(env, Environment):
-                    raise ValueError()
+            if isinstance(env, Environment):
                 out.addSubEnv(env)
+            elif isinstance(env, dict):
+                out.addSubEnv(Environment(content=env))
+            elif env is not None:
+                raise ValueError()
         return out
 
     def __init__(self, label=None, content=None):
@@ -91,17 +93,8 @@ class Environment():
             e.toList(acc=acc)
         return acc
 
-    def toMap(self):
-        out = OrderedDict()
-        for k in self.keys():
-            out[k] = self.findValue(k)
-        return out
-
     def keys(self):
-        out = set()
-        for k, _ in self.toList():
-            out.add(k)
-        return out
+        return set(map(lambda e: e[0], self.toList()))
 
     def findValue(self, key):
         out = None

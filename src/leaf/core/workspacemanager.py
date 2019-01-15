@@ -14,9 +14,9 @@ from pathlib import Path
 
 from leaf.constants import EnvConstants, LeafFiles
 from leaf.core.dependencies import DependencyUtils
-from leaf.core.error import (InvalidProfileNameException,
-                             ProfileNameAlreadyExistException,
-                             ProfileProvisioningException, NoProfileSelected)
+from leaf.core.error import InvalidProfileNameException, NoProfileSelected, \
+    ProfileNameAlreadyExistException, ProfileOutOfSyncException, \
+    ProfileProvisioningException
 from leaf.core.packagemanager import PackageManager
 from leaf.model.config import WorkspaceConfiguration
 from leaf.model.environment import Environment
@@ -200,7 +200,7 @@ class WorkspaceManager(PackageManager):
                     raise ValueError("Package should not be linked: %s" % pi)
         except Exception as e:
             if raiseIfNotSync:
-                raise e
+                raise ProfileOutOfSyncException(profile, cause=e)
             self.logger.printVerbose(str(e))
             return False
         return True
@@ -293,7 +293,7 @@ class WorkspaceManager(PackageManager):
 
     def _getSkelEnvironement(self, profile):
         return Environment.build(
-            self.getLeafEnvironment(),
+            self.getBuiltinEnvironment(),
             self.getUserEnvironment(),
             self.getWorkspaceEnvironment(),
             profile.getEnvironment())

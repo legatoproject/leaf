@@ -102,15 +102,12 @@ class ConfigurationManager():
             previousLayerFile=skelFile,
             pp=True)
 
-    def getLeafEnvironment(self):
+    def getBuiltinEnvironment(self):
         out = Environment("Leaf built-in variables")
         out.env.append(("LEAF_VERSION", str(__version__)))
         out.env.append(("LEAF_PLATFORM_SYSTEM", platform.system()))
         out.env.append(("LEAF_PLATFORM_MACHINE", platform.machine()))
         out.env.append(("LEAF_PLATFORM_RELEASE", platform.release()))
-        if EnvConstants.NON_INTERACTIVE in os.environ:
-            out.env.append((EnvConstants.NON_INTERACTIVE,
-                            os.getenv(EnvConstants.NON_INTERACTIVE)))
         return out
 
     def getUserEnvironment(self):
@@ -146,8 +143,8 @@ class LoggerManager(ConfigurationManager):
         else:
             self.logger.printError(str(ex))
 
-    def printRenderer(self, renderer):
-        renderer.verbosity = self.logger.getVerbosity()
+    def printRenderer(self, renderer, verbosity=None):
+        renderer.verbosity = self.logger.getVerbosity() if verbosity is None else verbosity
         renderer.tm = self.themeManager
         renderer.print()
 
@@ -537,7 +534,7 @@ class PackageManager(RemoteManager):
             self.logger.printVerbose("Installing %d pre-required package(s) in %s" %
                                      (len(apList), tmpRootFolder))
             if env is None:
-                env = Environment.build(self.getLeafEnvironment(),
+                env = Environment.build(self.getBuiltinEnvironment(),
                                         self.getUserEnvironment())
             env.addSubEnv(Environment("Prereq",
                                       {"LEAF_PREREQ_ROOT": tmpRootFolder}))
@@ -573,7 +570,7 @@ class PackageManager(RemoteManager):
 
             # Build env to resolve dynamic dependencies
             if env is None:
-                env = Environment.build(self.getLeafEnvironment(),
+                env = Environment.build(self.getBuiltinEnvironment(),
                                         self.getUserEnvironment())
 
             try:
@@ -662,7 +659,7 @@ class PackageManager(RemoteManager):
                                        ", ".join([str(ip.getIdentifier()) for ip in ipToRemove]))
                 self.confirm(raiseOnDecline=True)
 
-                env = Environment.build(self.getLeafEnvironment(),
+                env = Environment.build(self.getBuiltinEnvironment(),
                                         self.getUserEnvironment())
                 for ip in ipToRemove:
                     self.logger.printDefault("Removing", ip.getIdentifier())
@@ -684,7 +681,7 @@ class PackageManager(RemoteManager):
         '''
         ipMap = self.listInstalledPackages()
         if env is None:
-            env = Environment.build(self.getLeafEnvironment(),
+            env = Environment.build(self.getBuiltinEnvironment(),
                                     self.getUserEnvironment())
 
         for pi in piList:

@@ -1,0 +1,30 @@
+{
+  "info": {
+    "name": "scripts",
+    "version": "1.0",
+    "depends": [
+      "subscripts_1.0"
+    ]
+  },
+  "env": {
+    "MY_CUSTOM_VAR1": "My new value"
+  },
+  "bin": {
+    "echo": {
+      "path": "echo",
+      "description": "print something"
+    },
+    "env": {
+      "path": "env",
+      "description": "display env"
+    },
+    "mytouch": {
+      "path": "@{DIR}/mytouch.sh",
+      "description": "touch something differently"
+    },
+    "mytouch2": {
+      "path": "@{DIR:subscripts_1.0}/mytouch.sh",
+      "description": "also touch something"
+    }
+  }
+}

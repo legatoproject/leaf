@@ -278,6 +278,12 @@ class InstalledPackage(Manifest):
     def getEnvMap(self):
         return self.jsonget(JsonConstants.ENV, OrderedDict())
 
+    def getBinMap(self):
+        out = OrderedDict()
+        for name, jsonData in self.jsonget(JsonConstants.ENTRYPOINTS, default={}).items():
+            out[name] = Entrypoint(name, jsonData)
+        return out
+
 
 class Feature(JsonObject):
     '''
@@ -360,3 +366,18 @@ class Feature(JsonObject):
 
     def __str__(self):
         return self.name
+
+
+class Entrypoint(JsonObject):
+    def __init__(self, name, json):
+        JsonObject.__init__(self, json)
+        self.name = name
+
+    def getCommand(self):
+        return self.jsonget(JsonConstants.ENTRYPOINT_PATH, mandatory=True)
+
+    def getDescription(self):
+        return self.jsonget(JsonConstants.ENTRYPOINT_DESCRIPTION)
+
+    def runInShell(self):
+        return self.jsonget(JsonConstants.ENTRYPOINT_SHELL, default=True)
