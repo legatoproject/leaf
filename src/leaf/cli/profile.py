@@ -7,8 +7,9 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from leaf.cli.cliutils import LeafCommand, initCommonArgs
-from leaf.core.coreutils import retrievePackageIdentifier
+from leaf.core.coreutils import findLatestVersion
 from leaf.format.renderer.profile import ProfileListRenderer
+from leaf.model.package import PackageIdentifier
 
 
 class AbstractProfileCommand(LeafCommand):
@@ -200,11 +201,21 @@ class ProfileConfigCommand(AbstractProfileCommand):
         if args.pkgAddList is not None:
             validPiList = list(wm.listAvailablePackages().keys()) + \
                 list(wm.listInstalledPackages().keys())
-            profile.addPackages([retrievePackageIdentifier(
-                motif, validPiList) for motif in args.pkgAddList])
+            piList = []
+            for motif in args.pkgAddList:
+                if PackageIdentifier.isValidIdentifier(motif):
+                    piList.append(PackageIdentifier.fromString(motif))
+                else:
+                    piList.append(findLatestVersion(motif, validPiList))
+            profile.addPackages(piList)
         if args.pkgRmList is not None:
             validPiList = profile.getPackagesMap().values()
-            profile.removePackages([retrievePackageIdentifier(
-                motif, validPiList) for motif in args.pkgRmList])
+            piList = []
+            for motif in args.pkgRmList:
+                if PackageIdentifier.isValidIdentifier(motif):
+                    piList.append(PackageIdentifier.fromString(motif))
+                else:
+                    piList.append(findLatestVersion(motif, validPiList))
+            profile.removePackages(piList)
 
         wm.updateProfile(profile)

@@ -552,39 +552,50 @@ class TestCliWorkspaceManager(LeafCliWrapper):
         self.leafExec(("profile", "config"), "-p", "sync_1.0")
         self.leafExec(("profile", "sync"))
         self.assertTrue(syncFile.exists())
-        self.assertEqual([""],
+        self.assertEqual(["MYVALUE"],
                          getLines(syncFile))
 
         self.leafExec(("profile", "sync"))
         self.assertTrue(syncFile.exists())
-        self.assertEqual(["",
-                          ""],
+        self.assertEqual(["MYVALUE",
+                          "MYVALUE"],
                          getLines(syncFile))
 
         self.leafExec(("package", "sync"), "sync_1.0")
         self.assertTrue(syncFile.exists())
-        self.assertEqual(["",
-                          "",
-                          ""],
+        self.assertEqual(["MYVALUE",
+                          "MYVALUE",
+                          "MYVALUE"],
                          getLines(syncFile))
 
         self.leafExec(("env", "workspace"), "--set", "MYVAR2=AAA")
         self.leafExec(("profile", "sync"))
         self.assertTrue(syncFile.exists())
-        self.assertEqual(["",
-                          "",
-                          "",
-                          "AAA"],
+        self.assertEqual(["MYVALUE",
+                          "MYVALUE",
+                          "MYVALUE",
+                          "MYVALUE AAA"],
                          getLines(syncFile))
 
         self.leafExec(("env", "profile"), "--set", "MYVAR2=BBB")
         self.leafExec(("profile", "sync"))
         self.assertTrue(syncFile.exists())
-        self.assertEqual(["",
-                          "",
-                          "",
-                          "AAA",
-                          "BBB"],
+        self.assertEqual(["MYVALUE",
+                          "MYVALUE",
+                          "MYVALUE",
+                          "MYVALUE AAA",
+                          "MYVALUE BBB"],
+                         getLines(syncFile))
+
+        self.leafExec(("env", "profile"), "--set", "MYVAR1=FOO")
+        self.leafExec(("profile", "sync"))
+        self.assertTrue(syncFile.exists())
+        self.assertEqual(["MYVALUE",
+                          "MYVALUE",
+                          "MYVALUE",
+                          "MYVALUE AAA",
+                          "MYVALUE BBB",
+                          "MYVALUE BBB"],
                          getLines(syncFile))
 
 

@@ -5,7 +5,6 @@ import subprocess
 from builtins import sorted
 
 from leaf.constants import JsonConstants, LeafConstants
-from leaf.core.dependencies import DependencyUtils
 from leaf.core.error import InvalidPackageNameException, LeafException
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
@@ -61,28 +60,43 @@ def executeCommand(*args, cwd=None, env=None, shell=True, displayStdout=False):
     return subprocess.call(command, **kwargs)
 
 
-def retrievePackageIdentifier(motif, validPiList):
+def isLatestPackage(pi):
     '''
-    If only package name is given retrieve the latest package in given list
-    with same package name
+    Used to check if the given PackageIdentifier version is *latest*
     '''
-    if PackageIdentifier.isValidIdentifier(motif):
-        return PackageIdentifier.fromString(motif)
+    return pi.version == LeafConstants.LATEST
+
+
+def findLatestVersion(pi_or_piName, piList,
+                      ignoreUnknown=False):
+    '''
+    Use given package name to return the PackageIdentifier with the highest version
+    '''
     out = None
-    if validPiList is not None:
-        for pi in validPiList:
-            if pi.name == motif:
-                if out is None or pi > out:
-                    out = pi
-    if out is None:
-        raise InvalidPackageNameException(motif)
+    piName = pi_or_piName.name if isinstance(
+        pi_or_piName, PackageIdentifier) else str(pi_or_piName)
+    for pi in [pi for pi in piList if pi.name == piName]:
+        if out is None or pi > out:
+            out = pi
+    if out is None and not ignoreUnknown:
+        raise InvalidPackageNameException(pi_or_piName)
     return out
 
 
-def retrievePackage(pi, pkgMap):
-    if pi not in pkgMap:
+def findManifest(pi, mfMap,
+                 ignoreUnknown=False):
+    '''
+    Return the Manifest from the given map from its PackageIdentifier.
+    If the given PackageIdentifier is *latest*, then return the highest version of the package.
+    '''
+    if not isinstance(mfMap, dict):
+        raise ValueError()
+    if isLatestPackage(pi):
+        pi = findLatestVersion(pi, mfMap.keys(), ignoreUnknown=True)
+    if pi in mfMap:
+        return mfMap[pi]
+    if not ignoreUnknown:
         raise InvalidPackageNameException(pi)
-    return pkgMap[pi]
 
 
 def groupPackageIdentifiersByName(piList, pkgMap=None, sort=True):
@@ -136,10 +150,9 @@ class VariableResolver():
             # No PI specified means current package
             pkg = self.currentPackage
         else:
-            pkg = DependencyUtils.findManifest(
-                PackageIdentifier.fromString(pis),
-                self.allPackages,
-                ignoreUnknown=True)
+            pkg = findManifest(PackageIdentifier.fromString(pis),
+                               self.allPackages,
+                               ignoreUnknown=True)
         if pkg is not None:
             if var == 'NAME':
                 return pkg.getIdentifier().name

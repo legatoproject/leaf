@@ -634,21 +634,21 @@ class TestApiPackageManager(AbstractTestWithRepo):
 
         self.pm.syncPackages(PackageIdentifier.fromStringList(["sync_1.0"]))
         self.assertTrue(syncFile.exists())
-        self.assertEqual([""],
+        self.assertEqual(["MYVALUE"],
                          getLines(syncFile))
 
         self.pm.syncPackages(PackageIdentifier.fromStringList(["sync_1.0"]))
         self.assertTrue(syncFile.exists())
-        self.assertEqual(["",
-                          ""],
+        self.assertEqual(["MYVALUE",
+                          "MYVALUE"],
                          getLines(syncFile))
 
         self.pm.updateUserEnv({"MYVAR2": "MYOTHERVALUE"})
         self.pm.syncPackages(PackageIdentifier.fromStringList(["sync_1.0"]))
         self.assertTrue(syncFile.exists())
-        self.assertEqual(["",
-                          "",
-                          "MYOTHERVALUE"],
+        self.assertEqual(["MYVALUE",
+                          "MYVALUE",
+                          "MYVALUE MYOTHERVALUE"],
                          getLines(syncFile))
 
     def testResolveLatest(self):

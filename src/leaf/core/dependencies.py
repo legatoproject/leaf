@@ -7,8 +7,7 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-from leaf.constants import LeafConstants
-from leaf.core.error import InvalidPackageNameException
+from leaf.core.coreutils import findLatestVersion, findManifest
 from leaf.model.package import Manifest, PackageIdentifier
 
 
@@ -16,36 +15,6 @@ class DependencyUtils():
     '''
     Used to build the dependency tree using dynamic conditions
     '''
-
-    @staticmethod
-    def isLatestPackage(pi):
-        return pi.version == LeafConstants.LATEST
-
-    @staticmethod
-    def getLatestVersion(pi_or_piName, piList,
-                         ignoreUnknown=False):
-        out = None
-        piName = pi_or_piName.name if isinstance(
-            pi_or_piName, PackageIdentifier) else str(pi_or_piName)
-        for pi in [pi for pi in piList if pi.name == piName]:
-            if out is None or pi > out:
-                out = pi
-        if out is None and not ignoreUnknown:
-            raise InvalidPackageNameException(pi_or_piName)
-        return out
-
-    @staticmethod
-    def findManifest(pi, mfMap,
-                     ignoreUnknown=False):
-        if not isinstance(mfMap, dict):
-            raise ValueError()
-        if DependencyUtils.isLatestPackage(pi):
-            pi = DependencyUtils.getLatestVersion(pi, mfMap.keys(),
-                                                  ignoreUnknown=True)
-        if pi in mfMap:
-            return mfMap[pi]
-        if not ignoreUnknown:
-            raise InvalidPackageNameException(pi)
 
     @staticmethod
     def __buildTree(piList, mfMap, out,
@@ -62,8 +31,8 @@ class DependencyUtils():
         for pi in piList:
             if pi not in ignoredPiList:
                 ignoredPiList.append(pi)
-                mf = DependencyUtils.findManifest(pi, mfMap,
-                                                  ignoreUnknown=ignoreUnknown)
+                mf = findManifest(pi, mfMap,
+                                  ignoreUnknown=ignoreUnknown)
                 if mf is not None and mf not in out:
                     # Begin by adding dependencies
                     DependencyUtils.__buildTree(mf.getLeafDependsFromEnv(env),
@@ -176,7 +145,7 @@ class DependencyUtils():
         for ap in apList:
             for pis in ap.getLeafRequires():
                 pi = PackageIdentifier.fromString(pis)
-                ap = DependencyUtils.findManifest(pi, apMap)
+                ap = findManifest(pi, apMap)
                 out.append(ap)
         # sort alphabetically and ensure no dupplicates
         out = list(sorted(set(out), key=Manifest.getIdentifier))
@@ -200,9 +169,9 @@ class DependencyUtils():
         # Compute the list of package to install
         installList = []
         for piName in piNameList:
-            latestInstalled = DependencyUtils.getLatestVersion(piName, ipMap)
-            latestAvailable = DependencyUtils.getLatestVersion(piName, apMap,
-                                                               ignoreUnknown=False)
+            latestInstalled = findLatestVersion(piName, ipMap)
+            latestAvailable = findLatestVersion(piName, apMap,
+                                                ignoreUnknown=False)
             if latestAvailable is not None and latestAvailable > latestInstalled:
                 ap = apMap[latestAvailable]
                 if ap not in installList:

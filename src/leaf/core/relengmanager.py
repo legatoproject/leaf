@@ -13,8 +13,9 @@ from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
 
-from leaf.constants import EnvConstants, JsonConstants, LeafConstants, LeafFiles
-from leaf.core.dependencies import DependencyUtils
+from leaf.constants import EnvConstants, JsonConstants, LeafConstants, \
+    LeafFiles
+from leaf.core.coreutils import isLatestPackage
 from leaf.core.error import LeafException
 from leaf.core.packagemanager import LoggerManager
 from leaf.model.modelutils import layerModelUpdate
@@ -60,7 +61,7 @@ class RelengManager(LoggerManager):
 
         manifest = Manifest.parse(manifestFile)
 
-        if DependencyUtils.isLatestPackage(manifest.getIdentifier()):
+        if isLatestPackage(manifest.getIdentifier()):
             raise LeafException("Invalid version for manifest %s (%s is a reserved keyword)" % (
                 manifestFile, LeafConstants.LATEST))
 
@@ -120,7 +121,7 @@ class RelengManager(LoggerManager):
 
             ap = AvailablePackage(artifactNode, None)
             pi = ap.getIdentifier()
-            if DependencyUtils.isLatestPackage(pi):
+            if isLatestPackage(pi):
                 raise LeafException("Invalid version for package %s (%s is a reserved keyword)" % (
                     artifact, LeafConstants.LATEST))
 
@@ -224,7 +225,7 @@ class RelengManager(LoggerManager):
                 self.logger.printDefault("Replace %s --> %s" % (var, value))
                 jsonString = jsonString.replace("#{%s}" % var, value)
 
-        if DependencyUtils.isLatestPackage(manifest.getIdentifier()):
+        if isLatestPackage(manifest.getIdentifier()):
             raise LeafException(
                 "Invalid version (%s is a reserved keyword)" % LeafConstants.LATEST)
 

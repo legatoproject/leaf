@@ -7,10 +7,10 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
+import json
 import os
 import platform
 import shutil
-import json
 from builtins import Exception
 from collections import OrderedDict
 from datetime import datetime
@@ -22,8 +22,8 @@ import gnupg
 from leaf import __version__
 from leaf.constants import EnvConstants, JsonConstants, LeafConstants, \
     LeafFiles
-from leaf.core.coreutils import StepExecutor, VariableResolver, \
-    retrievePackage
+from leaf.core.coreutils import StepExecutor, VariableResolver, findManifest, \
+    isLatestPackage
 from leaf.core.dependencies import DependencyUtils
 from leaf.core.error import BadRemoteUrlException, \
     InvalidPackageNameException, LeafException, LeafOutOfDateException, \
@@ -487,22 +487,22 @@ class PackageManager(RemoteManager):
         # Create folder
         targetFolder.mkdir(parents=True)
 
+        ipMap = self.listInstalledPackages()
+        if la.getIdentifier() in ipMap:
+            raise LeafException(
+                "Package is already installed: %s" % la.getIdentifier())
+
         try:
             # Extract content
             self.logger.printVerbose("Extract %s in %s" %
                                      (la.path, targetFolder))
             with TarFile.open(str(la.path)) as tf:
                 tf.extractall(str(targetFolder))
-
             # Execute post install steps
             out = InstalledPackage(targetFolder / LeafFiles.MANIFEST)
-            vr = VariableResolver(out,
-                                  self.listInstalledPackages().values())
-            se = StepExecutor(self.logger,
-                              out,
-                              vr,
-                              env=env)
-            se.postInstall()
+            ipMap[out.getIdentifier()] = out
+            self._buildStepExecutorWithEnv(
+                out.getIdentifier(), ipMap, env=env).postInstall()
             return out
         except Exception as e:
             self.logger.printError("Error during installation:", e)
@@ -527,7 +527,7 @@ class PackageManager(RemoteManager):
             availablePackages = self.listAvailablePackages()
 
         # Get packages to install
-        apList = [retrievePackage(pi, availablePackages) for pi in piList]
+        apList = [findManifest(pi, availablePackages) for pi in piList]
 
         errorCount = 0
         if len(apList) > 0:
@@ -645,10 +645,9 @@ class PackageManager(RemoteManager):
         Remove given package
         '''
         with self.applicationLock.acquire():
-            installedPackages = self.listInstalledPackages()
+            ipMap = self.listInstalledPackages()
 
-            ipToRemove = DependencyUtils.uninstall(piList,
-                                                   installedPackages)
+            ipToRemove = DependencyUtils.uninstall(piList, ipMap)
 
             if len(ipToRemove) == 0:
                 self.logger.printDefault(
@@ -658,19 +657,13 @@ class PackageManager(RemoteManager):
                 self.logger.printQuiet("Packages to uninstall:",
                                        ", ".join([str(ip.getIdentifier()) for ip in ipToRemove]))
                 self.confirm(raiseOnDecline=True)
-
-                env = Environment.build(self.getBuiltinEnvironment(),
-                                        self.getUserEnvironment())
                 for ip in ipToRemove:
                     self.logger.printDefault("Removing", ip.getIdentifier())
-                    vr = VariableResolver(
-                        ip,
-                        installedPackages.values())
-                    stepExec = StepExecutor(self.logger, ip, vr, env=env)
-                    stepExec.preUninstall()
+                    self._buildStepExecutorWithEnv(
+                        ip.getIdentifier(), ipMap).preUninstall()
                     self.logger.printVerbose("Remove folder:", ip.folder)
                     shutil.rmtree(str(ip.folder))
-                    del installedPackages[ip.getIdentifier()]
+                    del ipMap[ip.getIdentifier()]
 
                 self.logger.printDefault(
                     "%d package(s) removed" % len(ipToRemove))
@@ -680,16 +673,29 @@ class PackageManager(RemoteManager):
         Run the sync steps for all given packages
         '''
         ipMap = self.listInstalledPackages()
+        for pi in piList:
+            self.logger.printVerbose("Sync package %s" % pi)
+            self._buildStepExecutorWithEnv(pi, ipMap, env=env).sync()
+
+    def _buildStepExecutorWithEnv(self,
+                                  pi: PackageIdentifier,
+                                  ipMap: dict,
+                                  env: Environment = None) -> StepExecutor:
+        # Find the package
+        ip = findManifest(pi, ipMap)
+        # The environment
         if env is None:
             env = Environment.build(self.getBuiltinEnvironment(),
                                     self.getUserEnvironment())
-
-        for pi in piList:
-            ip = retrievePackage(pi, ipMap)
-            self.logger.printVerbose("Sync package %s" % ip.getIdentifier())
-            vr = VariableResolver(ip, ipMap.values())
-            stepExec = StepExecutor(self.logger, ip, vr, env=env)
-            stepExec.sync()
+        # build the dependencies
+        deps = DependencyUtils.installed(
+            [pi], ipMap, env=env, ignoreUnknown=True)
+        # Update env
+        env.addSubEnv(self.getPackagesEnvironment(deps))
+        # The Variable resolver
+        vr = VariableResolver(ip, ipMap.values())
+        # Execute steps
+        return StepExecutor(self.logger, ip, vr, env=env)
 
     def getPackagesEnvironment(self, itemList):
         '''
@@ -704,8 +710,8 @@ class PackageManager(RemoteManager):
                 ip = item
             elif isinstance(item, PackageIdentifier):
                 ip = None
-                if DependencyUtils.isLatestPackage(item):
-                    ip = DependencyUtils.findManifest(item, installedPackages)
+                if isLatestPackage(item):
+                    ip = findManifest(item, installedPackages)
                 else:
                     ip = installedPackages.get(item)
                 if ip is None:
