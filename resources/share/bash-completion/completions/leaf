@@ -1,12 +1,6 @@
 #compdef leaf
 
-# If sourced from ZSH, ensure bashcompinit is loaded 
-if [ -n "$ZSH_VERSION" ]; then
-	autoload bashcompinit
-	bashcompinit
-fi
-
-_python_argcomplete() {
+_leaf_argcomplete() {
     local IFS=$'\013'
     COMPREPLY=( $(IFS="$IFS" \
                   COMP_LINE="$COMP_LINE" \
@@ -14,58 +8,81 @@ _python_argcomplete() {
                   COMP_TYPE="$COMP_TYPE" \
                   _ARGCOMPLETE_COMP_WORDBREAKS="$COMP_WORDBREAKS" \
                   _ARGCOMPLETE=1 \
-                  "$1" 8>&1 9>&2 1>/dev/null 2>/dev/null) )
+                  leaf 8>&1 9>&2 1>/dev/null 2>/dev/null) )
     if [[ $? != 0 ]]; then
         unset COMPREPLY
     fi
 }
 
-_process_leaf_completion() {
-	local LEAF_SUGGESTIONS="$(eval $1 2> /dev/null)"
-	local CURRENT_WORD="${COMP_WORDS[COMP_CWORD]}"
+_leaf_build_completion() {
 	compopt +o nospace
-	COMPREPLY+=($(compgen -W "${LEAF_SUGGESTIONS}" -- "${CURRENT_WORD}"))
+	local values=$(eval $1 2>/dev/null)
+	if [[ $? != 0 ]]; then
+        unset COMPREPLY
+    else
+		COMPREPLY+=( $(compgen -W "$values" -- "$2") )
+	fi
+}
+
+_leaf_command_matches() {
+	echo "$COMP_LINE" | grep -E -q "^leaf $1"
 }
 
 _leaf_completions()
 {
-	local PREVIOUS_WORD="${COMP_WORDS[COMP_CWORD-1]}"
-	local PREVIOUS_PREVIOUS_WORD="${COMP_WORDS[COMP_CWORD-2]}"
+	## DEBUG
+	# echo "[DEBUG]  COMP_LINE=$COMP_LINE"
+	# echo "[DEBUG]  COMP_WORDS[${#COMP_WORDS[@]}]=${COMP_WORDS[@]}"
+	# echo "[DEBUG]  COMP_WORDS=$COMP_CWORD"
+	# echo "[DEBUG]  COMP_POINT=$COMP_POINT"
 
-	if test "$PREVIOUS_PREVIOUS_WORD" = "remote"; then
-		# Handle remotes
-		if test "$PREVIOUS_WORD" = "remove" -o \
-			"$PREVIOUS_WORD" = "enable" -o \
-			"$PREVIOUS_WORD" = "disable"; then
-			_process_leaf_completion "leaf remote list -q"
+	local cur prev 
+	_get_comp_words_by_ref cur prev  
+
+
+	if _leaf_command_matches "package install "; then
+		## AVAILABLE PACKAGES
+		_leaf_build_completion "leaf search -aq" $cur
+	elif test "$prev" = "-p" -o "$prev" = "--add-package"; then
+		## AVAILABLE PACKAGES
+		_leaf_build_completion "leaf search -aq" $cur
+	elif _leaf_command_matches "search "; then
+		## SEARCH MODE
+		_leaf_build_completion "leaf search -aq $cur"
+	elif _leaf_command_matches "package (uninstall|sync) "; then
+		## INSTALLED PACKAGES
+		_leaf_build_completion "leaf package list -aq" $cur
+	elif _leaf_command_matches "remote (enable|disable|remove) "; then
+		## REMOTES
+		_leaf_build_completion "leaf remote list -q" $cur
+	elif _leaf_command_matches "(select|profile (rename|delete|switch|config|sync)) "; then
+		## PROFILES
+		_leaf_build_completion "leaf profile list -q" $cur
+	elif _leaf_command_matches "env" && test "$prev" = "--unset"; then
+		## ENV UNSET
+		local scope=${COMP_WORDS[2]}
+		_leaf_build_completion "leaf env $scope -q | awk -F '[ =]' '{print \$2}'" $cur
+	elif _leaf_command_matches "feature (toggle|query) "; then
+		## FEATURES
+		if test "$prev" = "toggle" -o "$prev" = "query"; then
+			## FEATURE NAMES
+			_leaf_build_completion "leaf feature list -q | awk -F '=' '{print \$1}'" $cur
+		else
+			## FEATURE VALUES
+			_leaf_build_completion "leaf feature list -q | awk -F '[=|]' '/^$prev=/ {for (i=2; i<=NF; i++) print \$i}'" $cur
 		fi
-	elif test "$PREVIOUS_PREVIOUS_WORD" = "toggle"; then
-		# Handle values for features
-		_process_leaf_completion "leaf feature list | grep ${PREVIOUS_WORD}: | sed -e 's/^.*(\(.*\))$/\1/;s/|/\n/g'"
+	elif _leaf_command_matches "help "; then
+		## MANPAGES
+		_leaf_build_completion "leaf help --list" $cur
+	elif _leaf_command_matches "getsrc "; then
+		## GETSRC
+		_leaf_build_completion "leaf getsrc" $cur
+	elif _leaf_command_matches "run [^[:space:]]*$"; then
+		## RUN
+		_leaf_build_completion "leaf run --oneline | awk -F '[/:]' '{print \$2}'" $cur
 	else
-		case "$PREVIOUS_WORD" in
-			"search"|"install"|"-p"|"--package")
-				_process_leaf_completion "leaf search -aq"
-				;;
-			"remove")
-				_process_leaf_completion "leaf package list -aq"
-				;;
-			"select")
-				_process_leaf_completion "leaf profile list -q"
-				;;
-			"help")
-				_process_leaf_completion "leaf help --list"
-				;;
-			"toggle"|"query")
-				_process_leaf_completion "leaf feature list -q"
-				;;
-			"getsrc")
-				_process_leaf_completion "leaf-getsrc"
-				;;
-			*)
-			  _python_argcomplete "$@"
-			  ;;
-		esac
+		## ARGCOMPLETE 
+		_leaf_argcomplete
 	fi
 }
 

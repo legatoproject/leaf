@@ -1,5 +1,5 @@
-featureWithDups
-featureWithMultipleKeys
-myFeatureFoo
-myFeatureHello
-test-src
+featureWithDups=enum1|enum2
+featureWithMultipleKeys=enum1
+myFeatureFoo=bar|notbar
+myFeatureHello=default|world
+test-src=binary|source

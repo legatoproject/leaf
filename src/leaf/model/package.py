@@ -295,6 +295,11 @@ class Feature(JsonObject):
         self.name = name
         self.aliases = []
 
+    def __str__(self):
+        return "{name}={values}".format(
+            name=self.name,
+            values='|'.join(sorted(self.getValues().keys())))
+
     def addAlias(self, other):
         if not isinstance(other, Feature):
             raise ValueError()
@@ -363,9 +368,6 @@ class Feature(JsonObject):
             self.getKey() == other.getKey() and \
             self.getValues() == other.getValues() and \
             self.getDescription() == other.getDescription()
-
-    def __str__(self):
-        return self.name
 
 
 class Entrypoint(JsonObject):

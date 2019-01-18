@@ -26,8 +26,8 @@ class FeatureListCommand(LeafCommand):
 
         featureManager = FeatureManager(pm)
         rend = FeatureListRenderer()
-        rend.extend(list(sorted(featureManager.features.values(),
-                                key=lambda x: x.name)))
+        rend.extend(sorted(featureManager.features.values(),
+                           key=lambda x: x.name))
         pm.printRenderer(rend)
 
 

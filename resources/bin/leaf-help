@@ -23,7 +23,7 @@ while test -n "$1"; do
 		--list) 
 			# Main dir where leaf man pages are stored
 			LEAFMANDIR=`dirname $(man -w leaf)`
-			find "$LEAFMANDIR" -name "leaf-*" | sed -e "s|/.*/leaf-\(.*\).1|\1|g"
+			find "$LEAFMANDIR" -name "leaf-*" | sed -e "s|/.*/leaf-\(.*\).1|\1|g" | sort
 			exit 0
 			;;
 

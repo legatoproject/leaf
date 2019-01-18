@@ -62,7 +62,7 @@ leafCall() {
 
 if test -z "$LEAFSRCMODULE"; then
     # No source module required, just list all available ones
-    leafCall feature list -q | grep -e '-src$' | sed -e 's/-src$//g'
+    leafCall feature list -q | grep -e '-src=' | sed -e 's/-src=.*$//g'
 else
     # Check current status
     QUERY_ERROR=$(mktemp)
