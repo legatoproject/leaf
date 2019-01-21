@@ -165,12 +165,14 @@ class TestCliBashCompletion(LeafCliWrapper):
     def testHelp(self):
         self.assertEqual(
             getCompletionList("help"),
-            ['colors',
+            ['build',
+             'colors',
              'config',
              'env',
              'feature',
              'getsrc',
              'init',
+             'manifest',
              'package',
              'profile',
              'remote',

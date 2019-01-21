@@ -43,6 +43,7 @@ Manage your Leaf Environment
 colors    Change to a different color theme
 env       Create, set, and remove environment variables
 config    Manage the configuration of leaf
+feature   List and toggle features allowing to configure packages behavior
 
 
 Manage the repositories for your packages. (see also: *leaf help legato-workflow*)
@@ -58,6 +59,12 @@ run       List and execute binaries/tools bundled in installed packages
 Manage packages
 [listing]
 package   List, install, uninstall, upgrade packages (independently from any workspace)
+
+
+Build packages
+[listing]
+manifest  Describe how to write a leaf package manifest
+build     Build manifests, packages and indexes
 
 
 == OPTIONS

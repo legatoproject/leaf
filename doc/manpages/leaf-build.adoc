@@ -1,0 +1,165 @@
+= leaf-build(1)
+
+== NAME
+
+leaf-build - build leaf manifests, packages and indexes
+
+== SYNOPSIS
+
+*leaf* *build* *manifest* *--name* _NAME_ *--version* _VERSION_ [*-o* _FOLDER_] [*--append* _JSON_FILE_]
+                          [*--env*] [*--description* _DESCR_] [*--date* _DATE_]
+                          [*--minver* _MINVER_] [*--master* _BOOL_]
+                          [*--upgradable* _BOOL_] [*--requires* _PKGID_]
+                          [*--depends* _PKGID_] [*--tag* _TAG_]
+
+*leaf* *build* *pack* *-o* _FILE_ [*-i* _FOLDER_] [*--no-info*] [-- _TAR_ARGS_ [_TAR_ARGS_ ...]]
+
+*leaf* *build* *index* *-o* _FILE_ [*--name* _NAME_] [*--description* _DESCR_]
+                       [*--no-info*] [*--no-extra-tags*] [*--prettyprint*] _ARTIFACTS_
+
+== DESCRIPTION
+
+*leaf build* builds artifacts to setup a leaf package repository.
+
+== SUB-COMMANDS
+
+*manifest*::
+
+Generates a leaf package manifest (see *leaf help manifest*) from input parameters.
+
+*pack*::
+
+Builds a leaf package artifact (_.leaf_ file) from an input manifest (written manually, or generated
+by *leaf build manifest*).
++
+The command looks in the input folder for a _manifest.json_ file (command fails with no manifest file)
+and then it builds a tar archive containing all files in the input folder.
+
+*index*::
+
+Generates a repository _index.json_ file from a list of input _.leaf_ packages.
++
+This set of _index.json_ + all referenced _*.leaf_ files can then be hosted anywhere (either on the
+same file system or remotely over http/https). Add the index.json location to leaf with the
+*leaf remote* command.
+
+== OPTIONS
+
+*--name* _NAME_::
+
+*leaf build manifest*: sets the package name (see _info/name_ node *leaf help manifest*)
++
+ *leaf build index*: sets the remote name
+
+*--version* _VERSION_::
+
+Sets the package version (see _info/version_ node *leaf help manifest*)
+
+*--description* _DESCR_::
+
+*leaf build manifest*: sets the package description (see _info/description_ node *leaf help manifest*)
++
+*leaf build index*: sets the remote description
+
+*--date* _DATE_::
+
+Sets the package build date (see _info/date_ node *leaf help manifest*)
+
+*--minver* _MINVER_::
+
+Sets the package minimum required leaf version (see _info/leafMinVersion_ node *leaf help manifest*)
+
+*--master* _BOOL_::
+
+Sets the package master property (see _info/master_ node *leaf help manifest*)
+master defines the *"top level"* packages that group a set of artifacts as one set.
+
+*--upgradable* _BOOL_::
+
+Sets the package upgrade property (see _info/upgrade_ node *leaf help manifest*)
+
+*--requires* _PKGID_::
+
+Adds _PKGID_ to the package requirements list (see _info/requires_ node *leaf help manifest*)
+
+*--depends* _PKGID_::
+
+Adds _PKGID_ to the package dependencies list (see _info/depends_ node *leaf help manifest*)
+
+*--tag* _TAG_::
+
+Adds a _TAG_ to the package tags list (see _info/tags_ node *leaf help manifest*)
+
+*-o* _FOLDER_::
+
+Configures the output folder where *manifest.json* file will be written.
+If not specified, the current folder will be used.
+
+*--append* _JSON_FILE_::
+
+Merges _JSON_FILE_ content with generated content in the final generated _manifest.json_ file.
+
+*--env*::
+
+When finding a *#\{VAR}* pattern in any specified fragment (see *--append* above),
+look for _VAR_ in the current environment, and replace the pattern by its value.
++
+If a pattern is not resolved (environment variable not found), this will cause an error.
+
+*-o* _FILE_::
+
+When used with *leaf build pack*: sets the generated leaf package file name and path. By convention,
+it is recommended to use _NAME_VERSION.leaf_
++
+When used with *leaf build index*: sets the generated package index file name.
+
+*-i* _FOLDER_::
+
+Configures the input folder where to look for _manifest.json_ file + all files to bundle in the leaf
+ package tar archive.
++
+If not specified, the command will use the current folder.
+
+*--no-info*::
+
+When used with *leaf build pack*: disables the generation of the _.leaf.info_ file.
+This file is only used to increase future *leaf build index* command execution speed, by providing
+necessary information in a separated file. If the _.leaf.info_ file is not present, the index build
+will take longer as it will have to open all _.leaf_ archives to find the required information.
++
+When used with *leaf build index*: ignores the input _.leaf.info_ files when building the index
+(forces to read information directly from the _.leaf_ files)
+
+_TAR_ARGS_::
+
+Specifies any extra arguments to be given to *tar* command line.
++
+This can be used to specify a compression level (e.g. *-J* to get xz compressed archives),
+to exclude some files when building the archive with *-X* option, etc...
+See *man tar* for all tar options.
++
+If used, the _TAR_ARGS_ list must start with *--*, and the archive content must be specified
+(usually, specifying "*.*" is enough)
+
+*--no-extra-tags*::
+
+Normal index build behavior is to read _.leaf.tags_ files to find extra tags to be applied to the
+corresponding package.
+This allows to add _"volatile"_ tags are specified at remote level (while other tags information is
+bundled inside the package itself and can't be changed once the package is built).
++
+If this option is specified, the _.leaf.tags_ files will be ignored.
+
+*--prettyprint*::
+
+Prints the index in human readable format with returns and extra spacing.
+Normal index build behavior is to generate the index information on one single line, without space
+characters. This allows to save size for big indexes.
+
+_ARTIFACTS_::
+
+List of the _.leaf_ files that will be referenced by the built index.
+
+== SEE ALSO
+
+*leaf help manifest*, *leaf remote*

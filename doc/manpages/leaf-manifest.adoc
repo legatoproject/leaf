@@ -1,0 +1,380 @@
+= leaf-manifest(1)
+
+== NAME
+
+leaf-manifest - package manifest documentation
+
+== DESCRIPTION
+
+Leaf packages are indexed by a *manifest.json* file. It describes the leaf package and provides
+instruction for different operations (install, uninstall, etc).
+
+The manifest json file is composed of several nodes and can be written manually, or by using the
+the *leaf build manifest* command.
+
+== info node
+
+The *info* node contains information about the leaf package.
+
+=== Example
+
+Example *info* node content:
+
+....
+  "info": {
+    "name": "my-package",
+    "version": "1.2.3",
+    "description": "This is a sample package",
+    "date": "Thu May 24 09:58:43 UTC 2018",
+    "master": true,
+    "upgrade": false,
+    "leafMinVersion": "1.0",
+    "tags": [
+      "mytag"
+    ],
+    "depends": [
+      "my-sub-package_1.0",
+      "some-tool_latest",
+      "my-arch-dep-package_1.0-linux64(LEAF_PLATFORM_MACHINE=x86_64)",
+      "my-arch-dep-package_1.0-linux32(LEAF_PLATFORM_MACHINE=i686)",
+      "my-ftr-dep-package_1.0(MY_FEATURE)",
+    ],
+    "requires": [
+      "my-checker_1.0"
+    ],
+    "features": {
+      "myfeature": {
+        "key": "MY_FEATURE",
+        "description": "Feature example",
+        "values": {
+          "unset": null,
+          "enabled": "1"
+        }
+      }
+    }
+  }
+....
+
+=== info properties
+
+The *info* node is a map, providing the following property nodes.
+
+*name*::
+
+*This node is mandatory*
++
+Leaf package name. Names can only contain letters, numbers and dash ("-") characters.
+
+*version*::
+
+*This node is mandatory*
++
+Leaf package version. Versions can only contain letters, numbers, dot ("."), underscore ("_") and
+dash ("-") characters.
+
+*description*::
+
+Descriptive text about the package content.
+This field is typically displayed in *leaf search*/*leaf package list* results, and also browsed
+when looking for keywords.
+
+*date*::
+
+Package build date.
+This field is displayed in *leaf search -v*/*leaf package list -v* results.
+
+*master*::
+
+Tells if the package is a master (top level) package (boolean value).
++
+Master packages are the ones that are displayed with *leaf search*/*leaf package list* commands.
++
+To search for dependant packages (non-master) *leaf search -a*/*leaf package list -a* flags must be
+used.
+
+*upgrade*::
+
+Flags the packages as _upgradable_ (boolean value).
++
+See *leaf help package* (*upgrade* command section) for more information.
+
+*leafMinVersion*::
+
+The minimum *leaf* version that needs to be used in order to install this package.
+If a lower version is used, the package can't be installed.
+
+*tags*::
+
+Defines a list of tags applied to the package.
+Tags are displayed in *leaf search*/*leaf package list* results, and also browsed when looking for
+tags (*-t* option).
+
+*depends*::
+
+Lists the leaf package identifiers that will have to be installed as dependencies before the package
+is installed.
++
+Dependencies can be set:
++
+  - either on a fixed package version (e.g. *my-package_1.2.3*);
+    this exact version will be installed as dependency
+  - or on the latest seen version of the expected package (e.g. *my-package_latest*);
+    in this case, the latest version of the package will always be installed.
+    Note that any install operation (including profile sync) will automatically install newer
+    versions for *latest* dependencies if there are new ones
+    (even if the package declaring the dependencies didn't change).
++
+Conditions can also be added to install dependencies only in specific cases. Conditions are based on
+environment variable values. Typical use cases are to use leaf built-in variables (e.g. to install
+a dependency specific to a given system architecture) -- see *leaf help env*;
+or variables used to configure leaf *features* -- see *leaf help features*
++
+A condition is an expression surrounded by parenthesis. The expression is composed of:
++
+  - the tested environment variable name
+  - an operator (see below)
+  - an optional variable value
++
+The different known operators syntaxes are:
++
+  - *(VAR)*: condition is true if _VAR_ is set and non-empty
+  - *(!VAR)*: condition is true if _VAR_ is not set
+  - *(VAR=VALUE)*: condition is true if _VAR_ value is exactly matching specified _VALUE_
+  - *(VAR!=VALUE)*: condition is true if _VAR_ value is not matching specified _VALUE_
+  - *(VAR~VALUE)*: condition is true if _VAR_ value contains specified _VALUE_ (ignoring case)
+  - *(VAR!~VALUE)*: condition is true if _VAR_ value doesn't contain specified _VALUE_ (ignoring case)
++
+Conditions can be combined by concatenating the conditions. In that case, dependency will
+be installed if _all_ specified conditions are true.
++
+Note that dependencies are recursive. If a dependency has its own dependencies, the whole dependency
+tree will be installed.
+
+*requires*::
+
+Lists the leaf package identifiers that will be installed _before_ the actual install operation is
+performed.
++
+That kind of requirements is used to install small packages that will perform some checks
+through *install* steps (see below). If any check fails (any install step return a non-zero return code),
+the main install will be canceled.
++
+Example uses case are if some prerequisite system install is necessary (e.g. *apt* packages verification),
+or if the main package has be used under some licensing conditions (and the license *must* be accepted
+before the package is actually installed).
++
+Dependencies are set the same way than for the *depends* node (see above).
+The only differences are:
++
+  - conditions are not supported
+  - dependencies of required packages will be ignored
+
+*features*::
+
+Provides a map of features that will be made available through the *leaf feature* command.
+The map keys are the feature identifiers (i.e. the values manipulated with the *leaf feature*
+command).
+Map values:
++
+  - *key*: the name of the environment variable that will be used to persist/read the feature state
+  - *description*: the feature description that will be displayed in the *leaf feature* command
+  - *values*: a map that defines the mapping between the environment variable values and the feature state
+    (as used in *leaf feature query/toggle* commands); note that the *null* value matches if the variable is not set
+
+== Manifest variables
+
+Manifest variables can be used to reference package relative information for the following sections:
+*env*, *install*/*uninstall*/*sync*, *bin*/
+
+*@\{DIR[:PACK]}*::
+
+Installation path of the specified/current package (if _PACK_ is specified or not)
+
+*@\{NAME[:PACK]}*::
+
+Name of the specified/current package (if _PACK_ is specified or not)
+
+*@\{VERSION[:PACK]}*::
+
+Version of the specified/current package (if _PACK_ is specified or not)
+
+== env node
+
+The *env* node provides a map of environment variables defined by the package.
+Here is an example of an *env* node content:
+
+....
+  "env": {
+    "MYVAR": "1",
+    "VAR_WITH_DEFAULT": "${VAR_WITH_DEFAULT:-defaultValue}",
+    "PATH": "@{DIR}/bin:$PATH"
+  }
+....
+
+These variables will be added to the environment as soon as the package is added to a profile
+(see *leaf env* and *leaf shell*).
+
+=== Constant values
+
+Constant values can simply be assigned to a variable, by specifying it in the manifest.
+
+=== Special values
+
+An alternative way to configure values is to use shell features (values will be interpreted by
+the shell before being set)
+
+*Use default value*::
+
+The *$\{VAR:-default}* shell syntax can be used to set a default value. +
+If _VAR_ is already set, its value will be kept as is. +
+If it's not, then the _default_ value will be set instead
+
+*List contribution*::
+
+A common use case is to contribute to a path list environment variable (e.g. *PATH*).
+This can be simply done with the *@\{DIR}:$\{PATH}* syntax. +
+Note: manifest variables can be used to reference installation path of any package (see above)
+
+== install/uninstall/sync nodes
+
+These nodes allow to declare install steps to be performed during the life cycle of the package.
+They all use the same syntax, the only difference is the phase when the specified install steps are
+executed:
+
+*install*::
+
+Steps specified in *install* node will be executed after the package archive is extracted on the
+file system.
+
+*uninstall*::
+
+Steps specified in *uninstall* node will be executed before the package installation folder is
+removed from the file system.
+
+*sync*::
+
+Steps specified in *sync* node will be executed when a profile synchronization step is executed
+(i.e. with *leaf setup*/*leaf update*/*leaf select*/*leaf getsrc*/*leaf profile sync* commands)
+
+=== Example
+
+Here is an example of an *install* node content:
+
+....
+  "install": [
+    {
+      "command": [ "touch", "@{DIR}/somefile" ],
+      "label": "useless step",
+      "shell": false
+    },
+    {
+      "command": [ "echo", "installing..." ],
+      "verbose": true
+    },
+    {
+      "command": [ "false" ],
+      "label": "another useless one",
+      "ignoreFail": true
+    },
+    {
+      "command": [ "echo", "$CUSTOMVAR" ],
+      "verbose": true,
+      "env": {
+        "CUSTOMVAR": "Message from custom env"
+      }
+    }
+  ]
+....
+
+=== Install steps
+
+The *install*/*uninstall*/*sync* nodes are lists of install steps.
+
+Each install step is a map of properties defining the step behavior.
+
+*command*::
+
+*This property is mandatory*
++
+This is a list representing the command line to be executed for this install step.
+First element is the executable path or command name.
+Other elements are arguments that will be passed to this executable/command.
++
+Note that the package environment (including all its dependencies) will be setup before calling the
+command line (unless the *shell* property is set to _false_; see below)
++
+Note that manifest variables can be used in this list to reference/access to package related
+information (see above).
+
+*label*::
+
+This property is a string which will be displayed by leaf before executing the install step.
+
+*verbose*::
+
+This is a boolean property (default _false_) stating if the command output has to be displayed to
+the user or not.
+
+*ignoreFail*::
+
+This is a boolean property (default _false_) stating if the installation has to fail if the executed
+command returns a non-zero exit code.
+
+*env*::
+
+This property is a map of variables that will be added to the executed step environment.
++
+This can be usefull if the executed command behavior needs to be tuned with some environment,
+and if we don't want this environment to be part of the package environment.
+
+*shell*::
+
+This boolean property (default _true_) specifies if the command line will be executed in a shell
+with all the package environment loaded, or not.
++
+If set to _false_, the executable will be called directly by leaf, without loading the environment.
+
+== bin node
+
+The *bin* node allows to specify binaries which will be available through the *leaf run* command.
+
+=== Example
+
+Here is an example of a *bin* node:
+
+....
+  "bin": {
+    "mytool": {
+      "path": "@{DIR}/mytool",
+      "description": "some tool bundled as a leaf package",
+      "shell": true
+    }
+  }
+....
+
+=== Binaries
+
+The *bin* node is a map; keys are the binary name (that will be used in *leaf run* command),
+and values are a map of properties defining the binary behavior.
+
+*path*::
+
+Absolute path to the binary to be executed.
++
+Note that manifest variables can be used to reference an executable bundled in the current package
+or in any dependency.
+
+*description*::
+
+Binary description (to be displayed when listing binaries in *leaf run* command)
+
+*shell*::
+
+Boolean property (default _true_) stating if the binary has to be executed in a shell with all the
+ package (+ dependencies) environment loaded and processed, or not.
++
+If set to _false_, the binary will be called directly by leaf, without running a shell to process the environment.
+
+== SEE ALSO
+
+*leaf build*, *leaf search*, *leaf package*, *leaf feature*, *leaf env*, *leaf shell*, *leaf run*
