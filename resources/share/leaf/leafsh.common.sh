@@ -10,8 +10,8 @@
 function lsh_StoreEnvironment
 {
     unset LEAF_WORKSPACE
-    python3 -m leaf env print -q --activate-script "$LEAF_SHELL_ACTIVATE_FILE" \
-                                 --deactivate-script "$LEAF_SHELL_DEACTIVATE_FILE" > /dev/null 2>&1
+    \leaf env print -q --activate-script "$LEAF_SHELL_ACTIVATE_FILE" \
+                       --deactivate-script "$LEAF_SHELL_DEACTIVATE_FILE" > /dev/null 2>&1
     export LEAF_WORKSPACE="$LEAF_SHELL_WORKSPACE"
 }
 
@@ -76,7 +76,7 @@ function lsh_FinishStartup
 function lsh_IsInWorkspace
 {
     unset LEAF_WORKSPACE
-    WSROOT=`python3 -m leaf status -q`
+    WSROOT=`\leaf status -q`
     export LEAF_WORKSPACE="$LEAF_SHELL_WORKSPACE"
     test -n "$WSROOT"
 }
