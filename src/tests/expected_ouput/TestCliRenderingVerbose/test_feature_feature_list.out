@@ -27,5 +27,6 @@ Fetched content from other
 ├─────────────────────────┼──────────────────────────────────────┤
 │ test-src                │         Key: LEAF_FTR_TEST_SRC       │
 │                         │      Values: binary()                │
-│                         │              source(1)               │
+│                         │              source(tag)             │
+│                         │              source-branch(branch)   │
 └─────────────────────────┴──────────────────────────────────────┘

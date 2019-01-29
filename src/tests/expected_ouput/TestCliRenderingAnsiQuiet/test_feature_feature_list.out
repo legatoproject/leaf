@@ -2,4 +2,4 @@ featureWithDups=enum1|enum2
 featureWithMultipleKeys=enum1
 myFeatureFoo=bar|notbar
 myFeatureHello=default|world
-test-src=binary|source
+test-src=binary|source|source-branch

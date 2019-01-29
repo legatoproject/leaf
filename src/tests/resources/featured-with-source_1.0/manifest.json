@@ -12,7 +12,8 @@
         "key": "LEAF_FTR_TEST_SRC",
         "values": {
           "binary": null,
-          "source": "1"
+          "source": "tag",
+          "source-branch": "branch"
         }
       }
     }

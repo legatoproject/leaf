@@ -3,7 +3,6 @@
 """
 
 import subprocess
-import unittest
 
 from leaf.model.package import PackageIdentifier
 from tests.testutils import RESOURCE_FOLDER, LeafTestCaseWithCli
@@ -134,7 +133,6 @@ class TestCliBashCompletion(LeafTestCaseWithCli):
             ],
         )
 
-    @unittest.skip
     def test_getsrc(self):
         self.assertEqual(get_completion_list("getsrc"), ["test"])
 

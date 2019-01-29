@@ -8,7 +8,7 @@ leaf-getsrc - trigger source code fetching for packages
 
 *leaf* *getsrc*
 
-*leaf* *getsrc* _MODULE_ [*--user*|*--workspace*|*--profile*] [*--disable*]
+*leaf* *getsrc* _MODULE_ [*--user*|*--workspace*|*--profile*] [*--disable*|*--binary*|*--source* [_MODE_]]
 
 == DESCRIPTION
 
@@ -34,7 +34,15 @@ feature corresponding to the required source _MODULE_. Allows a user to toggle a
 workspaces (if *--user* is used), across all profiles of a given workspace (if *--workspace* is
 used), or specifically to the current profile (if *--profile* is used; default if not specified).
 
-*--disable*::
+*--source* [_MODE_]::
+
+Toggles source mode for specified source module.
+This is as well the default behavior if neither *--source* nor *--disable* option is specified.
++
+Some source module may provide different source modes (e.g. to switch to an alternative branch).
+In this case the _MODE_ parameter can be used to specify the source mode to be used (e.g. *--source master*).
+
+*--disable*|*--binary*::
 
 Allows a user to get back to binary mode instead of source code mode.
 
@@ -47,6 +55,10 @@ Get source modules list::
 Trigger source code fetching::
 
 *leaf getsrc mymodule*
+
+Toggle another source mode (e.g. use master branch instead of version tag)::
+
+*leaf getsrc mymodule --source master*
 
 Get back to binary mode::
 
@@ -77,9 +89,8 @@ If necessary (if the feature value changed), the profile provisioning is trigger
 
 source fetching operation trigger::
 
-The last step is to trigger the source fetching operation. It is assumed to be handled by an
-executable named with _MODULE_FEATURE_ and a *-sync* suffix, provided on the *$PATH* by the
-installed packages.
+The last step is to trigger the source fetching operation. It is assumed to be handled by a
+sync hook provided by any source package that will be installed once the relevant feature is toggled.
 
 == SEE ALSO
 

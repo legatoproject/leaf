@@ -74,7 +74,7 @@ _leaf_completions()
 	elif _leaf_command_matches "help "; then
 		## MANPAGES
 		_leaf_build_completion "leaf help --list" $cur
-	elif _leaf_command_matches "getsrc "; then
+	elif _leaf_command_matches "getsrc " && test "$prev" = "getsrc"; then
 		## GETSRC
 		_leaf_build_completion "leaf getsrc" $cur
 	elif _leaf_command_matches "run [^[:space:]]*$"; then

@@ -8,7 +8,7 @@ Leaf Package Manager
 """
 
 import os
-from argparse import Action
+from argparse import Action, ONE_OR_MORE
 from builtins import ValueError
 from pathlib import Path
 
@@ -40,6 +40,14 @@ class EnvSetterAction(Action):
             if values[0] is None:
                 raise ValueError()
             value = values[0]
+        elif self.nargs == ONE_OR_MORE:
+            if values[0] is None:
+                raise ValueError()
+            separator = self.const if self.const is not None else ":"
+            if self.dest in os.environ.keys() and len(os.environ[self.dest]) > 0:
+                value = os.environ[self.dest] + separator + values[0]
+            else:
+                value = values[0]
         else:
             raise ValueError()
         if value is None:
