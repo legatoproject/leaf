@@ -22,10 +22,7 @@ class EnvConstants():
     DISABLE_LOCKS = 'LEAF_DISABLE_LOCKS'
     CUSTOM_THEME = 'LEAF_THEME'
     PAGER = 'LEAF_PAGER'
-    # Other env variables
-    WORKSPACE_ROOT = 'LEAF_WORKSPACE'
-    CUSTOM_CONFIG = 'LEAF_CONFIG'
-    CUSTOM_CACHE = 'LEAF_CACHE'
+    NOPLUGIN = 'LEAF_NOPLUGIN'
 
     '''
     Leaf settings are some env vars that user can configure either in is environment or in user scope
@@ -42,7 +39,14 @@ class EnvConstants():
                      CUSTOM_TAR,
                      DISABLE_LOCKS,
                      CUSTOM_THEME,
-                     PAGER)
+                     PAGER,
+                     NOPLUGIN)
+
+    # Other env variables
+    WORKSPACE_ROOT = 'LEAF_WORKSPACE'
+    CUSTOM_CONFIG = 'LEAF_CONFIG'
+    CUSTOM_CACHE = 'LEAF_CACHE'
+    CUSTOM_RESOURCES = 'LEAF_RESOURCES'
 
 
 class LeafConstants():
@@ -74,30 +78,56 @@ class LeafFiles():
     WS_DATA_FOLDERNAME = "leaf-data"
     CURRENT_PROFILE_LINKNAME = "current"
     # Configuration folders
-    USER_HOME = Path(os.path.expanduser("~"))
-    DEFAULT_LEAF_ROOT = USER_HOME / '.leaf'
-    DEFAULT_CONFIG_FOLDER = USER_HOME / '.config' / 'leaf'
-    DEFAULT_CACHE_FOLDER = USER_HOME / '.cache' / 'leaf'
+    ETC_PREFIX = Path("/etc/leaf")
+    DEFAULT_LEAF_ROOT = Path(os.path.expanduser("~/.leaf"))
+    DEFAULT_CONFIG_FOLDER = Path(os.path.expanduser("~/.config/leaf"))
+    DEFAULT_CACHE_FOLDER = Path(os.path.expanduser("~/.cache/leaf"))
     # Configuration files
     CONFIG_FILENAME = 'config.json'
     CACHE_DOWNLOAD_FOLDERNAME = "files"
     CACHE_REMOTES_FILENAME = 'remotes.json'
     THEMES_FILENAME = 'themes.ini'
+    PLUGINS_DIRNAME = 'plugins'
+    SHELL_DIRNAME = 'shell'
     GPG_DIRNAME = 'gpg'
     LOCK_FILENAME = 'lock'
-    # Skeleton files
-    SKEL_FILES = {
-        CONFIG_FILENAME: [
-            Path('/') / 'etc' / 'leaf' / CONFIG_FILENAME,
-            Path('/') / 'usr' / 'share' / 'leaf' / CONFIG_FILENAME,
-            USER_HOME / '.local' / 'share' / 'leaf' / CONFIG_FILENAME],
-        THEMES_FILENAME: [
-            Path('/') / 'etc' / 'leaf' / THEMES_FILENAME,
-            Path('/') / 'usr' / 'share' / 'leaf' / THEMES_FILENAME,
-            USER_HOME / '.local' / 'share' / 'leaf' / THEMES_FILENAME],
-    }
     # Releng
     EXTINFO_EXTENSION = '.info'
+
+    @staticmethod
+    def getConfigFolder():
+        out = LeafFiles.DEFAULT_CONFIG_FOLDER
+        value = os.getenv(EnvConstants.CUSTOM_CONFIG, "")
+        if len(value) > 0:
+            out = Path(value)
+        if not out.is_dir():
+            out.mkdir(parents=True)
+        return out
+
+    @staticmethod
+    def getCacheFolder():
+        out = LeafFiles.DEFAULT_CACHE_FOLDER
+        value = os.getenv(EnvConstants.CUSTOM_CACHE, "")
+        if len(value) > 0:
+            out = Path(value)
+        if not out.is_dir():
+            out.mkdir(parents=True)
+        return out
+
+    @staticmethod
+    def getResource(name: str = None, check_exists=True):
+        folder = None
+        for prefix in (os.getenv(EnvConstants.CUSTOM_RESOURCES, ""),
+                       os.path.expanduser("~/.local/share/leaf"),
+                       "/usr/share/leaf"):
+            if len(prefix) > 0:
+                folder = Path(prefix)
+                if folder.is_dir():
+                    break
+        out = folder if name is None else folder / name
+        if check_exists and not out.exists():
+            return None
+        return out
 
 
 class JsonConstants(object):
@@ -151,6 +181,11 @@ class JsonConstants(object):
     ENTRYPOINT_PATH = 'path'
     ENTRYPOINT_DESCRIPTION = 'description'
     ENTRYPOINT_SHELL = 'shell'
+    PLUGINS = 'plugins'
+    PLUGIN_PREFIX = 'location'
+    PLUGIN_DESCRIPTION = 'description'
+    PLUGIN_SOURCE = 'source'
+    PLUGIN_CLASS = 'class'
 
     # Profiles
     WS_PROFILES = "profiles"

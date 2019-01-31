@@ -1,0 +1,25 @@
+{
+  "info": {
+    "name": "pluginB",
+    "version": "1.0"
+  },
+  "plugins": {
+    "a": {
+      "source": "plugins/hello/ab.py",
+      "description": "Some description here",
+      "class": "PluginA"
+    },
+    "b": {
+      "source": "plugins/hello/ab.py",
+      "description": "Some description here too",
+      "class": "PluginB"
+    },
+    "c": {
+      "source": "plugins/hello/",
+      "class": "PluginC"
+    },
+    "d": {
+      "source": "plugins/hello/d.py"
+    }
+  }
+}

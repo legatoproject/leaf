@@ -31,6 +31,9 @@ failure-postinstall-exec_1.0
 featured-with-source_1.0
 install_1.0
 multitags_1.0
+pluginA_1.0
+pluginA_1.1
+pluginB_1.0
 prereq-A_1.0
 prereq-B_1.0
 prereq-C_1.0
@@ -86,6 +89,9 @@ failure-postinstall-exec_1.0
 featured-with-source_1.0
 install_1.0
 multitags_1.0
+pluginA_1.0
+pluginA_1.1
+pluginB_1.0
 prereq-A_1.0
 prereq-B_1.0
 prereq-C_1.0

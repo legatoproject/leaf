@@ -68,7 +68,7 @@ class ConfigFileWithLayer(JsonObject):
     def __init__(self, *layerFiles, defaultFactory=OrderedDict):
         model = None
         for layer in layerFiles:
-            if layer is not None and layer.exists():
+            if layer is not None and layer.is_file():
                 if model is None:
                     model = jsonLoadFile(layer)
                 else:

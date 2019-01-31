@@ -25,14 +25,14 @@ class RunCommand(LeafCommand):
             self,
             'run',
             "execute binary provided by installed packages",
-            allowUnknownArgs=True,
-            addVerboseQuietArgs=False)
+            allowUnknownArgs=True)
 
     def _getExamples(self):
         return [("leaf %s" % self.name, "List all declared commands"),
                 ("leaf %s myCommand -- --help" % self.name, "See help of a given binary")]
 
     def _configureParser(self, parser):
+        # Do not call super() to prevent --verbose/--quiet
         parser.add_argument('-p', '--package',
                             dest='package',
                             metavar='PKG_IDENTIFIER',
@@ -118,3 +118,6 @@ class RunCommand(LeafCommand):
                                   displayStdout=True,
                                   env=env,
                                   shell=ep.runInShell())
+
+
+PLOP = 1

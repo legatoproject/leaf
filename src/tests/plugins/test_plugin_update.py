@@ -5,7 +5,7 @@
 from tests.testutils import LeafCliWrapper
 
 
-class TestExtUpdate(LeafCliWrapper):
+class TestPluginUpdate(LeafCliWrapper):
 
     def __init__(self, methodName):
         LeafCliWrapper.__init__(self, methodName)

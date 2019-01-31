@@ -29,9 +29,11 @@ def findResourcesFiles():
                 resMap[key].append(value)
     visit(RESOURCES_FOLDER)
     out = []
-    for k, v in resMap.items():
-        out.append((k, v))
-        print("Found resources in %s: %s" % (k, ", ".join(v)))
+    for folder, items in resMap.items():
+        out.append((folder, items))
+        print("    Resources in {}".format(folder))
+        for item in items:
+            print("        {}".format(item))
     return out
 
 

@@ -4,11 +4,10 @@
 
 
 import subprocess
-
-from tests.testutils import RESOURCE_FOLDER, LeafCliWrapper
+import unittest
 
 from leaf.model.package import PackageIdentifier
-
+from tests.testutils import RESOURCE_FOLDER, LeafCliWrapper
 
 COMPLETION_SCRIPT = RESOURCE_FOLDER / 'leaf-completion-test.sh'
 
@@ -184,6 +183,7 @@ class TestCliBashCompletion(LeafCliWrapper):
              'status',
              'update'])
 
+    @unittest.skip
     def testGetsrc(self):
         self.assertEqual(
             getCompletionList("getsrc"),

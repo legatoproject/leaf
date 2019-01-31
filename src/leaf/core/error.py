@@ -17,9 +17,12 @@ from leaf.constants import EnvConstants
 HINTS_CMD_DELIMITER = '\''
 
 
-def printTrace():
-    if os.getenv(EnvConstants.DEBUG_MODE, "") != "" and sys.exc_info()[0] is not None:
-        traceback.print_exc(file=sys.stderr)
+def printTrace(message=None):
+    if os.getenv(EnvConstants.DEBUG_MODE, "") != "":
+        if message is not None:
+            print(message, file=sys.stderr)
+        if sys.exc_info()[0] is not None:
+            traceback.print_exc(file=sys.stderr)
 
 
 class LeafException(Exception):
@@ -187,9 +190,7 @@ class LeafOutOfDateException(LeafException):
 
 
 class UnknownArgsException(LeafException):
-    def __init__(self, commandPath, uargs):
-        cmd = ' '.join(commandPath)
+    def __init__(self, uargs):
         LeafException.__init__(
             self,
-            "Unknown arguments %s for command '%s'" % (' '.join(uargs), cmd),
-            hints="Use 'leaf %s --help' to get some help" % (cmd,))
+            "Unknown arguments %s" % (' '.join(uargs)))

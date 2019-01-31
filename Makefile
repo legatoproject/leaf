@@ -52,3 +52,7 @@ install:
 	test -n "$(VIRTUAL_ENV)"
 	python3 setup.py install
 	python3 setup.py install_data
+
+watch:
+	test -n "$(VIRTUAL_ENV)"
+	rerun -d src/leaf/ -p "**/*.py" -x "python3 setup.py install >/dev/null 2>&1"

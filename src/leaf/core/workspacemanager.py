@@ -42,6 +42,7 @@ class WorkspaceManager(PackageManager):
 
         # Check parents
         if checkParents:
+            # Use PWD to avoid symlinks resolution
             currentFolder = Path(os.getenv('PWD'))
             if WorkspaceManager.isWorkspaceRoot(currentFolder):
                 return currentFolder

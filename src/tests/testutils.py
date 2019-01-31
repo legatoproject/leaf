@@ -16,7 +16,6 @@ from leaf.format.logger import Verbosity
 from leaf.model.package import Manifest, PackageIdentifier
 from leaf.utils import jsonLoadFile, jsonWriteFile
 
-
 os.environ[EnvConstants.NON_INTERACTIVE] = "1"
 
 TestCase.maxDiff = None
@@ -25,9 +24,9 @@ LEAF_UT_SKIP = os.environ.get("LEAF_UT_SKIP", "")
 LEAF_UT_CREATE_TEMPLATE = os.environ.get("LEAF_UT_CREATE_TEMPLATE")
 
 ROOT_FOLDER = Path(__file__).parent.parent.parent
-RESOURCE_FOLDER = ROOT_FOLDER / "src" / "tests" / "resources"
-EXPECTED_OUTPUT_FOLDER = ROOT_FOLDER / "src" / "tests" / "expected_ouput"
-EXTENSIONS_FOLDER = ROOT_FOLDER / "resources" / "bin"
+RESOURCE_FOLDER = ROOT_FOLDER / "src/tests/resources"
+EXPECTED_OUTPUT_FOLDER = ROOT_FOLDER / "src/tests/expected_ouput"
+PLUGINS_FOLDER = ROOT_FOLDER / "resources/share/leaf/plugins"
 
 SEPARATOR = "--------------------"
 TAR_EXTRA_ARGS = {
@@ -43,7 +42,7 @@ ALT_INDEX_CONTENT = {
 }
 
 TEST_GPG_FINGERPRINT = "E35D6817397359074160F68952ECE808A2BC372C"
-TEST_GPG_HOMEDIR = ROOT_FOLDER / 'src' / 'tests' / 'gpg'
+TEST_GPG_HOMEDIR = ROOT_FOLDER / 'src/tests/gpg'
 
 
 class StringIOWrapper(StringIO):
@@ -279,16 +278,11 @@ class LeafCliWrapper(AbstractTestWithRepo):
     @classmethod
     def setUpClass(cls):
         AbstractTestWithRepo.setUpClass()
-        LeafCliWrapper.OLD_PATH = os.environ['PATH']
-        assert EXTENSIONS_FOLDER.is_dir()
-        os.environ['PATH'] = "%s:%s" % (EXTENSIONS_FOLDER,
-                                        LeafCliWrapper.OLD_PATH)
-        print("Update PATH:", os.environ['PATH'])
+        os.environ[EnvConstants.CUSTOM_RESOURCES] = str(PLUGINS_FOLDER.parent)
 
     @classmethod
     def tearDownClass(cls):
         AbstractTestWithRepo.tearDownClass()
-        os.environ['PATH'] = LeafCliWrapper.OLD_PATH
 
     def setUp(self):
         AbstractTestWithRepo.setUp(self)
@@ -297,6 +291,15 @@ class LeafCliWrapper(AbstractTestWithRepo):
                       "default", self.getRemoteUrl())
         self.leafExec(("remote", "add"), "--insecure",
                       "other", self.getRemoteUrl2())
+
+    def exec(self, *command, bin="leaf", expectedRc=0):
+        cmd = ' '.join(command)
+        if bin is not None:
+            cmd = bin + ' ' + cmd
+        rc, stdout = subprocess.getstatusoutput(cmd)
+        if expectedRc is not None:
+            self.assertEqual(expectedRc, rc)
+        return stdout
 
     def leafExec(self, verb, *args,
                  altWorkspace=None, expectedRc=0):
@@ -331,7 +334,7 @@ def generateRepo(sourceFolder, outputFolder):
 
     rm = RelengManager(Verbosity.QUIET)
     for packageFolder in sourceFolder.iterdir():
-        if packageFolder.is_dir():
+        if packageFolder.is_dir() and PackageIdentifier.isValidIdentifier(packageFolder.name):
             manifestFile = packageFolder / LeafFiles.MANIFEST
             if manifestFile.is_file():
                 manifest = Manifest.parse(manifestFile)

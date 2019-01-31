@@ -37,7 +37,7 @@ from leaf.format.ansi import ANSI
 
 
 class LeafRootCommand(LeafMetaCommand):
-    def __init__(self):
+    def __init__(self, pluginManager):
         LeafMetaCommand.__init__(self, None, None, [
             # Common commands
             StatusCommand(),
@@ -54,7 +54,8 @@ class LeafRootCommand(LeafMetaCommand):
                  EnvWorkspaceCommand(),
                  EnvProfileCommand(),
                  EnvPackageCommand()],
-                acceptDefaultCommand=True
+                acceptDefaultCommand=True,
+                pluginManager=pluginManager
             ),
             # Entry points
             RunCommand(),
@@ -65,7 +66,8 @@ class LeafRootCommand(LeafMetaCommand):
                 [FeatureListCommand(),
                  FeatureToggleCommand(),
                  FeatureQueryCommand()],
-                acceptDefaultCommand=True
+                acceptDefaultCommand=True,
+                pluginManager=pluginManager
             ),
             # Workspace common operations
             WorkspaceInitCommand(),
@@ -79,7 +81,8 @@ class LeafRootCommand(LeafMetaCommand):
                  ProfileSwitchCommand(),
                  ProfileSyncCommand(),
                  ProfileConfigCommand()],
-                acceptDefaultCommand=True
+                acceptDefaultCommand=True,
+                pluginManager=pluginManager
             ),
             # Config & remotes
             ConfigCommand(),
@@ -92,7 +95,8 @@ class LeafRootCommand(LeafMetaCommand):
                  RemoteEnableCommand(),
                  RemoteDisableCommand(),
                  RemoteFetchCommand()],
-                acceptDefaultCommand=True
+                acceptDefaultCommand=True,
+                pluginManager=pluginManager
             ),
             # Packages
             LeafMetaCommand(
@@ -105,7 +109,8 @@ class LeafRootCommand(LeafMetaCommand):
                  PackageSyncCommand(),
                  PackageDepsCommand(),
                  PackagePrereqCommand()],
-                acceptDefaultCommand=True
+                acceptDefaultCommand=True,
+                pluginManager=pluginManager
             ),
             # Releng
             LeafMetaCommand(
@@ -113,9 +118,10 @@ class LeafRootCommand(LeafMetaCommand):
                 "commands to build leaf artifacts (manifest, package or index)",
                 [BuildPackSubCommand(),
                  BuildIndexSubCommand(),
-                 BuildManifestSubCommand()]
-            )
-        ])
+                 BuildManifestSubCommand()],
+                pluginManager=pluginManager
+            )],
+            pluginManager=pluginManager)
 
     def _createParser(self, subparsers):
         # Setup argument parser

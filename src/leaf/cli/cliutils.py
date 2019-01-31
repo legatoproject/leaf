@@ -8,17 +8,13 @@ Leaf Package Manager
 '''
 
 import argparse
-import os
 from abc import ABC, abstractmethod
 from builtins import ValueError
-from collections import OrderedDict
-from os.path import pathsep
 from pathlib import Path
 
 from leaf.constants import LeafConstants
-from leaf.core.coreutils import executeCommand
-from leaf.core.error import LeafException, UnknownArgsException, \
-    WorkspaceNotInitializedException
+from leaf.core.error import (LeafException, UnknownArgsException,
+                             WorkspaceNotInitializedException)
 from leaf.core.packagemanager import LoggerManager, PackageManager
 from leaf.core.workspacemanager import WorkspaceManager
 from leaf.format.logger import Verbosity
@@ -113,15 +109,16 @@ class LeafCommand(ABC):
     '''
 
     def __init__(self, name, description,
-                 addVerboseQuietArgs=True,
                  allowUnknownArgs=False):
         self.name = name
         self.parent = None
         self.description = description
-        self.addVerboseQuietArgs = addVerboseQuietArgs
         self.allowUnknownArgs = allowUnknownArgs
 
     def _getCommandPath(self):
+        '''
+        Returns the command path, a tuple a the command/subcommands to invoke the command.
+        '''
         if self.name is None:
             return ()
         if not isinstance(self.parent, LeafMetaCommand):
@@ -147,19 +144,24 @@ class LeafCommand(ABC):
         return out
 
     def _createParser(self, subparsers):
+        '''
+        This method should not be overiden.
+        '''
         return subparsers.add_parser(self.name,
                                      help=self.description,
                                      epilog=self._getEpilogText(),
                                      formatter_class=argparse.RawTextHelpFormatter)
 
     def _configureParser(self, parser):
-        pass
+        '''
+        By default, add --verbose/--quiet options
+        This method should be overiden to add options and arguments.
+        '''
+        addVerboseQuietArgs(parser)
 
     def setup(self, subparsers):
         p = self._createParser(subparsers)
         p.set_defaults(handler=self)
-        if self.addVerboseQuietArgs:
-            addVerboseQuietArgs(p)
         self._configureParser(p)
         return p
 
@@ -171,7 +173,7 @@ class LeafCommand(ABC):
         out = 0
         try:
             if uargs is not None and len(uargs) > 0 and not self.allowUnknownArgs:
-                raise UnknownArgsException(self._getCommandPath(), uargs)
+                raise UnknownArgsException(uargs)
             out = self.execute(args, uargs)
         except Exception as e:
             lm = self.getLoggerManager(args)
@@ -209,12 +211,11 @@ class LeafMetaCommand(LeafCommand):
 
     def __init__(self, name, description, commands,
                  acceptDefaultCommand=False,
-                 enableExternalCommands=True):
-        LeafCommand.__init__(self, name, description,
-                             addVerboseQuietArgs=False)
+                 pluginManager=None):
+        LeafCommand.__init__(self, name, description)
         self.commands = commands
         self.acceptDefaultCommand = acceptDefaultCommand
-        self.enableExternalCommands = enableExternalCommands
+        self.pluginManager = pluginManager
         # Link subcommands to current Meta command
         for c in self.commands:
             c.parent = self
@@ -227,9 +228,8 @@ class LeafMetaCommand(LeafCommand):
         for command in self.commands:
             command.setup(subparsers2)
         # If external commands are enabled, initialize parsers
-        if self.enableExternalCommands:
-            for c in ExternalCommandUtils.getCommands(prefix=self._getCommandPath(),
-                                                      ignoreList=[c.name for c in self.commands]):
+        if self.pluginManager is not None:
+            for c in self.pluginManager.getCommands(self._getCommandPath(), [c.name for c in self.commands]):
                 c.setup(subparsers2)
         # If no default command, subparser is required
         subparsers2.required = not self.acceptDefaultCommand
@@ -239,101 +239,3 @@ class LeafMetaCommand(LeafCommand):
 
     def execute(self, args, uargs):
         raise NotImplementedError()
-
-
-class ExternalCommand(LeafCommand):
-    '''
-    Wrapper to run external binaries as leaf subcommand.
-    '''
-
-    def __init__(self, name, description, executable):
-        LeafCommand.__init__(self,
-                             name,
-                             description,
-                             addVerboseQuietArgs=False)
-        self.executable = executable
-
-    def _createParser(self, subparsers):
-        return subparsers.add_parser(self.name,
-                                     help=self.description,
-                                     prefix_chars='+',
-                                     add_help=False)
-
-    def _configureParser(self, parser):
-        super()._configureParser(parser)
-        parser.add_argument('ARGS',
-                            nargs=argparse.REMAINDER)
-
-    def execute(self, args, uargs):
-        wm = self.getWorkspaceManager(args, checkInitialized=False)
-
-        # Use args to run the external command
-        command = [str(self.executable)]
-        command += args.ARGS
-
-        return executeCommand(*command,
-                              env=wm.getBuiltinEnvironment(),
-                              shell=False,
-                              displayStdout=True)
-
-
-class ExternalCommandUtils():
-    '''
-    Find leaf-XXX binaries in $PATH to build external commands
-    '''
-
-    COMMANDS = None
-    MOTIF = 'LEAF_DESCRIPTION'
-    HEADER_SIZE = 2048
-
-    @staticmethod
-    def grepDescription(file):
-        try:
-            with open(str(file), 'rb') as fp:
-                header = fp.read(ExternalCommandUtils.HEADER_SIZE)
-                if ExternalCommandUtils.MOTIF.encode() in header:
-                    for line in header.decode().splitlines():
-                        if ExternalCommandUtils.MOTIF in line:
-                            return line.split(ExternalCommandUtils.MOTIF, 1)[1].strip()
-        except Exception:
-            pass
-
-    @staticmethod
-    def scanPath():
-        out = []
-        folderList = os.environ["PATH"].split(pathsep)
-        for folder in map(Path, folderList):
-            out += ExternalCommandUtils.scanFolder(folder)
-        return out
-
-    @staticmethod
-    def scanFolder(folder):
-        out = []
-        if isinstance(folder, Path) and folder.is_dir():
-            for candidate in folder.iterdir():
-                if candidate.is_file() and candidate.name.startswith("leaf-") and os.access(str(candidate), os.X_OK):
-                    segments = candidate.name.split('-')[1:]
-                    description = ExternalCommandUtils.grepDescription(
-                        candidate)
-                    if description is not None:
-                        out.append((segments, description, candidate))
-        return out
-
-    @staticmethod
-    def getCommands(prefix=(), ignoreList=None):
-        if ExternalCommandUtils.COMMANDS is None:
-            ExternalCommandUtils.COMMANDS = ExternalCommandUtils.scanPath()
-
-        out = OrderedDict()
-        for segments, description, binary in ExternalCommandUtils.COMMANDS:
-            # Filter leaf-PREFIX1-PREFIX2-XXX only, where XXX will be the name
-            if len(segments) == len(prefix) + 1 and segments[:len(prefix)] == list(prefix):
-                name = segments[-1]
-                if ignoreList is not None and name in ignoreList:
-                    # Ignore command
-                    continue
-                if name in out:
-                    # Command already found
-                    continue
-                out[name] = ExternalCommand(name, description, binary)
-        return out.values()

@@ -2,39 +2,21 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
+import unittest
 from tempfile import mktemp
 
-import unittest
-from tests.testutils import EXTENSIONS_FOLDER, RESOURCE_FOLDER
 
-from leaf.cli.cliutils import ExternalCommandUtils
 from leaf.constants import JsonConstants, LeafFiles
-from leaf.core.coreutils import VariableResolver, \
-    groupPackageIdentifiersByName
+from leaf.core.coreutils import VariableResolver, groupPackageIdentifiersByName
 from leaf.core.error import LeafException
 from leaf.core.lock import LockFile
 from leaf.model.base import JsonObject
 from leaf.model.package import Feature, InstalledPackage, PackageIdentifier
 from leaf.utils import checkSupportedLeaf, jsonLoadFile, jsonWriteFile
+from tests.testutils import RESOURCE_FOLDER
 
 
 class TestMisc(unittest.TestCase):
-
-    def testGrepDescription(self):
-        file = RESOURCE_FOLDER / "leaf-foo.sh"
-        self.assertTrue(file.exists())
-        description = ExternalCommandUtils.grepDescription(file)
-        self.assertEqual("The description of my command", description)
-
-        file = RESOURCE_FOLDER / "install_1.0" / "manifest.json"
-        self.assertTrue(file.exists())
-        description = ExternalCommandUtils.grepDescription(file)
-        self.assertIsNone(description)
-
-        for extension in EXTENSIONS_FOLDER.iterdir():
-            description = ExternalCommandUtils.grepDescription(extension)
-            print(extension, description)
-            self.assertIsNotNone(description)
 
     def testLeafMinVersion(self):
         self.assertTrue(checkSupportedLeaf(None))

@@ -4,6 +4,7 @@ coverage
 flake8
 flake8-html
 nose
+pytest
 ## Tools
 autopep8
 git-review

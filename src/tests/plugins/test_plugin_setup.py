@@ -8,7 +8,7 @@ from leaf.constants import LeafFiles
 from tests.testutils import LEAF_UT_SKIP, LeafCliWrapper
 
 
-class TestExtSetup(LeafCliWrapper):
+class TestPluginSetup(LeafCliWrapper):
 
     def __init__(self, methodName):
         LeafCliWrapper.__init__(self, methodName)
@@ -97,14 +97,14 @@ class TestExtSetup(LeafCliWrapper):
 
 
 @unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
-class TestExtSetupVerbose(TestExtSetup):
+class TestExtSetupVerbose(TestPluginSetup):
     def __init__(self, methodName):
-        TestExtSetup.__init__(self, methodName)
+        TestPluginSetup.__init__(self, methodName)
         self.postVerbArgs.append("--verbose")
 
 
 @unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
-class TestExtSetupQuiet(TestExtSetup):
+class TestExtSetupQuiet(TestPluginSetup):
     def __init__(self, methodName):
-        TestExtSetup.__init__(self, methodName)
+        TestPluginSetup.__init__(self, methodName)
         self.postVerbArgs.append("--quiet")

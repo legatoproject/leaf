@@ -2,7 +2,7 @@
 │ 0 package - Filter: None │
 └──────────────────────────┘
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                             110 packages - Filter: None                             │
+│                             116 packages - Filter: None                             │
 ├─────────────────────────────────────┬───────────────────────┬───────────────────────┤
 │              Identifier             │      Description      │          Tags         │
 ╞═════════════════════════════════════╪═══════════════════════╪═══════════════════════╡
@@ -39,6 +39,9 @@
 │ featured-with-source_1.0            │                       │                       │
 │ install_1.0                         │ this is a description │                       │
 │ multitags_1.0                       │                       │ staticTag1,staticTag2 │
+│ pluginA_1.0                         │                       │                       │
+│ pluginA_1.1                         │                       │                       │
+│ pluginB_1.0                         │                       │                       │
 │ prereq-A_1.0                        │                       │                       │
 │ prereq-B_1.0                        │                       │                       │
 │ prereq-C_1.0                        │                       │                       │
@@ -94,6 +97,9 @@
 │ featured-with-source_1.0            │                       │                       │
 │ install_1.0                         │ this is a description │                       │
 │ multitags_1.0                       │                       │ staticTag1,staticTag2 │
+│ pluginA_1.0                         │                       │                       │
+│ pluginA_1.1                         │                       │                       │
+│ pluginB_1.0                         │                       │                       │
 │ prereq-A_1.0                        │                       │                       │
 │ prereq-B_1.0                        │                       │                       │
 │ prereq-C_1.0                        │                       │                       │

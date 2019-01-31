@@ -9,12 +9,10 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-from argparse import ArgumentParser
 
+from leaf.cli.plugins import LeafPluginCommand
 from leaf.core.coreutils import groupPackageIdentifiersByName
 from leaf.core.error import InvalidPackageNameException
-from leaf.core.workspacemanager import WorkspaceManager
-from leaf.format.logger import Verbosity
 from leaf.model.package import PackageIdentifier
 
 
@@ -30,38 +28,18 @@ def getLatestAvailablePackage(motif, piList):
     return out
 
 
-if __name__ == '__main__':
-    parser = ArgumentParser(
-        prog="leaf update",
-        description='update packages from current profile')
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument("-v", "--verbose",
-                       dest="verbosity",
-                       action='store_const',
-                       const=Verbosity.VERBOSE,
-                       default=Verbosity.DEFAULT,
-                       help="increase output verbosity")
-    group.add_argument("-q", "--quiet",
-                       dest="verbosity",
-                       action='store_const',
-                       const=Verbosity.QUIET,
-                       help="decrease output verbosity")
-    parser.add_argument('-p', '--add-package',
-                        dest='packages',
-                        action='append',
-                        metavar='PKG_NAME',
-                        help="specific packages to update")
-    try:
-        import argcomplete
-        argcomplete.autocomplete(parser)
-    except ImportError:
-        pass
-    args = parser.parse_args()
+class UpdagePlugin(LeafPluginCommand):
 
-    try:
-        workspaceManager = WorkspaceManager(
-            WorkspaceManager.findRoot(),
-            args.verbosity)
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
+        parser.add_argument('-p', '--add-package',
+                            dest='packages',
+                            action='append',
+                            metavar='PKG_NAME',
+                            help="specific packages to update")
+
+    def execute(self, args, uargs):
+        workspaceManager = self.getWorkspaceManager(args)
         logger = workspaceManager.logger
 
         profileName = workspaceManager.getCurrentProfileName()
@@ -116,6 +94,3 @@ if __name__ == '__main__':
             profile.addPackages(updatePiList)
             workspaceManager.updateProfile(profile)
             workspaceManager.provisionProfile(profile)
-    except Exception as e:
-        workspaceManager.printException(e)
-        exit(1)

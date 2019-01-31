@@ -20,15 +20,16 @@ from tempfile import NamedTemporaryFile
 import gnupg
 
 from leaf import __version__
-from leaf.constants import EnvConstants, JsonConstants, LeafConstants, \
-    LeafFiles
-from leaf.core.coreutils import StepExecutor, VariableResolver, findManifest, \
-    isLatestPackage
+from leaf.constants import (EnvConstants, JsonConstants, LeafConstants,
+                            LeafFiles)
+from leaf.core.coreutils import (StepExecutor, VariableResolver, findManifest,
+                                 isLatestPackage)
 from leaf.core.dependencies import DependencyUtils
-from leaf.core.error import BadRemoteUrlException, \
-    InvalidPackageNameException, LeafException, LeafOutOfDateException, \
-    NoEnabledRemoteException, NoPackagesInCacheException, NoRemoteException, \
-    UserCancelException
+from leaf.core.error import (BadRemoteUrlException,
+                             InvalidPackageNameException, LeafException,
+                             LeafOutOfDateException, NoEnabledRemoteException,
+                             NoPackagesInCacheException, NoRemoteException,
+                             UserCancelException)
 from leaf.core.lock import LockFile
 from leaf.format.formatutils import sizeof_fmt
 from leaf.format.logger import TextLogger
@@ -37,13 +38,13 @@ from leaf.format.renderer.question import QuestionRenderer
 from leaf.format.theme import ThemeManager
 from leaf.model.config import UserConfiguration
 from leaf.model.environment import Environment
-from leaf.model.package import AvailablePackage, InstalledPackage, \
-    LeafArtifact, PackageIdentifier
+from leaf.model.package import (AvailablePackage, InstalledPackage,
+                                LeafArtifact, PackageIdentifier)
 from leaf.model.remote import Remote
-from leaf.utils import downloadData, downloadFile, getAltEnvPath, \
-    getCachedArtifactName, getTotalSize, isFolderIgnored, isNotInteractive, \
-    jsonLoadFile, jsonWriteFile, markFolderAsIgnored, mkTmpLeafRootDir, \
-    versionComparator_lt
+from leaf.utils import (downloadData, downloadFile, getCachedArtifactName,
+                        getTotalSize, isFolderIgnored, isNotInteractive,
+                        jsonLoadFile, jsonWriteFile, markFolderAsIgnored,
+                        mkTmpLeafRootDir, versionComparator_lt)
 
 
 class ConfigurationManager():
@@ -51,12 +52,8 @@ class ConfigurationManager():
         '''
         Constructor
         '''
-        self.configurationFolder = getAltEnvPath(EnvConstants.CUSTOM_CONFIG,
-                                                 LeafFiles.DEFAULT_CONFIG_FOLDER,
-                                                 mkdirIfNeeded=True)
-        self.cacheFolder = getAltEnvPath(EnvConstants.CUSTOM_CACHE,
-                                         LeafFiles.DEFAULT_CACHE_FOLDER,
-                                         mkdirIfNeeded=True)
+        self.configurationFolder = LeafFiles.getConfigFolder()
+        self.cacheFolder = LeafFiles.getCacheFolder()
         self.initLeafSettings()
 
     def initLeafSettings(self, force=False):
@@ -65,15 +62,6 @@ class ConfigurationManager():
             if k in userEnvMap:
                 if force or k not in os.environ:
                     os.environ[k] = userEnvMap[k]
-
-    def _getSkelConfigurationFile(self, filename):
-        '''
-        Try to find a default configuration file
-        '''
-        if filename in LeafFiles.SKEL_FILES:
-            for candidate in LeafFiles.SKEL_FILES[filename]:
-                if candidate.exists():
-                    return candidate
 
     def getConfigurationFile(self, filename, checkExists=False):
         '''
@@ -90,17 +78,16 @@ class ConfigurationManager():
         Read the configuration if it exists, else return the the default configuration
         '''
         return UserConfiguration(
-            self._getSkelConfigurationFile(LeafFiles.CONFIG_FILENAME),
+            LeafFiles.ETC_PREFIX / LeafFiles.CONFIG_FILENAME,
             self.getConfigurationFile(LeafFiles.CONFIG_FILENAME))
 
     def writeConfiguration(self, usrc):
         '''
         Write the given configuration
         '''
-        skelFile = self._getSkelConfigurationFile(LeafFiles.CONFIG_FILENAME)
         usrc.writeLayerToFile(
             self.getConfigurationFile(LeafFiles.CONFIG_FILENAME),
-            previousLayerFile=skelFile,
+            previousLayerFile=LeafFiles.ETC_PREFIX / LeafFiles.CONFIG_FILENAME,
             pp=True)
 
     def getBuiltinEnvironment(self):
@@ -128,8 +115,7 @@ class LoggerManager(ConfigurationManager):
             LeafFiles.THEMES_FILENAME, checkExists=True)
         # If the theme file does not exists, try to find a skeleton
         if themesFile is None:
-            themesFile = self._getSkelConfigurationFile(
-                LeafFiles.THEMES_FILENAME)
+            themesFile = LeafFiles.ETC_PREFIX / LeafFiles.THEMES_FILENAME
         self.themeManager = ThemeManager(themesFile)
         self.logger = TextLogger(verbosity)
 

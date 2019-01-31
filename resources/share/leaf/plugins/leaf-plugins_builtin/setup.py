@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# LEAF_DESCRIPTION all in one command to create a profile in a workspace
 '''
 Leaf Package Manager
 
@@ -16,12 +14,84 @@ from argparse import ArgumentParser
 from collections import OrderedDict
 
 from leaf.cli.cliutils import addVerboseQuietArgs
+from leaf.cli.plugins import LeafPluginCommand
 from leaf.core.coreutils import groupPackageIdentifiersByName
 from leaf.core.error import InvalidPackageNameException, LeafException
-from leaf.core.workspacemanager import WorkspaceManager
 from leaf.format.logger import Verbosity
 from leaf.model.package import PackageIdentifier
 from leaf.model.workspace import Profile
+
+
+class SetupPlugin(LeafPluginCommand):
+
+    def _configureParser(self, parser):
+        super()._configureParser(parser)
+        parser.add_argument('-p', '--add-package',
+                            dest='packages',
+                            action='append',
+                            metavar='PKG_NAME',
+                            help="add a package to profile")
+        parser.add_argument('--set',
+                            dest='envVars',
+                            action='append',
+                            metavar='KEY=VALUE',
+                            help="add environment variable to profile")
+        parser.add_argument('profiles', nargs=argparse.OPTIONAL,
+                            metavar='PROFILE', help='the profile name')
+
+    def execute(self, args, uargs):
+        wm = self.getWorkspaceManager(
+            args, autoFindWorkspace=False, checkInitialized=False)
+        cmdGenerator = LeafCommandGenerator()
+        cmdGenerator.initCommonArgs(args)
+
+        # Checks
+        if args.packages is None or len(args.packages) == 0:
+            raise LeafException(
+                "You need to add at least one package to your profile")
+
+        # Compute PackageIdentifiers
+        piList = resolveLatest(args.packages, wm)
+
+        # Find or create workspace
+        if not wm.isWorkspaceInitialized():
+            wm.confirm("Cannot find workspace, initialize one in %s?" % wm.workspaceRootFolder,
+                       raiseOnDecline=True)
+            leafExec(cmdGenerator, wm.logger, "init")
+
+        # Profile name
+        profileName = args.profiles
+        if profileName is None:
+            profileName = Profile.genDefaultName(piList)
+            wm.logger.printDefault(
+                "No profile name given, the new profile will be automatically named %s" % profileName)
+
+        # Create profile
+        leafExec(cmdGenerator, wm.logger,
+                 ("profile", "create"),
+                 [profileName])
+
+        # Update profile with packages
+        configArgs = [profileName]
+        for pi in piList:
+            configArgs += ["-p", str(pi)]
+        leafExec(cmdGenerator, wm.logger,
+                 ("profile", "config"),
+                 configArgs)
+
+        # Set profile env
+        if args.envVars is not None:
+            configArgs = [profileName]
+            for e in args.envVars:
+                configArgs += ["--set", e]
+            leafExec(cmdGenerator, wm.logger,
+                     ("env", "profile"),
+                     configArgs)
+
+        # Run sync command
+        leafExec(cmdGenerator, wm.logger,
+                 ("profile", "sync"),
+                 [profileName])
 
 
 class LeafCommandGenerator():
@@ -74,7 +144,7 @@ def resolveLatest(pkgMotifList, pm):
                 # Unknwon package
                 pi = None
         elif pkgMotif in groupedPackages:
-                # Get latest of the sorted list
+            # Get latest of the sorted list
             pi = groupedPackages[pkgMotif][-1]
 
         # Check if package identifier has been found
@@ -94,7 +164,6 @@ def leafExec(cmdGenerator, logger, verb, arguments=None):
                          stdout=None,
                          stderr=subprocess.STDOUT)
     if rc != 0:
-        raise SystemExit(rc)
         logger.printError("Command exited with %d" % rc)
         raise LeafException("Sub command failed: '%s'" % (" ".join(command)))
 
@@ -106,73 +175,4 @@ if __name__ == '__main__':
 
     addVerboseQuietArgs(parser)
 
-    parser.add_argument('-p', '--add-package',
-                        dest='packages',
-                        action='append',
-                        metavar='PKG_NAME',
-                        help="add a package to profile")
-    parser.add_argument('--set',
-                        dest='envVars',
-                        action='append',
-                        metavar='KEY=VALUE',
-                        help="add environment variable to profile")
-
-    parser.add_argument('profiles', nargs=argparse.OPTIONAL,
-                        metavar='PROFILE', help='the profile name')
     args = parser.parse_args()
-
-    wm = WorkspaceManager(WorkspaceManager.findRoot(), args.verbosity)
-
-    try:
-        cmdGenerator = LeafCommandGenerator()
-        cmdGenerator.initCommonArgs(args)
-
-        # Checks
-        if args.packages is None:
-            raise LeafException(
-                "You need to add at least one package to your profile")
-
-        # Compute PackageIdentifiers
-        piList = resolveLatest(args.packages, wm)
-
-        # Find or create workspace
-        if not wm.isWorkspaceInitialized():
-            wm.confirm("Cannot find workspace, initialize one in %s?" % wm.workspaceRootFolder,
-                       raiseOnDecline=True)
-            leafExec(cmdGenerator, wm.logger, "init")
-
-        # Profile name
-        profileName = args.profiles
-        if profileName is None:
-            profileName = Profile.genDefaultName(piList)
-            wm.logger.printDefault(
-                "No profile name given, the new profile will be automatically named %s" % profileName)
-
-        # Create profile
-        leafExec(cmdGenerator, wm.logger,
-                 ("profile", "create"),
-                 [profileName])
-
-        # Update profile with packages
-        configArgs = [profileName]
-        for pi in piList:
-            configArgs += ["-p", str(pi)]
-        leafExec(cmdGenerator, wm.logger,
-                 ("profile", "config"),
-                 configArgs)
-
-        # Set profile env
-        if args.envVars is not None:
-            configArgs = [profileName]
-            for e in args.envVars:
-                configArgs += ["--set", e]
-            leafExec(cmdGenerator, wm.logger,
-                     ("env", "profile"),
-                     configArgs)
-
-        # Run sync command
-        leafExec(cmdGenerator, wm.logger,
-                 ("profile", "sync"),
-                 [profileName])
-    except Exception as e:
-        wm.printException(e)

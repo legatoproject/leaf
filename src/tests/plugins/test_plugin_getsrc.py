@@ -3,11 +3,13 @@
 '''
 
 import traceback
+import unittest
 
 from tests.testutils import LeafCliWrapper
 
 
-class TestExtGetsrc(LeafCliWrapper):
+@unittest.skip
+class TestPluginGetsrc(LeafCliWrapper):
 
     def __init__(self, methodName):
         LeafCliWrapper.__init__(self, methodName)

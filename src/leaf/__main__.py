@@ -6,13 +6,16 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
+
 import os
 import sys
 from signal import SIGINT, signal
 
 from leaf.cli.leaf import LeafRootCommand
-from leaf.constants import EnvConstants
+from leaf.cli.plugins import LeafPluginManager
+from leaf.constants import EnvConstants, LeafFiles
 from leaf.core.error import UserCancelException
+from leaf.core.packagemanager import ConfigurationManager
 
 
 def main():
@@ -25,8 +28,15 @@ def runLeaf(argv, catchInt=True):
         def signal_handler(sig, frame):
             raise UserCancelException()
         signal(SIGINT, signal_handler)
+    # Plugin manager
+    pm = LeafPluginManager()
+    cm = ConfigurationManager()
+    if os.getenv(EnvConstants.NOPLUGIN, "") == "":
+        pm.loadBuiltinPlugins(LeafFiles.getResource(
+            LeafFiles.PLUGINS_DIRNAME, check_exists=False))
+        pm.loadUserPlugins(cm.readConfiguration().getRootFolder())
     # Setup the app CLI parser
-    parser = LeafRootCommand().setup(None)
+    parser = LeafRootCommand(pm).setup(None)
     # Try to enable argcomplete library
     try:
         import argcomplete

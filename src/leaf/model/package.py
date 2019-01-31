@@ -9,6 +9,7 @@ Leaf Package Manager
 
 import io
 import re
+from builtins import ValueError
 from collections import OrderedDict
 from functools import total_ordering
 from pathlib import Path
@@ -17,8 +18,8 @@ from tarfile import TarFile
 from leaf.constants import JsonConstants, LeafFiles
 from leaf.core.error import InvalidPackageNameException, LeafException
 from leaf.model.base import JsonObject
-from leaf.utils import checkSupportedLeaf, jsonLoad, jsonLoadFile, resolveUrl, \
-    stringToTuple, versionComparator_lt
+from leaf.utils import (checkSupportedLeaf, jsonLoad, jsonLoadFile, resolveUrl,
+                        stringToTuple, versionComparator_lt)
 
 
 @total_ordering
@@ -283,6 +284,34 @@ class InstalledPackage(Manifest):
         for name, jsonData in self.jsonget(JsonConstants.ENTRYPOINTS, default={}).items():
             out[name] = Entrypoint(name, jsonData)
         return out
+
+    def getPluginMap(self):
+        out = OrderedDict()
+        for name, jsonData in self.jsonget(JsonConstants.PLUGINS, default={}).items():
+            out[name] = PluginDefinition(name, self, jsonData)
+        return out
+
+
+class PluginDefinition(JsonObject):
+    def __init__(self, location, ip, json):
+        JsonObject.__init__(self, json)
+        self.name = location.split(' ')[-1]
+        self.prefix = location.split(' ')[0:-1]
+        self.ip = ip
+        self.command = None
+
+    def getDescription(self):
+        return self.jsonget(JsonConstants.PLUGIN_DESCRIPTION)
+
+    def getSourceFile(self):
+        out = self.ip.folder / \
+            self.jsonget(JsonConstants.PLUGIN_SOURCE, mandatory=True)
+        if not out.exists():
+            raise ValueError("Cannot find plugin source: %s" % out)
+        return out
+
+    def getClassName(self):
+        return self.jsonget(JsonConstants.PLUGIN_CLASS)
 
 
 class Feature(JsonObject):

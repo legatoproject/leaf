@@ -1,0 +1,14 @@
+{
+  "info": {
+    "name": "pluginA",
+    "version": "1.0"
+  },
+  "plugins": {
+    "bar": {
+      "source": "plugins/bar.py"
+    },
+    "bar1": {
+      "source": "plugins/bar.py"
+    }
+  }
+}
