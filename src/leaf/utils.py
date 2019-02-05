@@ -20,16 +20,17 @@ import urllib
 from collections import OrderedDict
 from pathlib import Path
 from shutil import copyfile
+from time import sleep
 from urllib.parse import urlparse, urlunparse
 from urllib.request import urlretrieve
 
 import requests
+from requests.exceptions import RequestException
 
 from leaf import __version__
 from leaf.constants import EnvConstants, LeafConstants
-from leaf.core.error import InvalidHashException, LeafException, \
-    LeafOutOfDateException
-
+from leaf.core.error import (InvalidHashException, LeafException,
+                             LeafOutOfDateException, UserCancelException)
 
 _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
 _VERSION_SEPARATOR = re.compile("[-_.~]")
@@ -155,7 +156,44 @@ def downloadData(url, outputFile=None):
                 fp.write(stream.read())
 
 
-def downloadFile(url, folder, logger, filename=None, hash=None, bufferSize=256 * 1024):
+def downloadWithRetry(url: str, out, logger_function: callable, filename: str,
+                      timeout: int = getLeafTimeout(), retry: int = 5, buffer_size: int = 262144):
+    # Get total size
+    size_total = size_current = 0
+    headers = None
+    iteration = 0
+    while True:
+        try:
+            req = requests.get(
+                url, stream=True, headers=headers, timeout=timeout)
+            if size_total <= 0:
+                # Get total size on first request
+                size_total = int(req.headers.get('content-length', -1))
+
+            for data in req.iter_content(buffer_size):
+                size_current += out.write(data)
+                printProgress(logger_function,
+                              "Downloading " + filename,
+                              size_current,
+                              size_total)
+            return size_current
+        except RequestException as e:
+            iteration += 1
+            # Check retry
+            if iteration > retry:
+                raise e
+            # Log the retry attempt
+            logger_function(
+                "\nError while downloading, retry {}/{}".format(iteration, retry))
+            # Resume mode
+            if size_current < size_total:
+                headers = {'Range': 'bytes=%d-%d' % (size_current,
+                                                     (size_total - 1))}
+            # Prevent imediate retry
+            sleep(1)
+
+
+def downloadFile(url, folder, logger, filename=None, hash=None):
     '''
     Download an artifact and check its hash if given
     '''
@@ -189,22 +227,23 @@ def downloadFile(url, folder, logger, filename=None, hash=None, bufferSize=256 *
             elif parsedUrl.scheme.startswith("http"):
                 # http/https mode, get file length before
                 message = "Downloading " + targetFile.name
-                req = requests.get(url,
-                                   stream=True,
-                                   timeout=getLeafTimeout())
-                size = int(req.headers.get('content-length', -1))
-                currentSize = 0
-                with open(str(targetFile), 'wb') as fp:
-                    for data in req.iter_content(bufferSize):
-                        currentSize += len(data)
-                        printProgress(logger.printDefault,
-                                      message,
-                                      currentSize, size)
-                        fp.write(data)
+
+                with targetFile.open('wb') as fp:
+                    downloadWithRetry(url,
+                                      fp,
+                                      logger.printDefault,
+                                      targetFile.name)
+
             else:
                 # other scheme, use urllib
                 urlretrieve(url, str(targetFile))
             printProgress(logger.printDefault, message, 1, 1)
+        except UserCancelException:
+            pass
+        except Exception as ex:
+            logger.printDefault("")
+            logger.printError(
+                "[Error] Unable to get {0}: {1}".format(targetFile.name, ex))
         finally:
             # End line since all progress message are on the same line
             logger.printDefault("")

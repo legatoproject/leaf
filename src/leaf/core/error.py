@@ -191,5 +191,5 @@ class UnknownArgsException(LeafException):
         cmd = ' '.join(commandPath)
         LeafException.__init__(
             self,
-            "Unknwon arguments %s for command '%s'" % (' '.join(uargs), cmd),
+            "Unknown arguments %s for command '%s'" % (' '.join(uargs), cmd),
             hints="Use 'leaf %s --help' to get some help" % (cmd,))
