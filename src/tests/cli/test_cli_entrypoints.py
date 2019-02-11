@@ -4,25 +4,18 @@
 
 
 import os
-
-from tests.testutils import LeafCliWrapper
-
+from tests.testutils import LeafTestCaseWithCli
 from leaf import __version__
 
 
-class TestCliEntrypoints(LeafCliWrapper):
-
-    def __init__(self, methodName):
-        LeafCliWrapper.__init__(self, methodName)
+class TestCliEntrypoints(LeafTestCaseWithCli):
 
     def testList(self):
         self.leafExec(("package", "install"), "scripts_1.0")
 
-        with self.assertStdout(templateOut="list.out",
-                               variables={}):
+        with self.assertStdout(templateOut="list.out"):
             self.leafExec("run")
-        with self.assertStdout(templateOut="list-oneline.out",
-                               variables={}):
+        with self.assertStdout(templateOut="list-oneline.out"):
             self.leafExec("run", "--oneline")
 
     def testRun(self):

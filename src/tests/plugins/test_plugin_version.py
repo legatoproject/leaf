@@ -2,14 +2,11 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
-from tests.testutils import LeafCliWrapper
+from tests.testutils import LeafTestCaseWithCli
 from leaf import __version__
 
 
-class TestPluginVersion(LeafCliWrapper):
-
-    def __init__(self, methodName):
-        LeafCliWrapper.__init__(self, methodName)
+class TestPluginVersion(LeafTestCaseWithCli):
 
     def testVersion(self):
         self.leafExec("version")

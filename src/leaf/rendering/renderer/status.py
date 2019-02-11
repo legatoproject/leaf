@@ -8,10 +8,10 @@ Renderer for status command
 '''
 from builtins import sorted
 
-from leaf.format.alignment import HAlign
-from leaf.format.renderer.profile import ProfileListRenderer
-from leaf.format.renderer.renderer import Renderer
-from leaf.format.table import Table
+from leaf.rendering.alignment import HAlign
+from leaf.rendering.renderer.profile import ProfileListRenderer
+from leaf.rendering.renderer.renderer import Renderer
+from leaf.rendering.table import Table
 
 
 class StatusRenderer(ProfileListRenderer):

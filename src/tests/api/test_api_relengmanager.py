@@ -5,27 +5,20 @@
 import json
 import os
 
-from tests.testutils import AbstractTestWithRepo, RESOURCE_FOLDER, checkMime
-
-from leaf.constants import JsonConstants, LeafFiles
+from leaf.api import RelengManager
+from leaf.core.constants import JsonConstants, LeafFiles
 from leaf.core.error import LeafException
-from leaf.core.relengmanager import RelengManager
-from leaf.format.logger import Verbosity
+from leaf.core.jsonutils import jsonLoadFile, jsonWriteFile
+from leaf.core.utils import computeHash
 from leaf.model.package import AvailablePackage
-from leaf.utils import computeHash, jsonLoadFile, jsonWriteFile
+from tests.testutils import RESOURCE_FOLDER, LeafTestCaseWithRepo, checkMime
 
 
-VERBOSITY = Verbosity.DEFAULT
-
-
-class TestApiRelengManager(AbstractTestWithRepo):
-
-    def __init__(self, methodName):
-        AbstractTestWithRepo.__init__(self, methodName)
+class TestApiRelengManager(LeafTestCaseWithRepo):
 
     def setUp(self):
-        AbstractTestWithRepo.setUp(self)
-        self.rm = RelengManager(VERBOSITY)
+        super().setUp()
+        self.rm = RelengManager()
 
     def testPackageCompression(self):
         pkgFolder = RESOURCE_FOLDER / "install_1.0"

@@ -10,14 +10,15 @@ import argparse
 from builtins import ValueError
 from pathlib import Path
 
+from leaf.api import PackageManager
 from leaf.cli.cliutils import LeafCommand
-from leaf.core.dependencies import DependencyUtils
+from leaf.model.dependencies import DependencyUtils
 from leaf.core.error import PackageInstallInterruptedException
-from leaf.format.renderer.manifest import ManifestListRenderer
+from leaf.rendering.renderer.manifest import ManifestListRenderer
 from leaf.model.environment import Environment
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import Manifest, PackageIdentifier
-from leaf.utils import envListToMap, mkTmpLeafRootDir
+from leaf.core.utils import envListToMap, mkTmpLeafRootDir
 
 
 class PackageListCommand(LeafCommand):
@@ -43,7 +44,7 @@ class PackageListCommand(LeafCommand):
                             help="filter with given keywords")
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         pkgFilter = MetaPackageFilter()
         if 'allPackages' not in vars(args) or not args.allPackages:
@@ -117,7 +118,7 @@ class PackageDepsCommand(LeafCommand):
                             help='package identifier')
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
         env = Environment.build(
             pm.getBuiltinEnvironment(),
             pm.getUserEnvironment(),
@@ -189,7 +190,7 @@ class PackageInstallCommand(LeafCommand):
                             help='identifier of packages to install')
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         try:
             items = pm.installFromRemotes(PackageIdentifier.fromStringList(args.packages),
@@ -222,7 +223,7 @@ class PackagePrereqCommand(LeafCommand):
                             help='package identifier')
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         tmpRootFolder = args.prereqRootFolder
         if tmpRootFolder is None:
@@ -250,7 +251,7 @@ class PackageUninstallCommand(LeafCommand):
                             help='identifier of package to uninstall')
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         pm.uninstallPackages(PackageIdentifier.fromStringList(args.packages))
 
@@ -270,7 +271,7 @@ class PackageSyncCommand(LeafCommand):
                             help='name of package to uninstall')
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         pm.syncPackages(PackageIdentifier.fromStringList(args.packages))
 
@@ -294,7 +295,7 @@ class PackageUpgradeCommand(LeafCommand):
                             help='name of the packages to upgrade')
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         env = Environment.build(
             pm.getBuiltinEnvironment(),

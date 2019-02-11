@@ -6,10 +6,10 @@ Renderer for search and package list commands
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from leaf.format.alignment import HAlign
-from leaf.format.formatutils import sizeof_fmt
-from leaf.format.renderer.renderer import Renderer
-from leaf.format.table import Table
+from leaf.rendering.alignment import HAlign
+from leaf.rendering.formatutils import sizeof_fmt
+from leaf.rendering.renderer.renderer import Renderer
+from leaf.rendering.table import Table
 from leaf.model.package import AvailablePackage, InstalledPackage, ConditionalPackageIdentifier
 
 

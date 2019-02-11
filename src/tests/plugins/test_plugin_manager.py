@@ -5,12 +5,13 @@
 from pathlib import Path
 
 from leaf.cli.plugins import LeafPluginCommand, LeafPluginManager
-from tests.testutils import RESOURCE_FOLDER, LeafCliWrapper
+from tests.testutils import RESOURCE_FOLDER, LeafTestCaseWithCli
 
 
-class TestPluginManagerCli(LeafCliWrapper):
+class TestPluginManagerCli(LeafTestCaseWithCli):
 
     def checkCommands(self, pm, commandNames, prefix=(), ignored=None):
+        prefix = ('leaf', ) + prefix
         for c in pm.getCommands(prefix):
             self.assertIsInstance(c, LeafPluginCommand)
         self.assertEqual(commandNames,

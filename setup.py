@@ -46,12 +46,13 @@ setup(name='leaf',
       setup_requires=['setuptools_scm'],
       package_dir={'': 'src'},
       packages=[
-          'leaf',
-          'leaf.cli',
-          'leaf.core',
-          'leaf.format',
-          'leaf.format.renderer',
-          'leaf.model'
+          "leaf",
+          "leaf.core",
+          "leaf.model",
+          "leaf.rendering",
+          "leaf.rendering.renderer",
+          "leaf.api",
+          "leaf.cli"
       ],
       entry_points={
           'console_scripts': [

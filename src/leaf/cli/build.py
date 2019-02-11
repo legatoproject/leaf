@@ -11,10 +11,10 @@ import argparse
 from builtins import ValueError
 from pathlib import Path
 
+from leaf.api import RelengManager
 from leaf.cli.cliutils import LeafCommand, stringToBoolean
-from leaf.constants import JsonConstants, LeafFiles
+from leaf.core.constants import JsonConstants, LeafFiles
 from leaf.core.error import LeafException
-from leaf.core.relengmanager import RelengManager
 
 
 class BuildPackSubCommand(LeafCommand):
@@ -63,7 +63,7 @@ class BuildPackSubCommand(LeafCommand):
                             help="extra arguments given to tar command line\n(must start with '--')")
 
     def execute(self, args, uargs):
-        rm = RelengManager(self.getVerbosity(args))
+        rm = RelengManager()
 
         pkgFolder = None
         if args.inputFolder is None:
@@ -123,7 +123,7 @@ class BuildIndexSubCommand(LeafCommand):
                             help='leaf artifacts')
 
     def execute(self, args, uargs):
-        rm = RelengManager(self.getVerbosity(args))
+        rm = RelengManager()
         rm.generateIndex(args.outputFile,
                          args.artifacts,
                          name=args.index_name,
@@ -207,7 +207,7 @@ class BuildManifestSubCommand(LeafCommand):
                         help='add a tag')
 
     def execute(self, args, uargs):
-        rm = RelengManager(self.getVerbosity(args))
+        rm = RelengManager()
 
         # Guess output file
         outputFile = LeafFiles.MANIFEST

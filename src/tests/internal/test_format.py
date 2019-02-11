@@ -2,16 +2,15 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
-from tests.testutils import AbstractTestWithChecker
+from leaf.rendering.alignment import HAlign, VAlign
+from leaf.rendering.chars import _SEPARATORS_ASCII
+from leaf.rendering.formatutils import sizeof_fmt
+from leaf.rendering.table import Table
+from leaf.rendering.theme import ThemeManager
+from tests.testutils import LeafTestCase
 
-from leaf.format.alignment import HAlign, VAlign
-from leaf.format.chars import _SEPARATORS_ASCII
-from leaf.format.formatutils import sizeof_fmt
-from leaf.format.table import Table
-from leaf.format.theme import ThemeManager
 
-
-class TestFormat(AbstractTestWithChecker):
+class TestFormat(LeafTestCase):
 
     def testsizeof_fmt(self):
         self.assertEqual(sizeof_fmt(0), "0 bytes")
@@ -36,8 +35,7 @@ class TestFormat(AbstractTestWithChecker):
 
     def testTable(self):
         table = self._createTable()
-        with self.assertStdout(
-                templateOut="table.out"):
+        with self.assertStdout(templateOut="table.out"):
             print(table)
             table.removeColumns({1, 2, 4, 5})
             print(table)
@@ -45,6 +43,5 @@ class TestFormat(AbstractTestWithChecker):
     def testAsciiSwitch(self):
         table = self._createTable()
         table.separators = _SEPARATORS_ASCII
-        with self.assertStdout(
-                templateOut="table.out"):
+        with self.assertStdout(templateOut="table.out"):
             print(table)

@@ -13,15 +13,16 @@ from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
 
-from leaf.constants import EnvConstants, JsonConstants, LeafConstants, \
-    LeafFiles
-from leaf.core.coreutils import isLatestPackage
+from leaf.api import LoggerManager
+from leaf.core.constants import (JsonConstants, LeafConstants, LeafFiles,
+                                 LeafSettings)
 from leaf.core.error import LeafException
-from leaf.core.packagemanager import LoggerManager
-from leaf.model.modelutils import layerModelUpdate
-from leaf.model.package import AvailablePackage, ConditionalPackageIdentifier, \
-    LeafArtifact, Manifest, PackageIdentifier
-from leaf.utils import computeHash, jsonLoadFile, jsonToString, jsonWriteFile
+from leaf.core.jsonutils import (jsonLoadFile, jsonToString, jsonWriteFile,
+                                 layerModelUpdate)
+from leaf.core.utils import computeHash
+from leaf.model.modelutils import isLatestPackage
+from leaf.model.package import (AvailablePackage, ConditionalPackageIdentifier,
+                                LeafArtifact, Manifest, PackageIdentifier)
 
 
 class RelengManager(LoggerManager):
@@ -29,8 +30,8 @@ class RelengManager(LoggerManager):
     Methods needed for releng, ie generate packages and maintain repository
     '''
 
-    def __init__(self, verbosity):
-        LoggerManager.__init__(self, verbosity)
+    def __init__(self):
+        LoggerManager.__init__(self)
 
     def _getNowDate(self):
         return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
@@ -237,7 +238,7 @@ class RelengManager(LoggerManager):
 
     def executeTarProcess(self, outputFile, workingFolder, tar="tar", tarExtraArgs=None):
 
-        command = [os.getenv(EnvConstants.CUSTOM_TAR, "tar"), "-c"]
+        command = [LeafSettings.TAR_BINARY.value, "-c"]
         command += ['-f', str(outputFile)]
         command += ['-C', str(workingFolder)]
 

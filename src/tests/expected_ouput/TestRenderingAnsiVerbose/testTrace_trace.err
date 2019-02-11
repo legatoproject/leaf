@@ -19,12 +19,12 @@ Random message for this exception
   [32mthis is a first hint with a [0m[1m[32mcommand[0m[32m[0m
   [32manother one with [0m[1m[32ma first command[0m[32m and [0m[1m[32ma second one[0m[32m[0m
 Traceback (most recent call last):
-  File "{ROOT_FOLDER}/src/tests/internal/test_rendering.py", line 279, in _printError
+  File "{TESTS_PROJECT_FOLDER}/src/tests/internal/test_rendering.py", line 263, in _printError
     1 / 0  # Ooops !
 ZeroDivisionError: division by zero
 ---- Logger error ----
 Random message for this exception
 Traceback (most recent call last):
-  File "{ROOT_FOLDER}/src/tests/internal/test_rendering.py", line 279, in _printError
+  File "{TESTS_PROJECT_FOLDER}/src/tests/internal/test_rendering.py", line 263, in _printError
     1 / 0  # Ooops !
 ZeroDivisionError: division by zero

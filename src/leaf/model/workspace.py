@@ -9,9 +9,9 @@ Leaf Package Manager
 
 from collections import OrderedDict
 
-from leaf.constants import JsonConstants, LeafConstants, LeafFiles
+from leaf.core.constants import JsonConstants, LeafConstants, LeafFiles
 from leaf.core.error import LeafException
-from leaf.model.base import JsonObject
+from leaf.core.jsonutils import JsonObject
 from leaf.model.environment import IEnvObject
 from leaf.model.package import InstalledPackage, PackageIdentifier
 

@@ -1,34 +1,34 @@
-import os
 import shutil
 import subprocess
 import sys
 import unittest
+import platform
 from builtins import ValueError
 from pathlib import Path
 from tempfile import mkdtemp
 from unittest.case import TestCase
 
 from _io import StringIO
+from leaf import __version__
 from leaf.__main__ import runLeaf
-from leaf.constants import EnvConstants, JsonConstants, LeafFiles
-from leaf.core.relengmanager import RelengManager
-from leaf.format.logger import Verbosity
+from leaf.api import RelengManager
+from leaf.core.constants import JsonConstants, LeafFiles, LeafSettings
+from leaf.core.jsonutils import jsonLoadFile, jsonWriteFile
+from leaf.core.settings import Setting
 from leaf.model.package import Manifest, PackageIdentifier
-from leaf.utils import jsonLoadFile, jsonWriteFile
 
-os.environ[EnvConstants.NON_INTERACTIVE] = "1"
+LeafSettings.NON_INTERACTIVE.value = 1
 
 TestCase.maxDiff = None
-LEAF_UT_DEBUG = os.environ.get("LEAF_UT_DEBUG")
-LEAF_UT_SKIP = os.environ.get("LEAF_UT_SKIP", "")
-LEAF_UT_CREATE_TEMPLATE = os.environ.get("LEAF_UT_CREATE_TEMPLATE")
+LEAF_UT_DEBUG = Setting("LEAF_UT_DEBUG")
+LEAF_UT_SKIP = Setting("LEAF_UT_SKIP", "")
+LEAF_UT_CREATE_TEMPLATE = Setting("LEAF_UT_CREATE_TEMPLATE")
 
-ROOT_FOLDER = Path(__file__).parent.parent.parent
-RESOURCE_FOLDER = ROOT_FOLDER / "src/tests/resources"
-EXPECTED_OUTPUT_FOLDER = ROOT_FOLDER / "src/tests/expected_ouput"
-PLUGINS_FOLDER = ROOT_FOLDER / "resources/share/leaf/plugins"
+PROJECT_ROOT_FOLDER = Path(__file__).parent.parent.parent
+RESOURCE_FOLDER = PROJECT_ROOT_FOLDER / "src/tests/resources"
+EXPECTED_OUTPUT_FOLDER = PROJECT_ROOT_FOLDER / "src/tests/expected_ouput"
+PLUGINS_FOLDER = PROJECT_ROOT_FOLDER / "resources/share/leaf/plugins"
 
-SEPARATOR = "--------------------"
 TAR_EXTRA_ARGS = {
     PackageIdentifier.fromString("compress-xz_1.0"): ('-z', '.'),
     PackageIdentifier.fromString("compress-bz2_1.0"): ('-j', '.'),
@@ -42,7 +42,7 @@ ALT_INDEX_CONTENT = {
 }
 
 TEST_GPG_FINGERPRINT = "E35D6817397359074160F68952ECE808A2BC372C"
-TEST_GPG_HOMEDIR = ROOT_FOLDER / 'src/tests/gpg'
+TEST_GPG_HOMEDIR = PROJECT_ROOT_FOLDER / 'src/tests/gpg'
 
 
 class StringIOWrapper(StringIO):
@@ -102,7 +102,7 @@ class ContentChecker():
             template = classFolder / template
 
             # Generate template if envar is set
-            if LEAF_UT_CREATE_TEMPLATE is not None:
+            if LEAF_UT_CREATE_TEMPLATE.as_boolean():
                 if not classFolder.exists():
                     classFolder.mkdir()
                 for line in streamLines:
@@ -136,10 +136,33 @@ class ContentChecker():
         return line
 
 
-class AbstractTestWithChecker(unittest.TestCase):
+class LeafTestCase(unittest.TestCase):
 
-    def __init__(self, methodName):
-        TestCase.__init__(self, methodName)
+    def __init__(self, *args, verbosity=None, **kwargs):
+        TestCase.__init__(self, *args, **kwargs)
+        self.__verbosity = verbosity
+
+    @property
+    def verbosity(self):
+        return self.__verbosity
+
+    def setUp(self):
+        if self.__verbosity and LEAF_UT_SKIP.is_set():
+            if self.__verbosity.lower() in LEAF_UT_SKIP.value.lower():
+                self.skipTest("Verbosity %s is ignored" % self.__verbosity)
+
+        print("[LEAF_VERBOSE]  %s  -->  %s" %
+              (self.__class__.__name__, self.__verbosity))
+        LeafSettings.VERBOSITY.value = self.__verbosity
+
+    def _get_default_variables(self):
+        return {
+            "{TESTS_LEAF_VERSION}": __version__,
+            "{TESTS_PLATFORM_SYSTEM}": platform.system(),
+            "{TESTS_PLATFORM_MACHINE}": platform.machine(),
+            "{TESTS_PLATFORM_RELEASE}": platform.release(),
+            "{TESTS_PROJECT_FOLDER}": PROJECT_ROOT_FOLDER
+        }
 
     def assertStdout(self, templateOut=None, templateErr=[], variables=None, byMethod=True):
         '''
@@ -148,68 +171,77 @@ class AbstractTestWithChecker(unittest.TestCase):
         - Empty list, tuple or set -> the stream is checked as empty
         - File name -> the stream is compared to the file content
         '''
+        vars = self._get_default_variables()
+        if variables is not None:
+            vars.update(variables)
         return ContentChecker(self,
                               testCase=self,
                               templateOut=templateOut,
                               templateErr=templateErr,
-                              variables=variables,
+                              variables=vars,
                               byMethod=byMethod)
 
 
-class AbstractTestWithRepo(AbstractTestWithChecker):
+class LeafTestCaseWithRepo(LeafTestCase):
 
     ROOT_FOLDER = None
     REPO_FOLDER = None
     VOLATILE_FOLDER = None
 
-    def __init__(self, methodName):
-        AbstractTestWithChecker.__init__(self, methodName)
-
     @classmethod
     def setUpClass(cls):
-        AbstractTestWithChecker.setUpClass()
+        LeafTestCase.setUpClass()
 
-        if LEAF_UT_DEBUG is not None:
-            AbstractTestWithRepo.ROOT_FOLDER = Path("/tmp/leaf")
+        if LEAF_UT_DEBUG.as_boolean():
+            LeafTestCaseWithRepo.ROOT_FOLDER = Path("/tmp/leaf")
         else:
-            AbstractTestWithRepo.ROOT_FOLDER = Path(
+            LeafTestCaseWithRepo.ROOT_FOLDER = Path(
                 mkdtemp(prefix="leaf_tests_"))
 
-        AbstractTestWithRepo.REPO_FOLDER = AbstractTestWithRepo.ROOT_FOLDER / "repository"
-        AbstractTestWithRepo.VOLATILE_FOLDER = AbstractTestWithRepo.ROOT_FOLDER / "volatile"
+        LeafTestCaseWithRepo.REPO_FOLDER = LeafTestCaseWithRepo.ROOT_FOLDER / "repository"
+        LeafTestCaseWithRepo.VOLATILE_FOLDER = LeafTestCaseWithRepo.ROOT_FOLDER / "volatile"
 
-        shutil.rmtree(str(AbstractTestWithRepo.ROOT_FOLDER),
+        shutil.rmtree(str(LeafTestCaseWithRepo.ROOT_FOLDER),
                       ignore_errors=True)
 
         assert RESOURCE_FOLDER.exists(), "Cannot find resources folder!"
         generateRepo(RESOURCE_FOLDER,
-                     AbstractTestWithRepo.REPO_FOLDER)
+                     LeafTestCaseWithRepo.REPO_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
-        if LEAF_UT_DEBUG is None:
-            shutil.rmtree(str(AbstractTestWithRepo.ROOT_FOLDER), True)
+        if not LEAF_UT_DEBUG.as_boolean():
+            shutil.rmtree(str(LeafTestCaseWithRepo.ROOT_FOLDER), True)
 
     def setUp(self):
-        shutil.rmtree(str(AbstractTestWithRepo.VOLATILE_FOLDER),
+        shutil.rmtree(str(LeafTestCaseWithRepo.VOLATILE_FOLDER),
                       ignore_errors=True)
-        AbstractTestWithRepo.VOLATILE_FOLDER.mkdir()
-        os.environ[EnvConstants.CUSTOM_CONFIG] = str(
-            self.getConfigurationFolder())
-        os.environ[EnvConstants.CUSTOM_CACHE] = str(
-            self.getCacheFolder())
+        LeafTestCaseWithRepo.VOLATILE_FOLDER.mkdir()
+        LeafSettings.CONFIG_FOLDER.value = self.getConfigurationFolder()
+        LeafSettings.CACHE_FOLDER.value = self.getCacheFolder()
+
+    def _get_default_variables(self):
+        out = super()._get_default_variables()
+        out.update({
+            "{TESTS_WORKSPACE_FOLDER}": self.getWorkspaceFolder(),
+            "{TESTS_REMOTE_URL}": self.getRemoteUrl(),
+            "{TESTS_REMOTE_URL2}": self.getRemoteUrl2(),
+            "{TESTS_INSTALL_FOLDER}": self.getInstallFolder(),
+            "{TESTS_CACHE_FOLDER}": self.getCacheFolder()
+        })
+        return out
 
     def tearDown(self):
         pass
 
     def getRemoteUrl(self):
-        return (AbstractTestWithRepo.REPO_FOLDER / "index.json").as_uri()
+        return (LeafTestCaseWithRepo.REPO_FOLDER / "index.json").as_uri()
 
     def getRemoteUrl2(self):
-        return str(AbstractTestWithRepo.REPO_FOLDER / "index2.json")
+        return str(LeafTestCaseWithRepo.REPO_FOLDER / "index2.json")
 
     def getVolatileItem(self, name, mkdir=True):
-        out = AbstractTestWithRepo.VOLATILE_FOLDER / name
+        out = LeafTestCaseWithRepo.VOLATILE_FOLDER / name
         if mkdir and not out.is_dir():
             out.mkdir()
         return out
@@ -268,24 +300,26 @@ class AbstractTestWithRepo(AbstractTestWithChecker):
             self.assertEqual(symlinkCount, len(contentList))
 
 
-class LeafCliWrapper(AbstractTestWithRepo):
-
-    def __init__(self, methodName):
-        AbstractTestWithRepo.__init__(self, methodName)
-        self.preVerbArgs = []
-        self.postVerbArgs = []
+class LeafTestCaseWithCli(LeafTestCaseWithRepo):
 
     @classmethod
     def setUpClass(cls):
-        AbstractTestWithRepo.setUpClass()
-        os.environ[EnvConstants.CUSTOM_RESOURCES] = str(PLUGINS_FOLDER.parent)
+        LeafTestCaseWithRepo.setUpClass()
+        LeafSettings.RESOURCES_FOLDER.value = PLUGINS_FOLDER.parent
 
     @classmethod
     def tearDownClass(cls):
-        AbstractTestWithRepo.tearDownClass()
+        LeafTestCaseWithRepo.tearDownClass()
+
+    def _get_default_variables(self):
+        out = super()._get_default_variables()
+        out.update({
+            "{TESTS_RESOURCES_FOLDER}": LeafSettings.RESOURCES_FOLDER.value
+        })
+        return out
 
     def setUp(self):
-        AbstractTestWithRepo.setUp(self)
+        LeafTestCaseWithRepo.setUp(self)
         self.leafExec("config", "--root", self.getInstallFolder())
         self.leafExec(("remote", "add"), "--insecure",
                       "default", self.getRemoteUrl())
@@ -296,10 +330,16 @@ class LeafCliWrapper(AbstractTestWithRepo):
         cmd = ' '.join(command)
         if bin is not None:
             cmd = bin + ' ' + cmd
-        rc, stdout = subprocess.getstatusoutput(cmd)
-        if expectedRc is not None:
-            self.assertEqual(expectedRc, rc)
-        return stdout
+        # Mask verbosity if set
+        oldVerbosity = LeafSettings.VERBOSITY.value
+        try:
+            LeafSettings.VERBOSITY.value = None
+            rc, stdout = subprocess.getstatusoutput(cmd)
+            if expectedRc is not None:
+                self.assertEqual(expectedRc, rc)
+            return stdout
+        finally:
+            LeafSettings.VERBOSITY.value = oldVerbosity
 
     def leafExec(self, verb, *args,
                  altWorkspace=None, expectedRc=0):
@@ -307,23 +347,31 @@ class LeafCliWrapper(AbstractTestWithRepo):
             altWorkspace = self.getWorkspaceFolder()
 
         command = []
-        command += self.preVerbArgs
+        if self.verbosity == "quiet":
+            command.append("--quiet")
+        elif self.verbosity == "verbose":
+            command.append("--verbose")
         command += ("--non-interactive", "--workspace", altWorkspace)
         if isinstance(verb, (list, tuple)):
             command += verb
         else:
             command.append(verb)
-        command += self.postVerbArgs
         if args is not None:
             command += args
         self.eazyExecute(command, expectedRc)
 
     def eazyExecute(self, command, expectedRc):
         command = [str(i) for i in command]
-        out = runLeaf(command)
-        if expectedRc is not None:
-            self.assertEqual(expectedRc, out, " ".join(command))
-        return out
+        # Mask verbosity if set
+        oldVerbosity = LeafSettings.VERBOSITY.value
+        try:
+            LeafSettings.VERBOSITY.value = None
+            out = runLeaf(command)
+            if expectedRc is not None:
+                self.assertEqual(expectedRc, out, " ".join(command))
+            return out
+        finally:
+            LeafSettings.VERBOSITY.value = oldVerbosity
 
 
 def generateRepo(sourceFolder, outputFolder):
@@ -332,7 +380,7 @@ def generateRepo(sourceFolder, outputFolder):
     artifactsList = []
     artifactsList2 = []
 
-    rm = RelengManager(Verbosity.QUIET)
+    rm = RelengManager()
     for packageFolder in sourceFolder.iterdir():
         if packageFolder.is_dir() and PackageIdentifier.isValidIdentifier(packageFolder.name):
             manifestFile = packageFolder / LeafFiles.MANIFEST

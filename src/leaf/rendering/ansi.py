@@ -8,10 +8,9 @@ Fake Ansi module to manage the lack of colorama module
 '''
 import re
 
-from leaf.constants import LeafConstants
-from leaf.format.formatutils import isatty
-from leaf.utils import versionComparator_lt
-
+from leaf.core.constants import LeafConstants
+from leaf.rendering.formatutils import isatty
+from leaf.core.utils import versionComparator_lt
 
 # Ansi chars regex
 ansiCharsRegex = re.compile(r'\x1b[^m]*m')

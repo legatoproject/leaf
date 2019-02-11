@@ -1,78 +1,129 @@
-'''
-Leaf Package Manager
 
-@author:    Legato Tooling Team <letools@sierrawireless.com>
-@copyright: Sierra Wireless. All rights reserved.
-@contact:   Legato Tooling Team <letools@sierrawireless.com>
-@license:   https://www.mozilla.org/en-US/MPL/2.0/
-'''
+import os
+import subprocess
+from builtins import sorted
+
+from leaf.core.constants import LeafConstants
+from leaf.core.error import InvalidPackageNameException
+from leaf.model.environment import Environment
+from leaf.model.package import PackageIdentifier
+from leaf.model.steps import VariableResolver
 
 
-from collections import OrderedDict
-
-
-def layerModelUpdate(left, right, listAppend=False):
+def executeCommand(*args, cwd=None, env=None, shell=True, displayStdout=False):
     '''
-    Update the *left* model with values from *right*
-    Both left & right have to be dict objects
+    Execute a process and returns the return code.
+    If 'shell' is set (true means bash, else set the string value), then the command is run in a $SHELL -c
+    and the env is set via multiple export commands to preserve variable overriding
     '''
-    if not isinstance(left, dict):
-        raise ValueError("Problem with json layer")
-    if not isinstance(right, dict):
-        raise ValueError("Problem with json layer")
 
-    for key in list(left.keys()):
-        if key in right:
-            if right[key] is None:
-                # Delete value
-                del left[key]
-            elif isinstance(left[key], dict) and isinstance(right[key], dict):
-                # Reccursive update
-                layerModelUpdate(left[key], right[key], listAppend=listAppend)
-            elif listAppend and isinstance(left[key], list) and isinstance(right[key], list):
-                # Handle list append if option is set
-                left[key] += right[key]
-            else:
-                # Replace
-                left[key] = right[key]
-    for key in right.keys():
-        if key not in left and right[key] is not None:
-            # Add it
-            left[key] = right[key]
-    return left
+    # Builds args
+    kwargs = {'stdout': subprocess.DEVNULL,
+              'stderr': subprocess.STDOUT}
+    if displayStdout:
+        kwargs['stdout'] = None
+        kwargs['stderr'] = None
+    if cwd is not None:
+        kwargs['cwd'] = str(cwd)
+
+    # Build the command line
+    command = None
+    if isinstance(shell, str) or shell is True:
+        # In shell mode, env is evaluated in the command line
+        shellCmd = ''
+        if isinstance(env, dict):
+            for k, v in env.items():
+                shellCmd += 'export %s="%s";' % (k, v)
+        elif isinstance(env, Environment):
+            for k, v in env.toList():
+                shellCmd += 'export %s="%s";' % (k, v)
+        for arg in args:
+            shellCmd += ' "%s"' % arg
+        if not isinstance(shell, str):
+            shell = LeafConstants.DEFAULT_SHELL
+        command = [shell, '-c', shellCmd]
+    else:
+        # invoke process directly
+        if isinstance(env, dict):
+            customEnv = dict(os.environ)
+            for k, v in env.items():
+                customEnv[k] = str(v)
+            kwargs['env'] = customEnv
+        elif isinstance(env, Environment):
+            customEnv = dict(os.environ)
+            for k, v in env.toList():
+                customEnv[k] = str(v)
+            kwargs['env'] = customEnv
+        command = args
+
+    # Execute the command
+    return subprocess.call(command, **kwargs)
 
 
-def layerModelDiff(left, right):
+def isLatestPackage(pi):
     '''
-    Compute the difference between the *left* and *right* model
-    Both left & right have to be dict objects
+    Used to check if the given PackageIdentifier version is *latest*
     '''
-    if not isinstance(left, dict):
-        raise ValueError("Problem with json layer")
-    if not isinstance(right, dict):
-        raise ValueError("Problem with json layer")
-    # Special case, diff is empty
-    if left == right:
-        return OrderedDict()
+    return pi.version == LeafConstants.LATEST
 
-    out = OrderedDict()
-    for key in left.keys():
-        if key in right:
-            if left[key] == right[key]:
-                # Same value, do nothing
-                pass
-            elif isinstance(left[key], dict) and isinstance(right[key], dict):
-                # Recursive diff
-                out[key] = layerModelDiff(left[key], right[key])
-            else:
-                # Value has been updated
-                out[key] = right[key]
-        else:
-            # Delete value
-            out[key] = None
-    for key in right.keys():
-        if key not in left:
-            # New value
-            out[key] = right[key]
 
+def findLatestVersion(pi_or_piName, piList,
+                      ignoreUnknown=False):
+    '''
+    Use given package name to return the PackageIdentifier with the highest version
+    '''
+    out = None
+    piName = pi_or_piName.name if isinstance(
+        pi_or_piName, PackageIdentifier) else str(pi_or_piName)
+    for pi in [pi for pi in piList if pi.name == piName]:
+        if out is None or pi > out:
+            out = pi
+    if out is None and not ignoreUnknown:
+        raise InvalidPackageNameException(pi_or_piName)
     return out
+
+
+def findManifest(pi, mfMap,
+                 ignoreUnknown=False):
+    '''
+    Return the Manifest from the given map from its PackageIdentifier.
+    If the given PackageIdentifier is *latest*, then return the highest version of the package.
+    '''
+    if not isinstance(mfMap, dict):
+        raise ValueError()
+    if isLatestPackage(pi):
+        pi = findLatestVersion(pi, mfMap.keys(), ignoreUnknown=True)
+    if pi in mfMap:
+        return mfMap[pi]
+    if not ignoreUnknown:
+        raise InvalidPackageNameException(pi)
+
+
+def groupPackageIdentifiersByName(piList, pkgMap=None, sort=True):
+    out = pkgMap if pkgMap is not None else {}
+    for pi in piList:
+        if not isinstance(pi, PackageIdentifier):
+            raise ValueError()
+        currentPiList = out.get(pi.name)
+        if currentPiList is None:
+            currentPiList = []
+            out[pi.name] = currentPiList
+        if pi not in currentPiList:
+            currentPiList.append(pi)
+    if sort:
+        for pkgName in out:
+            out[pkgName] = sorted(out[pkgName])
+    return out
+
+
+def packageListToEnvironnement(ipList, ipMap, env=None):
+    if env is None:
+        env = Environment()
+    for ip in ipList:
+        ipEnv = Environment("Exported by package %s" % ip.getIdentifier())
+        env.addSubEnv(ipEnv)
+        vr = VariableResolver(ip, ipMap.values())
+        for key, value in ip.getEnvMap().items():
+            ipEnv.env.append((key,
+                              vr.resolve(value)))
+    return env

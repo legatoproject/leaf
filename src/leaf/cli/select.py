@@ -22,7 +22,7 @@ class SelectCommand(LeafCommand):
                             metavar='PROFILE', help='the profile name'),
 
     def execute(self, args, uargs):
-        wm = self.getWorkspaceManager(args)
+        wm = self.getWorkspaceManager()
 
         name = args.profiles[0]
         profile = wm.getProfile(name)

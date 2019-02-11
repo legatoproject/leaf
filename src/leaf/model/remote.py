@@ -6,9 +6,9 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from leaf.constants import JsonConstants
+from leaf.core.constants import JsonConstants
 from leaf.core.error import LeafException
-from leaf.model.base import JsonObject
+from leaf.core.jsonutils import JsonObject
 
 
 class Remote(JsonObject):

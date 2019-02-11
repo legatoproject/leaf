@@ -7,7 +7,7 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-from leaf.core.coreutils import findLatestVersion, findManifest
+from leaf.model.modelutils import findLatestVersion, findManifest
 from leaf.model.package import Manifest, PackageIdentifier
 
 

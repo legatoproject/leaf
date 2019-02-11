@@ -2,30 +2,17 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
-import platform
-import unittest
-
-from leaf import __version__
-from tests.testutils import AbstractTestWithRepo, LEAF_UT_SKIP, \
-    LeafCliWrapper
+from leaf.rendering.ansi import ANSI
+from tests.testutils import LeafTestCaseWithCli
 
 
-class TestCliRendering(LeafCliWrapper):
-
-    def __init__(self, methodName):
-        LeafCliWrapper.__init__(self, methodName)
+class TestCliRendering(LeafTestCaseWithCli):
 
     def testManifest(self):
         self.leafExec(["package", "install"], "container-A_2.1")
-        with self.assertStdout(
-                templateOut="search_all.out",
-                variables={
-                    "{REMOTE_URL}": self.getRemoteUrl(),
-                    "{REMOTE_URL2}": self.getRemoteUrl2()}):
+        with self.assertStdout(templateOut="search_all.out"):
             self.leafExec("search", "-a", "container-A")
-        with self.assertStdout(
-                templateOut="package_list.out",
-                variables={"{ROOT_FOLDER}": AbstractTestWithRepo.ROOT_FOLDER}):
+        with self.assertStdout(templateOut="package_list.out"):
             self.leafExec(["package", "list"])
             self.leafExec(["package", "list"], "--all")
 
@@ -33,11 +20,7 @@ class TestCliRendering(LeafCliWrapper):
         self.leafExec(["remote", "add"], "alt",
                       self.getRemoteUrl(), "--insecure")
         self.leafExec(["remote", "disable"], "alt")
-        with self.assertStdout(
-                templateOut="remote_list.out",
-                variables={
-                    "{REMOTE_URL}": self.getRemoteUrl(),
-                    "{REMOTE_URL2}": self.getRemoteUrl2()}):
+        with self.assertStdout(templateOut="remote_list.out"):
             self.leafExec(("remote", "list"))
 
     def testEnvironment(self):
@@ -50,13 +33,7 @@ class TestCliRendering(LeafCliWrapper):
         self.leafExec(("profile", "sync"))
         self.leafExec(("profile", "create"), "bar")
         self.leafExec(["package", "install"], "env-A_1.0")
-        with self.assertStdout(
-                templateOut="env.out",
-                variables={"{ROOT_FOLDER}": AbstractTestWithRepo.ROOT_FOLDER,
-                           "{LEAF_VERSION}": __version__,
-                           "{PLATFORM_SYSTEM}": platform.system(),
-                           "{PLATFORM_MACHINE}": platform.machine(),
-                           "{PLATFORM_RELEASE}": platform.release()}):
+        with self.assertStdout(templateOut="env.out"):
             self.leafExec(("env", "print"))
             self.leafExec(("env", "user"), "--set", "UNKNWONVAR=TOTO")
             self.leafExec(("env", "workspace"), "--set", "FOO=BAR")
@@ -77,10 +54,7 @@ class TestCliRendering(LeafCliWrapper):
         self.leafExec(("profile", "config"), "-p", "container-A_1.0")
         self.leafExec(("env", "profile"), "--set", "FOO=BAR")
         self.leafExec(("profile", "sync"))
-        with self.assertStdout(
-                templateOut="status.out",
-                variables={
-                    "{ROOT_FOLDER}": AbstractTestWithRepo.ROOT_FOLDER}):
+        with self.assertStdout(templateOut="status.out"):
             self.leafExec("status")
 
     def testProfile(self):
@@ -88,29 +62,50 @@ class TestCliRendering(LeafCliWrapper):
         self.leafExec(("profile", "create"), "foo")
         self.leafExec(("profile", "config"), "-p", "container-A_1.0")
         self.leafExec(("env", "profile"), "--set", "FOO=BAR")
-        with self.assertStdout(
-                templateOut="profile_list.out",
-                variables={
-                    "{ROOT_FOLDER}": AbstractTestWithRepo.ROOT_FOLDER}):
+        with self.assertStdout(templateOut="profile_list.out"):
             self.leafExec(("profile", "list"))
 
     def testFeature(self):
-        with self.assertStdout(
-                templateOut="feature_list.out",
-                variables={
-                    "{ROOT_FOLDER}": AbstractTestWithRepo.ROOT_FOLDER}):
+        with self.assertStdout(templateOut="feature_list.out"):
             self.leafExec(("feature", "list"))
 
 
-@unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
 class TestCliRenderingVerbose(TestCliRendering):
-    def __init__(self, methodName):
-        TestCliRendering.__init__(self, methodName)
-        self.postVerbArgs.append("--verbose")
+
+    def __init__(self, *args, **kwargs):
+        TestCliRendering.__init__(
+            self, *args, verbosity="verbose", **kwargs)
 
 
-@unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
 class TestCliRenderingQuiet(TestCliRendering):
-    def __init__(self, methodName):
-        TestCliRendering.__init__(self, methodName)
-        self.postVerbArgs.append("--quiet")
+
+    def __init__(self, *args, **kwargs):
+        TestCliRendering.__init__(
+            self, *args, verbosity="quiet", **kwargs)
+
+
+class TestCliRenderingAnsi(TestCliRendering):
+
+    @classmethod
+    def setUpClass(cls):
+        ANSI.force = True
+        TestCliRendering.setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        TestCliRendering.tearDownClass()
+        ANSI.force = False
+
+
+class TestCliRenderingAnsiVerbose(TestCliRenderingAnsi):
+
+    def __init__(self, *args, **kwargs):
+        TestCliRenderingAnsi.__init__(
+            self, *args, verbosity="verbose", **kwargs)
+
+
+class TestCliRenderingAnsiQuiet(TestCliRenderingAnsi):
+
+    def __init__(self, *args, **kwargs):
+        TestCliRenderingAnsi.__init__(
+            self, *args, verbosity="quiet", **kwargs)

@@ -7,337 +7,28 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-import json
-import os
-import platform
 import shutil
 from builtins import Exception
 from collections import OrderedDict
 from datetime import datetime
 from tarfile import TarFile
-from tempfile import NamedTemporaryFile
 
-import gnupg
-
-from leaf import __version__
-from leaf.constants import (EnvConstants, JsonConstants, LeafConstants,
-                            LeafFiles)
-from leaf.core.coreutils import (StepExecutor, VariableResolver, findManifest,
-                                 isLatestPackage)
-from leaf.core.dependencies import DependencyUtils
-from leaf.core.error import (BadRemoteUrlException,
-                             InvalidPackageNameException, LeafException,
-                             LeafOutOfDateException, NoEnabledRemoteException,
-                             NoPackagesInCacheException, NoRemoteException,
-                             UserCancelException)
+from leaf.api.remotes import RemoteManager
+from leaf.core.constants import LeafConstants, LeafFiles
+from leaf.model.dependencies import DependencyUtils
+from leaf.core.error import (InvalidPackageNameException, LeafException,
+                             LeafOutOfDateException,
+                             NoPackagesInCacheException)
 from leaf.core.lock import LockFile
-from leaf.format.formatutils import sizeof_fmt
-from leaf.format.logger import TextLogger
-from leaf.format.renderer.error import HintsRenderer, LeafExceptionRenderer
-from leaf.format.renderer.question import QuestionRenderer
-from leaf.format.theme import ThemeManager
-from leaf.model.config import UserConfiguration
+from leaf.core.utils import (downloadFile, getCachedArtifactName, getTotalSize,
+                             isFolderIgnored, markFolderAsIgnored,
+                             mkTmpLeafRootDir)
 from leaf.model.environment import Environment
+from leaf.model.modelutils import findManifest, isLatestPackage
 from leaf.model.package import (AvailablePackage, InstalledPackage,
                                 LeafArtifact, PackageIdentifier)
-from leaf.model.remote import Remote
-from leaf.utils import (downloadData, downloadFile, getCachedArtifactName,
-                        getTotalSize, isFolderIgnored, isNotInteractive,
-                        jsonLoadFile, jsonWriteFile, markFolderAsIgnored,
-                        mkTmpLeafRootDir, versionComparator_lt)
-
-
-class ConfigurationManager():
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        self.configurationFolder = LeafFiles.getConfigFolder()
-        self.cacheFolder = LeafFiles.getCacheFolder()
-        self.initLeafSettings()
-
-    def initLeafSettings(self, force=False):
-        userEnvMap = self.readConfiguration().getEnvMap()
-        for k in EnvConstants.LEAF_SETTINGS:
-            if k in userEnvMap:
-                if force or k not in os.environ:
-                    os.environ[k] = userEnvMap[k]
-
-    def getConfigurationFile(self, filename, checkExists=False):
-        '''
-        Return the path of a configuration file.
-        If checkExists arg is True and the file does not exists, returns None
-        '''
-        out = self.configurationFolder / filename
-        if checkExists and not out.exists():
-            return None
-        return out
-
-    def readConfiguration(self):
-        '''
-        Read the configuration if it exists, else return the the default configuration
-        '''
-        return UserConfiguration(
-            LeafFiles.ETC_PREFIX / LeafFiles.CONFIG_FILENAME,
-            self.getConfigurationFile(LeafFiles.CONFIG_FILENAME))
-
-    def writeConfiguration(self, usrc):
-        '''
-        Write the given configuration
-        '''
-        usrc.writeLayerToFile(
-            self.getConfigurationFile(LeafFiles.CONFIG_FILENAME),
-            previousLayerFile=LeafFiles.ETC_PREFIX / LeafFiles.CONFIG_FILENAME,
-            pp=True)
-
-    def getBuiltinEnvironment(self):
-        out = Environment("Leaf built-in variables")
-        out.env.append(("LEAF_VERSION", str(__version__)))
-        out.env.append(("LEAF_PLATFORM_SYSTEM", platform.system()))
-        out.env.append(("LEAF_PLATFORM_MACHINE", platform.machine()))
-        out.env.append(("LEAF_PLATFORM_RELEASE", platform.release()))
-        return out
-
-    def getUserEnvironment(self):
-        return self.readConfiguration().getEnvironment()
-
-    def updateUserEnv(self, setMap=None, unsetList=None):
-        usrc = self.readConfiguration()
-        usrc.updateEnv(setMap, unsetList)
-        self.writeConfiguration(usrc)
-
-
-class LoggerManager(ConfigurationManager):
-
-    def __init__(self, verbosity):
-        ConfigurationManager.__init__(self)
-        themesFile = self.getConfigurationFile(
-            LeafFiles.THEMES_FILENAME, checkExists=True)
-        # If the theme file does not exists, try to find a skeleton
-        if themesFile is None:
-            themesFile = LeafFiles.ETC_PREFIX / LeafFiles.THEMES_FILENAME
-        self.themeManager = ThemeManager(themesFile)
-        self.logger = TextLogger(verbosity)
-
-    def printHints(self, *hints):
-        tr = HintsRenderer()
-        tr.extend(hints)
-        self.printRenderer(tr)
-
-    def printException(self, ex):
-        if isinstance(ex, LeafException):
-            self.printRenderer(LeafExceptionRenderer(ex))
-        else:
-            self.logger.printError(str(ex))
-
-    def printRenderer(self, renderer, verbosity=None):
-        renderer.verbosity = self.logger.getVerbosity() if verbosity is None else verbosity
-        renderer.tm = self.themeManager
-        renderer.print()
-
-    def confirm(self, question="Do you want to continue?", raiseOnDecline=False):
-        out = None
-        while out is None:
-            self.printRenderer(QuestionRenderer(question + ' (Y/n)'))
-            if isNotInteractive():
-                out = True
-            else:
-                answer = input().strip()
-                if answer == '' or answer.lower() == 'y':
-                    out = True
-                elif answer.lower() == 'n':
-                    out = False
-        if not out and raiseOnDecline:
-            raise UserCancelException()
-        return out
-
-
-class GPGManager(LoggerManager):
-
-    def __init__(self, verbosity):
-        LoggerManager.__init__(self, verbosity)
-        self.gpgHome = self.configurationFolder / LeafFiles.GPG_DIRNAME
-        if not self.gpgHome.is_dir():
-            self.gpgHome.mkdir(mode=0o700)
-
-        self.gpg = gnupg.GPG(gnupghome=str(self.gpgHome))
-        self.gpgDefaultKeyserver = os.environ.get(
-            EnvConstants.GPG_KEYSERVER,
-            LeafConstants.DEFAULT_GPG_KEYSERVER)
-
-    def gpgVerifyContent(self, data, sigUrl, expectedKey=None):
-        self.logger.printVerbose(
-            "Known GPG keys:", len(self.gpg.list_keys()))
-        with NamedTemporaryFile() as sigFile:
-            downloadData(sigUrl, sigFile.name)
-            verif = self.gpg.verify_data(sigFile.name, data)
-            if verif.valid:
-                self.logger.printVerbose(
-                    "Content has been signed by %s (%s)" %
-                    (verif.username, verif.pubkey_fingerprint))
-                if expectedKey is not None:
-                    if expectedKey != verif.pubkey_fingerprint:
-                        raise LeafException(
-                            "Content is not signed with %s" % expectedKey)
-            else:
-                raise LeafException("Signed content could not be verified")
-
-    def gpgImportKeys(self, *keys, keyserver=None):
-        if keyserver is None:
-            keyserver = self.gpgDefaultKeyserver
-        if len(keys) > 0:
-            self.logger.printVerbose(
-                "Update GPG keys for %s from %s" %
-                (", ".join(keys), keyserver))
-            gpgImport = self.gpg.recv_keys(keyserver, *keys)
-            for result in gpgImport.results:
-                if 'ok' in result:
-                    self.logger.printVerbose(
-                        "Received GPG key {fingerprint}".format(**result))
-                else:
-                    raise LeafException(
-                        "Error receiving GPG keys: {text}".format(**result))
-
-
-class RemoteManager(GPGManager):
-
-    def __init__(self, verbosity):
-        GPGManager.__init__(self, verbosity)
-        '''
-        Constructor
-        '''
-        self.remoteCacheFile = self.cacheFolder / \
-            LeafFiles.CACHE_REMOTES_FILENAME
-
-    def cleanRemotesCacheFile(self):
-        if self.remoteCacheFile.exists():
-            os.remove(str(self.remoteCacheFile))
-
-    def listRemotes(self, onlyEnabled=False):
-        out = OrderedDict()
-
-        cache = None
-        if self.remoteCacheFile.exists():
-            cache = jsonLoadFile(self.remoteCacheFile)
-
-        items = self.readConfiguration().getRemotesMap().items()
-        if len(items) == 0:
-            raise NoRemoteException()
-        for alias, jsondata in items:
-            remote = Remote(alias, jsondata)
-            if remote.isEnabled() or not onlyEnabled:
-                out[alias] = remote
-            url = remote.getUrl()
-            if cache is not None and url in cache:
-                remote.content = cache[url]
-
-        if len(out) == 0 and onlyEnabled:
-            raise NoEnabledRemoteException()
-        return out
-
-    def createRemote(self, alias, url, enabled=True, insecure=False, gpgKey=None):
-        usrc = self.readConfiguration()
-        remotes = usrc.getRemotesMap()
-        if alias in remotes:
-            raise LeafException("Remote %s already exists" % alias)
-        if insecure:
-            remotes[alias] = {JsonConstants.CONFIG_REMOTE_URL: str(url),
-                              JsonConstants.CONFIG_REMOTE_ENABLED: enabled}
-        elif gpgKey is not None:
-            remotes[alias] = {JsonConstants.CONFIG_REMOTE_URL: str(url),
-                              JsonConstants.CONFIG_REMOTE_ENABLED: enabled,
-                              JsonConstants.CONFIG_REMOTE_GPGKEY: gpgKey}
-        else:
-            raise LeafException("Invalid security for remote %s" % alias)
-        # Save and clean cache
-        self.writeConfiguration(usrc)
-        self.cleanRemotesCacheFile()
-
-    def renameRemote(self, oldalias, newalias):
-        usrc = self.readConfiguration()
-        remotes = usrc.getRemotesMap()
-        if oldalias not in remotes:
-            raise LeafException("Cannot find remote %s" % oldalias)
-        if newalias in remotes:
-            raise LeafException("Remote %s already exists" % newalias)
-        remotes[newalias] = remotes[oldalias]
-        del remotes[oldalias]
-        self.writeConfiguration(usrc)
-        self.cleanRemotesCacheFile()
-
-    def updateRemote(self, remote):
-        usrc = self.readConfiguration()
-        remotes = usrc.getRemotesMap()
-        if remote.alias not in remotes:
-            raise LeafException("Cannot find remote %s" % remote.alias)
-        remotes[remote.alias] = remote.json
-        self.writeConfiguration(usrc)
-        self.cleanRemotesCacheFile()
-
-    def deleteRemote(self, alias):
-        usrc = self.readConfiguration()
-        remotes = usrc.getRemotesMap()
-        if alias not in remotes:
-            raise LeafException("Cannot find remote %s" % alias)
-        del remotes[alias]
-        self.writeConfiguration(usrc)
-        self.cleanRemotesCacheFile()
-
-    def fetchRemotes(self, smartRefresh=True):
-        '''
-        Refresh remotes content with smart refresh, ie auto refresh after X days
-        '''
-        if self.remoteCacheFile.exists():
-            if not smartRefresh:
-                os.remove(str(self.remoteCacheFile))
-            elif datetime.fromtimestamp(self.remoteCacheFile.stat().st_mtime) < datetime.now() - LeafConstants.CACHE_DELTA:
-                self.logger.printDefault("Cache file is outdated")
-                os.remove(str(self.remoteCacheFile))
-        if not self.remoteCacheFile.exists():
-            self.logger.printDefault("Refreshing available packages...")
-            content = OrderedDict()
-            remotes = self.listRemotes(onlyEnabled=True)
-            if len(remotes) == 0:
-                raise NoRemoteException()
-            for alias, remote in remotes.items():
-                try:
-                    indexUrl = remote.getUrl()
-                    data = downloadData(indexUrl)
-                    gpgKey = remote.getGpgKey()
-                    if gpgKey is not None:
-                        signatureUrl = indexUrl + LeafConstants.GPG_SIG_EXTENSION
-                        self.logger.printDefault(
-                            "Verifying signature for remote %s" % alias)
-                        self.gpgImportKeys(gpgKey)
-                        self.gpgVerifyContent(data,
-                                              signatureUrl,
-                                              expectedKey=gpgKey)
-                    self.logger.printVerbose("Fetched", indexUrl)
-                    jsonData = json.loads(data.decode())
-                    self._checkRemoteContent(alias, indexUrl, jsonData)
-                    content[indexUrl] = jsonData
-                    self.logger.printDefault(
-                        "Fetched content from %s" % alias)
-                except LeafOutOfDateException:
-                    raise
-                except Exception as e:
-                    self.printException(BadRemoteUrlException(remote, e))
-            if len(content) > 0:
-                jsonWriteFile(self.remoteCacheFile, content)
-
-    def _checkRemoteContent(self, alias, url, jsonContent):
-        # Check leaf min version for all packages
-        remote = Remote("", None)
-        remote.content = jsonContent
-        leafMinVersion = None
-        for apInfoJson in remote.getAvailablePackageList():
-            ap = AvailablePackage(apInfoJson, url)
-            if not ap.isSupportedByCurrentLeafVersion():
-                if leafMinVersion is None or versionComparator_lt(leafMinVersion, ap.getSupportedLeafVersion()):
-                    leafMinVersion = ap.getSupportedLeafVersion()
-        if leafMinVersion is not None:
-            raise LeafOutOfDateException(
-                "You need to upgrade leaf v%s to use packages from %s" % (leafMinVersion, alias))
+from leaf.model.steps import StepExecutor, VariableResolver
+from leaf.rendering.formatutils import sizeof_fmt
 
 
 class PackageManager(RemoteManager):
@@ -345,11 +36,11 @@ class PackageManager(RemoteManager):
     Main API for using Leaf package manager
     '''
 
-    def __init__(self, verbosity):
+    def __init__(self):
         '''
         Constructor
         '''
-        RemoteManager.__init__(self, verbosity)
+        RemoteManager.__init__(self)
         self.downloadCacheFolder = self.cacheFolder / LeafFiles.CACHE_DOWNLOAD_FOLDERNAME
         self.applicationLock = LockFile(
             self.configurationFolder / LeafFiles.LOCK_FILENAME)

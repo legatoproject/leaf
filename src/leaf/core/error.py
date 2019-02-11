@@ -6,23 +6,10 @@ Error management
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-import os
-import sys
-import traceback
+
 from builtins import Exception
 
-from leaf.constants import EnvConstants
-
-
-HINTS_CMD_DELIMITER = '\''
-
-
-def printTrace(message=None):
-    if os.getenv(EnvConstants.DEBUG_MODE, "") != "":
-        if message is not None:
-            print(message, file=sys.stderr)
-        if sys.exc_info()[0] is not None:
-            traceback.print_exc(file=sys.stderr)
+HINTS_CMD_DELIMITER = "'"
 
 
 class LeafException(Exception):

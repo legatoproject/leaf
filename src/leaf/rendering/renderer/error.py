@@ -8,10 +8,10 @@ Renderer for exceptions in leaf app
 '''
 import sys
 
-from leaf.format.ansi import ANSI
-from leaf.format.renderer.renderer import Renderer
-
-from leaf.core.error import HINTS_CMD_DELIMITER, printTrace
+from leaf.core.error import HINTS_CMD_DELIMITER
+from leaf.core.logger import printTrace
+from leaf.rendering.ansi import ANSI
+from leaf.rendering.renderer.renderer import Renderer
 
 
 class HintsRenderer(Renderer):

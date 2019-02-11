@@ -13,8 +13,8 @@ import subprocess
 from pathlib import Path
 
 from leaf.cli.plugins import LeafPluginCommand
+from leaf.core.constants import LeafSettings
 from leaf.core.error import LeafException
-from leaf.utils import isNotInteractive
 
 
 class HelpPlugin(LeafPluginCommand):
@@ -55,7 +55,7 @@ class HelpPlugin(LeafPluginCommand):
                     hints="Use 'leaf help --list' to see all topics",
                     exitCode=3)
             manCommand = ["man"]
-            if isNotInteractive():
+            if LeafSettings.NON_INTERACTIVE.as_boolean():
                 manCommand += ["-P", "cat"]
             manCommand.append(manpage)
             os.execv(subprocess.getoutput("which man"), manCommand)

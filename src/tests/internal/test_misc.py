@@ -2,21 +2,20 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
-import unittest
 from tempfile import mktemp
 
-
-from leaf.constants import JsonConstants, LeafFiles
-from leaf.core.coreutils import VariableResolver, groupPackageIdentifiersByName
+from leaf.core.constants import JsonConstants, LeafFiles
+from leaf.model.modelutils import VariableResolver, groupPackageIdentifiersByName
 from leaf.core.error import LeafException
+from leaf.core.jsonutils import jsonLoadFile, jsonWriteFile
 from leaf.core.lock import LockFile
+from leaf.core.utils import checkSupportedLeaf
 from leaf.model.base import JsonObject
 from leaf.model.package import Feature, InstalledPackage, PackageIdentifier
-from leaf.utils import checkSupportedLeaf, jsonLoadFile, jsonWriteFile
-from tests.testutils import RESOURCE_FOLDER
+from tests.testutils import RESOURCE_FOLDER, LeafTestCase
 
 
-class TestMisc(unittest.TestCase):
+class TestMisc(LeafTestCase):
 
     def testLeafMinVersion(self):
         self.assertTrue(checkSupportedLeaf(None))

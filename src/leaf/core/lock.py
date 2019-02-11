@@ -1,9 +1,17 @@
+'''
+Leaf Package Manager
+
+@author:    Legato Tooling Team <letools@sierrawireless.com>
+@copyright: Sierra Wireless. All rights reserved.
+@contact:   Legato Tooling Team <letools@sierrawireless.com>
+@license:   https://www.mozilla.org/en-US/MPL/2.0/
+'''
+
 import fcntl
-import os
 from contextlib import ContextDecorator
 from pathlib import Path
 
-from leaf.constants import EnvConstants
+from leaf.core.constants import LeafSettings
 from leaf.core.error import LockException
 
 
@@ -17,7 +25,7 @@ class AdvisoryLock(ContextDecorator):
             self.lockFunction = fcntl.lockf if advisory else fcntl.flock
 
     def isDisabled(self):
-        return os.getenv(EnvConstants.DISABLE_LOCKS, "") != ""
+        return LeafSettings.DISABLE_LOCKS.as_boolean()
 
     def __enter__(self):
         if self.lockfile is not None and not self.isDisabled():

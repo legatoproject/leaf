@@ -50,9 +50,9 @@ from abc import ABC, abstractmethod
 
 from enum import unique, Enum
 
-from leaf.format.alignment import HAlign, VAlign
-from leaf.format.ansi import removeAnsiChars
-from leaf.format.chars import PADDING_CHAR, getSeparators
+from leaf.rendering.alignment import HAlign, VAlign
+from leaf.rendering.ansi import removeAnsiChars
+from leaf.rendering.chars import PADDING_CHAR, getSeparators
 
 
 class Table():

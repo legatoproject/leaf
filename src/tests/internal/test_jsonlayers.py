@@ -3,14 +3,14 @@
 '''
 
 import json
-import unittest
 from builtins import staticmethod
 from collections import OrderedDict
 
-from leaf.model.modelutils import layerModelDiff, layerModelUpdate
+from leaf.core.jsonutils import layerModelDiff, layerModelUpdate
+from tests.testutils import LeafTestCase
 
 
-class TestJsonLayers(unittest.TestCase):
+class TestJsonLayers(LeafTestCase):
 
     @staticmethod
     def json2model(s):

@@ -8,9 +8,18 @@ Leaf Package Manager
 '''
 
 import sys
+import traceback
 from enum import IntEnum, unique
 
-from leaf.core.error import printTrace
+from leaf.core.constants import LeafSettings
+
+
+def printTrace(message=None):
+    if LeafSettings.DEBUG_MODE.as_boolean():
+        if message is not None:
+            print(message, file=sys.stderr)
+        if sys.exc_info()[0] is not None:
+            traceback.print_exc(file=sys.stderr)
 
 
 @unique
@@ -19,20 +28,28 @@ class Verbosity(IntEnum):
     DEFAULT = 1
     VERBOSE = 2
 
+    @staticmethod
+    def get_current():
+        v = LeafSettings.VERBOSITY.value
+        if v is not None:
+            if v.lower() == "quiet":
+                return Verbosity.QUIET
+            if v.lower() == "verbose":
+                return Verbosity.VERBOSE
+        return Verbosity.DEFAULT
+
 
 class TextLogger ():
 
-    def __init__(self, verbosity):
-        self.verbosity = verbosity
-
-    def getVerbosity(self):
-        return self.verbosity
+    @property
+    def verbosity(self):
+        return Verbosity.get_current()
 
     def isQuiet(self):
-        return self.getVerbosity() == Verbosity.QUIET
+        return self.verbosity == Verbosity.QUIET
 
     def isVerbose(self):
-        return self.getVerbosity() == Verbosity.VERBOSE
+        return self.verbosity == Verbosity.VERBOSE
 
     def printQuiet(self, *message, **kwargs):
         if self.verbosity >= Verbosity.QUIET:

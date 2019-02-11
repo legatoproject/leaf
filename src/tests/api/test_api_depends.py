@@ -2,27 +2,22 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
-import unittest
 from collections import OrderedDict
-from unittest.case import TestCase
 
-from leaf.constants import LeafFiles
-from leaf.core.dependencies import DependencyUtils
+from leaf.core.constants import LeafFiles
+from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
 from leaf.model.package import Manifest, PackageIdentifier
-from tests.testutils import RESOURCE_FOLDER
+from tests.testutils import RESOURCE_FOLDER, LeafTestCase
 
 
 def deps2strlist(deps):
     return list(map(str, map(Manifest.getIdentifier, deps)))
 
 
-class TestApiDepends(unittest.TestCase):
+class TestApiDepends(LeafTestCase):
 
     MANIFEST_MAP = {}
-
-    def __init__(self, methodName):
-        TestCase.__init__(self, methodName)
 
     @classmethod
     def setUpClass(cls):

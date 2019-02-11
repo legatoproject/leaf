@@ -2,16 +2,12 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
-import unittest
 
-from leaf.constants import LeafFiles
-from tests.testutils import LEAF_UT_SKIP, LeafCliWrapper
+from leaf.core.constants import LeafFiles
+from tests.testutils import LeafTestCaseWithCli
 
 
-class TestPluginSetup(LeafCliWrapper):
-
-    def __init__(self, methodName):
-        LeafCliWrapper.__init__(self, methodName)
+class TestPluginSetup(LeafTestCaseWithCli):
 
     def testSetupWsCreation(self):
         wsConfigFile = self.getWorkspaceFolder() / LeafFiles.WS_CONFIG_FILENAME
@@ -96,15 +92,13 @@ class TestPluginSetup(LeafCliWrapper):
                                           "install"])
 
 
-@unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
-class TestExtSetupVerbose(TestPluginSetup):
-    def __init__(self, methodName):
-        TestPluginSetup.__init__(self, methodName)
-        self.postVerbArgs.append("--verbose")
+class TestPluginSetupVerbose(TestPluginSetup):
+
+    def __init__(self, *args, **kwargs):
+        TestPluginSetup.__init__(self, *args, verbosity="verbose", **kwargs)
 
 
-@unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
-class TestExtSetupQuiet(TestPluginSetup):
-    def __init__(self, methodName):
-        TestPluginSetup.__init__(self, methodName)
-        self.postVerbArgs.append("--quiet")
+class TestPluginSetupQuiet(TestPluginSetup):
+
+    def __init__(self, *args, **kwargs):
+        TestPluginSetup.__init__(self, *args, verbosity="quiet", **kwargs)

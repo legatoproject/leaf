@@ -6,8 +6,8 @@ Renderer for env command
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-from leaf.format.renderer.renderer import Renderer
 from leaf.model.environment import Environment
+from leaf.rendering.renderer.renderer import Renderer
 
 
 class EnvironmentRenderer(Renderer):

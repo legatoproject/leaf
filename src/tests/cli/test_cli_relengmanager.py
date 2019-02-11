@@ -6,21 +6,15 @@ import json
 import os
 import time
 
-import unittest
-from tests.testutils import LEAF_UT_SKIP, LeafCliWrapper, RESOURCE_FOLDER, \
-    checkMime
-
-from leaf.constants import JsonConstants, LeafFiles
-from leaf.utils import computeHash, jsonLoadFile, jsonWriteFile
+from leaf.core.constants import JsonConstants, LeafFiles
+from leaf.core.jsonutils import jsonLoadFile, jsonWriteFile
+from leaf.core.utils import computeHash
+from tests.testutils import RESOURCE_FOLDER, LeafTestCaseWithCli, checkMime
 
 
-class TestCliRelengManager(LeafCliWrapper):
-
-    def __init__(self, methodName):
-        LeafCliWrapper.__init__(self, methodName)
+class TestCliRelengManager(LeafTestCaseWithCli):
 
     def testPackageCompression(self):
-
         pkgFolder = RESOURCE_FOLDER / "install_1.0"
 
         def checkAllCompressions(extension, defaultMime):
@@ -308,15 +302,15 @@ class TestCliRelengManager(LeafCliWrapper):
                       expectedRc=2)
 
 
-@unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
 class TestCliRelengManagerVerbose(TestCliRelengManager):
-    def __init__(self, methodName):
-        TestCliRelengManager.__init__(self, methodName)
-        self.postVerbArgs.append("--verbose")
+
+    def __init__(self, *args, **kwargs):
+        TestCliRelengManager.__init__(
+            self, *args, verbosity="verbose", **kwargs)
 
 
-@unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
 class TestCliRelengManagerQuiet(TestCliRelengManager):
-    def __init__(self, methodName):
-        TestCliRelengManager.__init__(self, methodName)
-        self.postVerbArgs.append("--quiet")
+
+    def __init__(self, *args, **kwargs):
+        TestCliRelengManager.__init__(
+            self, *args, verbosity="quiet", **kwargs)

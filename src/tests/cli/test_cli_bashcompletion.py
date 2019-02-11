@@ -7,7 +7,7 @@ import subprocess
 import unittest
 
 from leaf.model.package import PackageIdentifier
-from tests.testutils import RESOURCE_FOLDER, LeafCliWrapper
+from tests.testutils import RESOURCE_FOLDER, LeafTestCaseWithCli
 
 COMPLETION_SCRIPT = RESOURCE_FOLDER / 'leaf-completion-test.sh'
 
@@ -36,10 +36,7 @@ CONDITION_PACKAGES = ["condition_1.0",
                       "condition-H_1.0"]
 
 
-class TestCliBashCompletion(LeafCliWrapper):
-
-    def __init__(self, methodName):
-        LeafCliWrapper.__init__(self, methodName)
+class TestCliBashCompletion(LeafTestCaseWithCli):
 
     def setUp(self):
         super().setUp()

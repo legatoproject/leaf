@@ -7,7 +7,7 @@ Renderer for exceptions in leaf app
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-from leaf.format.renderer.renderer import Renderer
+from leaf.rendering.renderer.renderer import Renderer
 
 
 class QuestionRenderer(Renderer):

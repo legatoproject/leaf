@@ -1,14 +1,14 @@
 '''
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
-import unittest
+
 
 from leaf.model.environment import Environment
-from leaf.model.package import ConditionalPackageIdentifier, \
-    PackageIdentifier
+from leaf.model.package import ConditionalPackageIdentifier, PackageIdentifier
+from tests.testutils import LeafTestCase
 
 
-class TestConditions(unittest.TestCase):
+class TestConditions(LeafTestCase):
 
     def testRegex(self):
         pi = PackageIdentifier.fromString("foo_1.2-beta")

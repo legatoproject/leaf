@@ -6,9 +6,9 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
+import os
 from abc import ABC, abstractmethod
 from collections import OrderedDict
-import os
 
 
 class IEnvObject(ABC):

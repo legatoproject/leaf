@@ -1,37 +1,37 @@
 '''
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
-import os
 
-from tests.testutils import AbstractTestWithRepo, LeafCliWrapper, \
-    TEST_GPG_FINGERPRINT
-
-from leaf.constants import EnvConstants, LeafConstants, LeafFiles
+from leaf.api import GPGManager
+from leaf.core.constants import LeafConstants, LeafFiles, LeafSettings
 from leaf.core.error import LeafException
-from leaf.core.packagemanager import GPGManager
-from leaf.format.logger import Verbosity
-from leaf.utils import downloadData
+from leaf.core.utils import downloadData
+from tests.testutils import (TEST_GPG_FINGERPRINT, LeafTestCaseWithRepo,
+                             LeafTestCaseWithCli)
 
 
-class TestGPG(LeafCliWrapper):
+class TestGPG(LeafTestCaseWithCli):
 
-    def __init__(self, methodName):
-        LeafCliWrapper.__init__(self, methodName)
-        self.postVerbArgs += ["--verbose"]
+    def __init__(self, *args, **kwargs):
+        LeafTestCaseWithCli.__init__(self, *args, **kwargs)
+
+    @classmethod
+    def setUpClass(cls):
+        LeafTestCaseWithCli.setUpClass()
+        LeafSettings.VERBOSITY.value = "verbose"
 
     def setUp(self):
-        # bypass LeafCliWrapper.setup
+        # bypass LeafTestCaseWithCli.setup
         # because we don't want default remote configured here
-        AbstractTestWithRepo.setUp(self)
-        os.environ[EnvConstants.GPG_KEYSERVER] = "keyserver.ubuntu.com"
+        LeafTestCaseWithRepo.setUp(self)
+        LeafSettings.GPG_KEYSERVER.value = "keyserver.ubuntu.com"
         self.cacheFile = self.getCacheFolder() / LeafFiles.CACHE_REMOTES_FILENAME
 
     def tearDown(self):
-        LeafCliWrapper.tearDown(self)
-        del os.environ[EnvConstants.GPG_KEYSERVER]
+        LeafTestCaseWithCli.tearDown(self)
 
     def testSimple(self):
-        gpg = GPGManager(Verbosity.VERBOSE)
+        gpg = GPGManager()
         print("GPG Home:", gpg.gpgHome)
         data = downloadData(self.getRemoteUrl())
 

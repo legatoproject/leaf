@@ -15,11 +15,11 @@ from functools import total_ordering
 from pathlib import Path
 from tarfile import TarFile
 
-from leaf.constants import JsonConstants, LeafFiles
+from leaf.core.constants import JsonConstants, LeafFiles
 from leaf.core.error import InvalidPackageNameException, LeafException
-from leaf.model.base import JsonObject
-from leaf.utils import (checkSupportedLeaf, jsonLoad, jsonLoadFile, resolveUrl,
-                        stringToTuple, versionComparator_lt)
+from leaf.core.jsonutils import JsonObject, jsonLoad, jsonLoadFile
+from leaf.core.utils import (checkSupportedLeaf, resolveUrl, stringToTuple,
+                             versionComparator_lt)
 
 
 @total_ordering

@@ -8,7 +8,7 @@ Vertical and horizontal alignment code
 '''
 import math
 from enum import unique, Enum
-from leaf.format.ansi import removeAnsiChars
+from leaf.rendering.ansi import removeAnsiChars
 
 
 def _topAlign(lines, height):

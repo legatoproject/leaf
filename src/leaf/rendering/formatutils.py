@@ -6,13 +6,11 @@ Utils to format logger output
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
-import os
+import shlex
 import sys
 from math import log
-import shlex
 
-from leaf.constants import EnvConstants, LeafConstants
-
+from leaf.core.constants import LeafConstants, LeafSettings
 
 '''
 Units used to show file size with their respective decimal count
@@ -50,7 +48,7 @@ def getPager():
     If the user sets empty string, pager is disabled
     Else use less as pager
     '''
-    pager = os.getenv(EnvConstants.PAGER)
+    pager = LeafSettings.PAGER.value
     if pager is None:
         # Default pager
         pager = LeafConstants.DEFAULT_PAGER

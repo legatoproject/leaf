@@ -6,12 +6,11 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
+from leaf.api import LoggerManager, WorkspaceManager
 from leaf.cli.cliutils import LeafCommand
 from leaf.cli.profile import computeProfileInfo
-from leaf.core.workspacemanager import WorkspaceManager
-
 from leaf.core.error import NoProfileSelected
-from leaf.format.renderer.status import StatusRenderer
+from leaf.rendering.renderer.status import StatusRenderer
 
 
 class StatusCommand(LeafCommand):
@@ -24,10 +23,10 @@ class StatusCommand(LeafCommand):
     def execute(self, args, uargs):
         wsRoot = WorkspaceManager.findRoot()
         if not WorkspaceManager.isWorkspaceRoot(wsRoot):
-            self.getLoggerManager(args).logger.printDefault(
+            LoggerManager().logger.printDefault(
                 "Not in a workspace, use 'leaf init' to create one")
         else:
-            wm = WorkspaceManager(wsRoot, self.getVerbosity(args))
+            wm = WorkspaceManager(wsRoot)
 
             pfs = wm.listProfiles().values()
             pfsCount = len(pfs)

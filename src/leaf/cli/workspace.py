@@ -18,8 +18,7 @@ class WorkspaceInitCommand(LeafCommand):
             "initialize workspace")
 
     def execute(self, args, uargs):
-        wm = self.getWorkspaceManager(args,
-                                      autoFindWorkspace=False,
+        wm = self.getWorkspaceManager(autoFindWorkspace=False,
                                       checkInitialized=False)
         if wm.workspaceConfigFile.exists():
             raise LeafException("Workspace is already initialized (file %s already exists)" %

@@ -11,19 +11,19 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from leaf.core.settings import RegexValidator, Setting, StaticSettings
 
-class EnvConstants():
-    # Settings
-    DOWNLOAD_TIMEOUT = 'LEAF_TIMEOUT'
-    DEBUG_MODE = 'LEAF_DEBUG'
-    GPG_KEYSERVER = "LEAF_GPG_KEYSERVER"
-    NON_INTERACTIVE = 'LEAF_NON_INTERACTIVE'
-    CUSTOM_TAR = 'LEAF_TAR_BIN'
-    DISABLE_LOCKS = 'LEAF_DISABLE_LOCKS'
-    CUSTOM_THEME = 'LEAF_THEME'
-    PAGER = 'LEAF_PAGER'
-    NOPLUGIN = 'LEAF_NOPLUGIN'
 
+class CommonSettings(StaticSettings):
+    WORKSPACE = Setting('LEAF_WORKSPACE')
+    CONFIG_FOLDER = Setting('LEAF_CONFIG',
+                            os.path.expanduser("~/.config/leaf"))
+    CACHE_FOLDER = Setting('LEAF_CACHE',
+                           os.path.expanduser("~/.cache/leaf"))
+    RESOURCES_FOLDER = Setting('LEAF_RESOURCES')
+
+
+class LeafSettings(CommonSettings):
     '''
     Leaf settings are some env vars that user can configure either in is environment or in user scope
     For example, LEAF_DEBUG can be set to 1 with:
@@ -32,21 +32,23 @@ class EnvConstants():
     $ leaf env user --set LEAF_DEBUG=1
     $ leaf search
     '''
-    LEAF_SETTINGS = (DOWNLOAD_TIMEOUT,
-                     DEBUG_MODE,
-                     GPG_KEYSERVER,
-                     NON_INTERACTIVE,
-                     CUSTOM_TAR,
-                     DISABLE_LOCKS,
-                     CUSTOM_THEME,
-                     PAGER,
-                     NOPLUGIN)
-
-    # Other env variables
-    WORKSPACE_ROOT = 'LEAF_WORKSPACE'
-    CUSTOM_CONFIG = 'LEAF_CONFIG'
-    CUSTOM_CACHE = 'LEAF_CACHE'
-    CUSTOM_RESOURCES = 'LEAF_RESOURCES'
+    DOWNLOAD_TIMEOUT = Setting('LEAF_TIMEOUT', "5",
+                               RegexValidator("[0-9]+"))
+    DOWNLOAD_RETRY = Setting('LEAF_RETRY', "5",
+                             RegexValidator("[0-9]+"))
+    DOWNLOAD_RESUME = Setting('LEAF_RESUME', "1")
+    DEBUG_MODE = Setting('LEAF_DEBUG')
+    GPG_KEYSERVER = Setting('LEAF_GPG_KEYSERVER',
+                            "subset.pool.sks-keyservers.net")
+    NON_INTERACTIVE = Setting('LEAF_NON_INTERACTIVE')
+    TAR_BINARY = Setting('LEAF_TAR_BIN',
+                         "tar")
+    DISABLE_LOCKS = Setting('LEAF_DISABLE_LOCKS')
+    CUSTOM_THEME = Setting('LEAF_THEME')
+    PAGER = Setting('LEAF_PAGER')
+    NOPLUGIN = Setting('LEAF_NOPLUGIN')
+    VERBOSITY = Setting('LEAF_VERBOSE',
+                        "default")
 
 
 class LeafConstants():
@@ -56,12 +58,10 @@ class LeafConstants():
     DEFAULT_ERROR_RC = 2
     MIN_PYTHON_VERSION = (3, 4)
     COLORAMA_MIN_VERSION = "0.3.3"
-    DEFAULT_DOWNLOAD_TIMEOUT = "10"
     DEFAULT_PROFILE = "default"
     CACHE_DELTA = timedelta(days=1)
     CACHE_SIZE_MAX = 5 * 1024 * 1024 * 1024  # 5GB
     GPG_SIG_EXTENSION = '.asc'
-    DEFAULT_GPG_KEYSERVER = 'subset.pool.sks-keyservers.net'
     LATEST = "latest"
     DEFAULT_PAGER = pager = ("less", "-R", "-S", "-P",
                              "Leaf -- Press q to exit")
@@ -80,8 +80,8 @@ class LeafFiles():
     # Configuration folders
     ETC_PREFIX = Path("/etc/leaf")
     DEFAULT_LEAF_ROOT = Path(os.path.expanduser("~/.leaf"))
-    DEFAULT_CONFIG_FOLDER = Path(os.path.expanduser("~/.config/leaf"))
-    DEFAULT_CACHE_FOLDER = Path(os.path.expanduser("~/.cache/leaf"))
+    USER_RESOURCE_FOLDER = Path(os.path.expanduser("~/.local/share/leaf"))
+    SYSTEM_RESOURCE_FOLDER = Path("/usr/share/leaf")
     # Configuration files
     CONFIG_FILENAME = 'config.json'
     CACHE_DOWNLOAD_FOLDERNAME = "files"
@@ -95,35 +95,19 @@ class LeafFiles():
     EXTINFO_EXTENSION = '.info'
 
     @staticmethod
-    def getConfigFolder():
-        out = LeafFiles.DEFAULT_CONFIG_FOLDER
-        value = os.getenv(EnvConstants.CUSTOM_CONFIG, "")
-        if len(value) > 0:
-            out = Path(value)
-        if not out.is_dir():
-            out.mkdir(parents=True)
-        return out
-
-    @staticmethod
-    def getCacheFolder():
-        out = LeafFiles.DEFAULT_CACHE_FOLDER
-        value = os.getenv(EnvConstants.CUSTOM_CACHE, "")
-        if len(value) > 0:
-            out = Path(value)
-        if not out.is_dir():
-            out.mkdir(parents=True)
-        return out
-
-    @staticmethod
     def getResource(name: str = None, check_exists=True):
         folder = None
-        for prefix in (os.getenv(EnvConstants.CUSTOM_RESOURCES, ""),
-                       os.path.expanduser("~/.local/share/leaf"),
-                       "/usr/share/leaf"):
-            if len(prefix) > 0:
-                folder = Path(prefix)
-                if folder.is_dir():
-                    break
+        if LeafSettings.RESOURCES_FOLDER.is_set():
+            folder = Path(LeafSettings.RESOURCES_FOLDER.value)
+        elif LeafFiles.USER_RESOURCE_FOLDER.is_dir():
+            folder = LeafFiles.USER_RESOURCE_FOLDER
+        else:
+            folder = LeafFiles.SYSTEM_RESOURCE_FOLDER
+
+        if not folder.is_dir():
+            raise ValueError(
+                "Cannot find leaf resources folder: %s" % folder)
+
         out = folder if name is None else folder / name
         if check_exists and not out.exists():
             return None

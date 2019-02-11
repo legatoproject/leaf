@@ -8,12 +8,10 @@ This module describe how colors and style applies to each kind of printed elemen
 '''
 
 import configparser
-import os
 from collections import OrderedDict
 
-from leaf.constants import EnvConstants
-from leaf.format.ansi import ANSI
-
+from leaf.core.constants import LeafSettings
+from leaf.rendering.ansi import ANSI
 
 '''
 Map between configuration file and actual code
@@ -108,7 +106,7 @@ class ThemeManager():
         if themesFile is not None and themesFile.exists():
             themeConfig = configparser.ConfigParser()
             themeConfig.read(str(themesFile))
-            customeThemeName = os.getenv(EnvConstants.CUSTOM_THEME)
+            customeThemeName = LeafSettings.CUSTOM_THEME.value
             if customeThemeName is not None and customeThemeName in themeConfig:
                 # Apply custom theme
                 self.theme.update(themeConfig[customeThemeName])

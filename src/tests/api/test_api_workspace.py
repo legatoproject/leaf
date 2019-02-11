@@ -5,29 +5,21 @@
 import platform
 from collections import OrderedDict
 
-from tests.testutils import AbstractTestWithRepo
-
 import leaf
-from leaf.core.error import InvalidProfileNameException, LeafException, \
-    NoProfileSelected, ProfileNameAlreadyExistException
-from leaf.core.features import FeatureManager
-from leaf.core.workspacemanager import WorkspaceManager
-from leaf.format.logger import TextLogger, Verbosity
+from leaf.api import WorkspaceManager
+from leaf.core.error import (InvalidProfileNameException, LeafException,
+                             NoProfileSelected,
+                             ProfileNameAlreadyExistException)
+from leaf.model.features import FeatureManager
 from leaf.model.package import Manifest, PackageIdentifier
+from tests.testutils import LeafTestCaseWithRepo
 
 
-VERBOSITY = Verbosity.VERBOSE
-
-
-class TestApiWorkspaceManager(AbstractTestWithRepo):
-
-    def __init__(self, methodName):
-        AbstractTestWithRepo.__init__(self, methodName)
-        self.logger = TextLogger(VERBOSITY)
+class TestApiWorkspaceManager(LeafTestCaseWithRepo):
 
     def setUp(self):
-        AbstractTestWithRepo.setUp(self)
-        self.wm = WorkspaceManager(self.getWorkspaceFolder(), VERBOSITY)
+        super().setUp()
+        self.wm = WorkspaceManager(self.getWorkspaceFolder())
         self.wm.setInstallFolder(self.getInstallFolder())
         self.wm.createRemote("default", self.getRemoteUrl(), insecure=True)
         self.wm.createRemote("other", self.getRemoteUrl2(), insecure=True)

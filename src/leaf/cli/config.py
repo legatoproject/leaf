@@ -8,8 +8,9 @@ Leaf Package Manager
 '''
 from pathlib import Path
 
+from leaf.api import PackageManager
 from leaf.cli.cliutils import LeafCommand
-from leaf.constants import LeafFiles
+from leaf.core.constants import LeafFiles
 
 
 class ConfigCommand(LeafCommand):
@@ -29,7 +30,7 @@ class ConfigCommand(LeafCommand):
                             help="set the root folder, default: %s" % LeafFiles.DEFAULT_LEAF_ROOT)
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
         if args.rootFolder is not None:
             pm.setInstallFolder(args.rootFolder)
         configurationFile = pm.getConfigurationFile(

@@ -6,9 +6,10 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
+from leaf.api import PackageManager
 from leaf.cli.cliutils import LeafCommand, initCommonArgs
-from leaf.core.features import FeatureManager
-from leaf.format.renderer.feature import FeatureListRenderer
+from leaf.model.features import FeatureManager
+from leaf.rendering.renderer.feature import FeatureListRenderer
 from leaf.model.base import Scope
 from leaf.model.environment import Environment
 
@@ -22,7 +23,7 @@ class FeatureListCommand(LeafCommand):
             "list all available features")
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         featureManager = FeatureManager(pm)
         rend = FeatureListRenderer()
@@ -46,7 +47,7 @@ class FeatureQueryCommand(LeafCommand):
                             help='the feature name')
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         featureManager = FeatureManager(pm)
         featureName = args.featureName[0]
@@ -55,7 +56,7 @@ class FeatureQueryCommand(LeafCommand):
                                (feature.name, feature.getKey()))
 
         env = None
-        workspace = self.getWorkspaceManager(args, checkInitialized=False)
+        workspace = self.getWorkspaceManager(checkInitialized=False)
         if workspace.isWorkspaceInitialized():
             profile = workspace.getProfile(workspace.getCurrentProfileName())
             env = workspace.getFullEnvironment(profile)
@@ -93,7 +94,7 @@ class FeatureToggleCommand(LeafCommand):
                             help='the feature value')
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         featureManager = FeatureManager(pm)
         name = args.featureName[0]
@@ -103,7 +104,7 @@ class FeatureToggleCommand(LeafCommand):
                 name, value, pm)
         elif args.envScope == Scope.WORKSPACE:
             featureManager.toggleWorkspaceFeature(
-                name, value, self.getWorkspaceManager(args))
+                name, value, self.getWorkspaceManager())
         elif args.envScope == Scope.PROFILE:
             featureManager.toggleProfileFeature(
-                name, value, self.getWorkspaceManager(args))
+                name, value, self.getWorkspaceManager())

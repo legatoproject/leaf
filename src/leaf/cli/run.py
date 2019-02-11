@@ -9,11 +9,11 @@ Leaf Package Manager
 import argparse
 
 from leaf.cli.cliutils import LeafCommand
-from leaf.core.coreutils import VariableResolver, executeCommand
-from leaf.core.dependencies import DependencyUtils
+from leaf.model.modelutils import VariableResolver, executeCommand
+from leaf.model.dependencies import DependencyUtils
 from leaf.core.error import LeafException
-from leaf.format.logger import Verbosity
-from leaf.format.renderer.entrypoint import EntrypointListRenderer
+from leaf.core.logger import Verbosity
+from leaf.rendering.renderer.entrypoint import EntrypointListRenderer
 from leaf.model.environment import Environment
 from leaf.model.package import Manifest, PackageIdentifier
 
@@ -47,7 +47,7 @@ class RunCommand(LeafCommand):
                             help='name of binary to execute')
 
     def execute(self, args, uargs):
-        wm = self.getWorkspaceManager(args, checkInitialized=False)
+        wm = self.getWorkspaceManager(checkInitialized=False)
 
         ipMap = wm.listInstalledPackages()
         searchingIpList = None

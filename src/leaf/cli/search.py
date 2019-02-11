@@ -8,9 +8,10 @@ Leaf Package Manager
 '''
 import argparse
 
+from leaf.api import PackageManager
 from leaf.cli.cliutils import LeafCommand
-from leaf.core.tags import TagManager
-from leaf.format.renderer.manifest import ManifestListRenderer
+from leaf.model.tags import TagManager
+from leaf.rendering.renderer.manifest import ManifestListRenderer
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import Manifest
 
@@ -38,7 +39,7 @@ class SearchCommand(LeafCommand):
                             nargs=argparse.ZERO_OR_MORE)
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         pkgFilter = MetaPackageFilter()
         if not args.allPackages:

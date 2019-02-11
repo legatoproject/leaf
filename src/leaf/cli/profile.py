@@ -7,8 +7,8 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 from leaf.cli.cliutils import LeafCommand, initCommonArgs
-from leaf.core.coreutils import findLatestVersion
-from leaf.format.renderer.profile import ProfileListRenderer
+from leaf.model.modelutils import findLatestVersion
+from leaf.rendering.renderer.profile import ProfileListRenderer
 from leaf.model.package import PackageIdentifier
 
 
@@ -46,7 +46,7 @@ class ProfileListCommand(AbstractProfileCommand):
             profileNargs='*')
 
     def execute(self, args, uargs):
-        wm = self.getWorkspaceManager(args)
+        wm = self.getWorkspaceManager()
         name = self.getProfileName(args)
         profileList = []
         if 'profiles' in vars(args) and len(args.profiles) > 0:
@@ -95,7 +95,7 @@ class ProfileCreateCommand(AbstractProfileCommand):
             profileNargs=1)
 
     def execute(self, args, uargs):
-        wm = self.getWorkspaceManager(args)
+        wm = self.getWorkspaceManager()
 
         profile = wm.createProfile(self.getProfileName(args))
         wm.switchProfile(profile)
@@ -118,7 +118,7 @@ class ProfileRenameCommand(AbstractProfileCommand):
                             help='the new profile name')
 
     def execute(self, args, uargs):
-        wm = self.getWorkspaceManager(args)
+        wm = self.getWorkspaceManager()
 
         oldName = wm.getCurrentProfileName()
         profile = wm.renameProfile(oldName, args.profiles[0])
@@ -135,7 +135,7 @@ class ProfileDeleteCommand(AbstractProfileCommand):
             profileNargs='*')
 
     def execute(self, args, uargs):
-        wm = self.getWorkspaceManager(args)
+        wm = self.getWorkspaceManager()
 
         if len(args.profiles) > 0:
             for pfname in args.profiles:
@@ -156,7 +156,7 @@ class ProfileSwitchCommand(AbstractProfileCommand):
             profileNargs=1)
 
     def execute(self, args, uargs):
-        wm = self.getWorkspaceManager(args)
+        wm = self.getWorkspaceManager()
 
         profile = wm.getProfile(self.getProfileName(args))
         wm.switchProfile(profile)
@@ -172,7 +172,7 @@ class ProfileSyncCommand(AbstractProfileCommand):
             profileNargs='?')
 
     def execute(self, args, uargs):
-        wm = self.getWorkspaceManager(args)
+        wm = self.getWorkspaceManager()
 
         pfname = self.getProfileName(args, wm.getCurrentProfileName)
         profile = wm.getProfile(pfname)
@@ -193,7 +193,7 @@ class ProfileConfigCommand(AbstractProfileCommand):
                        addRemovePackages=True)
 
     def execute(self, args, uargs):
-        wm = self.getWorkspaceManager(args)
+        wm = self.getWorkspaceManager()
 
         pfname = self.getProfileName(args, wm.getCurrentProfileName)
         profile = wm.getProfile(pfname)

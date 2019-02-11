@@ -4,7 +4,7 @@ import re
 import subprocess
 from builtins import sorted
 
-from leaf.constants import JsonConstants, LeafConstants
+from leaf.core.constants import JsonConstants, LeafConstants
 from leaf.core.error import InvalidPackageNameException, LeafException
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier

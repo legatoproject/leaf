@@ -5,14 +5,11 @@
 import traceback
 import unittest
 
-from tests.testutils import LeafCliWrapper
+from tests.testutils import LeafTestCaseWithCli
 
 
 @unittest.skip
-class TestPluginGetsrc(LeafCliWrapper):
-
-    def __init__(self, methodName):
-        LeafCliWrapper.__init__(self, methodName)
+class TestPluginGetsrc(LeafTestCaseWithCli):
 
     def testGetsrc(self):
         try:

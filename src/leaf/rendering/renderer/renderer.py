@@ -12,9 +12,9 @@ from subprocess import Popen, PIPE
 import errno
 import signal
 
-from leaf.format.ansi import removeAnsiChars
-from leaf.format.formatutils import getPager, isatty
-from leaf.format.logger import Verbosity
+from leaf.rendering.ansi import removeAnsiChars
+from leaf.rendering.formatutils import getPager, isatty
+from leaf.core.logger import Verbosity
 
 from leaf.core.error import UserCancelException
 

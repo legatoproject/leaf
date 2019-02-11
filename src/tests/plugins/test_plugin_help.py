@@ -4,18 +4,15 @@
 
 import os
 
-from tests.testutils import ROOT_FOLDER, LeafCliWrapper
+from tests.testutils import PROJECT_ROOT_FOLDER, LeafTestCaseWithCli
 
 
-class TestPluginHelp(LeafCliWrapper):
-
-    def __init__(self, methodName):
-        LeafCliWrapper.__init__(self, methodName)
+class TestPluginHelp(LeafTestCaseWithCli):
 
     def setUp(self):
-        LeafCliWrapper.setUp(self)
+        LeafTestCaseWithCli.setUp(self)
         TestPluginHelp.OLD_MANPATH = os.environ.get("MANPATH")
-        manDir = ROOT_FOLDER / "resources" / "man"
+        manDir = PROJECT_ROOT_FOLDER / "resources" / "man"
         self.assertTrue(manDir.is_dir())
         if TestPluginHelp.OLD_MANPATH is None:
             os.environ['MANPATH'] = "%s" % (manDir.resolve())
@@ -29,7 +26,7 @@ class TestPluginHelp(LeafCliWrapper):
             del os.environ['MANPATH']
         else:
             os.environ['MANPATH'] = TestPluginHelp.OLD_MANPATH
-        LeafCliWrapper.tearDown(self)
+        LeafTestCaseWithCli.tearDown(self)
 
     def testHelp(self):
         self.exec("help")

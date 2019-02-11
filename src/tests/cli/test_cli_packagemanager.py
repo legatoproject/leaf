@@ -2,15 +2,12 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
-import unittest
 
-from tests.testutils import LEAF_UT_SKIP, LeafCliWrapper
+from leaf.core.constants import LeafSettings
+from tests.testutils import LeafTestCaseWithCli
 
 
-class TestCliPackageManager(LeafCliWrapper):
-
-    def __init__(self, methodName):
-        LeafCliWrapper.__init__(self, methodName)
+class TestCliPackageManager(LeafTestCaseWithCli):
 
     def testConfig(self):
         self.leafExec("config")
@@ -194,15 +191,17 @@ class TestCliPackageManager(LeafCliWrapper):
                                      "upgrade_2.0"])
 
 
-@unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
 class TestCliPackageManagerVerbose(TestCliPackageManager):
-    def __init__(self, methodName):
-        TestCliPackageManager.__init__(self, methodName)
-        self.postVerbArgs.append("--verbose")
+
+    @classmethod
+    def setUpClass(cls):
+        TestCliPackageManager.setUpClass()
+        LeafSettings.VERBOSITY.value = "verbose"
 
 
-@unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
 class TestCliPackageManagerQuiet(TestCliPackageManager):
-    def __init__(self, methodName):
-        TestCliPackageManager.__init__(self, methodName)
-        self.postVerbArgs.append("--quiet")
+
+    @classmethod
+    def setUpClass(cls):
+        TestCliPackageManager.setUpClass()
+        LeafSettings.VERBOSITY.value = "quiet"

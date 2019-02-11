@@ -14,7 +14,7 @@ import os
 from pathlib import Path
 
 from leaf.cli.plugins import LeafPluginCommand
-from leaf.constants import LeafFiles
+from leaf.core.constants import LeafFiles
 from leaf.core.error import LeafException
 
 

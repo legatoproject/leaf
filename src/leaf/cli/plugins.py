@@ -6,8 +6,8 @@ from os import sys
 from pathlib import Path
 
 from leaf.cli.cliutils import LeafCommand
-from leaf.constants import LeafFiles
-from leaf.core.error import printTrace
+from leaf.core.constants import LeafFiles
+from leaf.core.logger import printTrace
 from leaf.model.package import InstalledPackage, Manifest, PackageIdentifier
 
 
@@ -178,7 +178,7 @@ class LeafPluginManager():
             if plugin.command is None:
                 return False
             # Check command prefix
-            if list(prefix) != plugin.prefix:
+            if list(prefix)[1:] != plugin.prefix:
                 return False
             # Check command is blacklisted
             if ignoredNames is not None and plugin.name in ignoredNames:

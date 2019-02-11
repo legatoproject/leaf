@@ -6,9 +6,10 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
+from leaf.api import PackageManager
 from leaf.cli.cliutils import LeafCommand
 from leaf.core.error import LeafException
-from leaf.format.renderer.remote import RemoteListRenderer
+from leaf.rendering.renderer.remote import RemoteListRenderer
 
 
 class RemoteListCommand(LeafCommand):
@@ -19,7 +20,7 @@ class RemoteListCommand(LeafCommand):
             "list remote repositories")
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         rend = RemoteListRenderer()
         rend.extend(pm.listRemotes().values())
@@ -51,7 +52,7 @@ class RemoteAddCommand(LeafCommand):
                            help="GPG fingerprint to verify signature")
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         pm.createRemote(args.alias[0], args.url[0],
                         insecure=args.insecure,
@@ -73,7 +74,7 @@ class RemoteRemoveCommand(LeafCommand):
                             help='the alias(es) of the remote(s) to remove')
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
         for alias in args.aliases:
             pm.deleteRemote(alias)
 
@@ -93,7 +94,7 @@ class RemoteEnableCommand(LeafCommand):
                             help='the alias(es) of the remote(s) to enable')
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         for alias in args.aliases:
             remote = pm.listRemotes().get(alias)
@@ -118,7 +119,7 @@ class RemoteDisableCommand(LeafCommand):
                             help='the alias(es) of the remote(s) to disable')
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         for alias in args.aliases:
             remote = pm.listRemotes().get(alias)
@@ -137,6 +138,6 @@ class RemoteFetchCommand(LeafCommand):
             "fetch content from enabled remotes")
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         pm.fetchRemotes(smartRefresh=False)

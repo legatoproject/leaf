@@ -8,16 +8,16 @@ Leaf Package Manager
 '''
 
 import argparse
+import os
 from abc import ABC, abstractmethod
+from argparse import Action
 from builtins import ValueError
 from pathlib import Path
 
-from leaf.constants import LeafConstants
+from leaf.api import LoggerManager, WorkspaceManager
+from leaf.core.constants import LeafConstants, LeafSettings
 from leaf.core.error import (LeafException, UnknownArgsException,
                              WorkspaceNotInitializedException)
-from leaf.core.packagemanager import LoggerManager, PackageManager
-from leaf.core.workspacemanager import WorkspaceManager
-from leaf.format.logger import Verbosity
 from leaf.model.base import Scope
 
 
@@ -30,19 +30,27 @@ def stringToBoolean(value):
         raise ValueError('Boolean value expected.')
 
 
-def addVerboseQuietArgs(parser):
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument("-v", "--verbose",
-                       dest="verbosity",
-                       action='store_const',
-                       const=Verbosity.VERBOSE,
-                       default=Verbosity.DEFAULT,
-                       help="increase output verbosity")
-    group.add_argument("-q", "--quiet",
-                       dest="verbosity",
-                       action='store_const',
-                       const=Verbosity.QUIET,
-                       help="decrease output verbosity")
+class EnvSetterAction(Action):
+    def __init__(self, *args, **kwargs):
+        if 'nargs' not in kwargs:
+            kwargs['nargs'] = 0
+        Action.__init__(self, *args, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        value = None
+        if self.nargs == 0:
+            if self.const is None:
+                raise ValueError()
+            value = self.const
+        elif self.nargs == 1:
+            if values[0] is None:
+                raise ValueError()
+            value = values[0]
+        else:
+            raise ValueError()
+        if value is None:
+            raise ValueError("Cannot set null value for %s" % self.dest)
+        os.environ[self.dest] = str(value)
 
 
 def initCommonArgs(parser,
@@ -115,7 +123,8 @@ class LeafCommand(ABC):
         self.description = description
         self.allowUnknownArgs = allowUnknownArgs
 
-    def _getCommandPath(self):
+    @property
+    def path(self):
         '''
         Returns the command path, a tuple a the command/subcommands to invoke the command.
         '''
@@ -123,13 +132,13 @@ class LeafCommand(ABC):
             return ()
         if not isinstance(self.parent, LeafMetaCommand):
             return (self.name,)
-        return self.parent._getCommandPath() + (self.name, )
+        return self.parent.path + (self.name, )
 
     def _getExamples(self):
         '''
         Return a list of (text, command) to be printed in help epilog
         '''
-        return None
+        return ()
 
     def _getEpilogText(self):
         '''
@@ -137,7 +146,7 @@ class LeafCommand(ABC):
         '''
         out = None
         examples = self._getExamples()
-        if examples is not None:
+        if examples is not None and len(examples) > 0:
             out = "example%s: " % ("s" if len(examples) > 1 else "")
             for command, text in examples:
                 out += "\n  %s\n    $ %s" % (text, command)
@@ -157,7 +166,17 @@ class LeafCommand(ABC):
         By default, add --verbose/--quiet options
         This method should be overiden to add options and arguments.
         '''
-        addVerboseQuietArgs(parser)
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument("-v", "--verbose",
+                           action=EnvSetterAction,
+                           dest=LeafSettings.VERBOSITY.key,
+                           const="verbose",
+                           help="increase output verbosity")
+        group.add_argument("-q", "--quiet",
+                           action=EnvSetterAction,
+                           dest=LeafSettings.VERBOSITY.key,
+                           const="quiet",
+                           help="decrease output verbosity")
 
     def setup(self, subparsers):
         p = self._createParser(subparsers)
@@ -176,7 +195,7 @@ class LeafCommand(ABC):
                 raise UnknownArgsException(uargs)
             out = self.execute(args, uargs)
         except Exception as e:
-            lm = self.getLoggerManager(args)
+            lm = LoggerManager()
             if isinstance(e, LeafException):
                 lm.printException(e)
                 out = e.exitCode
@@ -185,20 +204,9 @@ class LeafCommand(ABC):
                 out = LeafConstants.DEFAULT_ERROR_RC
         return out if out is not None else 0
 
-    def getVerbosity(self, args, default=Verbosity.DEFAULT):
-        if hasattr(args, 'verbosity'):
-            return getattr(args, 'verbosity')
-        return default
-
-    def getLoggerManager(self, args):
-        return LoggerManager(self.getVerbosity(args))
-
-    def getPackageManager(self, args):
-        return PackageManager(self.getVerbosity(args))
-
-    def getWorkspaceManager(self, args, autoFindWorkspace=True, checkInitialized=True):
-        wsRoot = WorkspaceManager.findRoot(checkParents=autoFindWorkspace)
-        out = WorkspaceManager(wsRoot, self.getVerbosity(args))
+    def getWorkspaceManager(self, autoFindWorkspace=True, checkInitialized=True):
+        out = WorkspaceManager(WorkspaceManager.findRoot(
+            checkParents=autoFindWorkspace))
         if checkInitialized and not out.isWorkspaceInitialized():
             raise WorkspaceNotInitializedException()
         return out
@@ -221,18 +229,23 @@ class LeafMetaCommand(LeafCommand):
             c.parent = self
 
     def _configureParser(self, parser):
-        subparsers2 = parser.add_subparsers(description='supported subcommands',
-                                            metavar="SUBCOMMAND",
-                                            help='actions to execute')
+        # Add quiet/verbose
+        super()._configureParser(parser)
+
+        # Create sub parsers
+        subparsers = parser.add_subparsers(description='supported subcommands',
+                                           metavar="SUBCOMMAND",
+                                           help='actions to execute')
+
         # Initialize all subcommand parsers
         for command in self.commands:
-            command.setup(subparsers2)
+            command.setup(subparsers)
         # If external commands are enabled, initialize parsers
         if self.pluginManager is not None:
-            for c in self.pluginManager.getCommands(self._getCommandPath(), [c.name for c in self.commands]):
-                c.setup(subparsers2)
+            for c in self.pluginManager.getCommands(self.path, [c.name for c in self.commands]):
+                c.setup(subparsers)
         # If no default command, subparser is required
-        subparsers2.required = not self.acceptDefaultCommand
+        subparsers.required = not self.acceptDefaultCommand
         # Register default handler
         if self.acceptDefaultCommand:
             parser.set_defaults(handler=self.commands[0])

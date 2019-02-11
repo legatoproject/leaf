@@ -2,17 +2,16 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
-from leaf.core.packagemanager import PackageManager
-from leaf.format.logger import Verbosity
+from leaf.api import PackageManager
 from leaf.model.filtering import MetaPackageFilter
-from tests.testutils import AbstractTestWithRepo
+from tests.testutils import LeafTestCaseWithRepo
 
 
-class TestApiFiltering(AbstractTestWithRepo):
+class TestApiFiltering(LeafTestCaseWithRepo):
 
     def setUp(self):
-        AbstractTestWithRepo.setUp(self)
-        pm = PackageManager(Verbosity.DEFAULT)
+        super().setUp()
+        pm = PackageManager()
         pm.createRemote("default", self.getRemoteUrl(), insecure=True)
         pm.createRemote("default2", self.getRemoteUrl2(), insecure=True)
         pm.fetchRemotes()

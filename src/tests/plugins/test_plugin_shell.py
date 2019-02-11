@@ -4,13 +4,10 @@
 
 import os
 
-from tests.testutils import LeafCliWrapper
+from tests.testutils import LeafTestCaseWithCli
 
 
-class TestPluginShell(LeafCliWrapper):
-
-    def __init__(self, methodName):
-        LeafCliWrapper.__init__(self, methodName)
+class TestPluginShell(LeafTestCaseWithCli):
 
     def testShell(self):
         pwd = os.getcwd()

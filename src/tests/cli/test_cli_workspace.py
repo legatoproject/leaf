@@ -4,17 +4,12 @@
 
 import os
 import shutil
-import unittest
 
-from leaf.constants import LeafFiles
-from tests.testutils import LEAF_UT_SKIP, LeafCliWrapper, envFileToMap, \
-    getLines
+from leaf.core.constants import LeafFiles
+from tests.testutils import LeafTestCaseWithCli, envFileToMap, getLines
 
 
-class TestCliWorkspaceManager(LeafCliWrapper):
-
-    def __init__(self, methodName):
-        LeafCliWrapper.__init__(self, methodName)
+class TestCliWorkspaceManager(LeafTestCaseWithCli):
 
     def testInitWithoutProfile(self):
         self.leafExec("init")
@@ -599,15 +594,15 @@ class TestCliWorkspaceManager(LeafCliWrapper):
                          getLines(syncFile))
 
 
-@unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
 class TestCliWorkspaceManagerVerbose(TestCliWorkspaceManager):
-    def __init__(self, methodName):
-        TestCliWorkspaceManager.__init__(self, methodName)
-        self.postVerbArgs.append("--verbose")
+
+    def __init__(self, *args, **kwargs):
+        TestCliWorkspaceManager.__init__(
+            self, *args, verbosity="verbose", **kwargs)
 
 
-@unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
 class TestCliWorkspaceManagerQuiet(TestCliWorkspaceManager):
-    def __init__(self, methodName):
-        TestCliWorkspaceManager.__init__(self, methodName)
-        self.postVerbArgs.append("--quiet")
+
+    def __init__(self, *args, **kwargs):
+        TestCliWorkspaceManager.__init__(
+            self, *args, verbosity="quiet", **kwargs)

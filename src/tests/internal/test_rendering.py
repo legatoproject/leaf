@@ -2,30 +2,25 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 '''
 
-import os
-import platform
 import sys
-import unittest
 
-from leaf import __version__
-from leaf.constants import EnvConstants, JsonConstants, LeafFiles
-from leaf.core.packagemanager import LoggerManager, PackageManager
-from leaf.format.logger import Verbosity
-from leaf.format.renderer.environment import EnvironmentRenderer
-from leaf.format.renderer.feature import FeatureListRenderer
-from leaf.format.renderer.manifest import ManifestListRenderer
-from leaf.format.renderer.profile import ProfileListRenderer
-from leaf.format.renderer.remote import RemoteListRenderer
+from leaf.api import LoggerManager, PackageManager
+from leaf.core.constants import JsonConstants, LeafFiles, LeafSettings
+from leaf.core.error import LeafException
+from leaf.core.jsonutils import jsonLoadFile
 from leaf.model.environment import Environment
-from leaf.model.package import AvailablePackage, Feature, InstalledPackage, Manifest
+from leaf.model.package import (AvailablePackage, Feature, InstalledPackage,
+                                Manifest)
 from leaf.model.remote import Remote
 from leaf.model.workspace import Profile
-from leaf.utils import jsonLoadFile
-
-from leaf.core.error import LeafException
-from leaf.format.renderer.status import StatusRenderer
-from tests.testutils import LEAF_UT_SKIP, RESOURCE_FOLDER,\
-    AbstractTestWithRepo, ROOT_FOLDER, AbstractTestWithChecker
+from leaf.rendering.ansi import ANSI
+from leaf.rendering.renderer.environment import EnvironmentRenderer
+from leaf.rendering.renderer.feature import FeatureListRenderer
+from leaf.rendering.renderer.manifest import ManifestListRenderer
+from leaf.rendering.renderer.profile import ProfileListRenderer
+from leaf.rendering.renderer.remote import RemoteListRenderer
+from leaf.rendering.renderer.status import StatusRenderer
+from tests.testutils import RESOURCE_FOLDER, LeafTestCase
 
 
 class AvailablePackageWithFakeSize(AvailablePackage):
@@ -39,11 +34,11 @@ class AvailablePackageWithFakeSize(AvailablePackage):
         return 0
 
 
-class TestRendering(AbstractTestWithChecker):
+class TestRendering(LeafTestCase):
 
-    def __init__(self, methodName):
-        AbstractTestWithChecker.__init__(self, methodName)
-        self.loggerManager = LoggerManager(Verbosity.DEFAULT)
+    def __init__(self, *args, **kwargs):
+        LeafTestCase.__init__(self, *args, **kwargs)
+        self.loggerManager = LoggerManager()
 
     def getRemoteUrl(self):
         return "http://fakeUrl"
@@ -92,24 +87,17 @@ class TestRendering(AbstractTestWithChecker):
                     JsonConstants.REMOTE_NAME: "remote_name3",
                     JsonConstants.REMOTE_DESCRIPTION: "remote_desc3",
                     JsonConstants.REMOTE_DATE: "remote_date3"}}))
-        with self.assertStdout(
-                templateOut="remotes.out"):
+        with self.assertStdout(templateOut="remotes.out"):
             self.loggerManager.printRenderer(RemoteListRenderer())
             self.loggerManager.printRenderer(rend)
 
     def testEnvironment(self):
-        pm = PackageManager(self.loggerManager.logger)
+        pm = PackageManager()
         env = Environment.build(pm.getBuiltinEnvironment(),
                                 pm.getUserEnvironment(),
                                 Environment("test", {"FOO": "BAR"}))
         rend = EnvironmentRenderer(env)
-        with self.assertStdout(
-                templateOut="env.out",
-                variables={"{ROOT_FOLDER}": AbstractTestWithRepo.ROOT_FOLDER,
-                           "{LEAF_VERSION}": __version__,
-                           "{PLATFORM_SYSTEM}": platform.system(),
-                           "{PLATFORM_MACHINE}": platform.machine(),
-                           "{PLATFORM_RELEASE}": platform.release()}):
+        with self.assertStdout(templateOut="env.out"):
             self.loggerManager.printRenderer(rend)
 
     def testStatus(self):
@@ -140,8 +128,7 @@ class TestRendering(AbstractTestWithChecker):
                 JsonConstants.INFO_VERSION: "1.0",
                 JsonConstants.INFO_DESCRIPTION: "Fake description for container C"}})
 
-        with self.assertStdout(
-                templateOut="status.out"):
+        with self.assertStdout(templateOut="status.out"):
             print("####### Test with 2 other profiles, 2 incl, 1 deps #######")
             self.loggerManager.printRenderer(StatusRenderer(
                 workspaceRootFolder="fake/root/folder",
@@ -239,8 +226,7 @@ class TestRendering(AbstractTestWithChecker):
 
     def testFeature(self):
         rend = FeatureListRenderer()
-        with self.assertStdout(
-                templateOut="feature.out"):
+        with self.assertStdout(templateOut="feature.out"):
             self.loggerManager.printRenderer(rend)
             rend.append(Feature("id1", {
                 JsonConstants.INFO_FEATURE_KEY: "KEY1",
@@ -263,15 +249,13 @@ class TestRendering(AbstractTestWithChecker):
         return ex
 
     def testHints(self):
-        with self.assertStdout(
-                templateOut="hints.out"):
+        with self.assertStdout(templateOut="hints.out"):
             self.loggerManager.printHints(
                 "This is a hints", "This is another hint with a 'fake command'")
 
     def testError(self):
-        with self.assertStdout(
-                templateOut=[],
-                templateErr="error.err"):
+        with self.assertStdout(templateOut=[],
+                               templateErr="error.err"):
             self.loggerManager.printException(self._createException())
 
     def _printError(self):
@@ -286,28 +270,50 @@ class TestRendering(AbstractTestWithChecker):
             self.loggerManager.logger.printError(ex)
 
     def testTrace(self):
-        with self.assertStdout(
-                templateOut=[],
-                templateErr="trace.err",
-                variables={
-                    "{ROOT_FOLDER}": ROOT_FOLDER}):
+        with self.assertStdout(templateOut=[],
+                               templateErr="trace.err"):
+            LeafSettings.DEBUG_MODE.value = None
             print("--------- Production mode ---------", file=sys.stderr)
             self._printError()
-            os.environ[EnvConstants.DEBUG_MODE] = "1"
+
+            LeafSettings.DEBUG_MODE.value = 1
             print("--------- Debug mode ---------", file=sys.stderr)
             self._printError()
-            del os.environ[EnvConstants.DEBUG_MODE]
+            LeafSettings.DEBUG_MODE.value = None
 
 
-@unittest.skipIf("VERBOSE" in LEAF_UT_SKIP, "Test disabled")
 class TestRenderingVerbose(TestRendering):
-    def __init__(self, methodName):
-        TestRendering.__init__(self, methodName)
-        self.loggerManager = LoggerManager(Verbosity.VERBOSE)
+
+    def __init__(self, *args, **kwargs):
+        TestRendering.__init__(self, *args, verbosity="verbose", **kwargs)
 
 
-@unittest.skipIf("QUIET" in LEAF_UT_SKIP, "Test disabled")
 class TestRenderingQuiet(TestRendering):
-    def __init__(self, methodName):
-        TestRendering.__init__(self, methodName)
-        self.loggerManager = LoggerManager(Verbosity.QUIET)
+
+    def __init__(self, *args, **kwargs):
+        TestRendering.__init__(self, *args, verbosity="quiet", **kwargs)
+
+
+class TestRenderingAnsi(TestRendering):
+
+    @classmethod
+    def setUpClass(cls):
+        ANSI.force = True
+        TestRendering.setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        TestRendering.tearDownClass()
+        ANSI.force = False
+
+
+class TestRenderingAnsiVerbose(TestRenderingAnsi):
+
+    def __init__(self, *args, **kwargs):
+        TestRenderingAnsi.__init__(self, *args, verbosity="verbose", **kwargs)
+
+
+class TestRenderingAnsiQuiet(TestRenderingAnsi):
+
+    def __init__(self, *args, **kwargs):
+        TestRenderingAnsi.__init__(self, *args, verbosity="quiet", **kwargs)

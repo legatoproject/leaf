@@ -8,9 +8,9 @@ Renderer for feature list command
 '''
 import operator
 
-from leaf.format.alignment import HAlign
-from leaf.format.renderer.renderer import Renderer
-from leaf.format.table import Table
+from leaf.rendering.alignment import HAlign
+from leaf.rendering.renderer.renderer import Renderer
+from leaf.rendering.table import Table
 
 
 class FeatureListRenderer(Renderer):

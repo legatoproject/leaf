@@ -12,13 +12,15 @@ from builtins import Exception
 from collections import OrderedDict
 from pathlib import Path
 
-from leaf.constants import EnvConstants, LeafFiles
-from leaf.core.dependencies import DependencyUtils
-from leaf.core.error import InvalidProfileNameException, LeafException, \
-    NoProfileSelected, ProfileNameAlreadyExistException, \
-    ProfileOutOfSyncException, ProfileProvisioningException, \
-    WorkspaceNotInitializedException
-from leaf.core.packagemanager import PackageManager
+from leaf.api.packages import PackageManager
+from leaf.core.constants import LeafFiles, LeafSettings
+from leaf.model.dependencies import DependencyUtils
+from leaf.core.error import (InvalidProfileNameException, LeafException,
+                             NoProfileSelected,
+                             ProfileNameAlreadyExistException,
+                             ProfileOutOfSyncException,
+                             ProfileProvisioningException,
+                             WorkspaceNotInitializedException)
 from leaf.model.config import WorkspaceConfiguration
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
@@ -35,14 +37,13 @@ class WorkspaceManager(PackageManager):
         return folder is not None and (folder / LeafFiles.WS_CONFIG_FILENAME).is_file()
 
     @staticmethod
-    def findRoot(checkEnv=True, checkParents=True):
+    def findRoot(checkParents=True):
         # Check env if no custom path given
-        if checkEnv and os.getenv(EnvConstants.WORKSPACE_ROOT, "") != "":
-            return Path(os.environ[EnvConstants.WORKSPACE_ROOT])
+        if LeafSettings.WORKSPACE.as_boolean():
+            return Path(LeafSettings.WORKSPACE.value)
 
-        # Check parents
-        if checkParents:
-            # Use PWD to avoid symlinks resolution
+        # Check parents using PWD to respect symlinks
+        if checkParents and 'PWD' in os.environ:
             currentFolder = Path(os.getenv('PWD'))
             if WorkspaceManager.isWorkspaceRoot(currentFolder):
                 return currentFolder
@@ -51,11 +52,11 @@ class WorkspaceManager(PackageManager):
                     if WorkspaceManager.isWorkspaceRoot(parent):
                         return parent
 
-        # Use PWD
+        # Use process current directory
         return Path(os.getcwd())
 
-    def __init__(self, workspaceRootFolder, verbosity):
-        PackageManager.__init__(self, verbosity)
+    def __init__(self, workspaceRootFolder):
+        PackageManager.__init__(self)
         self.workspaceRootFolder = workspaceRootFolder
         self.workspaceConfigFile = workspaceRootFolder / LeafFiles.WS_CONFIG_FILENAME
         self.workspaceDataFolder = workspaceRootFolder / LeafFiles.WS_DATA_FOLDERNAME
@@ -92,7 +93,7 @@ class WorkspaceManager(PackageManager):
 
     def getWorkspaceEnvironment(self):
         out = self.readWorkspaceConfiguration().getEnvironment()
-        out.env.insert(0, (EnvConstants.WORKSPACE_ROOT,
+        out.env.insert(0, (LeafSettings.WORKSPACE.key,
                            str(self.workspaceRootFolder)))
         return out
 

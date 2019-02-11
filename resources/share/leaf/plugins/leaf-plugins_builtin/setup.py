@@ -10,14 +10,12 @@ Leaf Package Manager
 import argparse
 import os
 import subprocess
-from argparse import ArgumentParser
 from collections import OrderedDict
 
-from leaf.cli.cliutils import addVerboseQuietArgs
 from leaf.cli.plugins import LeafPluginCommand
-from leaf.core.coreutils import groupPackageIdentifiersByName
+from leaf.core.constants import LeafSettings
+from leaf.model.modelutils import groupPackageIdentifiersByName
 from leaf.core.error import InvalidPackageNameException, LeafException
-from leaf.format.logger import Verbosity
 from leaf.model.package import PackageIdentifier
 from leaf.model.workspace import Profile
 
@@ -40,8 +38,8 @@ class SetupPlugin(LeafPluginCommand):
                             metavar='PROFILE', help='the profile name')
 
     def execute(self, args, uargs):
-        wm = self.getWorkspaceManager(
-            args, autoFindWorkspace=False, checkInitialized=False)
+        wm = self.getWorkspaceManager(autoFindWorkspace=False,
+                                      checkInitialized=False)
         cmdGenerator = LeafCommandGenerator()
         cmdGenerator.initCommonArgs(args)
 
@@ -102,9 +100,9 @@ class LeafCommandGenerator():
 
     def initCommonArgs(self, args):
         # Verbose, Quiet
-        if args.verbosity == Verbosity.VERBOSE:
+        if LeafSettings.VERBOSITY.value == "verbose":
             self.postVerbArgs["--verbose"] = None
-        elif args.verbosity == Verbosity.QUIET:
+        elif LeafSettings.VERBOSITY.value == "quiet":
             self.postVerbArgs["--quiet"] = None
 
     def genCommand(self, verb, arguments=None):
@@ -166,13 +164,3 @@ def leafExec(cmdGenerator, logger, verb, arguments=None):
     if rc != 0:
         logger.printError("Command exited with %d" % rc)
         raise LeafException("Sub command failed: '%s'" % (" ".join(command)))
-
-
-if __name__ == '__main__':
-    parser = ArgumentParser(
-        prog="leaf setup",
-        description='all in one command to create a profile in a workspace')
-
-    addVerboseQuietArgs(parser)
-
-    args = parser.parse_args()

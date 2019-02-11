@@ -7,15 +7,14 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 '''
 
-import os
 import sys
 from signal import SIGINT, signal
 
+from leaf.api import ConfigurationManager
 from leaf.cli.leaf import LeafRootCommand
 from leaf.cli.plugins import LeafPluginManager
-from leaf.constants import EnvConstants, LeafFiles
+from leaf.core.constants import LeafFiles, LeafSettings
 from leaf.core.error import UserCancelException
-from leaf.core.packagemanager import ConfigurationManager
 
 
 def main():
@@ -28,10 +27,12 @@ def runLeaf(argv, catchInt=True):
         def signal_handler(sig, frame):
             raise UserCancelException()
         signal(SIGINT, signal_handler)
+    # Init leaf configuration
+    cm = ConfigurationManager()
+    cm.initLeafSettings()
     # Plugin manager
     pm = LeafPluginManager()
-    cm = ConfigurationManager()
-    if os.getenv(EnvConstants.NOPLUGIN, "") == "":
+    if not LeafSettings.NOPLUGIN.as_boolean():
         pm.loadBuiltinPlugins(LeafFiles.getResource(
             LeafFiles.PLUGINS_DIRNAME, check_exists=False))
         pm.loadUserPlugins(cm.readConfiguration().getRootFolder())
@@ -46,11 +47,6 @@ def runLeaf(argv, catchInt=True):
 
     # Parse args
     args, uargs = parser.parse_known_args(argv)
-    # Init some env vars overriden by arguments
-    if args.workspace is not None:
-        os.environ[EnvConstants.WORKSPACE_ROOT] = str(args.workspace)
-    if args.nonInteractive:
-        os.environ[EnvConstants.NON_INTERACTIVE] = "1"
     # Execute command handler
     return args.handler.safeExecute(args, uargs)
 

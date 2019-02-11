@@ -3,51 +3,45 @@
 '''
 
 import os
+import random
 import socketserver
 import sys
 import time
+import unittest
 from datetime import datetime, timedelta
+from http.server import SimpleHTTPRequestHandler
 from multiprocessing import Process
 from time import sleep
 
-import unittest
-from http.server import SimpleHTTPRequestHandler
-from tests.testutils import ALT_INDEX_CONTENT, AbstractTestWithRepo, \
-    LEAF_UT_SKIP, envFileToMap, getLines
-
-from leaf.constants import EnvConstants
-from leaf.core.dependencies import DependencyUtils
-from leaf.core.error import InvalidHashException, InvalidPackageNameException, \
-    LeafException, NoEnabledRemoteException, NoRemoteException
-from leaf.core.features import FeatureManager
-from leaf.core.packagemanager import PackageManager
-from leaf.format.logger import Verbosity
+from leaf.api import PackageManager
+from leaf.core.constants import LeafSettings
+from leaf.model.dependencies import DependencyUtils
+from leaf.core.error import (InvalidHashException, InvalidPackageNameException,
+                             LeafException, NoEnabledRemoteException,
+                             NoRemoteException)
+from leaf.model.features import FeatureManager
 from leaf.model.environment import Environment
-from leaf.model.package import AvailablePackage, InstalledPackage, \
-    PackageIdentifier
-from leaf.utils import isFolderIgnored
+from leaf.model.package import (AvailablePackage, InstalledPackage,
+                                PackageIdentifier)
+from leaf.core.utils import isFolderIgnored
+from tests.testutils import (ALT_INDEX_CONTENT, LEAF_UT_SKIP,
+                             LeafTestCaseWithRepo, envFileToMap, getLines)
 
-
-VERBOSITY = Verbosity.VERBOSE
-HTTP_PORT = os.environ.get("LEAF_HTTP_PORT", "54940")
+HTTP_PORT = os.environ.get("LEAF_HTTP_PORT", str(random.randint(54000, 54999)))
 
 # Needed for http server
 sys.path.insert(0, os.path.abspath('../..'))
 
 
-class TestApiPackageManager(AbstractTestWithRepo):
-
-    def __init__(self, methodName):
-        AbstractTestWithRepo.__init__(self, methodName)
+class TestApiPackageManager(LeafTestCaseWithRepo):
 
     def setUp(self):
-        AbstractTestWithRepo.setUp(self)
+        super().setUp()
 
-        self.pm = PackageManager(VERBOSITY)
+        self.pm = PackageManager()
 
         # Fix CI timeout
-        self.pm.updateUserEnv(setMap={EnvConstants.DOWNLOAD_TIMEOUT: "30"})
-        self.pm.initLeafSettings()
+        LeafSettings.DOWNLOAD_TIMEOUT.value = 30
 
         self.pm.setInstallFolder(self.getInstallFolder())
         with self.assertRaises(NoRemoteException):
@@ -733,18 +727,15 @@ def startHttpServer(rootFolder):
     httpd.serve_forever()
 
 
-@unittest.skipIf("HTTP" in LEAF_UT_SKIP, "Test disabled")
+@unittest.skipIf("http" in LEAF_UT_SKIP.value.lower(), "Test disabled")
 class TestApiPackageManagerHttp(TestApiPackageManager):
-
-    def __init__(self, methodName):
-        TestApiPackageManager.__init__(self, methodName)
 
     @classmethod
     def setUpClass(cls):
         TestApiPackageManager.setUpClass()
         print("Using http port %s" % HTTP_PORT, file=sys.stderr)
         TestApiPackageManagerHttp.process = Process(target=startHttpServer,
-                                                    args=(AbstractTestWithRepo.REPO_FOLDER,))
+                                                    args=(LeafTestCaseWithRepo.REPO_FOLDER,))
         TestApiPackageManagerHttp.process.start()
         # Wait 10 seconds for the http server to start
         sleep(10)

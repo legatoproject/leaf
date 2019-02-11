@@ -11,7 +11,7 @@ Leaf Package Manager
 
 
 from leaf.cli.plugins import LeafPluginCommand
-from leaf.core.coreutils import groupPackageIdentifiersByName
+from leaf.model.modelutils import groupPackageIdentifiersByName
 from leaf.core.error import InvalidPackageNameException
 from leaf.model.package import PackageIdentifier
 
@@ -39,7 +39,7 @@ class UpdagePlugin(LeafPluginCommand):
                             help="specific packages to update")
 
     def execute(self, args, uargs):
-        workspaceManager = self.getWorkspaceManager(args)
+        workspaceManager = self.getWorkspaceManager()
         logger = workspaceManager.logger
 
         profileName = workspaceManager.getCurrentProfileName()

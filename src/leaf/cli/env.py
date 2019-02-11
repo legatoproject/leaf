@@ -8,14 +8,15 @@ Leaf Package Manager
 '''
 import argparse
 
+from leaf.api import PackageManager
+from leaf.api.remotes import LeafSettings
 from leaf.cli.cliutils import LeafCommand, initCommonArgs
-from leaf.constants import EnvConstants
-from leaf.core.dependencies import DependencyUtils
+from leaf.model.dependencies import DependencyUtils
 from leaf.core.error import ProfileOutOfSyncException
-from leaf.format.renderer.environment import EnvironmentRenderer
+from leaf.rendering.renderer.environment import EnvironmentRenderer
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
-from leaf.utils import envListToMap
+from leaf.core.utils import envListToMap
 
 
 class EnvPrintCommand(LeafCommand):
@@ -35,13 +36,13 @@ class EnvPrintCommand(LeafCommand):
                             help='the profile name')
 
     def execute(self, args, uargs):
-        wm = self.getWorkspaceManager(args, checkInitialized=False)
+        wm = self.getWorkspaceManager(checkInitialized=False)
 
         env = None
         if not wm.isWorkspaceInitialized():
             env = Environment.build(
-                self.getPackageManager(args).getBuiltinEnvironment(),
-                self.getPackageManager(args).getUserEnvironment())
+                wm.getBuiltinEnvironment(),
+                wm.getUserEnvironment())
         else:
             # Get profile name, key could not exist if command is default
             # command
@@ -68,7 +69,7 @@ class EnvBuiltinCommand(LeafCommand):
         initCommonArgs(parser, withEnvScripts=True)
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         env = pm.getBuiltinEnvironment()
         pm.printRenderer(EnvironmentRenderer(env))
@@ -88,10 +89,12 @@ class EnvUserCommand(LeafCommand):
         initCommonArgs(parser, addRemoveEnv=True, withEnvScripts=True)
 
     def _getEpilogText(self):
-        return "note:\n  You can configure leaf settings with the user environment\n  List of settings: " + ', '.join(EnvConstants.LEAF_SETTINGS)
+        settings = ", ".join(sorted(map(lambda s: s.key,
+                                        LeafSettings.values())))
+        return "note: \n  You can configure leaf settings with the user environment\n  List of settings: " + settings
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         if args.envAddList is not None or args.envRmList is not None:
             pm.updateUserEnv(setMap=envListToMap(args.envAddList),
@@ -115,7 +118,7 @@ class EnvWorkspaceCommand(LeafCommand):
         initCommonArgs(parser, addRemoveEnv=True, withEnvScripts=True)
 
     def execute(self, args, uargs):
-        wm = self.getWorkspaceManager(args)
+        wm = self.getWorkspaceManager()
 
         if args.envAddList is not None or args.envRmList is not None:
             wm.updateWorkspaceEnv(setMap=envListToMap(args.envAddList),
@@ -143,7 +146,7 @@ class EnvProfileCommand(LeafCommand):
                             help='the profile name')
 
     def execute(self, args, uargs):
-        wm = self.getWorkspaceManager(args)
+        wm = self.getWorkspaceManager()
 
         name = args.profiles if args.profiles is not None else wm.getCurrentProfileName()
         profile = wm.getProfile(name)
@@ -178,7 +181,7 @@ class EnvPackageCommand(LeafCommand):
                             nargs=argparse.REMAINDER)
 
     def execute(self, args, uargs):
-        pm = self.getPackageManager(args)
+        pm = PackageManager()
 
         items = None
         if args.resolveDeps:

@@ -8,7 +8,6 @@ Leaf Package Manager
 '''
 
 import hashlib
-import json
 import os
 import random
 import re
@@ -27,9 +26,10 @@ from urllib.request import urlretrieve
 import requests
 
 from leaf import __version__
-from leaf.constants import EnvConstants, LeafConstants
+from leaf.core.constants import LeafConstants, LeafSettings
 from leaf.core.error import (InvalidHashException, LeafException,
-                             LeafOutOfDateException, printTrace)
+                             LeafOutOfDateException)
+from leaf.core.logger import printTrace
 
 _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
 _VERSION_SEPARATOR = re.compile("[-_.~]")
@@ -130,11 +130,6 @@ def markFolderAsIgnored(folder):
     return out
 
 
-def getLeafTimeout():
-    return int(os.getenv(EnvConstants.DOWNLOAD_TIMEOUT,
-                         LeafConstants.DEFAULT_DOWNLOAD_TIMEOUT))
-
-
 def downloadData(url, outputFile=None):
     '''
     Download data and write it to outputFile
@@ -148,15 +143,20 @@ def downloadData(url, outputFile=None):
             with open(str(outputFile), 'wb') as fp:
                 fp.write(fp.read())
     else:
-        with urllib.request.urlopen(url, timeout=getLeafTimeout()) as stream:
+        with urllib.request.urlopen(url, timeout=LeafSettings.DOWNLOAD_TIMEOUT.as_int()) as stream:
             if outputFile is None:
                 return stream.read()
             with open(str(outputFile), 'wb') as fp:
                 fp.write(stream.read())
 
 
-def downloadWithRetry(url: str, out, logger_function: callable, filename: str,
-                      timeout: int = getLeafTimeout(), retry: int = 5, buffer_size: int = 262144):
+def downloadWithRetry(url: str,
+                      out,
+                      logger_function: callable,
+                      message: str,
+                      timeout: int = LeafSettings.DOWNLOAD_TIMEOUT.as_int(),
+                      retry: int = LeafSettings.DOWNLOAD_RETRY.as_int(),
+                      buffer_size: int = 262144):
     # Get total size
     size_total = size_current = 0
     headers = None
@@ -172,7 +172,7 @@ def downloadWithRetry(url: str, out, logger_function: callable, filename: str,
             for data in req.iter_content(buffer_size):
                 size_current += out.write(data)
                 printProgress(logger_function,
-                              "Downloading " + filename,
+                              message,
                               size_current,
                               size_total)
             if 0 < size_current < size_total:
@@ -234,8 +234,7 @@ def downloadFile(url, folder, logger, filename=None, hash=None):
                     downloadWithRetry(url,
                                       fp,
                                       logger.printDefault,
-                                      targetFile.name)
-
+                                      message)
             else:
                 # other scheme, use urllib
                 printProgress(logger.printDefault, message, 0, 1)
@@ -272,28 +271,6 @@ def envListToMap(envList):
             else:
                 out[line] = ""
     return out
-
-
-def jsonToString(data, pp=False):
-    kw = {}
-    if pp:
-        kw.update({'indent': 4,
-                   'separators': (',', ': ')})
-    return json.dumps(data, **kw)
-
-
-def jsonWriteFile(file, data, pp=False):
-    with open(str(file), 'w') as fp:
-        fp.write(jsonToString(data, pp=pp))
-
-
-def jsonLoadFile(file):
-    with open(str(file), 'r') as fp:
-        return jsonLoad(fp)
-
-
-def jsonLoad(fp):
-    return json.load(fp, object_pairs_hook=OrderedDict)
 
 
 def mkTmpLeafRootDir():
@@ -354,7 +331,3 @@ def getTotalSize(item):
     for sub in item.iterdir():
         out += getTotalSize(sub)
     return out
-
-
-def isNotInteractive():
-    return os.getenv(EnvConstants.NON_INTERACTIVE, '') != ''
