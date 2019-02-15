@@ -25,12 +25,11 @@ from urllib.parse import urlparse, urlunparse
 from urllib.request import urlretrieve
 
 import requests
-from requests.exceptions import RequestException
 
 from leaf import __version__
 from leaf.constants import EnvConstants, LeafConstants
 from leaf.core.error import (InvalidHashException, LeafException,
-                             LeafOutOfDateException, UserCancelException)
+                             LeafOutOfDateException, printTrace)
 
 _IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
 _VERSION_SEPARATOR = re.compile("[-_.~]")
@@ -176,8 +175,11 @@ def downloadWithRetry(url: str, out, logger_function: callable, filename: str,
                               "Downloading " + filename,
                               size_current,
                               size_total)
+            if 0 < size_current < size_total:
+                # Rare case when no exception raised and download is not finished
+                raise ValueError("Incomplete download")
             return size_current
-        except RequestException as e:
+        except (ValueError, requests.RequestException, requests.ConnectionError, requests.HTTPError, requests.Timeout) as e:
             iteration += 1
             # Check retry
             if iteration > retry:
@@ -185,10 +187,10 @@ def downloadWithRetry(url: str, out, logger_function: callable, filename: str,
             # Log the retry attempt
             logger_function(
                 "\nError while downloading, retry {}/{}".format(iteration, retry))
+            printTrace()
             # Resume mode
             if size_current < size_total:
-                headers = {'Range': 'bytes=%d-%d' % (size_current,
-                                                     (size_total - 1))}
+                headers = {'Range': 'bytes=%d-%d' % (size_current, size_total)}
             # Prevent imediate retry
             sleep(1)
 
@@ -219,15 +221,15 @@ def downloadFile(url, folder, logger, filename=None, hash=None):
     if not targetFile.exists():
         try:
             message = "Getting " + targetFile.name
-            printProgress(logger.printDefault, message, 0, 1)
             if parsedUrl.scheme == '':
                 # file mode, simple file copy
                 message = "Copying " + targetFile.name
+                printProgress(logger.printDefault, message, 0, 1)
                 copyfile(parsedUrl.path, str(targetFile))
             elif parsedUrl.scheme.startswith("http"):
                 # http/https mode, get file length before
                 message = "Downloading " + targetFile.name
-
+                printProgress(logger.printDefault, message, 0, 1)
                 with targetFile.open('wb') as fp:
                     downloadWithRetry(url,
                                       fp,
@@ -236,14 +238,9 @@ def downloadFile(url, folder, logger, filename=None, hash=None):
 
             else:
                 # other scheme, use urllib
+                printProgress(logger.printDefault, message, 0, 1)
                 urlretrieve(url, str(targetFile))
             printProgress(logger.printDefault, message, 1, 1)
-        except UserCancelException:
-            pass
-        except Exception as ex:
-            logger.printDefault("")
-            logger.printError(
-                "[Error] Unable to get {0}: {1}".format(targetFile.name, ex))
         finally:
             # End line since all progress message are on the same line
             logger.printDefault("")
@@ -252,10 +249,17 @@ def downloadFile(url, folder, logger, filename=None, hash=None):
     return targetFile
 
 
-def printProgress(printFunction, message, worked, total, end=''):
-    printFunction("\r[%d%%] %s" %
-                  (worked * 100 / total, message),
-                  end=end, flush=True)
+def printProgress(print_fnc: callable, message: str, worked: int, total: int, end: str = ''):
+    kwargs = {
+        'message': message,
+        'worked': worked,
+        'total': total,
+        'percent': "??"
+    }
+    if 0 <= worked <= total and total > 0:
+        kwargs['percent'] = int(worked * 100 / total)
+    print_fnc("\r[{percent}%] {message} ".format(**kwargs),
+              end=end, flush=True)
 
 
 def envListToMap(envList):
