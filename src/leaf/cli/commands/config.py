@@ -31,6 +31,5 @@ class ConfigCommand(LeafCommand):
         pm = PackageManager()
         if args.install_folder is not None:
             pm.set_install_folder(args.install_folder)
-        config_file = pm.configuration_file
-        if config_file is not None:
-            pm.logger.print_default("Configuration file: {file}".format(file=config_file))
+        pm.logger.print_default("Configuration file: {file}".format(file=pm.configuration_file))
+        pm.logger.print_default("Packages install folder: {folder}".format(folder=pm.get_install_folder()))

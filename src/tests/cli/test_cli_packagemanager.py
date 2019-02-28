@@ -8,7 +8,8 @@ from tests.testutils import LeafTestCaseWithCli
 
 class TestCliPackageManager(LeafTestCaseWithCli):
     def test_config(self):
-        self.leaf_exec("config")
+        with self.assertStdout(template_out="config.out", variables={"{TESTS_VOLATILE_FOLDER}": LeafTestCaseWithCli.VOLATILE_FOLDER}):
+            self.leaf_exec("config")
 
     def test_remote(self):
         self.leaf_exec(("remote", "list"))
