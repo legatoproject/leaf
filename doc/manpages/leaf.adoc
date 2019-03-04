@@ -61,7 +61,7 @@ Manage packages
 package   List, install, uninstall, upgrade packages (independently from any workspace)
 
 
-Build packages
+Build packages (see also: *leaf help legato-build*)
 [listing]
 manifest  Describe how to write a leaf package manifest
 build     Build manifests, packages and indexes

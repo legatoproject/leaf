@@ -49,7 +49,7 @@ same file system or remotely over http/https). Add the index.json location to le
 
 *leaf build manifest*: sets the package name (see _info/name_ node *leaf help manifest*)
 +
- *leaf build index*: sets the remote name
+*leaf build index*: sets the remote name
 
 *--version* _VERSION_::
 
