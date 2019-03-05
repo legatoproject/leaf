@@ -1,4 +1,3 @@
-
 import os
 import subprocess
 from builtins import sorted
@@ -7,123 +6,105 @@ from leaf.core.constants import LeafConstants
 from leaf.core.error import InvalidPackageNameException
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
-from leaf.model.steps import VariableResolver
 
 
-def executeCommand(*args, cwd=None, env=None, shell=True, displayStdout=False):
-    '''
+def execute_command(*args, cwd=None, env=None, shell=True, print_stdout=False):
+    """
     Execute a process and returns the return code.
     If 'shell' is set (true means bash, else set the string value), then the command is run in a $SHELL -c
     and the env is set via multiple export commands to preserve variable overriding
-    '''
+    """
 
     # Builds args
-    kwargs = {'stdout': subprocess.DEVNULL,
-              'stderr': subprocess.STDOUT}
-    if displayStdout:
-        kwargs['stdout'] = None
-        kwargs['stderr'] = None
+    kwargs = {"stdout": subprocess.DEVNULL, "stderr": subprocess.STDOUT}
+    if print_stdout:
+        kwargs["stdout"] = None
+        kwargs["stderr"] = None
     if cwd is not None:
-        kwargs['cwd'] = str(cwd)
+        kwargs["cwd"] = str(cwd)
 
     # Build the command line
     command = None
     if isinstance(shell, str) or shell is True:
         # In shell mode, env is evaluated in the command line
-        shellCmd = ''
+        shell_command = ""
         if isinstance(env, dict):
             for k, v in env.items():
-                shellCmd += 'export %s="%s";' % (k, v)
+                shell_command += 'export {key}="{value}";'.format(key=k, value=v)
         elif isinstance(env, Environment):
-            for k, v in env.toList():
-                shellCmd += 'export %s="%s";' % (k, v)
+            for k, v in env.tolist():
+                shell_command += 'export {key}="{value}";'.format(key=k, value=v)
         for arg in args:
-            shellCmd += ' "%s"' % arg
+            shell_command += ' "{arg}"'.format(arg=arg)
         if not isinstance(shell, str):
             shell = LeafConstants.DEFAULT_SHELL
-        command = [shell, '-c', shellCmd]
+        command = [shell, "-c", shell_command]
     else:
         # invoke process directly
         if isinstance(env, dict):
-            customEnv = dict(os.environ)
+            customenv = dict(os.environ)
             for k, v in env.items():
-                customEnv[k] = str(v)
-            kwargs['env'] = customEnv
+                customenv[k] = str(v)
+            kwargs["env"] = customenv
         elif isinstance(env, Environment):
-            customEnv = dict(os.environ)
-            for k, v in env.toList():
-                customEnv[k] = str(v)
-            kwargs['env'] = customEnv
+            customenv = dict(os.environ)
+            for k, v in env.tolist():
+                customenv[k] = str(v)
+            kwargs["env"] = customenv
         command = args
 
     # Execute the command
     return subprocess.call(command, **kwargs)
 
 
-def isLatestPackage(pi):
-    '''
+def is_latest_package(pi):
+    """
     Used to check if the given PackageIdentifier version is *latest*
-    '''
+    """
     return pi.version == LeafConstants.LATEST
 
 
-def findLatestVersion(pi_or_piName, piList,
-                      ignoreUnknown=False):
-    '''
+def find_latest_version(pi_or_name, pilist, ignore_unknown=False):
+    """
     Use given package name to return the PackageIdentifier with the highest version
-    '''
+    """
     out = None
-    piName = pi_or_piName.name if isinstance(
-        pi_or_piName, PackageIdentifier) else str(pi_or_piName)
-    for pi in [pi for pi in piList if pi.name == piName]:
+    piname = pi_or_name.name if isinstance(pi_or_name, PackageIdentifier) else str(pi_or_name)
+    for pi in [pi for pi in pilist if pi.name == piname]:
         if out is None or pi > out:
             out = pi
-    if out is None and not ignoreUnknown:
-        raise InvalidPackageNameException(pi_or_piName)
+    if out is None and not ignore_unknown:
+        raise InvalidPackageNameException(pi_or_name)
     return out
 
 
-def findManifest(pi, mfMap,
-                 ignoreUnknown=False):
-    '''
+def find_manifest(pi, mfmap, ignore_unknown=False):
+    """
     Return the Manifest from the given map from its PackageIdentifier.
     If the given PackageIdentifier is *latest*, then return the highest version of the package.
-    '''
-    if not isinstance(mfMap, dict):
+    """
+    if not isinstance(mfmap, dict):
         raise ValueError()
-    if isLatestPackage(pi):
-        pi = findLatestVersion(pi, mfMap.keys(), ignoreUnknown=True)
-    if pi in mfMap:
-        return mfMap[pi]
-    if not ignoreUnknown:
+    if is_latest_package(pi):
+        pi = find_latest_version(pi, mfmap.keys(), ignore_unknown=True)
+    if pi in mfmap:
+        return mfmap[pi]
+    if not ignore_unknown:
         raise InvalidPackageNameException(pi)
 
 
-def groupPackageIdentifiersByName(piList, pkgMap=None, sort=True):
-    out = pkgMap if pkgMap is not None else {}
-    for pi in piList:
+def group_package_identifiers_by_name(pilist, pkgmap=None, sort=True) -> dict:
+    out = pkgmap if pkgmap is not None else {}
+    for pi in pilist:
         if not isinstance(pi, PackageIdentifier):
             raise ValueError()
-        currentPiList = out.get(pi.name)
-        if currentPiList is None:
-            currentPiList = []
-            out[pi.name] = currentPiList
-        if pi not in currentPiList:
-            currentPiList.append(pi)
+        current_pilist = out.get(pi.name)
+        if current_pilist is None:
+            current_pilist = []
+            out[pi.name] = current_pilist
+        if pi not in current_pilist:
+            current_pilist.append(pi)
     if sort:
-        for pkgName in out:
-            out[pkgName] = sorted(out[pkgName])
+        for pkgname in out:
+            out[pkgname] = sorted(out[pkgname])
     return out
-
-
-def packageListToEnvironnement(ipList, ipMap, env=None):
-    if env is None:
-        env = Environment()
-    for ip in ipList:
-        ipEnv = Environment("Exported by package %s" % ip.getIdentifier())
-        env.addSubEnv(ipEnv)
-        vr = VariableResolver(ip, ipMap.values())
-        for key, value in ip.getEnvMap().items():
-            ipEnv.env.append((key,
-                              vr.resolve(value)))
-    return env

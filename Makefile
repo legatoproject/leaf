@@ -13,7 +13,7 @@ all: manpages sdist
 
 clean:
 	rm -rf $(MAN_OUTPUT_DIR) $(DIST)
-	rm -rf .coverage coverage-report/ flake-report/ nosetests_*.xml build/
+	rm -rf .coverage coverage-report/ flake-report/ tests_*.xml build/
 
 manpages:
 	rm -rf $(MAN_OUTPUT_DIR)
@@ -25,24 +25,22 @@ docker-image:
 
 docker-test:
 	docker run --rm \
-		-v $(PWD):/src/leaf \
+		-v $(PWD):/mnt/leaf \
 		-e LEAF_TEST_CLASS \
 		-e LEAF_TEST_TOX_ARGS \
+		-e LEAF_TEST_PYTEST_ARGS \
 		leaf-test:latest \
-		sh -c 'cp -R /src/leaf /tmp && cd /tmp/leaf && git clean -fdX && make clean manpages test'
+		sh -c 'cp -R /mnt/leaf /leaf && cd /leaf && git clean -fdX && make clean manpages test'
 
 venv: requirements.txt
 	virtualenv -p python3 venv --no-site-packages
 	./venv/bin/pip install -r requirements.txt
+	./venv/bin/pip install -r requirements-dev.txt
 	touch venv
 
 test:
 	chmod 700 src/tests/gpg/
 	tox $(LEAF_TEST_TOX_ARGS)
-
-flake:
-	rm -rf flake-report/
-	tox --recreate -e flake
 
 sdist:
 	rm -rf $(DIST)
@@ -56,3 +54,4 @@ install:
 watch:
 	test -n "$(VIRTUAL_ENV)"
 	rerun -d src/leaf/ -p "**/*.py" -x "python3 setup.py install >/dev/null 2>&1"
+

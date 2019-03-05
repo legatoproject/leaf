@@ -5,17 +5,17 @@ from setuptools import setup
 
 
 ROOT_FOLDER = Path(__file__).parent
-RESOURCES_FOLDER = ROOT_FOLDER / 'resources'
-MANPAGE_FOLDER = RESOURCES_FOLDER / 'man' / 'man1'
+RESOURCES_FOLDER = ROOT_FOLDER / "resources"
+MANPAGE_FOLDER = RESOURCES_FOLDER / "man" / "man1"
 
 
-def findResourcesFiles():
+def _find_resources():
     if not RESOURCES_FOLDER.exists():
         raise ValueError("Cannot find resources folder")
     if not MANPAGE_FOLDER.exists():
         raise ValueError("Manpages have not been generated yet")
 
-    resMap = {}
+    resources_map = {}
 
     def visit(folder):
         key = str(folder.relative_to(RESOURCES_FOLDER))
@@ -23,13 +23,14 @@ def findResourcesFiles():
             if item.is_dir():
                 visit(item)
             else:
-                if key not in resMap:
-                    resMap[key] = []
+                if key not in resources_map:
+                    resources_map[key] = []
                 value = str(item.relative_to(ROOT_FOLDER))
-                resMap[key].append(value)
+                resources_map[key].append(value)
+
     visit(RESOURCES_FOLDER)
     out = []
-    for folder, items in resMap.items():
+    for folder, items in resources_map.items():
         out.append((folder, items))
         print("    Resources in {}".format(folder))
         for item in items:
@@ -37,29 +38,15 @@ def findResourcesFiles():
     return out
 
 
-setup(name='leaf',
-      license='Mozilla Public License 2.0',
-      description='Leaf is a package and workspace manager',
-      use_scm_version={
-          'version_scheme': 'post-release'
-      },
-      setup_requires=['setuptools_scm'],
-      package_dir={'': 'src'},
-      packages=[
-          "leaf",
-          "leaf.core",
-          "leaf.model",
-          "leaf.rendering",
-          "leaf.rendering.renderer",
-          "leaf.api",
-          "leaf.cli"
-      ],
-      entry_points={
-          'console_scripts': [
-              'leaf = leaf.__main__:main'
-          ]
-      },
-      data_files=findResourcesFiles(),
-      include_package_data=True,
-      test_suite='nose.collector',
-      tests_require=['nose', 'coverage'])
+setup(
+    name="leaf",
+    license="Mozilla Public License 2.0",
+    description="Leaf is a package and workspace manager",
+    use_scm_version={"version_scheme": "post-release"},
+    setup_requires=["setuptools_scm"],
+    package_dir={"": "src"},
+    packages=["leaf", "leaf.core", "leaf.model", "leaf.rendering", "leaf.rendering.renderer", "leaf.api", "leaf.cli", "leaf.cli.commands"],
+    entry_points={"console_scripts": ["leaf = leaf.__main__:main"]},
+    data_files=_find_resources(),
+    include_package_data=True,
+)

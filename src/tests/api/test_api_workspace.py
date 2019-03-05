@@ -1,428 +1,393 @@
-'''
+"""
 @author: Legato Tooling Team <letools@sierrawireless.com>
-'''
+"""
 
 import platform
 from collections import OrderedDict
 
 import leaf
 from leaf.api import WorkspaceManager
-from leaf.core.error import (InvalidProfileNameException, LeafException,
-                             NoProfileSelected,
-                             ProfileNameAlreadyExistException)
+from leaf.core.error import InvalidProfileNameException, LeafException, NoProfileSelected, ProfileNameAlreadyExistException
 from leaf.model.features import FeatureManager
-from leaf.model.package import Manifest, PackageIdentifier
+from leaf.model.package import IDENTIFIER_GETTER, PackageIdentifier
 from tests.testutils import LeafTestCaseWithRepo
 
 
 class TestApiWorkspaceManager(LeafTestCaseWithRepo):
-
     def setUp(self):
         super().setUp()
-        self.wm = WorkspaceManager(self.getWorkspaceFolder())
-        self.wm.setInstallFolder(self.getInstallFolder())
-        self.wm.createRemote("default", self.getRemoteUrl(), insecure=True)
-        self.wm.createRemote("other", self.getRemoteUrl2(), insecure=True)
+        self.wm = WorkspaceManager(self.ws_folder)
+        self.wm.set_install_folder(self.install_folder)
+        self.wm.create_remote("default", self.remote_url1, insecure=True)
+        self.wm.create_remote("other", self.remote_url2, insecure=True)
 
-    def testInit(self):
+    def test_init(self):
         with self.assertRaises(Exception):
-            self.wm.createProfile("foo")
-        self.wm.initializeWorkspace()
-        profile = self.wm.createProfile("foo")
+            self.wm.create_profile("foo")
+        self.wm.init_ws()
+        profile = self.wm.create_profile("foo")
         self.assertIsNotNone(profile)
         self.assertEqual("foo", profile.name)
 
-    def testAddDeleteProfile(self):
-        self.wm.initializeWorkspace()
-        self.wm.createProfile("foo")
-        self.assertEqual(1, len(self.wm.listProfiles()))
+    def test_add_delete_profile(self):
+        self.wm.init_ws()
+        self.wm.create_profile("foo")
+        self.assertEqual(1, len(self.wm.list_profiles()))
 
         with self.assertRaises(Exception):
-            self.wm.createProfile("foo")
+            self.wm.create_profile("foo")
 
-        self.wm.createProfile("bar")
-        self.assertEqual(2, len(self.wm.listProfiles()))
-
-        with self.assertRaises(Exception):
-            self.wm.createProfile("bar")
-
-        self.wm.deleteProfile("foo")
-        self.assertEqual(1, len(self.wm.listProfiles()))
+        self.wm.create_profile("bar")
+        self.assertEqual(2, len(self.wm.list_profiles()))
 
         with self.assertRaises(Exception):
-            self.wm.deleteProfile("foo")
-        self.assertEqual(1, len(self.wm.listProfiles()))
+            self.wm.create_profile("bar")
 
-    def testUpdatetProfile(self):
-        self.wm.initializeWorkspace()
-        profile = self.wm.createProfile("foo")
-        self.assertEqual([], profile.getPackages())
-        self.assertEqual(OrderedDict(), profile.getEnvMap())
+        self.wm.delete_profile("foo")
+        self.assertEqual(1, len(self.wm.list_profiles()))
 
-        profile.addPackages(
-            PackageIdentifier.fromStringList(["container-A_1.0"]))
-        profile.updateEnv(OrderedDict([("FOO", "BAR"),
-                                       ("FOO2", "BAR2")]))
-        profile = self.wm.updateProfile(profile)
+        with self.assertRaises(Exception):
+            self.wm.delete_profile("foo")
+        self.assertEqual(1, len(self.wm.list_profiles()))
 
-        self.assertEqual(["container-A_1.0"],
-                         profile.getPackages())
-        self.assertEqual(OrderedDict([("FOO", "BAR"),
-                                      ("FOO2", "BAR2")]),
-                         profile.getEnvMap())
+    def test_updatet_profile(self):
+        self.wm.init_ws()
+        profile = self.wm.create_profile("foo")
+        self.assertEqual([], profile.packages)
+        self.assertEqual(OrderedDict(), profile._getenvmap())
 
-        profile.addPackages(
-            PackageIdentifier.fromStringList(["container-A_2.1"]))
-        profile = self.wm.updateProfile(profile)
-        self.assertEqual(["container-A_2.1"],
-                         profile.getPackages())
+        profile.add_packages(PackageIdentifier.parse_list(["container-A_1.0"]))
+        profile.update_environment(OrderedDict([("FOO", "BAR"), ("FOO2", "BAR2")]))
+        self.wm.update_profile(profile)
 
-        profile.addPackages(
-            PackageIdentifier.fromStringList(["env-A_1.0"]))
-        profile = self.wm.updateProfile(profile)
-        self.assertEqual(["container-A_2.1",
-                          "env-A_1.0"],
-                         profile.getPackages())
+        self.assertEqual(["container-A_1.0"], profile.packages)
+        self.assertEqual(OrderedDict([("FOO", "BAR"), ("FOO2", "BAR2")]), profile._getenvmap())
 
-        profile.removePackages(
-            PackageIdentifier.fromStringList(["container-A_2.1"]))
-        profile = self.wm.updateProfile(profile)
-        self.assertEqual(["env-A_1.0"],
-                         profile.getPackages())
+        profile.add_packages(PackageIdentifier.parse_list(["container-A_2.1"]))
+        self.wm.update_profile(profile)
+        self.assertEqual(["container-A_2.1"], profile.packages)
+
+        profile.add_packages(PackageIdentifier.parse_list(["env-A_1.0"]))
+        self.wm.update_profile(profile)
+        self.assertEqual(["container-A_2.1", "env-A_1.0"], profile.packages)
+
+        profile.remove_packages(PackageIdentifier.parse_list(["container-A_2.1"]))
+        self.wm.update_profile(profile)
+        self.assertEqual(["env-A_1.0"], profile.packages)
 
         with self.assertRaises(Exception):
             profile.name = "fooooooo"
-            self.wm.updateProfile(profile)
+            self.wm.update_profile(profile)
 
-    def testRenameProfile(self):
-        self.wm.initializeWorkspace()
-        self.wm.createProfile("foo")
+    def test_rename_profile(self):
+        self.wm.init_ws()
+        self.wm.create_profile("foo")
 
         with self.assertRaises(NoProfileSelected):
-            self.wm.getCurrentProfileName()
-        profile = self.wm.getProfile("foo")
-        self.wm.switchProfile(profile)
-        self.assertEqual("foo",
-                         self.wm.getCurrentProfileName())
+            self.wm.current_profile_name
+        profile = self.wm.get_profile("foo")
+        self.wm.switch_profile(profile)
+        self.assertEqual("foo", self.wm.current_profile_name)
 
-        profile.addPackages(
-            PackageIdentifier.fromStringList(["container-A_2.1"]))
-        profile.updateEnv({"FOO": "BAR"})
-        profile = self.wm.updateProfile(profile)
+        profile.add_packages(PackageIdentifier.parse_list(["container-A_2.1"]))
+        profile.update_environment({"FOO": "BAR"})
+        self.wm.update_profile(profile)
 
-        self.wm.provisionProfile(profile)
-        self.assertEqual("foo",
-                         self.wm.getCurrentProfileName())
+        self.wm.provision_profile(profile)
+        self.assertEqual("foo", self.wm.current_profile_name)
 
-        self.checkProfileContent("foo",
-                                 ["container-A",
-                                  "container-C",
-                                  "container-D"])
+        self.check_profile_content("foo", ["container-A", "container-C", "container-D"])
 
-        profile = self.wm.renameProfile("foo", "bar")
-        self.assertEqual(1, len(self.wm.listProfiles()))
+        profile = self.wm.rename_profile("foo", "bar")
+        self.assertEqual(1, len(self.wm.list_profiles()))
         self.assertEqual("bar", profile.name)
-        self.assertEqual("bar", self.wm.getProfile("bar").name)
-        self.assertEqual("bar", self.wm.getCurrentProfileName())
-        self.checkProfileContent("bar", ["container-A",
-                                         "container-C",
-                                         "container-D"])
-        self.wm.getFullEnvironment(profile)
+        self.assertEqual("bar", self.wm.get_profile("bar").name)
+        self.assertEqual("bar", self.wm.current_profile_name)
+        self.check_profile_content("bar", ["container-A", "container-C", "container-D"])
+        self.wm.build_full_environment(profile)
         with self.assertRaises(ProfileNameAlreadyExistException):
-            self.wm.renameProfile("bar", "bar")
+            self.wm.rename_profile("bar", "bar")
         with self.assertRaises(InvalidProfileNameException):
-            self.wm.renameProfile("foo", "bar")
+            self.wm.rename_profile("foo", "bar")
 
-    def testSwitchProfile(self):
-        self.wm.initializeWorkspace()
-        profile = self.wm.createProfile("foo")
-        self.wm.switchProfile(profile)
-        self.assertEqual("foo",
-                         self.wm.getCurrentProfileName())
+    def test_switch_profile(self):
+        self.wm.init_ws()
+        profile = self.wm.create_profile("foo")
+        self.wm.switch_profile(profile)
+        self.assertEqual("foo", self.wm.current_profile_name)
 
-        profile2 = self.wm.createProfile("bar")
-        self.wm.switchProfile(profile2)
-        self.assertEqual("bar",
-                         self.wm.getCurrentProfileName())
+        profile2 = self.wm.create_profile("bar")
+        self.wm.switch_profile(profile2)
+        self.assertEqual("bar", self.wm.current_profile_name)
 
-    def testEnv(self):
-        self.wm.initializeWorkspace()
-        profile = self.wm.createProfile("myenv")
-        profile.addPackages([PackageIdentifier.fromString(pis)
-                             for pis in ["env-A_1.0", "env-A_1.0"]])
-        profile = self.wm.updateProfile(profile)
+    def test_env(self):
+        self.wm.init_ws()
+        profile = self.wm.create_profile("myenv")
+        profile.add_packages([PackageIdentifier.parse(pis) for pis in ["env-A_1.0", "env-A_1.0"]])
+        self.wm.update_profile(profile)
 
-        self.wm.switchProfile(profile)
-        self.wm.provisionProfile(profile)
+        self.wm.switch_profile(profile)
+        self.wm.provision_profile(profile)
 
-        self.assertEqual([
-            ("LEAF_VERSION", leaf.__version__),
-            ("LEAF_PLATFORM_SYSTEM", platform.system()),
-            ("LEAF_PLATFORM_MACHINE", platform.machine()),
-            ("LEAF_PLATFORM_RELEASE", platform.release()),
-            ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
-            ('LEAF_PROFILE', 'myenv'),
-            ('LEAF_ENV_B', 'BAR'),
-            ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
-            ('LEAF_ENV_A', 'FOO'),
-            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
-             (self.getInstallFolder(), self.getInstallFolder()))],
-            self.wm.getFullEnvironment(profile).toList())
-
-        self.wm.updateUserEnv(setMap=OrderedDict(
-            (("scope", "user"), ("HELLO", "world"))))
-        self.assertEqual([
-            ("LEAF_VERSION", leaf.__version__),
-            ("LEAF_PLATFORM_SYSTEM", platform.system()),
-            ("LEAF_PLATFORM_MACHINE", platform.machine()),
-            ("LEAF_PLATFORM_RELEASE", platform.release()),
-            ('scope', 'user'),
-            ('HELLO', 'world'),
-            ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
-            ('LEAF_PROFILE', 'myenv'),
-            ('LEAF_ENV_B', 'BAR'),
-            ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
-            ('LEAF_ENV_A', 'FOO'),
-            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
-             (self.getInstallFolder(), self.getInstallFolder()))],
-            self.wm.getFullEnvironment(profile).toList())
-
-        self.wm.updateUserEnv(unsetList=["HELLO"])
-        self.assertEqual([
-            ("LEAF_VERSION", leaf.__version__),
-            ("LEAF_PLATFORM_SYSTEM", platform.system()),
-            ("LEAF_PLATFORM_MACHINE", platform.machine()),
-            ("LEAF_PLATFORM_RELEASE", platform.release()),
-            ('scope', 'user'),
-            ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
-            ('LEAF_PROFILE', 'myenv'),
-            ('LEAF_ENV_B', 'BAR'),
-            ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
-            ('LEAF_ENV_A', 'FOO'),
-            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
-             (self.getInstallFolder(), self.getInstallFolder()))],
-            self.wm.getFullEnvironment(profile).toList())
-
-        self.wm.updateWorkspaceEnv(setMap=OrderedDict(
-            (("scope", "workspace"), ("HELLO", "world"))))
-        self.assertEqual([
-            ("LEAF_VERSION", leaf.__version__),
-            ("LEAF_PLATFORM_SYSTEM", platform.system()),
-            ("LEAF_PLATFORM_MACHINE", platform.machine()),
-            ("LEAF_PLATFORM_RELEASE", platform.release()),
-            ('scope', 'user'),
-            ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
-            ('scope', 'workspace'),
-            ('HELLO', 'world'),
-            ('LEAF_PROFILE', 'myenv'),
-            ('LEAF_ENV_B', 'BAR'),
-            ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
-            ('LEAF_ENV_A', 'FOO'),
-            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
-             (self.getInstallFolder(), self.getInstallFolder()))],
-            self.wm.getFullEnvironment(profile).toList())
-
-        self.wm.updateWorkspaceEnv(unsetList=["HELLO"])
-        self.assertEqual([
-            ("LEAF_VERSION", leaf.__version__),
-            ("LEAF_PLATFORM_SYSTEM", platform.system()),
-            ("LEAF_PLATFORM_MACHINE", platform.machine()),
-            ("LEAF_PLATFORM_RELEASE", platform.release()),
-            ('scope', 'user'),
-            ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
-            ('scope', 'workspace'),
-            ('LEAF_PROFILE', 'myenv'),
-            ('LEAF_ENV_B', 'BAR'),
-            ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
-            ('LEAF_ENV_A', 'FOO'),
-            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
-             (self.getInstallFolder(), self.getInstallFolder()))],
-            self.wm.getFullEnvironment(profile).toList())
-
-        profile.updateEnv(setMap=OrderedDict(
-            (("scope", "profile"), ("HELLO", "world"))))
-        profile = self.wm.updateProfile(profile)
-        self.assertEqual([
-            ("LEAF_VERSION", leaf.__version__),
-            ("LEAF_PLATFORM_SYSTEM", platform.system()),
-            ("LEAF_PLATFORM_MACHINE", platform.machine()),
-            ("LEAF_PLATFORM_RELEASE", platform.release()),
-            ('scope', 'user'),
-            ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
-            ('scope', 'workspace'),
-            ('scope', 'profile'),
-            ('HELLO', 'world'),
-            ('LEAF_PROFILE', 'myenv'),
-            ('LEAF_ENV_B', 'BAR'),
-            ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
-            ('LEAF_ENV_A', 'FOO'),
-            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
-             (self.getInstallFolder(), self.getInstallFolder()))],
-            self.wm.getFullEnvironment(profile).toList())
-
-        profile.updateEnv(unsetList=["HELLO"])
-        profile = self.wm.updateProfile(profile)
-        self.assertEqual([
-            ("LEAF_VERSION", leaf.__version__),
-            ("LEAF_PLATFORM_SYSTEM", platform.system()),
-            ("LEAF_PLATFORM_MACHINE", platform.machine()),
-            ("LEAF_PLATFORM_RELEASE", platform.release()),
-            ('scope', 'user'),
-            ('LEAF_WORKSPACE', str(self.getWorkspaceFolder())),
-            ('scope', 'workspace'),
-            ('scope', 'profile'),
-            ('LEAF_PROFILE', 'myenv'),
-            ('LEAF_ENV_B', 'BAR'),
-            ('LEAF_PATH_B', '$PATH:%s/env-B_1.0' % self.getInstallFolder()),
-            ('LEAF_ENV_A', 'FOO'),
-            ('LEAF_PATH_A', '$PATH:%s/env-A_1.0:%s/env-B_1.0' %
-             (self.getInstallFolder(), self.getInstallFolder()))],
-            self.wm.getFullEnvironment(profile).toList())
-
-    def testPackageOverride(self):
-        self.wm.initializeWorkspace()
-        profile = self.wm.createProfile("myprofile")
-        profile.addPackages(
-            PackageIdentifier.fromStringList(["container-A_1.0"]))
-        profile = self.wm.updateProfile(profile)
-        self.wm.provisionProfile(profile)
-
-        self.checkInstalledPackages(["container-A_1.0",
-                                     "container-B_1.0",
-                                     "container-C_1.0",
-                                     "container-E_1.0"])
-        self.checkProfileContent("myprofile",
-                                 ["container-A",
-                                  "container-B",
-                                  "container-C",
-                                  "container-E"])
-
-        profile.addPackages(
-            PackageIdentifier.fromStringList(["container-E_1.1"]))
-        profile = self.wm.updateProfile(profile)
-        self.wm.provisionProfile(profile)
-
-        self.checkInstalledPackages(["container-A_1.0",
-                                     "container-B_1.0",
-                                     "container-C_1.0",
-                                     "container-E_1.0",
-                                     "container-E_1.1"])
-        self.checkProfileContent("myprofile",
-                                 ["container-A",
-                                  "container-B",
-                                  "container-C",
-                                  "container-E"])
         self.assertEqual(
-            PackageIdentifier.fromStringList(["container-E_1.1",
-                                              "container-B_1.0",
-                                              "container-C_1.0",
-                                              "container-A_1.0"]),
-            list(map(Manifest.getIdentifier,
-                     self.wm.getProfileDependencies(profile))))
+            [
+                ("LEAF_VERSION", leaf.__version__),
+                ("LEAF_PLATFORM_SYSTEM", platform.system()),
+                ("LEAF_PLATFORM_MACHINE", platform.machine()),
+                ("LEAF_PLATFORM_RELEASE", platform.release()),
+                ("LEAF_WORKSPACE", str(self.ws_folder)),
+                ("LEAF_PROFILE", "myenv"),
+                ("LEAF_ENV_B", "BAR"),
+                ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                ("LEAF_ENV_A", "FOO"),
+                ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
+            ],
+            self.wm.build_full_environment(profile).tolist(),
+        )
 
-    def testFeatures(self):
-        fm = FeatureManager(self.wm)
+        self.wm.update_user_environment(set_map=OrderedDict((("scope", "user"), ("HELLO", "world"))))
+        self.assertEqual(
+            [
+                ("LEAF_VERSION", leaf.__version__),
+                ("LEAF_PLATFORM_SYSTEM", platform.system()),
+                ("LEAF_PLATFORM_MACHINE", platform.machine()),
+                ("LEAF_PLATFORM_RELEASE", platform.release()),
+                ("scope", "user"),
+                ("HELLO", "world"),
+                ("LEAF_WORKSPACE", str(self.ws_folder)),
+                ("LEAF_PROFILE", "myenv"),
+                ("LEAF_ENV_B", "BAR"),
+                ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                ("LEAF_ENV_A", "FOO"),
+                ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
+            ],
+            self.wm.build_full_environment(profile).tolist(),
+        )
 
-        feature = fm.getFeature("myFeatureFoo")
+        self.wm.update_user_environment(unset_list=["HELLO"])
+        self.assertEqual(
+            [
+                ("LEAF_VERSION", leaf.__version__),
+                ("LEAF_PLATFORM_SYSTEM", platform.system()),
+                ("LEAF_PLATFORM_MACHINE", platform.machine()),
+                ("LEAF_PLATFORM_RELEASE", platform.release()),
+                ("scope", "user"),
+                ("LEAF_WORKSPACE", str(self.ws_folder)),
+                ("LEAF_PROFILE", "myenv"),
+                ("LEAF_ENV_B", "BAR"),
+                ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                ("LEAF_ENV_A", "FOO"),
+                ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
+            ],
+            self.wm.build_full_environment(profile).tolist(),
+        )
+
+        self.wm.update_ws_environment(set_map=OrderedDict((("scope", "workspace"), ("HELLO", "world"))))
+        self.assertEqual(
+            [
+                ("LEAF_VERSION", leaf.__version__),
+                ("LEAF_PLATFORM_SYSTEM", platform.system()),
+                ("LEAF_PLATFORM_MACHINE", platform.machine()),
+                ("LEAF_PLATFORM_RELEASE", platform.release()),
+                ("scope", "user"),
+                ("LEAF_WORKSPACE", str(self.ws_folder)),
+                ("scope", "workspace"),
+                ("HELLO", "world"),
+                ("LEAF_PROFILE", "myenv"),
+                ("LEAF_ENV_B", "BAR"),
+                ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                ("LEAF_ENV_A", "FOO"),
+                ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
+            ],
+            self.wm.build_full_environment(profile).tolist(),
+        )
+
+        self.wm.update_ws_environment(unset_list=["HELLO"])
+        self.assertEqual(
+            [
+                ("LEAF_VERSION", leaf.__version__),
+                ("LEAF_PLATFORM_SYSTEM", platform.system()),
+                ("LEAF_PLATFORM_MACHINE", platform.machine()),
+                ("LEAF_PLATFORM_RELEASE", platform.release()),
+                ("scope", "user"),
+                ("LEAF_WORKSPACE", str(self.ws_folder)),
+                ("scope", "workspace"),
+                ("LEAF_PROFILE", "myenv"),
+                ("LEAF_ENV_B", "BAR"),
+                ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                ("LEAF_ENV_A", "FOO"),
+                ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
+            ],
+            self.wm.build_full_environment(profile).tolist(),
+        )
+
+        profile.update_environment(set_map=OrderedDict((("scope", "profile"), ("HELLO", "world"))))
+        self.wm.update_profile(profile)
+        self.assertEqual(
+            [
+                ("LEAF_VERSION", leaf.__version__),
+                ("LEAF_PLATFORM_SYSTEM", platform.system()),
+                ("LEAF_PLATFORM_MACHINE", platform.machine()),
+                ("LEAF_PLATFORM_RELEASE", platform.release()),
+                ("scope", "user"),
+                ("LEAF_WORKSPACE", str(self.ws_folder)),
+                ("scope", "workspace"),
+                ("LEAF_PROFILE", "myenv"),
+                ("scope", "profile"),
+                ("HELLO", "world"),
+                ("LEAF_ENV_B", "BAR"),
+                ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                ("LEAF_ENV_A", "FOO"),
+                ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
+            ],
+            self.wm.build_full_environment(profile).tolist(),
+        )
+
+        profile.update_environment(unset_list=["HELLO"])
+        self.wm.update_profile(profile)
+        self.assertEqual(
+            [
+                ("LEAF_VERSION", leaf.__version__),
+                ("LEAF_PLATFORM_SYSTEM", platform.system()),
+                ("LEAF_PLATFORM_MACHINE", platform.machine()),
+                ("LEAF_PLATFORM_RELEASE", platform.release()),
+                ("scope", "user"),
+                ("LEAF_WORKSPACE", str(self.ws_folder)),
+                ("scope", "workspace"),
+                ("LEAF_PROFILE", "myenv"),
+                ("scope", "profile"),
+                ("LEAF_ENV_B", "BAR"),
+                ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                ("LEAF_ENV_A", "FOO"),
+                ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
+            ],
+            self.wm.build_full_environment(profile).tolist(),
+        )
+
+    def test_package_override(self):
+        self.wm.init_ws()
+        profile = self.wm.create_profile("myprofile")
+        profile.add_packages(PackageIdentifier.parse_list(["container-A_1.0"]))
+        self.wm.update_profile(profile)
+        self.wm.provision_profile(profile)
+
+        self.check_installed_packages(["container-A_1.0", "container-B_1.0", "container-C_1.0", "container-E_1.0"])
+        self.check_profile_content("myprofile", ["container-A", "container-B", "container-C", "container-E"])
+
+        profile.add_packages(PackageIdentifier.parse_list(["container-E_1.1"]))
+        self.wm.update_profile(profile)
+        self.wm.provision_profile(profile)
+
+        self.check_installed_packages(["container-A_1.0", "container-B_1.0", "container-C_1.0", "container-E_1.0", "container-E_1.1"])
+        self.check_profile_content("myprofile", ["container-A", "container-B", "container-C", "container-E"])
+        self.assertEqual(
+            PackageIdentifier.parse_list(["container-E_1.1", "container-B_1.0", "container-C_1.0", "container-A_1.0"]),
+            list(map(IDENTIFIER_GETTER, self.wm.get_profile_dependencies(profile))),
+        )
+
+    def test_features(self):
+        fm = FeatureManager()
+        fm.append_features(self.wm.list_available_packages().values())
+
+        feature = fm.get_feature("myFeatureFoo")
         self.assertIsNotNone(feature)
 
-        self.assertEqual("FOO",
-                         feature.getKey())
-        self.assertEqual({"bar": "BAR",
-                          "notbar": "OTHER_VALUE"},
-                         feature.getValues())
+        self.assertEqual("FOO", feature.key)
+        self.assertEqual({"bar": "BAR", "notbar": "OTHER_VALUE"}, feature.values)
 
-        self.assertEqual(None,
-                         self.wm.getUserEnvironment().findValue("FOO"))
-        fm.toggleUserFeature("myFeatureFoo", "bar", self.wm)
-        self.assertEqual("BAR",
-                         self.wm.getUserEnvironment().findValue("FOO"))
+        self.assertEqual(None, self.wm.build_user_environment().find_value("FOO"))
 
-        self.wm.initializeWorkspace()
-        self.assertEqual(None,
-                         self.wm.getWorkspaceEnvironment().findValue("FOO"))
-        fm.toggleWorkspaceFeature("myFeatureFoo", "bar", self.wm)
-        self.assertEqual("BAR",
-                         self.wm.getWorkspaceEnvironment().findValue("FOO"))
+        # Toggle user feature
+        usrc = self.wm.read_user_configuration()
+        fm.toggle_feature("myFeatureFoo", "bar", usrc)
+        self.wm.write_user_configuration(usrc)
 
-        profile = self.wm.createProfile("myprofile")
-        self.wm.switchProfile(profile)
-        self.assertEqual(None,
-                         self.wm.getProfile("myprofile").getEnvironment().findValue("FOO"))
-        fm.toggleProfileFeature("myFeatureFoo", "bar", self.wm)
-        self.assertEqual("BAR",
-                         self.wm.getProfile("myprofile").getEnvironment().findValue("FOO"))
+        self.assertEqual("BAR", self.wm.build_user_environment().find_value("FOO"))
+
+        self.wm.init_ws()
+        self.assertEqual(None, self.wm.build_ws_environment().find_value("FOO"))
+
+        # Toggle ws feature
+        wsrc = self.wm.read_ws_configuration()
+        fm.toggle_feature("myFeatureFoo", "bar", wsrc)
+        self.wm.write_ws_configuration(wsrc)
+
+        self.assertEqual("BAR", self.wm.build_ws_environment().find_value("FOO"))
+
+        profile = self.wm.create_profile("myprofile")
+        self.wm.switch_profile(profile)
+        self.assertEqual(None, self.wm.get_profile("myprofile").build_environment().find_value("FOO"))
+
+        # Toggle profile feature
+        fm.toggle_feature("myFeatureFoo", "bar", profile)
+        self.wm.update_profile(profile)
+
+        self.assertEqual("BAR", self.wm.get_profile("myprofile").build_environment().find_value("FOO"))
 
         with self.assertRaises(LeafException):
-            fm.toggleUserFeature("unknwonFeature", "unknownValue", self.wm)
+            usrc = self.wm.read_user_configuration()
+            fm.toggle_feature("unknwonFeature", "unknownValue", usrc)
 
         with self.assertRaises(LeafException):
-            fm.toggleUserFeature("myFeatureFoo", "unknownValue", self.wm)
+            usrc = self.wm.read_user_configuration()
+            fm.toggle_feature("myFeatureFoo", "unknownValue", usrc)
 
         # Error cases
-        fm.toggleUserFeature("featureWithDups", "enum1", self.wm)
+        wsrc = self.wm.read_ws_configuration()
+        fm.toggle_feature("featureWithDups", "enum1", wsrc)
+        self.wm.write_ws_configuration(wsrc)
         with self.assertRaises(LeafException):
-            fm.toggleUserFeature("featureWithDups", "enum2", self.wm)
+            usrc = self.wm.read_user_configuration()
+            fm.toggle_feature("featureWithDups", "enum2", usrc)
         with self.assertRaises(LeafException):
-            fm.toggleUserFeature("featureWithMultipleKeys", "enum1", self.wm)
+            usrc = self.wm.read_user_configuration()
+            fm.toggle_feature("featureWithMultipleKeys", "enum1", usrc)
 
-    def testResolveLatest(self):
-        self.assertEqual(2, len(self.wm.listRemotes(True)))
-        remote2 = self.wm.listRemotes()["other"]
-        remote2.setEnabled(False)
-        self.wm.updateRemote(remote2)
-        self.assertEqual(1, len(self.wm.listRemotes(True)))
+    def test_resolve_latest(self):
+        self.assertEqual(2, len(self.wm.list_remotes(True)))
+        remote2 = self.wm.list_remotes()["other"]
+        remote2.enabled = False
+        self.wm.update_remote(remote2)
+        self.assertEqual(1, len(self.wm.list_remotes(True)))
 
-        self.wm.initializeWorkspace()
-        profile = self.wm.createProfile("myprofile")
-        profile.addPackages(
-            PackageIdentifier.fromStringList(["testlatest_1.0"]))
-        profile = self.wm.updateProfile(profile)
-        self.wm.provisionProfile(profile)
-        self.checkInstalledPackages(["testlatest_1.0",
-                                     "version_1.1"])
-        self.checkProfileContent("myprofile",
-                                 ["testlatest",
-                                  "version"])
+        self.wm.init_ws()
+        profile = self.wm.create_profile("myprofile")
+        profile.add_packages(PackageIdentifier.parse_list(["testlatest_1.0"]))
+        self.wm.update_profile(profile)
+        self.wm.provision_profile(profile)
+        self.check_installed_packages(["testlatest_1.0", "version_1.1"])
+        self.check_profile_content("myprofile", ["testlatest", "version"])
 
-        remote2 = self.wm.listRemotes()["other"]
-        remote2.setEnabled(True)
-        self.wm.updateRemote(remote2)
-        self.assertEqual(2, len(self.wm.listRemotes(True)))
-        self.wm.fetchRemotes()
+        remote2 = self.wm.list_remotes()["other"]
+        remote2.enabled = True
+        self.wm.update_remote(remote2)
+        self.assertEqual(2, len(self.wm.list_remotes(True)))
+        self.wm.fetch_remotes()
 
-        self.wm.provisionProfile(profile)
-        self.checkInstalledPackages(["testlatest_1.0",
-                                     "version_1.1",
-                                     "version_2.0"])
-        self.checkProfileContent("myprofile",
-                                 ["testlatest",
-                                  "version"])
+        self.wm.provision_profile(profile)
+        self.check_installed_packages(["testlatest_1.0", "version_1.1", "version_2.0"])
+        self.check_profile_content("myprofile", ["testlatest", "version"])
 
-    def testSyncWithPackageNotAvailable(self):
-        self.wm.initializeWorkspace()
+    def test_sync_with_package_not_available(self):
+        self.wm.init_ws()
 
-        self.assertEqual(len(self.wm.listRemotes(onlyEnabled=True)), 2)
-        self.assertTrue(PackageIdentifier.fromString(
-            "container-A_1.0") in self.wm.listAvailablePackages())
+        self.assertEqual(len(self.wm.list_remotes(only_enabled=True)), 2)
+        self.assertTrue(PackageIdentifier.parse("container-A_1.0") in self.wm.list_available_packages())
 
-        profile = self.wm.createProfile("myprofile")
-        profile.addPackages(
-            PackageIdentifier.fromStringList(["container-A_1.0"]))
-        profile = self.wm.updateProfile(profile)
-        self.wm.provisionProfile(profile)
-        self.assertTrue(self.wm.isProfileSync(profile))
+        profile = self.wm.create_profile("myprofile")
+        profile.add_packages(PackageIdentifier.parse_list(["container-A_1.0"]))
+        self.wm.update_profile(profile)
+        self.wm.provision_profile(profile)
+        self.assertTrue(self.wm.is_profile_sync(profile))
 
-        remote2 = self.wm.listRemotes()["default"]
-        remote2.setEnabled(False)
-        self.wm.updateRemote(remote2)
-        self.assertEqual(len(self.wm.listRemotes(onlyEnabled=True)), 1)
-        self.assertFalse(PackageIdentifier.fromString(
-            "container-A_1.0") in self.wm.listAvailablePackages())
+        remote2 = self.wm.list_remotes()["default"]
+        remote2.enabled = False
+        self.wm.update_remote(remote2)
+        self.assertEqual(len(self.wm.list_remotes(only_enabled=True)), 1)
+        self.assertFalse(PackageIdentifier.parse("container-A_1.0") in self.wm.list_available_packages())
 
-        profile = self.wm.createProfile("myprofile2")
-        profile.addPackages(
-            PackageIdentifier.fromStringList(["container-A_1.0"]))
-        profile = self.wm.updateProfile(profile)
-        self.wm.provisionProfile(profile)
-        self.assertTrue(self.wm.isProfileSync(profile))
+        profile = self.wm.create_profile("myprofile2")
+        profile.add_packages(PackageIdentifier.parse_list(["container-A_1.0"]))
+        self.wm.update_profile(profile)
+        self.wm.provision_profile(profile)
+        self.assertTrue(self.wm.is_profile_sync(profile))

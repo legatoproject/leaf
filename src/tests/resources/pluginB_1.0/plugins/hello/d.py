@@ -1,13 +1,11 @@
-
 from leaf.cli.plugins import LeafPluginCommand
 
 
 class PluginBar(LeafPluginCommand):
-
     def execute(self, args, uargs):
         print("Hello D")
-        printHelpMessage("D")
+        print_help_message("D")
 
 
-def printHelpMessage(a):
-    print('Help', a, ";)")
+def print_help_message(a):
+    print("Help", a, ";)")

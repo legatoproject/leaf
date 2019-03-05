@@ -1,56 +1,83 @@
-'''
+"""
 Leaf Package Manager
 
 @author:    Legato Tooling Team <letools@sierrawireless.com>
 @copyright: Sierra Wireless. All rights reserved.
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
-'''
+"""
 from leaf.core.constants import JsonConstants
 from leaf.core.error import LeafException
 from leaf.core.jsonutils import JsonObject
+from leaf.model.package import AvailablePackage
 
 
 class Remote(JsonObject):
-
     def __init__(self, alias, json, content=None):
         JsonObject.__init__(self, json)
-        self.alias = alias
-        self.content = content
+        self.__alias = alias
+        self.__content = content
 
-    def isEnabled(self):
+    @property
+    def alias(self):
+        return self.__alias
+
+    @property
+    def content(self):
+        return self.__content
+
+    @content.setter
+    def content(self, content):
+        self.__content = content
+
+    @property
+    def enabled(self):
         return self.jsonget(JsonConstants.CONFIG_REMOTE_ENABLED, True)
 
-    def getGpgKey(self):
-        return self.jsonget(JsonConstants.CONFIG_REMOTE_GPGKEY)
-
-    def setEnabled(self, enabled):
+    @enabled.setter
+    def enabled(self, enabled):
         self.json[JsonConstants.CONFIG_REMOTE_ENABLED] = enabled
 
-    def getUrl(self):
+    @property
+    def gpg_key(self):
+        return self.jsonget(JsonConstants.CONFIG_REMOTE_GPGKEY)
+
+    @property
+    def url(self):
         return self.jsonget(JsonConstants.CONFIG_REMOTE_URL, mandatory=True)
 
-    def isFetched(self):
+    @property
+    def is_fetched(self):
         return self.content is not None
 
-    def getInfo(self):
-        if not self.isFetched():
+    @property
+    def info_node(self):
+        if not self.is_fetched:
             raise LeafException("Remote is not fetched")
         return JsonObject(self.content).jsonget(JsonConstants.INFO, default={})
 
-    def getInfoName(self):
-        return self.getInfo().get(JsonConstants.REMOTE_NAME)
+    @property
+    def info_name(self):
+        return self.info_node.get(JsonConstants.REMOTE_NAME)
 
-    def getInfoDescription(self):
-        return self.getInfo().get(JsonConstants.REMOTE_DESCRIPTION)
+    @property
+    def info_description(self):
+        return self.info_node.get(JsonConstants.REMOTE_DESCRIPTION)
 
-    def getInfoDate(self):
-        return self.getInfo().get(JsonConstants.REMOTE_DATE)
+    @property
+    def info_date(self):
+        return self.info_node.get(JsonConstants.REMOTE_DATE)
 
     def __str__(self):
         return self.alias
 
-    def getAvailablePackageList(self):
-        if not self.isFetched():
+    @property
+    def available_packages(self) -> list:
+        if not self.is_fetched:
             raise LeafException("Remote is not fetched")
-        return JsonObject(self.content).jsonget(JsonConstants.REMOTE_PACKAGES, [])
+        out = []
+        for json in JsonObject(self.content).jsonget(JsonConstants.REMOTE_PACKAGES, []):
+            ap = AvailablePackage(json, self.url)
+            ap.remotes.append(self)
+            out.append(ap)
+        return out

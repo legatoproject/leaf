@@ -1,11 +1,11 @@
-'''
+"""
 Renderer for feature list command
 
 @author:    Legato Tooling Team <letools@sierrawireless.com>
 @copyright: Sierra Wireless. All rights reserved.
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
-'''
+"""
 import operator
 
 from leaf.rendering.alignment import HAlign
@@ -14,14 +14,16 @@ from leaf.rendering.table import Table
 
 
 class FeatureListRenderer(Renderer):
-    '''
+
+    """
     Renderer for feature list command
-    '''
+    """
+
     def __init__(self):
         Renderer.__init__(self)
 
-    def _toStringDefault(self):
-        '''
+    def _tostring_default(self):
+        """
         Show a table like that:
         ┌─────────────────────────────────────────────────────────────────┐
         │                            6 features                           │
@@ -35,38 +37,32 @@ class FeatureListRenderer(Renderer):
         │ myFeatureHello          │ Some description here │ default|world │
         │ test-src                │                       │ binary|source │
         └─────────────────────────┴───────────────────────┴───────────────┘
-        '''
-        nbElements = 7
+        """
+        count = 7
         table = Table(self.tm)
 
         # Header
-        self._addHeaderRows(table, nbElements)
+        self._add_header_rows(table, count)
         if len(self) > 0:
-            table.newRow().newSep() \
-                .newCell(self.tm.LABEL("Feature"), HAlign.CENTER).newSep() \
-                .newCell(self.tm.LABEL("Description"), HAlign.CENTER).newSep() \
-                .newCell(self.tm.LABEL("Values"), HAlign.CENTER).newSep()
-            table.newRow().newDblSep(nbElements)
+            table.new_row().new_separator().new_cell(self.tm.LABEL("Feature"), HAlign.CENTER).new_separator().new_cell(
+                self.tm.LABEL("Description"), HAlign.CENTER
+            ).new_separator().new_cell(self.tm.LABEL("Values"), HAlign.CENTER).new_separator()
+            table.new_row().new_double_separator(count)
 
             # Body
-            for inputElt in self:
-                descValue = ""
-                if inputElt.getDescription() is not None:
-                    descValue = inputElt.getDescription()
-
+            for element in self:
                 # Draw table
-                table.newRow().newSep() \
-                    .newCell(inputElt.name).newSep() \
-                    .newCell(descValue).newSep() \
-                    .newCell("|".join(sorted(inputElt.getValues().keys()))).newSep()
+                table.new_row().new_separator().new_cell(element.name).new_separator().new_cell(element.description or "").new_separator().new_cell(
+                    "|".join(sorted(element.values.keys()))
+                ).new_separator()
 
             # Footer
-            table.newRow().newSep(nbElements)
+            table.new_row().new_separator(count)
 
         return table
 
-    def _toStringVerbose(self):
-        '''
+    def _tostring_verbose(self):
+        """
         Show a table like that:
         ┌────────────────────────────────────────────────────────────────┐
         │                           6 features                           │
@@ -98,70 +94,64 @@ class FeatureListRenderer(Renderer):
         │                         │      Values: binary()                │
         │                         │              source(1)               │
         └─────────────────────────┴──────────────────────────────────────┘
-        '''
-        nbElements = 6
+        """
+        count = 6
         table = Table(self.tm)
 
         # Header
-        self._addHeaderRows(table, nbElements)
+        self._add_header_rows(table, count)
 
         if len(self) > 0:
-            table.newRow().newSep() \
-                .newCell(self.tm.LABEL("Feature"), HAlign.CENTER).newSep() \
-                .newCell(self.tm.LABEL("Properties"), HAlign.CENTER).newHSpan().newSep()
-            table.newRow().newDblSep(nbElements)
+            table.new_row().new_separator().new_cell(self.tm.LABEL("Feature"), HAlign.CENTER).new_separator().new_cell(
+                self.tm.LABEL("Properties"), HAlign.CENTER
+            ).new_hspan().new_separator()
+            table.new_row().new_double_separator(count)
 
             # Body
-            for inputElt in self:
-                labels, values = self._createPropertyTable(inputElt)
+            for element in self:
+                labels, values = self._create_property_table(element)
 
                 # Create table row
-                table.newRow().newSep() \
-                    .newCell(inputElt.name).newSep() \
-                    .newCell("\n".join(map(str, labels)), HAlign.RIGHT) \
-                    .newCell("\n".join(map(str, values))).newSep()
+                table.new_row().new_separator().new_cell(element.name).new_separator().new_cell("\n".join(map(str, labels)), HAlign.RIGHT).new_cell(
+                    "\n".join(map(str, values))
+                ).new_separator()
 
                 # Footer for each manifest
-                table.newRow().newSep(nbElements)
+                table.new_row().new_separator(count)
 
         return table
 
-    def _createPropertyTable(self, inputElt):
+    def _create_property_table(self, element):
         labels = []
         values = []
 
         # Description
-        if inputElt.getDescription() is not None:
+        if element.description is not None:
             labels.append("Description:")
-            values.append(inputElt.getDescription())
+            values.append(element.description)
 
         # Key
-        if inputElt.getKey() is not None:
+        if element.key is not None:
             labels.append("Key:")
-            values.append(inputElt.getKey())
+            values.append(element.key)
 
         # Values
-        tagCount = len(inputElt.getValues().items())
-        if tagCount > 0:
-            labels.append("Values:" if tagCount > 1 else "Value:")
-
-            values.extend(["%s(%s)" % (k, "" if v is None else v)
-                           for k, v in sorted(inputElt.getValues().items(),
-                                              key=operator.itemgetter(0))])
+        tag_count = len(element.values.items())
+        if tag_count > 0:
+            labels.append("Values:" if tag_count > 1 else "Value:")
+            values.extend(["{enum}({value})".format(enum=k, value=v or "") for k, v in sorted(element.values.items(), key=operator.itemgetter(0))])
 
         return map(self.tm.LABEL, labels), values
 
-    def _addHeaderRows(self, table, tableSize):
-        '''
+    def _add_header_rows(self, table, size):
+        """
         Add header to the given Table like that:
         ┌─────────────────────────────────────────────────────────────────┐
         │                            6 features                           │
         ├─────────────────────────┬───────────────────────────────────────┤
-        '''
-        inputCount = len(self)
-        title = "{count} {labeltheme}{featureLabel}{resettheme}".format(
-            count=inputCount,
-            labeltheme=self.tm.LABEL,
-            featureLabel="feature" if inputCount <= 1 else "features",
-            resettheme=self.tm.RESET)
-        table.newHeader(title, tableSize)
+        """
+        count = len(self)
+        title = "{count} {labeltheme}{featurelabel}{resettheme}".format(
+            count=count, labeltheme=self.tm.LABEL, featurelabel="feature" if count <= 1 else "features", resettheme=self.tm.RESET
+        )
+        table.new_header(title, size)

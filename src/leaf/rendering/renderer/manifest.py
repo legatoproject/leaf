@@ -1,32 +1,34 @@
-'''
+"""
 Renderer for search and package list commands
 
 @author:    Legato Tooling Team <letools@sierrawireless.com>
 @copyright: Sierra Wireless. All rights reserved.
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
-'''
+"""
+from leaf.model.filtering import PackageFilter
+from leaf.model.package import AvailablePackage, ConditionalPackageIdentifier, InstalledPackage, Manifest
 from leaf.rendering.alignment import HAlign
 from leaf.rendering.formatutils import sizeof_fmt
 from leaf.rendering.renderer.renderer import Renderer
 from leaf.rendering.table import Table
-from leaf.model.package import AvailablePackage, InstalledPackage, ConditionalPackageIdentifier
 
 
 class ManifestListRenderer(Renderer):
-    '''
+
+    """
     Renderer for search and package list commands
-    '''
+    """
 
-    def __init__(self, pkgFilter=None):
-        '''
-        Store the pkgFilter to show it in the table header
-        '''
+    def __init__(self, pkg_filter: PackageFilter = None):
+        """
+        Store the pkg_filter to show it in the table header
+        """
         Renderer.__init__(self)
-        self.pkgFilter = pkgFilter
+        self.pkg_filter = pkg_filter
 
-    def _toStringDefault(self):
-        '''
+    def _tostring_default(self):
+        """
         Show a table like that:
         ┌──────────────────────────────────────────────────┐
         │         4 packages - Filter: only master         │
@@ -38,38 +40,32 @@ class ManifestListRenderer(Renderer):
         │ container-A_2.0          │             │ foo,bar │
         │ featured-with-source_1.0 │ Desc2       │ latest  │
         └──────────────────────────┴─────────────┴─────────┘
-        '''
-        nbElements = 7
+        """
+        count = 7
         table = Table(self.tm)
 
         # Header
-        self._addHeaderRows(table, nbElements)
+        self._add_header_rows(table, count)
         if len(self) > 0:
-            table.newRow().newSep() \
-                .newCell(self.tm.LABEL("Identifier"), HAlign.CENTER).newSep() \
-                .newCell(self.tm.LABEL("Description"), HAlign.CENTER).newSep() \
-                .newCell(self.tm.LABEL("Tags"), HAlign.CENTER).newSep()
-            table.newRow().newDblSep(nbElements)
+            table.new_row().new_separator().new_cell(self.tm.LABEL("Identifier"), HAlign.CENTER).new_separator().new_cell(
+                self.tm.LABEL("Description"), HAlign.CENTER
+            ).new_separator().new_cell(self.tm.LABEL("Tags"), HAlign.CENTER).new_separator()
+            table.new_row().new_double_separator(count)
 
             # Body
-            for inputElt in self:
-                descValue = ""
-                if inputElt.getDescription() is not None:
-                    descValue = inputElt.getDescription()
-
+            for element in self:
                 # Draw table
-                table.newRow().newSep() \
-                    .newCell(inputElt.getIdentifier()).newSep() \
-                    .newCell(descValue).newSep() \
-                    .newCell(self._getTagList(inputElt)).newSep()
+                table.new_row().new_separator().new_cell(element.identifier).new_separator().new_cell(element.description or "").new_separator().new_cell(
+                    self._get_tags(element)
+                ).new_separator()
 
             # Footer
-            table.newRow().newSep(nbElements)
+            table.new_row().new_separator(count)
 
         return table
 
-    def _toStringVerbose(self):
-        '''
+    def _tostring_verbose(self):
+        """
         Show a table like that:
         ┌────────────────────────────────────────────────────────────────────────────────┐
         │  47 packages - Filter: only master and (+tag1 or +tag2keyword1 or +keyword2)   │
@@ -91,107 +87,99 @@ class ManifestListRenderer(Renderer):
         │                                     │                    condition-H_1.0       │
         ├─────────────────────────────────────┼──────────────────────────────────────────┤
         │ ...                                 │                ... ...                   │
-        '''
-        nbElements = 6
+        """
+        count = 6
         table = Table(self.tm)
 
         # Header
-        self._addHeaderRows(table, nbElements)
+        self._add_header_rows(table, count)
 
         if len(self) > 0:
-            table.newRow().newSep() \
-                .newCell(self.tm.LABEL("Identifier"), HAlign.CENTER).newSep() \
-                .newCell(self.tm.LABEL("Properties"), HAlign.CENTER).newHSpan().newSep()
-            table.newRow().newDblSep(nbElements)
+            table.new_row().new_separator().new_cell(self.tm.LABEL("Identifier"), HAlign.CENTER).new_separator().new_cell(
+                self.tm.LABEL("Properties"), HAlign.CENTER
+            ).new_hspan().new_separator()
+            table.new_row().new_double_separator(count)
 
             # Body
-            for inputElt in self:
-                labels, values = self._createPropertyTable(inputElt)
+            for element in self:
+                labels, values = self._create_property_table(element)
 
                 # Create table row
-                table.newRow().newSep() \
-                    .newCell(inputElt.getIdentifier()).newSep() \
-                    .newCell("\n".join(map(str, labels)), HAlign.RIGHT) \
-                    .newCell("\n".join(map(str, values))).newSep()
+                table.new_row().new_separator().new_cell(element.identifier).new_separator().new_cell("\n".join(map(str, labels)), HAlign.RIGHT).new_cell(
+                    "\n".join(map(str, values))
+                ).new_separator()
 
                 # Footer for each manifest
-                table.newRow().newSep(nbElements)
+                table.new_row().new_separator(count)
 
         return table
 
-    def _createPropertyTable(self, inputElt):
+    def _create_property_table(self, element):
         labels = []
         values = []
 
         # Description
-        if inputElt.getDescription() is not None:
+        if element.description is not None:
             labels.append("Description:")
-            values.append(inputElt.getDescription())
+            values.append(element.description)
 
         # Tags
-        tagCount = len(inputElt.getAllTags())
-        if tagCount > 0:
-            labels.append("Tag%s:" % ('s' if tagCount > 1 else ''))
-            values.append(self._getTagList(inputElt))
+        tag_count = len(element.all_tags)
+        if tag_count > 0:
+            labels.append("Tag{s}:".format(s=("s" if tag_count > 1 else "")))
+            values.append(self._get_tags(element))
 
         # Release date
-        relDate = inputElt.getDate()
-        if relDate is not None:
+        if element.date is not None:
             labels.append("Release date:")
-            values.append(relDate)
+            values.append(element.date)
 
         # Count included packages
-        depCount = len(inputElt.getLeafDepends())
+        dependency_count = len(element.depends_packages)
 
         # For Availables Packages
-        if isinstance(inputElt, AvailablePackage):
+        if isinstance(element, AvailablePackage):
             # Sources
-            remoteCount = len(inputElt.sourceRemotes)
-            if remoteCount > 0:
-                labels.append("Source%s:" % ('s' if remoteCount > 1 else ''))
-                values.append(",".join(remote.alias
-                                       for remote in inputElt.sourceRemotes))
+            remote_count = len(element.remotes)
+            if remote_count > 0:
+                labels.append("Source{s}:".format(s=("s" if remote_count > 1 else "")))
+                values.append(",".join(remote.alias for remote in element.remotes))
 
-            if depCount == 0:
+            if dependency_count == 0:
                 # Size
                 labels.append("Size:")
-                values.append(sizeof_fmt(inputElt.getSize()))
+                values.append(sizeof_fmt(element.size))
         # For Installed Packages
-        elif isinstance(inputElt, InstalledPackage):
+        elif isinstance(element, InstalledPackage):
             # Folder
             labels.append("Folder:")
-            values.append(inputElt.folder)
+            values.append(element.folder)
 
         # Included packages
-        if depCount > 0:
-            labels.append("Included Package%s:" %
-                          ('s' if depCount > 1 else ''))
-            values.append('\n'.join(self._getCpis(inclPack)
-                                    for inclPack in inputElt.getLeafDepends()))
+        if dependency_count > 0:
+            labels.append("Included Package{s}:".format(s=("s" if dependency_count > 1 else "")))
+            values.append("\n".join(self._get_cpis(cpis) for cpis in element.depends_packages))
 
         return map(self.tm.LABEL, labels), values
 
-    def _addHeaderRows(self, table, tableSize):
-        '''
+    def _add_header_rows(self, table, size):
+        """
         Add header to the given Table like that:
         ┌──────────────────────────────────────────────────────────────────┐
         │                36 packages - Filter: only master                 │
         ├──────────────────────────────────────────────────────────────────┤
-        '''
-        inputCount = len(self)
+        """
+        count = len(self)
         title = "{count} {labeltheme}{featureLabel} - Filter:{resettheme} {filter}".format(
-            count=inputCount,
-            labeltheme=self.tm.LABEL,
-            featureLabel="packages" if inputCount > 1 else "package",
-            resettheme=self.tm.RESET,
-            filter=self.pkgFilter)
-        table.newHeader(title, tableSize)
+            count=count, labeltheme=self.tm.LABEL, featureLabel="packages" if count > 1 else "package", resettheme=self.tm.RESET, filter=self.pkg_filter
+        )
+        table.new_header(title, size)
 
-    def _getCpis(self, cpis):
+    def _get_cpis(self, cpis: str):
         try:
-            return str(ConditionalPackageIdentifier.fromString(cpis))
+            return str(ConditionalPackageIdentifier.parse(cpis))
         except Exception:
             return cpis
 
-    def _getTagList(self, inputElt):
-        return ",".join(map(self.tm.colorizeTag, inputElt.getAllTags()))
+    def _get_tags(self, element: Manifest):
+        return ",".join(map(self.tm.colorize_tag, element.all_tags))

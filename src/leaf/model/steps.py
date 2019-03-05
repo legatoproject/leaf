@@ -1,239 +1,101 @@
-
-import os
 import re
-import subprocess
-from builtins import sorted
 
-from leaf.core.constants import JsonConstants, LeafConstants
-from leaf.core.error import InvalidPackageNameException, LeafException
+from leaf.core.constants import JsonConstants
+from leaf.core.error import LeafException
+from leaf.core.logger import TextLogger
 from leaf.model.environment import Environment
-from leaf.model.package import PackageIdentifier
+from leaf.model.modelutils import execute_command, find_manifest
+from leaf.model.package import InstalledPackage, PackageIdentifier
 
 
-def executeCommand(*args, cwd=None, env=None, shell=True, displayStdout=False):
-    '''
-    Execute a process and returns the return code.
-    If 'shell' is set (true means bash, else set the string value), then the command is run in a $SHELL -c
-    and the env is set via multiple export commands to preserve variable overriding
-    '''
+class VariableResolver:
 
-    # Builds args
-    kwargs = {'stdout': subprocess.DEVNULL,
-              'stderr': subprocess.STDOUT}
-    if displayStdout:
-        kwargs['stdout'] = None
-        kwargs['stderr'] = None
-    if cwd is not None:
-        kwargs['cwd'] = str(cwd)
+    _PATTERN = "@{{(NAME|VERSION|DIR)(?::(({name}){separator}({version})))?}}".format(
+        name=PackageIdentifier.NAME_PATTERN, separator=PackageIdentifier.SEPARATOR, version=PackageIdentifier.VERSION_PATTERN
+    )
 
-    # Build the command line
-    command = None
-    if isinstance(shell, str) or shell is True:
-        # In shell mode, env is evaluated in the command line
-        shellCmd = ''
-        if isinstance(env, dict):
-            for k, v in env.items():
-                shellCmd += 'export %s="%s";' % (k, v)
-        elif isinstance(env, Environment):
-            for k, v in env.toList():
-                shellCmd += 'export %s="%s";' % (k, v)
-        for arg in args:
-            shellCmd += ' "%s"' % arg
-        if not isinstance(shell, str):
-            shell = LeafConstants.DEFAULT_SHELL
-        command = [shell, '-c', shellCmd]
-    else:
-        # invoke process directly
-        if isinstance(env, dict):
-            customEnv = dict(os.environ)
-            for k, v in env.items():
-                customEnv[k] = str(v)
-            kwargs['env'] = customEnv
-        elif isinstance(env, Environment):
-            customEnv = dict(os.environ)
-            for k, v in env.toList():
-                customEnv[k] = str(v)
-            kwargs['env'] = customEnv
-        command = args
+    def __init__(self, current_package: InstalledPackage = None, other_packages: list = None):
+        self.__current_package = current_package
+        self.__all_packages = {}
 
-    # Execute the command
-    return subprocess.call(command, **kwargs)
+        if other_packages is not None:
+            for pkg in other_packages:
+                self.__all_packages[pkg.identifier] = pkg
+        if current_package is not None:
+            self.__all_packages[current_package.identifier] = current_package
 
-
-def isLatestPackage(pi):
-    '''
-    Used to check if the given PackageIdentifier version is *latest*
-    '''
-    return pi.version == LeafConstants.LATEST
-
-
-def findLatestVersion(pi_or_piName, piList,
-                      ignoreUnknown=False):
-    '''
-    Use given package name to return the PackageIdentifier with the highest version
-    '''
-    out = None
-    piName = pi_or_piName.name if isinstance(
-        pi_or_piName, PackageIdentifier) else str(pi_or_piName)
-    for pi in [pi for pi in piList if pi.name == piName]:
-        if out is None or pi > out:
-            out = pi
-    if out is None and not ignoreUnknown:
-        raise InvalidPackageNameException(pi_or_piName)
-    return out
-
-
-def findManifest(pi, mfMap,
-                 ignoreUnknown=False):
-    '''
-    Return the Manifest from the given map from its PackageIdentifier.
-    If the given PackageIdentifier is *latest*, then return the highest version of the package.
-    '''
-    if not isinstance(mfMap, dict):
-        raise ValueError()
-    if isLatestPackage(pi):
-        pi = findLatestVersion(pi, mfMap.keys(), ignoreUnknown=True)
-    if pi in mfMap:
-        return mfMap[pi]
-    if not ignoreUnknown:
-        raise InvalidPackageNameException(pi)
-
-
-def groupPackageIdentifiersByName(piList, pkgMap=None, sort=True):
-    out = pkgMap if pkgMap is not None else {}
-    for pi in piList:
-        if not isinstance(pi, PackageIdentifier):
-            raise ValueError()
-        currentPiList = out.get(pi.name)
-        if currentPiList is None:
-            currentPiList = []
-            out[pi.name] = currentPiList
-        if pi not in currentPiList:
-            currentPiList.append(pi)
-    if sort:
-        for pkgName in out:
-            out[pkgName] = sorted(out[pkgName])
-    return out
-
-
-def packageListToEnvironnement(ipList, ipMap, env=None):
-    if env is None:
-        env = Environment()
-    for ip in ipList:
-        ipEnv = Environment("Exported by package %s" % ip.getIdentifier())
-        env.addSubEnv(ipEnv)
-        vr = VariableResolver(ip, ipMap.values())
-        for key, value in ip.getEnvMap().items():
-            ipEnv.env.append((key,
-                              vr.resolve(value)))
-    return env
-
-
-class VariableResolver():
-
-    _PATTERN = "@{(NAME|VERSION|DIR)(?::((%s)%s(%s)))?}" % (PackageIdentifier.NAME_PATTERN,
-                                                            PackageIdentifier.SEPARATOR,
-                                                            PackageIdentifier.VERSION_PATTERN)
-
-    def __init__(self, currentPkg=None, otherPkgList=None):
-        self.currentPackage = currentPkg
-        self.allPackages = {}
-        if otherPkgList is not None:
-            for pkg in otherPkgList:
-                self.allPackages[pkg.getIdentifier()] = pkg
-        if currentPkg is not None:
-            self.allPackages[currentPkg.getIdentifier()] = currentPkg
-
-    def getValue(self, var, pis):
+    def get_value(self, var: str, pis: str):
         pkg = None
         if pis is None:
             # No PI specified means current package
-            pkg = self.currentPackage
+            pkg = self.__current_package
         else:
-            pkg = findManifest(PackageIdentifier.fromString(pis),
-                               self.allPackages,
-                               ignoreUnknown=True)
+            pkg = find_manifest(PackageIdentifier.parse(pis), self.__all_packages, ignore_unknown=True)
         if pkg is not None:
-            if var == 'NAME':
-                return pkg.getIdentifier().name
-            if var == 'VERSION':
-                return pkg.getIdentifier().version
-            if var == 'DIR':
+            if var == "NAME":
+                return pkg.name
+            if var == "VERSION":
+                return pkg.version
+            if var == "DIR":
                 return str(pkg.folder)
 
-    def resolve(self, value):
-        def myReplace(m):
-            out = self.getValue(m.group(1), m.group(2))
+    def resolve(self, value: str):
+        def myreplace(m):
+            out = self.get_value(m.group(1), m.group(2))
             if out is None:
-                raise LeafException("Cannot resolve variable: %s" % m.group(0))
+                raise LeafException("Cannot resolve variable: {var}".format(var=m.group(0)))
             return out
 
-        return re.sub(VariableResolver._PATTERN, myReplace, value)
+        return re.sub(VariableResolver._PATTERN, myreplace, value)
 
 
-class StepExecutor():
-    '''
+class StepExecutor:
+
+    """
     Used to execute post install & pre uninstall steps
-    '''
+    """
 
-    def __init__(self, logger, package, variableResolver, env=None):
-        self.logger = logger
-        self.package = package
-        self.env = env
-        self.targetFolder = package.folder
-        self.variableResolver = variableResolver
+    def __init__(self, logger: TextLogger, package: InstalledPackage, vr: VariableResolver, env=None):
+        self.__logger = logger
+        self.__package = package
+        self.__env = env
+        self.__target_folder = package.folder
+        self.__vr = vr
 
-    def postInstall(self,):
-        self.runSteps(self.package.jsonget(
-            JsonConstants.INSTALL, default=[]),
-            label="install")
+    def install(self):
+        self.__run_steps(self.__package.jsonget(JsonConstants.INSTALL), label="install")
 
-    def preUninstall(self):
-        self.runSteps(self.package.jsonget(
-            JsonConstants.UNINSTALL, default=[]),
-            label="uninstall")
+    def uninstall(self):
+        self.__run_steps(self.__package.jsonget(JsonConstants.UNINSTALL), label="uninstall")
 
     def sync(self):
-        self.runSteps(self.package.jsonget(
-            JsonConstants.SYNC, default=[]),
-            label="sync")
+        self.__run_steps(self.__package.jsonget(JsonConstants.SYNC), label="sync")
 
-    def runSteps(self, steps, label):
+    def __run_steps(self, steps, label):
         if steps is not None and len(steps) > 0:
-            self.logger.printDefault("Run %s steps for %s" %
-                                     (label, self.package.getIdentifier()))
+            self.__logger.print_default("Run {label} steps for {ip.identifier}".format(label=label, ip=self.__package))
             for step in steps:
                 if JsonConstants.STEP_LABEL in step:
-                    self.logger.printDefault(step[JsonConstants.STEP_LABEL])
-                self.doExec(step, label)
+                    self.__logger.print_default(step[JsonConstants.STEP_LABEL])
+                self.__execute(step, label)
 
-    def doExec(self, step, label):
-        command = [self.resolve(arg)
-                   for arg in step[JsonConstants.STEP_EXEC_COMMAND]]
-        self.logger.printVerbose("Execute:", ' '.join(command))
+    def __execute(self, step, label):
+        command = step[JsonConstants.STEP_EXEC_COMMAND]
+        command = list(map(self.__vr.resolve, command))
+        command_text = " ".join(command)
+        self.__logger.print_verbose("Execute: {command}".format(command=command_text))
+
         env = Environment()
-        env.addSubEnv(self.env)
-        env.addSubEnv(Environment(
-            content=step.get(JsonConstants.STEP_EXEC_ENV)))
+        env.append(self.__env)
+        env.append(Environment(content=step.get(JsonConstants.STEP_EXEC_ENV)))
+
         verbose = step.get(JsonConstants.STEP_EXEC_VERBOSE, False)
         shell = step.get(JsonConstants.STEP_EXEC_SHELL, True)
 
-        rc = executeCommand(*command,
-                            cwd=self.targetFolder,
-                            env=env,
-                            displayStdout=verbose or self.logger.isVerbose(),
-                            shell=shell)
+        rc = execute_command(*command, cwd=self.__target_folder, env=env, print_stdout=verbose or self.__logger.isverbose(), shell=shell)
         if rc != 0:
-            self.logger.printVerbose("Command '%s' exited with %s" %
-                                     (" ".join(command), rc))
+            self.__logger.print_verbose("Command '{command}' exited with {rc}".format(command=command_text, rc=rc))
             if step.get(JsonConstants.STEP_IGNORE_FAIL, False):
-                self.logger.printVerbose("Step ignores failure")
+                self.__logger.print_verbose("Step ignores failure")
             else:
-                raise LeafException("Error during %s step for %s (command returned %d)" %
-                                    (label, self.package.getIdentifier(), rc))
-
-    def resolve(self, value, prefixWithFolder=False):
-        out = self.variableResolver.resolve(value)
-        if prefixWithFolder:
-            return str(self.targetFolder / out)
-        return out
+                raise LeafException("Error during {label} step for {ip.identifier} (command returned {rc})".format(label=label, ip=self.__package, rc=rc))

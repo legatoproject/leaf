@@ -1,13 +1,15 @@
-'''
+"""
 Leaf Package Manager
 
 @author:    Legato Tooling Team <letools@sierrawireless.com>
 @copyright: Sierra Wireless. All rights reserved.
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
-'''
+"""
 
 from abc import ABC, abstractmethod
+
+from leaf.model.package import Manifest
 
 
 class PackageFilter(ABC):
@@ -15,100 +17,111 @@ class PackageFilter(ABC):
         pass
 
     @abstractmethod
-    def matches(self, mf):
+    def matches(self, mf: Manifest):
         pass
 
 
 class MetaPackageFilter(PackageFilter):
-
     def __init__(self):
-        self.filter = AndPackageFilter()
+        self.__filter = AndPackageFilter()
 
-    def matches(self, mf):
-        return self.filter.matches(mf)
+    def matches(self, mf: Manifest):
+        return self.__filter.matches(mf)
 
-    def onlyMasterPackages(self):
-        self.filter.addFilter(MasterPackageFilter())
+    def only_master_packages(self):
+        self.__filter.add_filter(MasterPackageFilter())
         return self
 
-    def withTag(self, tag):
-        if "," in tag:
-            orFilter = OrPackageFilter()
-            self.filter.addFilter(orFilter)
-            for ortag in tag.split(","):
-                orFilter.addFilter(TagPackageFilter(ortag))
+    def with_tag(self, tags: str):
+        if "," in tags:
+            orfilter = OrPackageFilter()
+            self.__filter.add_filter(orfilter)
+            for tag in tags.split(","):
+                orfilter.add_filter(TagPackageFilter(tag))
         else:
-            self.filter.addFilter(TagPackageFilter(tag))
+            self.__filter.add_filter(TagPackageFilter(tags))
         return self
 
-    def withKeyword(self, kw):
-        if "," in kw:
-            orFilter = OrPackageFilter()
-            self.filter.addFilter(orFilter)
-            for orkw in kw.split(","):
-                orFilter.addFilter(KeywordPackageFilter(orkw))
+    def with_keyword(self, keywords: str):
+        if "," in keywords:
+            orfilter = OrPackageFilter()
+            self.__filter.add_filter(orfilter)
+            for orkw in keywords.split(","):
+                orfilter.add_filter(KeywordPackageFilter(orkw))
         else:
-            self.filter.addFilter(KeywordPackageFilter(kw))
+            self.__filter.add_filter(KeywordPackageFilter(keywords))
         return self
 
-    def withNames(self, nameList):
-        orFilter = OrPackageFilter()
-        self.filter.addFilter(orFilter)
-        for name in nameList:
-            orFilter.addFilter(PkgNamePackageFilter(name))
+    def with_names(self, names: list):
+        orfilter = OrPackageFilter()
+        self.__filter.add_filter(orfilter)
+        for name in names:
+            orfilter.add_filter(PkgNamePackageFilter(name))
         return self
 
     def __str__(self):
-        if len(self.filter.filters) == 0:
+        if self.__filter.size == 0:
             return "no filter"
-        return str(self.filter)
+        return str(self.__filter)
 
 
 class OrPackageFilter(PackageFilter):
     def __init__(self):
         PackageFilter.__init__(self)
-        self.filters = []
+        self.__filters = []
 
-    def addFilter(self, *filters):
-        self.filters += filters
+    @property
+    def size(self):
+        return len(self.__filters)
 
-    def matches(self, mf):
-        if len(self.filters) == 0:
+    def add_filter(self, *filters):
+        self.__filters += filters
+
+    def matches(self, mf: Manifest):
+        if len(self.__filters) == 0:
             return True
-        for f in self.filters:
+        for f in self.__filters:
             if f.matches(mf):
                 return True
         return False
 
     def __str__(self):
-        out = " or ".join(map(str, self.filters))
-        if len(self.filters) > 1:
-            out = "(%s)" % out
+        out = " or ".join(map(str, self.__filters))
+        if len(self.__filters) > 1:
+            out = "({out})".format(out=out)
         return out
 
 
-class AndPackageFilter(OrPackageFilter):
+class AndPackageFilter(PackageFilter):
     def __init__(self):
-        OrPackageFilter.__init__(self)
+        PackageFilter.__init__(self)
+        self.__filters = []
 
-    def matches(self, mf):
-        if len(self.filters) == 0:
+    @property
+    def size(self):
+        return len(self.__filters)
+
+    def add_filter(self, *filters):
+        self.__filters += filters
+
+    def matches(self, mf: Manifest):
+        if len(self.__filters) == 0:
             return True
-        for f in self.filters:
+        for f in self.__filters:
             if not f.matches(mf):
                 return False
         return True
 
     def __str__(self):
-        return " and ".join(map(str, self.filters))
+        return " and ".join(map(str, self.__filters))
 
 
 class MasterPackageFilter(PackageFilter):
     def __init__(self):
         PackageFilter.__init__(self)
 
-    def matches(self, mf):
-        return mf.isMaster()
+    def matches(self, mf: Manifest):
+        return mf.master
 
     def __str__(self):
         return "only master"
@@ -117,38 +130,39 @@ class MasterPackageFilter(PackageFilter):
 class PkgNamePackageFilter(PackageFilter):
     def __init__(self, name):
         PackageFilter.__init__(self)
-        self.name = name
+        self.__name = name
 
-    def matches(self, mf):
-        return mf.getIdentifier().name == self.name
+    def matches(self, mf: Manifest):
+        return mf.identifier.name == self.__name
 
     def __str__(self):
-        return "'%s'" % self.name
+        return "'{name}'".format(name=self.__name)
 
 
 class TagPackageFilter(PackageFilter):
     def __init__(self, tag):
         PackageFilter.__init__(self)
-        self.tag = tag
+        self.__tag = tag
 
-    def matches(self, mf):
-        return self.tag.lower() in map(str.lower, mf.getAllTags())
+    def matches(self, mf: Manifest):
+        return self.__tag.lower() in map(str.lower, mf.all_tags)
 
     def __str__(self):
-        return "+%s" % self.tag
+        return "+{tag}".format(tag=self.__tag)
 
 
 class KeywordPackageFilter(PackageFilter):
     def __init__(self, kw):
         PackageFilter.__init__(self)
-        self.kw = kw
+        self.__kw = kw
 
-    def matches(self, mf):
-        if self.kw.lower() in str(mf.getIdentifier()).lower():
+    def matches(self, mf: Manifest):
+        if self.__kw.lower() in str(mf.identifier).lower():
             return True
-        if mf.getDescription() is not None and self.kw.lower() in str(mf.getDescription()).lower():
-            return True
+        if mf.description is not None:
+            if self.__kw.lower() in str(mf.description).lower():
+                return True
         return False
 
     def __str__(self):
-        return "\"%s\"" % self.kw
+        return '"{kw}"'.format(kw=self.__kw)

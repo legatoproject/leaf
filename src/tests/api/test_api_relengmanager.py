@@ -1,6 +1,6 @@
-'''
+"""
 @author: Legato Tooling Team <letools@sierrawireless.com>
-'''
+"""
 
 import json
 import os
@@ -8,66 +8,56 @@ import os
 from leaf.api import RelengManager
 from leaf.core.constants import JsonConstants, LeafFiles
 from leaf.core.error import LeafException
-from leaf.core.jsonutils import jsonLoadFile, jsonWriteFile
-from leaf.core.utils import computeHash
+from leaf.core.jsonutils import jloadfile, jwritefile
+from leaf.core.utils import hash_compute, mkdirs
 from leaf.model.package import AvailablePackage
-from tests.testutils import RESOURCE_FOLDER, LeafTestCaseWithRepo, checkMime
+from tests.testutils import RESOURCE_FOLDER, LeafTestCaseWithRepo, check_mime
 
 
 class TestApiRelengManager(LeafTestCaseWithRepo):
-
     def setUp(self):
         super().setUp()
         self.rm = RelengManager()
 
-    def testPackageCompression(self):
-        pkgFolder = RESOURCE_FOLDER / "install_1.0"
+    def test_package_compression(self):
+        folder = RESOURCE_FOLDER / "install_1.0"
 
-        def checkAllCompressions(extension, defaultMime):
-            outputFile = self.getWorkspaceFolder() / ("myPackage" + extension)
-            for args, mime in ((None, 'x-tar'),
-                               (('.'), 'x-tar'),
-                               (('-z', '.'), 'gzip'),
-                               (('-j', '.'), 'x-bzip2'),
-                               (('-J', '.'), 'x-xz'),
-                               (('-a', '.'), defaultMime)):
-                self.rm.createPackage(pkgFolder, outputFile,
-                                      tarExtraArgs=args)
-                checkMime(outputFile, mime)
-        checkAllCompressions('.bin', 'x-tar')
-        checkAllCompressions('.tar', 'x-tar')
-        checkAllCompressions('.leaf', 'x-tar')
-        checkAllCompressions('.tar.gz', 'gzip')
-        checkAllCompressions('.tar.bz2', 'x-bzip2')
-        checkAllCompressions('.tar.xz', 'x-xz')
+        def check_all_compressions(extension, mime):
+            output_file = self.ws_folder / ("myPackage" + extension)
+            for args, mime in ((None, "x-tar"), (("."), "x-tar"), (("-z", "."), "gzip"), (("-j", "."), "x-bzip2"), (("-J", "."), "x-xz"), (("-a", "."), mime)):
+                self.rm.create_package(folder, output_file, tar_extra_args=args)
+                check_mime(output_file, mime)
 
-    def testExternalInfoFile(self):
-        pkgFolder = RESOURCE_FOLDER / "install_1.0"
-        artifactFile = self.getWorkspaceFolder() / "myPackage.leaf"
-        infoFile = self.getWorkspaceFolder() / "myPackage.leaf.info"
+        check_all_compressions(".bin", "x-tar")
+        check_all_compressions(".tar", "x-tar")
+        check_all_compressions(".leaf", "x-tar")
+        check_all_compressions(".tar.gz", "gzip")
+        check_all_compressions(".tar.bz2", "x-bzip2")
+        check_all_compressions(".tar.xz", "x-xz")
 
-        self.rm.createPackage(pkgFolder, artifactFile,
-                              storeExtenalInfo=False)
-        self.assertTrue(artifactFile.exists())
-        self.assertFalse(infoFile.exists())
+    def test_external_info_file(self):
+        folder = RESOURCE_FOLDER / "install_1.0"
+        artifact = self.ws_folder / "myPackage.leaf"
+        info_file = self.ws_folder / "myPackage.leaf.info"
 
-        self.rm.createPackage(pkgFolder, artifactFile,
-                              storeExtenalInfo=True)
-        self.assertTrue(artifactFile.exists())
-        self.assertTrue(infoFile.exists())
-        self.assertEqual(infoFile, self.rm._getExternalInfoFile(artifactFile))
-        self.assertEqual(computeHash(artifactFile),
-                         AvailablePackage(jsonLoadFile(infoFile), None).getHash())
+        self.rm.create_package(folder, artifact, store_extenal_info=False)
+        self.assertTrue(artifact.exists())
+        self.assertFalse(info_file.exists())
+
+        self.rm.create_package(folder, artifact, store_extenal_info=True)
+        self.assertTrue(artifact.exists())
+        self.assertTrue(info_file.exists())
+        self.assertEqual(info_file, self.rm.find_external_info_file(artifact))
+        self.assertEqual(hash_compute(artifact), AvailablePackage(jloadfile(info_file), None).hashsum)
 
         with self.assertRaises(LeafException):
-            self.rm.createPackage(pkgFolder, artifactFile,
-                                  storeExtenalInfo=False)
+            self.rm.create_package(folder, artifact, store_extenal_info=False)
 
-    def testManifestInfoMap(self):
-        manifestFile = self.getWorkspaceFolder() / LeafFiles.MANIFEST
-        self.rm.generateManifest(
-            manifestFile,
-            infoMap={
+    def test_manifest_info_map(self):
+        mffile = self.ws_folder / LeafFiles.MANIFEST
+        self.rm.generate_manifest(
+            mffile,
+            info_map={
                 JsonConstants.INFO_NAME: "foo",
                 JsonConstants.INFO_VERSION: "1.0",
                 JsonConstants.INFO_DESCRIPTION: "lorem ipsum",
@@ -78,64 +68,51 @@ class TestApiRelengManager(LeafTestCaseWithRepo):
                 JsonConstants.INFO_DEPENDS: ["a_1", "b_1(FOO=BAR)", "a_1"],
                 JsonConstants.INFO_TAGS: ["foo", "bar", "foo"],
                 "ignored_extra_key": "hello",
-            })
-        self.assertTrue(manifestFile.exists())
-        with open(str(manifestFile), 'r') as fp:
-            self.assertEqual({
-                JsonConstants.INFO: {
-                    JsonConstants.INFO_NAME: "foo",
-                    JsonConstants.INFO_VERSION: "1.0",
-                    JsonConstants.INFO_DESCRIPTION: "lorem ipsum",
-                    JsonConstants.INFO_DATE: "2012-12-12 12:12:12",
-                    JsonConstants.INFO_MASTER: True,
-                    JsonConstants.INFO_LEAF_MINVER: "0.42",
-                    JsonConstants.INFO_REQUIRES: ["a_1", "b_1"],
-                    JsonConstants.INFO_DEPENDS: ["a_1", "b_1(FOO=BAR)"],
-                    JsonConstants.INFO_TAGS: ["foo", "bar"], }},
-                json.load(fp))
+            },
+        )
+        self.assertTrue(mffile.exists())
+        with open(str(mffile), "r") as fp:
+            self.assertEqual(
+                {
+                    JsonConstants.INFO: {
+                        JsonConstants.INFO_NAME: "foo",
+                        JsonConstants.INFO_VERSION: "1.0",
+                        JsonConstants.INFO_DESCRIPTION: "lorem ipsum",
+                        JsonConstants.INFO_DATE: "2012-12-12 12:12:12",
+                        JsonConstants.INFO_MASTER: True,
+                        JsonConstants.INFO_LEAF_MINVER: "0.42",
+                        JsonConstants.INFO_REQUIRES: ["a_1", "b_1"],
+                        JsonConstants.INFO_DEPENDS: ["a_1", "b_1(FOO=BAR)"],
+                        JsonConstants.INFO_TAGS: ["foo", "bar"],
+                    }
+                },
+                json.load(fp),
+            )
 
-    def testManifestFragments(self):
-        manifestFile = self.getWorkspaceFolder() / LeafFiles.MANIFEST
+    def test_manifest_fragments(self):
+        mffile = self.ws_folder / LeafFiles.MANIFEST
 
-        fragmentA = self.getWorkspaceFolder() / "a.json"
-        jsonWriteFile(
-            fragmentA,
-            {
-                'a': 1,
-                'info': {
-                    'tags': ['tag1']
-                }
-            })
+        fragment1 = self.ws_folder / "a.json"
+        jwritefile(fragment1, {"a": 1, "info": {"tags": ["tag1"]}})
 
-        fragmentB = self.getWorkspaceFolder() / "b.json"
-        jsonWriteFile(
-            fragmentB,
-            {
-                'a': 2
-            })
+        fragment2 = self.ws_folder / "b.json"
+        jwritefile(fragment2, {"a": 2})
 
-        fragmentC = self.getWorkspaceFolder() / "c.json"
-        jsonWriteFile(
-            fragmentC,
-            {
-                'b': True,
-                'info': {
-                    'tags': ['tag2']
+        fragment3 = self.ws_folder / "c.json"
+        jwritefile(fragment3, {"b": True, "info": {"tags": ["tag2"]}})
 
-                }
-            })
-
-        self.rm.generateManifest(
-            manifestFile,
-            fragmentFiles=[fragmentA, fragmentB, fragmentC],
-            infoMap={
+        self.rm.generate_manifest(
+            mffile,
+            fragment_files=[fragment1, fragment2, fragment3],
+            info_map={
                 JsonConstants.INFO_NAME: "foo",
                 JsonConstants.INFO_VERSION: "1.0",
                 JsonConstants.INFO_TAGS: ["foo", "bar", "foo"],
                 "ignored_extra_key": "hello",
-            })
-        self.assertTrue(manifestFile.exists())
-        with open(str(manifestFile), 'r') as fp:
+            },
+        )
+        self.assertTrue(mffile.exists())
+        with open(str(mffile), "r") as fp:
             self.assertEqual(
                 {
                     JsonConstants.INFO: {
@@ -144,122 +121,95 @@ class TestApiRelengManager(LeafTestCaseWithRepo):
                         JsonConstants.INFO_TAGS: ["tag1", "tag2", "foo", "bar"],
                     },
                     "a": 2,
-                    "b": True
+                    "b": True,
                 },
-                json.load(fp))
+                json.load(fp),
+            )
 
-    def testManifestWithEnv(self, resolveEnv=True):
+    def test_manifest_with_env(self, resolve_env=True):
 
-        manifestFile = self.getWorkspaceFolder() / LeafFiles.MANIFEST
+        mffile = self.ws_folder / LeafFiles.MANIFEST
 
         try:
             os.environ["LEAF_TEST_VARIABLE"] = "hello"
 
-            fragmentA = self.getWorkspaceFolder() / "a.json"
-            jsonWriteFile(
-                fragmentA,
-                {
-                    'a': "#{LEAF_TEST_VARIABLE} #{LEAF_TEST_VARIABLE}"
-                })
+            fragment1 = self.ws_folder / "a.json"
+            jwritefile(fragment1, {"a": "#{LEAF_TEST_VARIABLE} #{LEAF_TEST_VARIABLE}"})
 
-            self.rm.generateManifest(
-                manifestFile,
-                fragmentFiles=[fragmentA, ],
-                infoMap={
+            self.rm.generate_manifest(
+                mffile,
+                fragment_files=[fragment1],
+                info_map={
                     JsonConstants.INFO_NAME: "foo",
                     JsonConstants.INFO_VERSION: "1.0",
-                    JsonConstants.INFO_DESCRIPTION: "#{LEAF_TEST_VARIABLE} #{LEAF_TEST_VARIABLE}"
+                    JsonConstants.INFO_DESCRIPTION: "#{LEAF_TEST_VARIABLE} #{LEAF_TEST_VARIABLE}",
                 },
-                resolveEnvVariables=resolveEnv)
-            self.assertTrue(manifestFile.exists())
-            with open(str(manifestFile), 'r') as fp:
-                motif = 'hello hello' if resolveEnv else '#{LEAF_TEST_VARIABLE} #{LEAF_TEST_VARIABLE}'
+                resolve_envvars=resolve_env,
+            )
+            self.assertTrue(mffile.exists())
+            with open(str(mffile), "r") as fp:
+                motif = "hello hello" if resolve_env else "#{LEAF_TEST_VARIABLE} #{LEAF_TEST_VARIABLE}"
                 self.assertEqual(
                     {
-                        JsonConstants.INFO: {
-                            JsonConstants.INFO_NAME: "foo",
-                            JsonConstants.INFO_VERSION: "1.0",
-                            JsonConstants.INFO_DESCRIPTION: motif
-                        },
-                        "a": motif
+                        JsonConstants.INFO: {JsonConstants.INFO_NAME: "foo", JsonConstants.INFO_VERSION: "1.0", JsonConstants.INFO_DESCRIPTION: motif},
+                        "a": motif,
                     },
-                    json.load(fp))
+                    json.load(fp),
+                )
 
         finally:
             del os.environ["LEAF_TEST_VARIABLE"]
 
-    def testManifestWithoutEnv(self):
-        self.testManifestWithEnv(resolveEnv=False)
+    def test_manifest_without_env(self):
+        self.test_manifest_with_env(resolve_env=False)
 
-    def testIndex(self):
-        indexFile = self.getWorkspaceFolder() / "index.json"
+    def test_index(self):
+        index = self.ws_folder / "index.json"
 
         # Build some packages
-        for pis in ("install_1.0",
-                    "condition_1.0",
-                    "condition-A_1.0",
-                    "condition-A_2.0",
-                    "condition-B_1.0",
-                    "condition-C_1.0",
-                    "condition-D_1.0",
-                    "condition-E_1.0",
-                    "condition-F_1.0",
-                    "condition-G_1.0",
-                    "condition-H_1.0"):
-            pkgFolder = RESOURCE_FOLDER / pis
-            outputFile = self.getWorkspaceFolder() / (pis + '.leaf')
-            self.rm.createPackage(pkgFolder, outputFile)
+        for pis in (
+            "install_1.0",
+            "condition_1.0",
+            "condition-A_1.0",
+            "condition-A_2.0",
+            "condition-B_1.0",
+            "condition-C_1.0",
+            "condition-D_1.0",
+            "condition-E_1.0",
+            "condition-F_1.0",
+            "condition-G_1.0",
+            "condition-H_1.0",
+        ):
+            folder = RESOURCE_FOLDER / pis
+            output_file = self.ws_folder / (pis + ".leaf")
+            self.rm.create_package(folder, output_file)
 
-        self.rm.generateIndex(
-            indexFile,
-            self.getWorkspaceFolder().glob("condition*.leaf"),
-            prettyprint=True)
-        indexContent = jsonLoadFile(indexFile)
-        self.assertEqual(10, len(indexContent[JsonConstants.REMOTE_PACKAGES]))
+        self.rm.generate_index(index, self.ws_folder.glob("condition*.leaf"), prettyprint=True)
+        index_content = jloadfile(index)
+        self.assertEqual(10, len(index_content[JsonConstants.REMOTE_PACKAGES]))
 
-        self.rm.generateIndex(
-            indexFile,
-            self.getWorkspaceFolder().glob("*.leaf"),
-            prettyprint=False)
-        indexContent = jsonLoadFile(indexFile)
-        self.assertEqual(11, len(indexContent[JsonConstants.REMOTE_PACKAGES]))
+        self.rm.generate_index(index, self.ws_folder.glob("*.leaf"), prettyprint=False)
+        index_content = jloadfile(index)
+        self.assertEqual(11, len(index_content[JsonConstants.REMOTE_PACKAGES]))
 
-    def testIndexSameArtifactDifferentHash(self):
-        (self.getWorkspaceFolder() / 'a').mkdir()
-        (self.getWorkspaceFolder() / 'b').mkdir()
+    def test_index_same_artifact_different_hash(self):
+        mkdirs(self.ws_folder / "a")
+        mkdirs(self.ws_folder / "b")
 
-        self.rm.generateManifest(
-            self.getWorkspaceFolder() / 'a' / LeafFiles.MANIFEST,
-            infoMap={JsonConstants.INFO_NAME: "foo",
-                     JsonConstants.INFO_VERSION: "1",
-                     JsonConstants.INFO_DESCRIPTION: "Some description"})
+        self.rm.generate_manifest(
+            self.ws_folder / "a" / LeafFiles.MANIFEST,
+            info_map={JsonConstants.INFO_NAME: "foo", JsonConstants.INFO_VERSION: "1", JsonConstants.INFO_DESCRIPTION: "Some description"},
+        )
 
-        self.rm.generateManifest(
-            self.getWorkspaceFolder() / 'b' / LeafFiles.MANIFEST,
-            infoMap={JsonConstants.INFO_NAME: "foo",
-                     JsonConstants.INFO_VERSION: "1",
-                     JsonConstants.INFO_DESCRIPTION: "Different description"})
+        self.rm.generate_manifest(
+            self.ws_folder / "b" / LeafFiles.MANIFEST,
+            info_map={JsonConstants.INFO_NAME: "foo", JsonConstants.INFO_VERSION: "1", JsonConstants.INFO_DESCRIPTION: "Different description"},
+        )
 
-        self.rm.createPackage(
-            self.getWorkspaceFolder() / 'a',
-            self.getWorkspaceFolder() / 'a.leaf')
-        self.rm.createPackage(
-            self.getWorkspaceFolder() / 'b',
-            self.getWorkspaceFolder() / 'b.leaf')
+        self.rm.create_package(self.ws_folder / "a", self.ws_folder / "a.leaf")
+        self.rm.create_package(self.ws_folder / "b", self.ws_folder / "b.leaf")
 
-        self.rm.generateIndex(
-            self.getWorkspaceFolder() / 'indexA.json',
-            [self.getWorkspaceFolder() / 'a.leaf',
-             self.getWorkspaceFolder() / 'a.leaf'],
-            prettyprint=True)
-        self.rm.generateIndex(
-            self.getWorkspaceFolder() / 'indexB.json',
-            [self.getWorkspaceFolder() / 'b.leaf',
-             self.getWorkspaceFolder() / 'b.leaf'],
-            prettyprint=True)
+        self.rm.generate_index(self.ws_folder / "indexA.json", [self.ws_folder / "a.leaf", self.ws_folder / "a.leaf"], prettyprint=True)
+        self.rm.generate_index(self.ws_folder / "indexB.json", [self.ws_folder / "b.leaf", self.ws_folder / "b.leaf"], prettyprint=True)
         with self.assertRaises(LeafException):
-            self.rm.generateIndex(
-                self.getWorkspaceFolder() / 'indexAB.json',
-                [self.getWorkspaceFolder() / 'a.leaf',
-                 self.getWorkspaceFolder() / 'b.leaf'],
-                prettyprint=True)
+            self.rm.generate_index(self.ws_folder / "indexAB.json", [self.ws_folder / "a.leaf", self.ws_folder / "b.leaf"], prettyprint=True)

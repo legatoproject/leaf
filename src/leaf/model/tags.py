@@ -1,54 +1,52 @@
-'''
+"""
 Leaf Package Manager
 
 @author:    Legato Tooling Team <letools@sierrawireless.com>
 @copyright: Sierra Wireless. All rights reserved.
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
-'''
+"""
 
-from collections import OrderedDict
+from profile import Profile
 
-from leaf.model.package import Manifest
+from leaf.model.modelutils import group_package_identifiers_by_name
+from leaf.model.package import IDENTIFIER_GETTER
 
 
-class TagManager():
-    '''
+class TagUtils:
+
+    """
     Class used to tag packages
-    '''
+    """
 
-    LATEST = 'latest'
-    INSTALLED = 'installed'
-    CURRENT = 'current'
+    LATEST = "latest"
+    INSTALLED = "installed"
+    CURRENT = "current"
 
-    def tagLatest(self, mfList):
-        '''
+    @staticmethod
+    def tag_latest(mflist: list):
+        """
         Add the 'latest' tag to packages with the latest version
-        '''
-        mapByName = OrderedDict()
-        for mf in mfList:
-            pkgName = mf.getIdentifier().name
-            if pkgName not in mapByName:
-                mapByName[pkgName] = []
-            mapByName[pkgName].append(mf)
-        for pkgList in mapByName.values():
-            latest = next(iter(sorted(pkgList,
-                                      key=Manifest.getIdentifier,
-                                      reverse=True)))
-            latest.customTags.append(TagManager.LATEST)
+        """
+        latest_pilist = []
+        for pkg_versions in group_package_identifiers_by_name(map(IDENTIFIER_GETTER, mflist)).values():
+            latest_pilist.append(pkg_versions[-1])
+        for mf in mflist:
+            if mf.identifier in latest_pilist:
+                mf.custom_tags.append(TagUtils.LATEST)
 
-    def tagInstalled(self, mfList, piList):
-        '''
+    @staticmethod
+    def tag_installed(mflist: list, installed_pilist: list):
+        """
         Tag packages from given mfList as installed if they are in the given piList
-        '''
-        for mf in mfList:
-            if mf.getIdentifier() in piList:
-                mf.customTags.append(TagManager.INSTALLED)
+        """
+        for mf in filter(lambda mf: mf.identifier in installed_pilist, mflist):
+            mf.custom_tags.append(TagUtils.INSTALLED)
 
-    def tagCurrent(self, mfList, pf):
-        '''
+    @staticmethod
+    def tag_current(mflist: list, pf: Profile):
+        """
         Tag packages in mfList as current if they are in the given profile
-        '''
-        for mf in mfList:
-            if str(mf.getIdentifier()) in pf.getPackages():
-                mf.customTags.append(TagManager.CURRENT)
+        """
+        for mf in filter(lambda mf: str(mf.identfier) in pf.packages, mflist):
+            mf.custom_tags.append(TagUtils.CURRENT)

@@ -1,84 +1,83 @@
-'''
+"""
 Abstract parent for command renderers
 
 @author:    Legato Tooling Team <letools@sierrawireless.com>
 @copyright: Sierra Wireless. All rights reserved.
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
-'''
-from abc import ABC, abstractmethod
-from shutil import get_terminal_size
-from subprocess import Popen, PIPE
+"""
 import errno
 import signal
-
-from leaf.rendering.ansi import removeAnsiChars
-from leaf.rendering.formatutils import getPager, isatty
-from leaf.core.logger import Verbosity
+from abc import ABC, abstractmethod
+from shutil import get_terminal_size
+from subprocess import PIPE, Popen
 
 from leaf.core.error import UserCancelException
-
+from leaf.core.logger import Verbosity
+from leaf.rendering.ansi import remove_ansi_chars
+from leaf.rendering.formatutils import get_leaf_pager, isatty
 
 TERMINAL_WIDTH, TERMINAL_HEIGHT = get_terminal_size((-1, -1))
 
 
 class Renderer(list, ABC):
-    '''
+
+    """
     Abstract Renderer
-    '''
+    """
 
     def __init__(self, *items):
         list.__init__(self, *items)
         self.tm = None
         self.verbosity = None
-        self.usePagerIfNeeded = True
+        self.use_pager_if_needed = True
 
-    def _toStringQuiet(self):
-        '''
+    def _tostring_quiet(self):
+        """
         Render inputList in quiet verbosity
-        '''
-        return '\n'.join(map(str, self))
+        """
+        return "\n".join(map(str, self))
 
     @abstractmethod
-    def _toStringDefault(self):
-        '''
+    def _tostring_default(self):
+        """
         Render inputList in default verbosity
-        '''
+        """
         pass
 
     @abstractmethod
-    def _toStringVerbose(self):
-        '''
+    def _tostring_verbose(self):
+        """
         Render inputList in verbose verbosity
-        '''
+        """
         pass
 
     def __str__(self):
         if self.verbosity == Verbosity.QUIET:
-            out = self._toStringQuiet()
+            out = self._tostring_quiet()
         elif self.verbosity == Verbosity.VERBOSE:
-            out = self._toStringVerbose()
+            out = self._tostring_verbose()
         else:
-            out = self._toStringDefault()
+            out = self._tostring_default()
         return str(out)
 
-    def print(self):
-        '''
+    def print_renderer(self):
+        """
         Print or pipe to pager if necessary and possible
-        '''
+        """
         out = str(self)
         if len(out) > 0:
-            pager = getPager()
-            if self._shouldUsePager(out) and pager is not None:
-                self._pipeToPager(pager, out)
+            pager = get_leaf_pager()
+            if self._should_use_pager(out) and pager is not None:
+                self._pipe_to_pager(pager, out)
             else:
                 print(out)
 
-    def _shouldUsePager(self, printed):
-        '''
+    def _should_use_pager(self, printed):
+        """
         Check the terminal size and return True if we need pager
-        '''
-        if not self.usePagerIfNeeded:
+        """
+        if not self.use_pager_if_needed:
             return False
 
         if self.verbosity == Verbosity.QUIET:
@@ -90,7 +89,7 @@ class Renderer(list, ABC):
         if TERMINAL_HEIGHT == -1 or TERMINAL_WIDTH == -1:
             return False
 
-        lines = removeAnsiChars(printed).split('\n')
+        lines = remove_ansi_chars(printed).split("\n")
 
         # Check height
         if len(lines) + 1 > TERMINAL_HEIGHT:  # +1 for prompt
@@ -99,14 +98,14 @@ class Renderer(list, ABC):
         # Check width
         return max(map(len, lines)) > TERMINAL_WIDTH
 
-    def _pipeToPager(self, pager, toPrint):
-        '''
+    def _pipe_to_pager(self, pager, data):
+        """
         Pipe toPrint to the given pager
-        '''
+        """
         p = Popen(pager, stdin=PIPE)
         try:
             try:
-                p.stdin.write(toPrint.encode())
+                p.stdin.write(data.encode())
             except IOError as e:
                 if e.errno == errno.EPIPE or e.errno == errno.EINVAL:
                     # Stop loop on "Invalid pipe" or "Invalid argument".

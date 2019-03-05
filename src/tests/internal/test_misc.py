@@ -1,31 +1,30 @@
-'''
+"""
 @author: Legato Tooling Team <letools@sierrawireless.com>
-'''
+"""
 
+from pathlib import Path
 from tempfile import mktemp
 
 from leaf.core.constants import JsonConstants, LeafFiles
-from leaf.model.modelutils import VariableResolver, groupPackageIdentifiersByName
 from leaf.core.error import LeafException
-from leaf.core.jsonutils import jsonLoadFile, jsonWriteFile
+from leaf.core.jsonutils import JsonObject, jloadfile, jwritefile
 from leaf.core.lock import LockFile
-from leaf.core.utils import checkSupportedLeaf
-from leaf.model.base import JsonObject
+from leaf.core.utils import check_leaf_min_version
+from leaf.model.modelutils import group_package_identifiers_by_name
 from leaf.model.package import Feature, InstalledPackage, PackageIdentifier
+from leaf.model.steps import VariableResolver
 from tests.testutils import RESOURCE_FOLDER, LeafTestCase
 
 
 class TestMisc(LeafTestCase):
-
-    def testLeafMinVersion(self):
-        self.assertTrue(checkSupportedLeaf(None))
-        self.assertTrue(checkSupportedLeaf("2.0", "2.0"))
-        self.assertFalse(checkSupportedLeaf("2.1", "2.0"))
+    def test_leaf_minver(self):
+        self.assertTrue(check_leaf_min_version(None))
+        self.assertTrue(check_leaf_min_version("2.0", "2.0"))
+        self.assertFalse(check_leaf_min_version("2.1", "2.0"))
         with self.assertRaises(LeafException):
-            self.assertFalse(checkSupportedLeaf("2.1", "2.0",
-                                                exceptionMessage="foo"))
+            self.assertFalse(check_leaf_min_version("2.1", "2.0", exception_message="foo"))
 
-    def testJo(self):
+    def test_json(self):
         jo = JsonObject({})
         self.assertIsNone(jo.jsonpath(["a"]))
         self.assertIsNotNone(jo.jsonpath(["a"], {}))
@@ -40,9 +39,9 @@ class TestMisc(LeafTestCase):
         self.assertEqual("hello", jo.jsonpath(["a", "b", "c"], "world"))
         self.assertEqual("hello", jo.jsonpath(["a", "b", "c"]))
 
-        tmpFile = mktemp(".json", "leaf-ut")
-        jsonWriteFile(tmpFile, jo.json, pp=True)
-        jo = JsonObject(jsonLoadFile(tmpFile))
+        tmpfile = Path(mktemp(".json", "leaf-ut"))
+        jwritefile(tmpfile, jo.json, pp=True)
+        jo = JsonObject(jloadfile(tmpfile))
 
         self.assertEqual("hello", jo.jsonpath(["a", "b", "c"], "hello"))
         self.assertEqual("hello", jo.jsonpath(["a", "b", "c"], "world"))
@@ -55,236 +54,268 @@ class TestMisc(LeafTestCase):
         with self.assertRaises(ValueError):
             jo.jsonpath(["a", "d", "e"])
 
-    def testFeaturesEquals(self):
-        self.assertEqual(Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message"
-        }), Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message"
-        }))
+    def test_features_equal(self):
+        self.assertEqual(
+            Feature(
+                "id1",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message",
+                },
+            ),
+            Feature(
+                "id1",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message",
+                },
+            ),
+        )
 
         # Different name
-        self.assertNotEqual(Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message"
-        }), Feature("id2", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message"
-        }))
+        self.assertNotEqual(
+            Feature(
+                "id1",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message",
+                },
+            ),
+            Feature(
+                "id2",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message",
+                },
+            ),
+        )
 
         # Different key
-        self.assertNotEqual(Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message"
-        }), Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY2",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message"
-        }))
+        self.assertNotEqual(
+            Feature(
+                "id1",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message",
+                },
+            ),
+            Feature(
+                "id1",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY2",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message",
+                },
+            ),
+        )
 
         # Different enum
-        self.assertNotEqual(Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message"
-        }), Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum2": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message"
-        }))
+        self.assertNotEqual(
+            Feature(
+                "id1",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message",
+                },
+            ),
+            Feature(
+                "id1",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum2": "value1"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message",
+                },
+            ),
+        )
 
         # Different value
-        self.assertNotEqual(Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message"
-        }), Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value2"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message"
-        }))
+        self.assertNotEqual(
+            Feature(
+                "id1",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message",
+                },
+            ),
+            Feature(
+                "id1",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value2"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message",
+                },
+            ),
+        )
 
         # Different size
-        self.assertNotEqual(Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message"
-        }), Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1", "enum2": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message"
-        }))
+        self.assertNotEqual(
+            Feature(
+                "id1",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message",
+                },
+            ),
+            Feature(
+                "id1",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1", "enum2": "value1"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message",
+                },
+            ),
+        )
 
         # Different description
-        self.assertNotEqual(Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message"
-        }), Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message2"
-        }))
+        self.assertNotEqual(
+            Feature(
+                "id1",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message",
+                },
+            ),
+            Feature(
+                "id1",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message2",
+                },
+            ),
+        )
 
         # Different description: None
-        self.assertNotEqual(Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message"
-        }), Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: None
-        }))
+        self.assertNotEqual(
+            Feature(
+                "id1",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message",
+                },
+            ),
+            Feature(
+                "id1",
+                {JsonConstants.INFO_FEATURE_KEY: "KEY1", JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"}, JsonConstants.INFO_FEATURE_DESCRIPTION: None},
+            ),
+        )
 
         # Different description: missing
-        self.assertNotEqual(Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-            JsonConstants.INFO_FEATURE_DESCRIPTION: "message"
-        }), Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"}
-        }))
+        self.assertNotEqual(
+            Feature(
+                "id1",
+                {
+                    JsonConstants.INFO_FEATURE_KEY: "KEY1",
+                    JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
+                    JsonConstants.INFO_FEATURE_DESCRIPTION: "message",
+                },
+            ),
+            Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1", JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"}}),
+        )
 
-    def testFeaturesAlias(self):
-        feature = Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-        })
-        feature_newValue = Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1",
-                                                "enum2": "value2"},
-        })
-        feature_dupValue = Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value3",
-                                                "enum3": None},
-        })
-        feature_altKey = Feature("id1", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY2",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-        })
-        otherFeature = Feature("id2", {
-            JsonConstants.INFO_FEATURE_KEY: "KEY1",
-            JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-        })
+    def test_features_alias(self):
+        feature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1", JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"}})
+        feature_newvalue = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1", JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1", "enum2": "value2"}})
+        feature_dupvalue = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1", JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value3", "enum3": None}})
+        feature_altkey = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY2", JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"}})
+        other_feature = Feature("id2", {JsonConstants.INFO_FEATURE_KEY: "KEY1", JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"}})
 
-        testFeature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
-        testFeature.check()
+        test_feature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
+        test_feature.check()
         with self.assertRaises(LeafException):
-            testFeature.getValue("enum1")
+            test_feature.get_value("enum1")
 
-        testFeature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
-        testFeature.addAlias(feature)
-        testFeature.check()
+        test_feature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
+        test_feature.add_alias(feature)
+        test_feature.check()
         with self.assertRaises(LeafException):
-            testFeature.getValue("enum2")
+            test_feature.get_value("enum2")
 
-        testFeature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
-        testFeature.addAlias(feature)
-        testFeature.addAlias(feature_newValue)
-        testFeature.check()
-        self.assertEqual("value1", testFeature.getValue("enum1"))
-        self.assertEqual("value2", testFeature.getValue("enum2"))
+        test_feature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
+        test_feature.add_alias(feature)
+        test_feature.add_alias(feature_newvalue)
+        test_feature.check()
+        self.assertEqual("value1", test_feature.get_value("enum1"))
+        self.assertEqual("value2", test_feature.get_value("enum2"))
 
-        testFeature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
-        testFeature.addAlias(feature)
-        testFeature.addAlias(feature_newValue)
-        testFeature.addAlias(feature_dupValue)
-        testFeature.check()
+        test_feature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
+        test_feature.add_alias(feature)
+        test_feature.add_alias(feature_newvalue)
+        test_feature.add_alias(feature_dupvalue)
+        test_feature.check()
         with self.assertRaises(LeafException):
-            testFeature.getValue("enum1")
-        self.assertEqual("value2", testFeature.getValue("enum2"))
-        self.assertEqual(None, testFeature.getValue("enum3"))
+            test_feature.get_value("enum1")
+        self.assertEqual("value2", test_feature.get_value("enum2"))
+        self.assertEqual(None, test_feature.get_value("enum3"))
 
-        testFeature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
-        testFeature.addAlias(feature)
-        testFeature.addAlias(feature_newValue)
-        testFeature.addAlias(feature_dupValue)
-        testFeature.addAlias(feature_altKey)
+        test_feature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
+        test_feature.add_alias(feature)
+        test_feature.add_alias(feature_newvalue)
+        test_feature.add_alias(feature_dupvalue)
+        test_feature.add_alias(feature_altkey)
         with self.assertRaises(LeafException):
-            testFeature.check()
+            test_feature.check()
 
-        testFeature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
+        test_feature = Feature("id1", {JsonConstants.INFO_FEATURE_KEY: "KEY1"})
         with self.assertRaises(LeafException):
-            testFeature.addAlias(otherFeature)
+            test_feature.add_alias(other_feature)
 
-    def testSortPi(self):
-        a10 = PackageIdentifier.fromString("a_1.0")
-        a20 = PackageIdentifier.fromString("a_2.0")
-        a11 = PackageIdentifier.fromString("a_1.1")
-        a21 = PackageIdentifier.fromString("a_2.1")
-        b10 = PackageIdentifier.fromString("b_1.0")
-        b20 = PackageIdentifier.fromString("b_2.0")
-        b11 = PackageIdentifier.fromString("b_1.1")
-        b21 = PackageIdentifier.fromString("b_2.1")
+    def test_sort_pi(self):
+        a10 = PackageIdentifier.parse("a_1.0")
+        a20 = PackageIdentifier.parse("a_2.0")
+        a11 = PackageIdentifier.parse("a_1.1")
+        a21 = PackageIdentifier.parse("a_2.1")
+        b10 = PackageIdentifier.parse("b_1.0")
+        b20 = PackageIdentifier.parse("b_2.0")
+        b11 = PackageIdentifier.parse("b_1.1")
+        b21 = PackageIdentifier.parse("b_2.1")
 
-        pkgMap = groupPackageIdentifiersByName(
-            [a20, a10, b11, b21, a21])
-        self.assertEqual(pkgMap,
-                         {'a': [a10, a20, a21],
-                          'b': [b11, b21]})
+        pkgmap = group_package_identifiers_by_name([a20, a10, b11, b21, a21])
+        self.assertEqual(pkgmap, {"a": [a10, a20, a21], "b": [b11, b21]})
 
-        pkgMap = groupPackageIdentifiersByName(
-            [b10, a11, b20, a20], pkgMap=pkgMap)
-        self.assertEqual(pkgMap,
-                         {'a': [a10, a11, a20, a21],
-                          'b': [b10, b11, b20, b21]})
+        pkgmap = group_package_identifiers_by_name([b10, a11, b20, a20], pkgmap=pkgmap)
+        self.assertEqual(pkgmap, {"a": [a10, a11, a20, a21], "b": [b10, b11, b20, b21]})
 
-    def testVariableResolver(self):
+    def test_variable_resolver(self):
 
-        ip1 = InstalledPackage(
-            RESOURCE_FOLDER / "version_1.0" / LeafFiles.MANIFEST)
-        ip2 = InstalledPackage(
-            RESOURCE_FOLDER / "version_1.1" / LeafFiles.MANIFEST)
-        ip3 = InstalledPackage(
-            RESOURCE_FOLDER / "version_2.0" / LeafFiles.MANIFEST)
+        ip1 = InstalledPackage(RESOURCE_FOLDER / "version_1.0" / LeafFiles.MANIFEST)
+        ip2 = InstalledPackage(RESOURCE_FOLDER / "version_1.1" / LeafFiles.MANIFEST)
+        ip3 = InstalledPackage(RESOURCE_FOLDER / "version_2.0" / LeafFiles.MANIFEST)
 
         vr = VariableResolver(ip1, [ip1, ip2, ip3])
 
-        self.assertEqual("version",
-                         vr.resolve("@{NAME}"))
-        self.assertEqual("1.0",
-                         vr.resolve("@{VERSION}"))
-        self.assertEqual(str(RESOURCE_FOLDER / "version_1.0"),
-                         vr.resolve("@{DIR}"))
+        self.assertEqual("version", vr.resolve("@{NAME}"))
+        self.assertEqual("1.0", vr.resolve("@{VERSION}"))
+        self.assertEqual(str(RESOURCE_FOLDER / "version_1.0"), vr.resolve("@{DIR}"))
 
-        self.assertEqual("version",
-                         vr.resolve("@{NAME:version_1.0}"))
-        self.assertEqual("1.0",
-                         vr.resolve("@{VERSION:version_1.0}"))
-        self.assertEqual(str(RESOURCE_FOLDER / "version_1.0"),
-                         vr.resolve("@{DIR:version_1.0}"))
+        self.assertEqual("version", vr.resolve("@{NAME:version_1.0}"))
+        self.assertEqual("1.0", vr.resolve("@{VERSION:version_1.0}"))
+        self.assertEqual(str(RESOURCE_FOLDER / "version_1.0"), vr.resolve("@{DIR:version_1.0}"))
 
-        self.assertEqual("version",
-                         vr.resolve("@{NAME:version_2.0}"))
-        self.assertEqual("2.0",
-                         vr.resolve("@{VERSION:version_2.0}"))
-        self.assertEqual(str(RESOURCE_FOLDER / "version_2.0"),
-                         vr.resolve("@{DIR:version_2.0}"))
+        self.assertEqual("version", vr.resolve("@{NAME:version_2.0}"))
+        self.assertEqual("2.0", vr.resolve("@{VERSION:version_2.0}"))
+        self.assertEqual(str(RESOURCE_FOLDER / "version_2.0"), vr.resolve("@{DIR:version_2.0}"))
 
-        self.assertEqual("version",
-                         vr.resolve("@{NAME:version_latest}"))
-        self.assertEqual("2.0",
-                         vr.resolve("@{VERSION:version_latest}"))
-        self.assertEqual(str(RESOURCE_FOLDER / "version_2.0"),
-                         vr.resolve("@{DIR:version_latest}"))
+        self.assertEqual("version", vr.resolve("@{NAME:version_latest}"))
+        self.assertEqual("2.0", vr.resolve("@{VERSION:version_latest}"))
+        self.assertEqual(str(RESOURCE_FOLDER / "version_2.0"), vr.resolve("@{DIR:version_latest}"))
 
-        self.assertEqual("version 1.1 " + str(RESOURCE_FOLDER / "version_2.0"),
-                         vr.resolve("@{NAME} @{VERSION:version_1.1} @{DIR:version_latest}"))
+        self.assertEqual("version 1.1 " + str(RESOURCE_FOLDER / "version_2.0"), vr.resolve("@{NAME} @{VERSION:version_1.1} @{DIR:version_latest}"))
 
         with self.assertRaises(LeafException):
             vr.resolve("@{NAME} @{VERSION:version_1.2} @{DIR:version_latest}")
 
-    def testLockAdvisory(self):
+    def test_lock_advisory(self):
         advisory = True
         lf = LockFile("/tmp/advisory.lock")
 
@@ -304,7 +335,7 @@ class TestMisc(LeafTestCase):
                 foo()
             foo()
 
-    def testLockMandatory(self):
+    def test_lock_mandatory(self):
         advisory = False
         lf = LockFile("/tmp/mandatory.lock")
 

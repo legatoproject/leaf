@@ -1,0 +1,47 @@
+####### Test with no profile #######
+┌─────────────────────────────┐
+│ Workspace: fake/root/folder │
+└─────────────────────────────┘
+
+
+
+####### Test with various profiles #######
+┌───────────────────────────────────────────────────────────────────┐
+│                    Workspace: fake/root/folder                    │
+╞═══════════════════════════════════════════════════════════════════╡
+│                      Profile: profile1 (sync)                     │
+├──────────────┬────────────────────────────────────────────────────┤
+│ Environment  │ LEAF_PROFILE=profile1                              │
+│              │ Foo1=Bar1                                          │
+│              │ Foo2=Bar2                                          │
+│              │ Foo3=Bar3                                          │
+├──────────────┼─────────────────┬──────────────────────────────────┤
+│   Packages   │    Identifier   │           Description            │
+├──────────────┼─────────────────┼──────────────────────────────────┤
+│   Included   │ container-A_1.0 │ Fake description for container A │
+├──────────────┼─────────────────┼──────────────────────────────────┤
+│ Dependencies │ container-B_1.0 │ Fake description for container B │
+│              │ container-C_1.0 │ Fake description for container C │
+╞══════════════╧═════════════════╧══════════════════════════════════╡
+│               Profile: profile2 [current] (not sync)              │
+├──────────────┬────────────────────────────────────────────────────┤
+│ Environment  │ LEAF_PROFILE=profile2                              │
+├──────────────┼─────────────────┬──────────────────────────────────┤
+│   Packages   │    Identifier   │           Description            │
+├──────────────┼─────────────────┼──────────────────────────────────┤
+│   Included   │ container-B_1.0 │ Fake description for container B │
+╞══════════════╧═════════════════╧══════════════════════════════════╡
+│                      Profile: profile3 (sync)                     │
+├──────────────┬────────────────────────────────────────────────────┤
+│ Environment  │ LEAF_PROFILE=profile3                              │
+│              │ Foo2=Bar2                                          │
+│              │ Foo3=Bar3                                          │
+├──────────────┼─────────────────┬──────────────────────────────────┤
+│   Packages   │    Identifier   │           Description            │
+├──────────────┼─────────────────┼──────────────────────────────────┤
+│  Dependency  │ container-B_1.0 │ Fake description for container B │
+╞══════════════╧═════════════════╧══════════════════════════════════╡
+│                    Profile: profile4 (not sync)                   │
+├──────────────┬────────────────────────────────────────────────────┤
+│ Environment  │ LEAF_PROFILE=profile4                              │
+└──────────────┴────────────────────────────────────────────────────┘

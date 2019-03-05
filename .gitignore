@@ -1,11 +1,7 @@
-# Eclipse
-/.project
-/.pydevproject
-/.settings/
-
 # VS Code
-/.vscode/
 /.env
+/.vscode/*
+!/.vscode/settings.json
 
 # Python
 __pycache__
@@ -23,5 +19,5 @@ __pycache__
 /.coverage
 /coverage-report/
 /flake-report/
-/nosetests_*.xml
+/tests_*.xml
 /.tox/

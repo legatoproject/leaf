@@ -5,155 +5,139 @@ from enum import Enum
 from os import sys
 from pathlib import Path
 
-from leaf.cli.cliutils import LeafCommand
+from leaf.cli.base import LeafCommand
 from leaf.core.constants import LeafFiles
-from leaf.core.logger import printTrace
-from leaf.model.package import InstalledPackage, Manifest, PackageIdentifier
+from leaf.core.logger import print_trace
+from leaf.model.package import IDENTIFIER_GETTER, InstalledPackage, PackageIdentifier
 
 
 class LeafPluginCommand(LeafCommand):
-    '''
+
+    """
     Class to inherit from to implement a leaf plugin
-    Methods to override are: _configureParser and execute
-    '''
+    Methods to override are: _configure_parser and execute
+    """
 
     def __init__(self, *args, ip=None, **kwargs):
         LeafCommand.__init__(self, *args, **kwargs)
         self.__installedPackage = ip
 
     @property
-    def installedPackage(self):
+    def installed_package(self):
         return self.__installedPackage
 
 
 class PluginScope(Enum):
-    BUILTIN = 'builtin'
-    USER = 'user'
+    BUILTIN = "builtin"
+    USER = "user"
 
 
-class LeafPluginManager():
+class LeafPluginManager:
 
-    __INIT__PY = '__init__.py'
-
-    @staticmethod
-    def sanitize(o):
-        return re.sub(r'[^a-zA-Z0-9_]', '_', str(o)).lower()
+    __INIT__PY = "__init__.py"
 
     @staticmethod
-    def getPluginModuleName(scope: PluginScope, pi: PackageIdentifier, location: str) -> str:
-        return '.'.join(map(LeafPluginManager.sanitize,
-                            ("leaf", "plugins",
-                             scope.value, pi.name, location)))
+    def __sanitize(o):
+        return re.sub(r"[^a-zA-Z0-9_]", "_", str(o)).lower()
+
+    @staticmethod
+    def __get_plugin_module_name(scope: PluginScope, pi: PackageIdentifier, location: str) -> str:
+        return ".".join(map(LeafPluginManager.__sanitize, ("leaf", "plugins", scope.value, pi.name, location)))
 
     def __init__(self):
-        self.builtinPluginMap = {}
-        self.userPluginMap = {}
+        self.__builtin_plugins = {}
+        self.__user_plugins = {}
 
-    def loadUserPlugins(self, packagesRootFolder: Path):
-        self.userPluginMap = self.__loadPluginsFromFolder(
-            packagesRootFolder, PluginScope.USER)
+    def load_user_plugins(self, root_folder: Path):
+        self.__user_plugins = self.__load_plugins_from_folder(root_folder, PluginScope.USER)
 
-    def loadBuiltinPlugins(self, builtinRootFolder: Path):
-        self.builtinPluginMap = self.__loadPluginsFromFolder(
-            builtinRootFolder, PluginScope.BUILTIN)
+    def load_builtin_plugins(self, root_folder: Path):
+        self.__builtin_plugins = self.__load_plugins_from_folder(root_folder, PluginScope.BUILTIN)
 
-    def __listLatestPackages(self, rootFolder: Path):
-        latestMap = {}
+    def __list_latest_packages(self, root_folder: Path):
+        latest_map = {}
         # Check folder is valid
-        if rootFolder.is_dir():
+        if root_folder.is_dir():
             # Iterate over all subfolders
-            for folder in filter(Path.is_dir, rootFolder.iterdir()):
+            for folder in filter(Path.is_dir, root_folder.iterdir()):
                 # Check manifest exists
-                mfFile = folder / LeafFiles.MANIFEST
-                if mfFile.is_file():
+                mffile = folder / LeafFiles.MANIFEST
+                if mffile.is_file():
                     try:
-                        ip = InstalledPackage(mfFile)
-                        pi = ip.getIdentifier()
+                        ip = InstalledPackage(mffile)
+                        pi = ip.identifier
                         # Only keep latest version for a given name
-                        if pi.name not in latestMap or pi > latestMap[pi.name].getIdentifier():
-                            latestMap[pi.name] = ip
+                        if pi.name not in latest_map or pi > latest_map[pi.name].identifier:
+                            latest_map[pi.name] = ip
                     except BaseException:
                         pass
-        return sorted(latestMap.values(), key=Manifest.getIdentifier)
+        return sorted(latest_map.values(), key=IDENTIFIER_GETTER)
 
-    def __loadPluginsFromFolder(self, folder: Path, scope: PluginScope):
+    def __load_plugins_from_folder(self, folder: Path, scope: PluginScope) -> dict:
         out = OrderedDict()
-        printTrace("Load {} plugins from {}".format(scope.value, folder))
+        print_trace("Load {0} plugins from {1}".format(scope.value, folder))
         if folder is not None:
-            for ip in self.__listLatestPackages(folder):
-                for location, plugin in self.__loadPluginsFromInstalledPackage(ip, scope).items():
-                    if location in out:
+            for ip in self.__list_latest_packages(folder):
+                for plugindef in self.__load_plugins_from_installed_package(ip, scope):
+                    if plugindef.location in out:
                         # Plugin already defined, deactivate it
-                        out[location] = None
+                        out[plugindef.location] = None
                     else:
                         # New plugin
-                        out[location] = plugin
+                        out[plugindef.location] = plugindef
         return out
 
-    def __loadPluginsFromInstalledPackage(self, ip: InstalledPackage, scope: PluginScope) -> tuple:
-        out = ip.getPluginMap()
-        for location, pluginDef in out.items():
+    def __load_plugins_from_installed_package(self, ip: InstalledPackage, scope: PluginScope) -> list:
+        out = []
+        for _, plugindef in ip.plugins.items():
+            out.append(plugindef)
             try:
                 # Build the plugin package name
-                moduleName = LeafPluginManager.getPluginModuleName(scope,
-                                                                   ip.getIdentifier(),
-                                                                   location)
+                module_name = LeafPluginManager.__get_plugin_module_name(scope, ip.identifier, plugindef.location)
                 # Load the module
-                modules = self.__loadModulesFromPath(pluginDef.getSourceFile(),
-                                                     moduleName)
+                modules = self.__load_modules_from_path(plugindef.source_file, module_name)
                 # Search for the class to instanciate
-                cls = self.__findCls(modules,
-                                     LeafPluginCommand,
-                                     pluginDef.getClassName())
+                cls = self.__find_class(modules, LeafPluginCommand, plugindef.classname)
                 if cls is not None:
                     # If the class is found, instantiate the command
-                    pluginDef.command = cls(pluginDef.name,
-                                            pluginDef.getDescription(),
-                                            ip=pluginDef.ip)
+                    plugindef.command = cls(plugindef.name, plugindef.description, ip=plugindef.installed_package)
             except BaseException:
-                printTrace("Cannot load plugin {location} from {folder}".format(location=location,
-                                                                                folder=ip.folder))
+                print_trace("Cannot load plugin {location} from {folder}".format(location=plugindef.location, folder=ip.folder))
         return out
 
-    def __loadModulesFromPath(self, source: Path, moduleName: str) -> type:
+    def __load_modules_from_path(self, source: Path, module_name: str) -> type:
         out = []
-        printTrace("[{len}] Load {module}: {path}".format(len=len(sys.modules),
-                                                          module=moduleName,
-                                                          path=source))
-        if source.is_file() and source.suffix == '.py':
+        print_trace("[{len}] Load {module}: {path}".format(len=len(sys.modules), module=module_name, path=source))
+        if source.is_file() and source.suffix == ".py":
             # If source is py file, load it directly
-            out.append(self.__loadSpec(source, moduleName))
+            out.append(self.__load_spec(source, module_name))
         elif source.is_dir() and (source / LeafPluginManager.__INIT__PY).is_file():
             # If source is a py folder:
             # Load the __init__.py
-            out.append(self.__loadSpec(
-                source / LeafPluginManager.__INIT__PY, moduleName))
+            out.append(self.__load_spec(source / LeafPluginManager.__INIT__PY, module_name))
             # The reccursively load content
             for item in source.iterdir():
                 # Do not load __* files
-                if not item.name.startswith('__'):
-                    subModuleName = "{parent}.{name}".format(parent=moduleName,
-                                                             name=re.sub(r'\.py$', '', item.name))
-                    out += self.__loadModulesFromPath(item, subModuleName)
+                if not item.name.startswith("__"):
+                    submodule_name = "{parent}.{name}".format(parent=module_name, name=re.sub(r"\.py$", "", item.name))
+                    out += self.__load_modules_from_path(item, submodule_name)
         return out
 
-    def __loadSpec(self, pyFile: Path, moduleName: str, force=True):
+    def __load_spec(self, pyfile: Path, module_name: str, force=True):
         # Skip if module already present in sys.modules
-        if force or moduleName not in sys.modules:
+        if force or module_name not in sys.modules:
             if sys.version_info > (3, 5):
-                spec = importlib.util.spec_from_file_location(
-                    moduleName, str(pyFile))
+                spec = importlib.util.spec_from_file_location(module_name, str(pyfile))
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)
-                sys.modules[moduleName] = module
+                sys.modules[module_name] = module
             else:
                 # TODO: Drop this code once python 3.4 is not supported
-                loader = importlib.machinery.SourceFileLoader(
-                    moduleName, str(pyFile))
+                loader = importlib.machinery.SourceFileLoader(module_name, str(pyfile))
                 loader.load_module(loader.name)
-        return sys.modules[moduleName]
+        return sys.modules[module_name]
 
-    def __findCls(self, modules: list, expectedCls: type, expectedClsName: str = None):
+    def __find_class(self, modules: list, class_: type, classname: str = None):
         for module in modules:
             for _, cls in module.__dict__.items():
                 # Check is class
@@ -163,14 +147,14 @@ class LeafPluginManager():
                 if module.__name__ != cls.__module__:
                     continue
                 # Check expected class
-                if not issubclass(cls, expectedCls):
+                if not issubclass(cls, class_):
                     continue
                 # Check expected class name if provided
-                if expectedClsName is None or expectedClsName == cls.__name__.split('.')[-1]:
+                if classname is None or classname == cls.__name__.split(".")[-1]:
                     return cls
 
-    def getCommands(self, prefix: tuple, ignoredNames: list = None) -> list:
-        def isValidPlugin(plugin):
+    def get_commands(self, prefix: tuple, ignored_names: list = None) -> list:
+        def is_valid_plugin(plugin):
             # Plugin disabled
             if plugin is None:
                 return False
@@ -181,21 +165,21 @@ class LeafPluginManager():
             if list(prefix)[1:] != plugin.prefix:
                 return False
             # Check command is blacklisted
-            if ignoredNames is not None and plugin.name in ignoredNames:
+            if ignored_names is not None and plugin.name in ignored_names:
                 return False
             # Plugin is valid
             return True
 
         out = OrderedDict()
         # Visit builtin plugins
-        if self.builtinPluginMap is not None:
-            for _, plugin in self.builtinPluginMap.items():
-                if isValidPlugin(plugin):
+        if self.__builtin_plugins is not None:
+            for _, plugin in self.__builtin_plugins.items():
+                if is_valid_plugin(plugin):
                     out[plugin.name] = plugin.command
         # Visit user plugins
-        if self.userPluginMap is not None:
-            for location, plugin in self.userPluginMap.items():
+        if self.__user_plugins is not None:
+            for location, plugin in self.__user_plugins.items():
                 # prevent user plugin overide builtin plugin
-                if location not in self.builtinPluginMap and isValidPlugin(plugin):
+                if location not in self.__builtin_plugins and is_valid_plugin(plugin):
                     out[plugin.name] = plugin.command
         return list(out.values())

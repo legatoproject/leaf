@@ -1,0 +1,69 @@
+####### Test with 2 other profiles, 2 incl, 1 deps #######
+┌──────────────────────────────────────────────────────────────────┐
+│                   Workspace: fake/root/folder                    │
+╞══════════════════════════════════════════════════════════════════╡
+│                Profile: profile1 [current] (sync)                │
+├─────────────┬────────────────────────────────────────────────────┤
+│ Environment │ LEAF_PROFILE=profile1                              │
+│             │ Foo1=Bar1                                          │
+│             │ Foo2=Bar2                                          │
+│             │ Foo3=Bar3                                          │
+├─────────────┼─────────────────┬──────────────────────────────────┤
+│   Packages  │    Identifier   │           Description            │
+├─────────────┼─────────────────┼──────────────────────────────────┤
+│   Included  │ container-A_1.0 │ Fake description for container A │
+│             │ container-B_1.0 │ Fake description for container B │
+├─────────────┼─────────────────┼──────────────────────────────────┤
+│  Dependency │ container-C_1.0 │ Fake description for container C │
+└─────────────┴─────────────────┴──────────────────────────────────┘
+Other profiles: profile2, profile3
+
+
+
+####### Test with 1 other profile, 0 incl, 2 deps #######
+┌───────────────────────────────────────────────────────────────────┐
+│                    Workspace: fake/root/folder                    │
+╞═══════════════════════════════════════════════════════════════════╡
+│                 Profile: profile1 [current] (sync)                │
+├──────────────┬────────────────────────────────────────────────────┤
+│ Environment  │ LEAF_PROFILE=profile1                              │
+│              │ Foo1=Bar1                                          │
+│              │ Foo2=Bar2                                          │
+│              │ Foo3=Bar3                                          │
+├──────────────┼─────────────────┬──────────────────────────────────┤
+│   Packages   │    Identifier   │           Description            │
+├──────────────┼─────────────────┼──────────────────────────────────┤
+│ Dependencies │ container-B_1.0 │ Fake description for container B │
+│              │ container-C_1.0 │ Fake description for container C │
+└──────────────┴─────────────────┴──────────────────────────────────┘
+Other profile: profile2
+
+
+
+####### Test with 1 other profile, 1 incl, 0 deps #######
+┌──────────────────────────────────────────────────────────────────┐
+│                   Workspace: fake/root/folder                    │
+╞══════════════════════════════════════════════════════════════════╡
+│              Profile: profile1 [current] (not sync)              │
+├─────────────┬────────────────────────────────────────────────────┤
+│ Environment │ LEAF_PROFILE=profile1                              │
+│             │ Foo1=Bar1                                          │
+│             │ Foo2=Bar2                                          │
+│             │ Foo3=Bar3                                          │
+├─────────────┼─────────────────┬──────────────────────────────────┤
+│   Packages  │    Identifier   │           Description            │
+├─────────────┼─────────────────┼──────────────────────────────────┤
+│   Included  │ container-C_1.0 │ Fake description for container C │
+└─────────────┴─────────────────┴──────────────────────────────────┘
+Other profile: profile2
+
+
+
+####### Test with no other profiles, no included nor deps nor envvars #######
+┌────────────────────────────────────────┐
+│      Workspace: fake/root/folder       │
+╞════════════════════════════════════════╡
+│ Profile: profile2 [current] (not sync) │
+├─────────────┬──────────────────────────┤
+│ Environment │ LEAF_PROFILE=profile2    │
+└─────────────┴──────────────────────────┘

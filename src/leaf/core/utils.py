@@ -1,11 +1,11 @@
-'''
+"""
 Leaf Package Manager
 
 @author:    Legato Tooling Team <letools@sierrawireless.com>
 @copyright: Sierra Wireless. All rights reserved.
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
-'''
+"""
 
 import hashlib
 import os
@@ -27,156 +27,151 @@ import requests
 
 from leaf import __version__
 from leaf.core.constants import LeafConstants, LeafSettings
-from leaf.core.error import (InvalidHashException, LeafException,
-                             LeafOutOfDateException)
-from leaf.core.logger import printTrace
+from leaf.core.error import InvalidHashException, LeafException, LeafOutOfDateException
+from leaf.core.logger import TextLogger, print_trace
 
-_IGNORED_PATTERN = re.compile('^.*_ignored[0-9]*$')
+_IGNORED_PATTERN = re.compile("^.*_ignored[0-9]*$")
 _VERSION_SEPARATOR = re.compile("[-_.~]")
 
 
-def checkSupportedLeaf(minVersion, currentVersion=__version__, exceptionMessage=None):
+def check_leaf_min_version(minversion, currentversion=__version__, exception_message=None):
     # Handle dev version
-    if minVersion is not None:
-        if versionComparator_lt(currentVersion, minVersion):
-            if exceptionMessage is not None:
-                raise LeafOutOfDateException(exceptionMessage)
+    if minversion is not None:
+        if version_comparator_lt(currentversion, minversion):
+            if exception_message is not None:
+                raise LeafOutOfDateException(exception_message)
             return False
     return True
 
 
-def stringToTuple(version):
+def version_string_to_tuple(version):
     def tryint(x):
         try:
             return int(x)
         except Exception:
             return x
+
     return tuple(tryint(x) for x in _VERSION_SEPARATOR.split(version))
 
 
-def versionComparator_lt(versionA, versionB):
-    if versionA == versionB:
+def version_comparator_lt(a: str, b: str):
+    if a == b:
         return False
-    if not isinstance(versionA, tuple):
-        versionA = stringToTuple(str(versionA))
-    if not isinstance(versionB, tuple):
-        versionB = stringToTuple(str(versionB))
+    if not isinstance(a, str) or not isinstance(b, str):
+        raise ValueError()
+    a = version_string_to_tuple(a)
+    b = version_string_to_tuple(b)
     i = 0
     while True:
-        if i >= len(versionA):
+        if i >= len(a):
             return True
-        if i >= len(versionB):
+        if i >= len(b):
             return False
-        a = versionA[i]
-        b = versionB[i]
-        if not type(a) == type(b):
-            a = str(a)
-            b = str(b)
-        if not a == b:
-            return a < b
+        itema = a[i]
+        itemb = b[i]
+        if not type(itema) == type(itemb):
+            itema = str(itema)
+            itemb = str(itemb)
+        if not itema == itemb:
+            return itema < itemb
         i += 1
 
 
-def checkPythonVersion():
+def check_supported_python_version():
     # Check python version
-    currentPythonVersion = sys.version_info
-    if (currentPythonVersion[0], currentPythonVersion[1]) < LeafConstants.MIN_PYTHON_VERSION:
+    if sys.version_info < LeafConstants.MIN_PYTHON_VERSION:
         print(
-            'Unsupported Python version, please use at least Python %d.%d.' % LeafConstants.MIN_PYTHON_VERSION,
-            file=sys.stderr)
+            "Unsupported Python version, please use at least Python {version}.".format(version=".".join(map(str, LeafConstants.MIN_PYTHON_VERSION))),
+            file=sys.stderr,
+        )
         sys.exit(1)
 
 
-def resolveUrl(remoteUrl, subPath):
-    '''
+def url_resolve(url: str, subpath: str):
+    """
     Resolves a relative URL
-    '''
-    url = urlparse(remoteUrl)
-    newPath = Path(url.path).parent / subPath
-    url = url._replace(path=str(newPath))
+    """
+    url = urlparse(url)
+    newpath = Path(url.path).parent / subpath
+    url = url._replace(path=str(newpath))
     return urlunparse(url)
 
 
-def getCachedArtifactName(filename, hash):
-    '''
+def get_cached_artifact_name(filename: str, hashstr: str):
+    """
     Compute a unique name for files in cache
-    '''
-    prefixLen = 7
-    if hash is not None:
-        prefix = parseHash(hash)[1][:prefixLen]
+    """
+    length = 7
+    if hashstr is not None:
+        prefix = hash_parse(hashstr)[1][:length]
     else:
-        prefix = ''.join(random.choice(string.ascii_uppercase + string.digits)
-                         for _ in range(prefixLen))
-    return "%s-%s" % (prefix, filename)
+        prefix = "".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
+    return prefix + "-" + filename
 
 
-def isFolderIgnored(folder):
-    '''
+def is_folder_ignored(folder: Path):
+    """
     Checks if a package folder should be ignored
-    '''
+    """
     return _IGNORED_PATTERN.match(folder.name) is not None
 
 
-def markFolderAsIgnored(folder):
-    '''
+def mark_folder_as_ignored(folder: Path):
+    """
     Marks the given folder as ignored
-    '''
+    """
     oldname = folder.name
     newname = oldname + "_ignored" + str(int(time.time()))
     if _IGNORED_PATTERN.match(newname) is None:
-        raise ValueError('Invalid ignored folder name: ' + newname)
+        raise ValueError("Invalid ignored folder name: " + newname)
     out = folder.parent / newname
     folder.rename(out)
     return out
 
 
-def downloadData(url, outputFile=None):
-    '''
+def download_data(url, outputfile=None):
+    """
     Download data and write it to outputFile
     or return the data if outputFile is None
-    '''
-    parsedUrl = urlparse(url)
-    if parsedUrl.scheme == '':
-        with open(parsedUrl.path, 'rb') as fp:
-            if outputFile is None:
+    """
+    parsedurl = urlparse(url)
+    if parsedurl.scheme == "":
+        with open(parsedurl.path, "rb") as fp:
+            if outputfile is None:
                 return fp.read()
-            with open(str(outputFile), 'wb') as fp:
+            with outputfile.open("wb") as fp:
                 fp.write(fp.read())
     else:
         with urllib.request.urlopen(url, timeout=LeafSettings.DOWNLOAD_TIMEOUT.as_int()) as stream:
-            if outputFile is None:
+            if outputfile is None:
                 return stream.read()
-            with open(str(outputFile), 'wb') as fp:
+            with outputfile.open("wb") as fp:
                 fp.write(stream.read())
 
 
-def downloadWithRetry(url: str,
-                      out,
-                      logger_function: callable,
-                      message: str,
-                      timeout: int = LeafSettings.DOWNLOAD_TIMEOUT.as_int(),
-                      retry: int = LeafSettings.DOWNLOAD_RETRY.as_int(),
-                      buffer_size: int = 262144):
+def download_with_retry(url: str, out, logger: TextLogger, message: str, timeout: int = None, retry: int = None, buffer_size: int = 262144):
+    if timeout is None:
+        timeout = LeafSettings.DOWNLOAD_TIMEOUT.as_int()
+    if retry is None:
+        retry = LeafSettings.DOWNLOAD_RETRY.as_int()
+
     # Get total size
     size_total = size_current = 0
     headers = None
     iteration = 0
     while True:
         try:
-            req = requests.get(
-                url, stream=True, headers=headers, timeout=timeout)
+            req = requests.get(url, stream=True, headers=headers, timeout=timeout)
             if size_total <= 0:
                 # Get total size on first request
-                size_total = int(req.headers.get('content-length', -1))
-
+                size_total = int(req.headers.get("content-length", -1))
+            # REad&Write data
             for data in req.iter_content(buffer_size):
                 size_current += out.write(data)
-                printProgress(logger_function,
-                              message,
-                              size_current,
-                              size_total)
+                display_progress(logger, message, size_current, size_total)
             if 0 < size_current < size_total:
-                # Rare case when no exception raised and download is not finished
+                # Rare case when no exception raised and download is not
+                # finished
                 raise ValueError("Incomplete download")
             return size_current
         except (ValueError, requests.RequestException, requests.ConnectionError, requests.HTTPError, requests.Timeout) as e:
@@ -185,149 +180,140 @@ def downloadWithRetry(url: str,
             if iteration > retry:
                 raise e
             # Log the retry attempt
-            logger_function(
-                "\nError while downloading, retry {}/{}".format(iteration, retry))
-            printTrace()
+            logger.print_default("\nError while downloading, retry {0}/{1}".format(iteration, retry))
+            print_trace()
             # Resume mode
             if size_current < size_total:
-                headers = {'Range': 'bytes=%d-%d' % (size_current, size_total)}
+                headers = {"Range": "bytes={0}-{1}".format(size_current, size_total)}
             # Prevent imediate retry
             sleep(1)
 
 
-def downloadFile(url, folder, logger, filename=None, hash=None):
-    '''
+def download_file(url: str, folder: Path, logger: TextLogger, filename: str = None, hashstr: str = None):
+    """
     Download an artifact and check its hash if given
-    '''
-    parsedUrl = urlparse(url)
+    """
+    parsedurl = urlparse(url)
     if filename is None:
-        filename = Path(parsedUrl.path).name
+        filename = Path(parsedurl.path).name
     if not folder.exists():
         folder.mkdir(parents=True)
-    targetFile = folder / filename
-    if targetFile.exists():
-        if hash is None:
-            logger.printVerbose("File exists but cannot be verified, %s will be re-downloaded" %
-                                targetFile.name)
-            os.remove(str(targetFile))
-        elif not checkHash(targetFile, hash, raiseException=False):
-            logger.printVerbose("File exists but hash differs, %s will be re-downloaded" %
-                                targetFile.name)
-            os.remove(str(targetFile))
+    targetfile = folder / filename
+    if targetfile.exists():
+        if hashstr is None:
+            logger.print_verbose("File exists but cannot be verified, {file.name} will be re-downloaded".format(file=targetfile))
+            os.remove(str(targetfile))
+        elif not hash_check(targetfile, hashstr, raise_exception=False):
+            logger.print_verbose("File exists but hash differs, {file.name} will be re-downloaded".format(file=targetfile))
+            os.remove(str(targetfile))
         else:
-            logger.printVerbose("File %s is already in cache" %
-                                targetFile.name)
+            logger.print_verbose("File {file.name} is already in cache".format(file=targetfile))
 
-    if not targetFile.exists():
+    if not targetfile.exists():
         try:
-            message = "Getting " + targetFile.name
-            if parsedUrl.scheme == '':
+            message = "Getting {file.name}".format(file=targetfile)
+            if parsedurl.scheme == "":
                 # file mode, simple file copy
-                message = "Copying " + targetFile.name
-                printProgress(logger.printDefault, message, 0, 1)
-                copyfile(parsedUrl.path, str(targetFile))
-            elif parsedUrl.scheme.startswith("http"):
+                message = "Copying {file.name}".format(file=targetfile)
+                display_progress(logger, message, 0, 1)
+                copyfile(parsedurl.path, str(targetfile))
+            elif parsedurl.scheme.startswith("http"):
                 # http/https mode, get file length before
-                message = "Downloading " + targetFile.name
-                printProgress(logger.printDefault, message, 0, 1)
-                with targetFile.open('wb') as fp:
-                    downloadWithRetry(url,
-                                      fp,
-                                      logger.printDefault,
-                                      message)
+                message = "Downloading {file.name}".format(file=targetfile)
+                display_progress(logger, message, 0, 1)
+                with targetfile.open("wb") as fp:
+                    download_with_retry(url, fp, logger, message)
             else:
                 # other scheme, use urllib
-                printProgress(logger.printDefault, message, 0, 1)
-                urlretrieve(url, str(targetFile))
-            printProgress(logger.printDefault, message, 1, 1)
+                display_progress(logger, message, 0, 1)
+                urlretrieve(url, str(targetfile))
+            display_progress(logger, message, 1, 1)
         finally:
             # End line since all progress message are on the same line
-            logger.printDefault("")
-        if hash is not None:
-            checkHash(targetFile, hash, raiseException=True)
-    return targetFile
+            logger.print_default("")
+        if hashstr is not None:
+            hash_check(targetfile, hashstr, raise_exception=True)
+    return targetfile
 
 
-def printProgress(print_fnc: callable, message: str, worked: int, total: int, end: str = ''):
-    kwargs = {
-        'message': message,
-        'worked': worked,
-        'total': total,
-        'percent': "??"
-    }
+def display_progress(logger: TextLogger, message: str, worked: int, total: int, end: str = ""):
+    kwargs = {"message": message, "worked": worked, "total": total, "percent": "??"}
     if 0 <= worked <= total and total > 0:
-        kwargs['percent'] = int(worked * 100 / total)
-    print_fnc("\r[{percent}%] {message} ".format(**kwargs),
-              end=end, flush=True)
+        kwargs["percent"] = int(worked * 100 / total)
+    logger.print_default("\r[{percent}%] {message} ".format(**kwargs), end=end, flush=True)
 
 
-def envListToMap(envList):
+def env_list_to_map(kv_list: list):
     out = OrderedDict()
-    if envList is not None:
-        for line in envList:
-            if '=' in line:
-                k, v = line.split('=', 1)
+    if kv_list is not None:
+        for line in kv_list:
+            if "=" in line:
+                k, v = line.split("=", 1)
                 out[k.strip()] = v.strip()
             else:
                 out[line] = ""
     return out
 
 
-def mkTmpLeafRootDir():
+def mkdir_tmp_leaf_dir():
     return Path(tempfile.mkdtemp(prefix="leaf-alt-root_"))
 
 
-__HASH_NAME = 'sha384'
+__HASH_NAME = "sha384"
 __HASH_FACTORY = hashlib.sha384
 __HASH_LEN = 96
 __HASH_BLOCKSIZE = 4096
 
 
-def parseHash(hash):
-    parts = hash.split(':')
+def hash_parse(hashstr: str):
+    parts = hashstr.split(":")
     if len(parts) != 2:
-        raise LeafException("Invalid hash format %s" % hash)
+        raise LeafException("Invalid hash format {hash}".format(hash=hashstr))
     if parts[0] != __HASH_NAME:
-        raise LeafException(
-            "Unsupported hash method, expecting %s" % __HASH_NAME)
+        raise LeafException("Unsupported hash method, expecting {hash}".format(hash=__HASH_NAME))
     if len(parts[1]) != __HASH_LEN:
-        raise LeafException(
-            "Hash value '%s' has not the correct length, expecting %d" % (parts[1], __HASH_LEN))
+        raise LeafException("Hash value '{hash}' has not the correct length, expecting {len}".format(hash=parts[1], len=__HASH_LEN))
     return parts
 
 
-def computeHash(file):
-    '''
+def hash_compute(file: Path):
+    """
     Return the hash of the given file
-    '''
+    """
     hasher = __HASH_FACTORY()
-    with open(str(file), 'rb') as fp:
+    with file.open("rb") as fp:
         buf = fp.read(__HASH_BLOCKSIZE)
         while len(buf) > 0:
             hasher.update(buf)
             buf = fp.read(__HASH_BLOCKSIZE)
-    return __HASH_NAME + ':' + hasher.hexdigest()
+    return __HASH_NAME + ":" + hasher.hexdigest()
 
 
-def checkHash(file, expected, raiseException=False):
-    parseHash(expected)
-    actual = computeHash(file)
+def hash_check(file: Path, expected: str, raise_exception: bool = False):
+    hash_parse(expected)
+    actual = hash_compute(file)
     if actual != expected:
-        if raiseException is True:
+        if raise_exception is True:
             raise InvalidHashException(file, actual, expected)
         return False
     return True
 
 
-def getTotalSize(item):
-    '''
+def fs_compute_total_size(item: Path):
+    """
     Get the size of a file or a folder (reccursive)
-    '''
+    """
     if not item.exists():
         return -1
     if not item.is_dir():
         return item.stat().st_size
     out = 0
     for sub in item.iterdir():
-        out += getTotalSize(sub)
+        out += fs_compute_total_size(sub)
     return out
+
+
+def mkdirs(folder: Path):
+    if not folder.is_dir():
+        folder.mkdir(parents=True)
+    return folder

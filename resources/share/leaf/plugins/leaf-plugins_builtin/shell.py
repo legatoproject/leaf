@@ -19,64 +19,55 @@ from leaf.core.error import LeafException
 
 
 class ShellPlugin(LeafPluginCommand):
-
-    def _configureParser(self, parser):
-        parser.add_argument('-n', '--name',
-                            dest='shell',
-                            help='run the named shell instead of the default')
-        parser.add_argument('-c', '--command',
-                            dest='command',
-                            nargs=argparse.REMAINDER,
-                            default=[],
-                            help='run a command in the given shell and exit')
+    def _configure_parser(self, parser):
+        parser.add_argument("-n", "--name", dest="shell", help="run the named shell instead of the default")
+        parser.add_argument("-c", "--command", dest="command", nargs=argparse.REMAINDER, default=[], help="run a command in the given shell and exit")
 
     def execute(self, args, uargs):
-        shellFolder = LeafFiles.getResource(LeafFiles.SHELL_DIRNAME)
-        if shellFolder is None:
+        shell_folder = LeafFiles.find_leaf_resource(LeafFiles.SHELL_DIRNAME)
+        if shell_folder is None:
             raise LeafException("Cannot find leaf shell configuration files")
-        shellName = None
+        shell_name = None
         # Was the shell name specified by the user directly?
         if args.shell is not None:
-            shellName = args.shell
-        elif 'SHELL' in os.environ:
+            shell_name = args.shell
+        elif "SHELL" in os.environ:
             # No, so see if the parent shell advertised it's name.
-            shellPath = Path(os.environ['SHELL'])
-            shellName = shellPath.name
+            shell_path = Path(os.environ["SHELL"])
+            shell_name = shell_path.name
         else:
             # If nothing else was found, assume Bash.
-            shellName = 'bash'
+            shell_name = "bash"
         # Now run our shell.
-        self.runSubShell(shellFolder, shellName, args.command)
+        self.__run_sub_shell(shell_folder, shell_name, args.command)
 
-    def tryExecShell(self, scriptDir, shellName, command, raiseException=False):
-        '''
+    def __try_exec_shell(self, script_dir, shell_name, command, raise_exception=False):
+        """
         Try to execute the given shell.
         If successful, this function will not return.
-        '''
+        """
         # Name of the support script to run.
-        scriptName = 'leafsh.%s.sh' % shellName
+        script_name = "leafsh.{shell}.sh".format(shell=shell_name)
         # Path to this support script.
-        scriptPath = scriptDir / scriptName
+        script_path = script_dir / script_name
 
         # If the support script exists, run it now.
-        if scriptPath.is_file():
-            os.execv(str(scriptPath), [
-                     str(scriptPath), str(scriptDir)] + command)
+        if script_path.is_file():
+            os.execv(str(script_path), [str(script_path), str(script_dir)] + command)
 
         # Looks like we failed to run the shell, so if requeststed, throw an exception here.
-        if raiseException:
-            raise RuntimeError(
-                'Shell startup script %s was not found.' % scriptPath)
+        if raise_exception:
+            raise RuntimeError("Shell startup script {file} was not found.".format(file=script_path))
 
-    def runSubShell(self, scriptPath, shellName, command):
-        '''
+    def __run_sub_shell(self, script_path, shell_name, command):
+        """
         Try to fire up a support script.
-        If TryExecShell is successful it will not return
-        '''
-        self.tryExecShell(scriptPath, shellName, command)
+        If __try_exec_shell is successful it will not return
+        """
+        self.__try_exec_shell(script_path, shell_name, command)
 
         # Looks like the shell they were looking for was not found.
         # Try again# with a default.
-        print('The shell %s is not supported, defaulting to Bash.' % shellName)
+        print("The shell {shell} is not supported, defaulting to Bash.".format(shell=shell_name))
 
-        self.tryExecShell(scriptPath, 'bash', command, raiseException=True)
+        self.__try_exec_shell(script_path, "bash", command, raise_exception=True)

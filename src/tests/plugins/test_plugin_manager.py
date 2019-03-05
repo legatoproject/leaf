@@ -1,6 +1,6 @@
-'''
+"""
 @author: Legato Tooling Team <letools@sierrawireless.com>
-'''
+"""
 
 from pathlib import Path
 
@@ -9,103 +9,94 @@ from tests.testutils import RESOURCE_FOLDER, LeafTestCaseWithCli
 
 
 class TestPluginManagerCli(LeafTestCaseWithCli):
-
-    def checkCommands(self, pm, commandNames, prefix=(), ignored=None):
-        prefix = ('leaf', ) + prefix
-        for c in pm.getCommands(prefix):
+    def check_commands(self, pm, cmdnames, prefix=(), ignored=None):
+        prefix = ("leaf",) + prefix
+        for c in pm.get_commands(prefix):
             self.assertIsInstance(c, LeafPluginCommand)
-        self.assertEqual(commandNames,
-                         list(map(lambda c: c.name,
-                                  pm.getCommands(prefix,
-                                                 ignoredNames=ignored))))
+        self.assertEqual(cmdnames, list(map(lambda c: c.name, pm.get_commands(prefix, ignored_names=ignored))))
 
-    def checkCommandRc(self, pm, cmdName, rc):
-        for c in pm.getCommands(()):
-            if c.name == cmdName:
+    def check_command_rc(self, pm, cmdname, rc):
+        for c in pm.get_commands(()):
+            if c.name == cmdname:
                 self.assertEqual(rc, c.execute(None, None))
                 return
-        self.fail("Cannot find command " + cmdName)
+        self.fail("Cannot find command " + cmdname)
 
-    def testBuiltin(self):
+    def test_builtin(self):
 
-        builtinFolder = RESOURCE_FOLDER / "__plugins"
-        self.assertTrue(builtinFolder.is_dir())
+        builtin_folder = RESOURCE_FOLDER / "__plugins"
+        self.assertTrue(builtin_folder.is_dir())
 
         pm = LeafPluginManager()
 
-        self.assertEqual(0, len(pm.builtinPluginMap))
-        self.assertEqual(0, len(pm.userPluginMap))
+        self.assertEqual(0, len(pm._LeafPluginManager__builtin_plugins))
+        self.assertEqual(0, len(pm._LeafPluginManager__user_plugins))
 
-        pm.loadBuiltinPlugins(builtinFolder)
-        self.assertEqual(5, len(pm.builtinPluginMap))
-        self.assertEqual(0, len(pm.userPluginMap))
-        self.checkCommands(pm, ["foo", "bar"])
+        pm.load_builtin_plugins(builtin_folder)
+        self.assertEqual(5, len(pm._LeafPluginManager__builtin_plugins))
+        self.assertEqual(0, len(pm._LeafPluginManager__user_plugins))
+        self.check_commands(pm, ["foo", "bar"])
 
-        pm.loadUserPlugins(Path("/unknownFolder/"))
-        self.assertEqual(5, len(pm.builtinPluginMap))
-        self.assertEqual(0, len(pm.userPluginMap))
-        self.checkCommands(pm, ["foo", "bar"])
+        pm.load_user_plugins(Path("/unknownFolder/"))
+        self.assertEqual(5, len(pm._LeafPluginManager__builtin_plugins))
+        self.assertEqual(0, len(pm._LeafPluginManager__user_plugins))
+        self.check_commands(pm, ["foo", "bar"])
 
-        pm.loadUserPlugins(self.getInstallFolder())
-        self.assertEqual(5, len(pm.builtinPluginMap))
-        self.assertEqual(0, len(pm.userPluginMap))
-        self.checkCommands(pm, ["foo", "bar"])
-        self.assertEqual(0, pm.getCommands(())[1].execute(None, None))
+        pm.load_user_plugins(self.install_folder)
+        self.assertEqual(5, len(pm._LeafPluginManager__builtin_plugins))
+        self.assertEqual(0, len(pm._LeafPluginManager__user_plugins))
+        self.check_commands(pm, ["foo", "bar"])
+        self.assertEqual(0, pm.get_commands(())[1].execute(None, None))
 
-        self.leafExec(('package', 'install'), 'pluginA_1.0')
-        pm.loadUserPlugins(self.getInstallFolder())
-        self.assertEqual(5, len(pm.builtinPluginMap))
-        self.assertEqual(2, len(pm.userPluginMap))
-        self.checkCommands(pm, ["foo", "bar", "bar1"])
-        self.checkCommandRc(pm, "bar", 0)
+        self.leaf_exec(("package", "install"), "pluginA_1.0")
+        pm.load_user_plugins(self.install_folder)
+        self.assertEqual(5, len(pm._LeafPluginManager__builtin_plugins))
+        self.assertEqual(2, len(pm._LeafPluginManager__user_plugins))
+        self.check_commands(pm, ["foo", "bar", "bar1"])
+        self.check_command_rc(pm, "bar", 0)
 
-        self.leafExec(('package', 'install'), 'pluginA_1.1')
-        pm.loadUserPlugins(self.getInstallFolder())
-        self.assertEqual(5, len(pm.builtinPluginMap))
-        self.assertEqual(3, len(pm.userPluginMap))
-        self.checkCommands(pm, ["foo", "bar", "bar2", "bar3"])
-        self.checkCommandRc(pm, "bar", 0)
+        self.leaf_exec(("package", "install"), "pluginA_1.1")
+        pm.load_user_plugins(self.install_folder)
+        self.assertEqual(5, len(pm._LeafPluginManager__builtin_plugins))
+        self.assertEqual(3, len(pm._LeafPluginManager__user_plugins))
+        self.check_commands(pm, ["foo", "bar", "bar2", "bar3"])
+        self.check_command_rc(pm, "bar", 0)
 
-        pm.loadBuiltinPlugins(None)
-        self.assertEqual(0, len(pm.builtinPluginMap))
-        self.assertEqual(3, len(pm.userPluginMap))
-        self.checkCommands(pm, ["bar", "bar2", "bar3"])
-        self.checkCommandRc(pm, "bar", 2)
+        pm.load_builtin_plugins(None)
+        self.assertEqual(0, len(pm._LeafPluginManager__builtin_plugins))
+        self.assertEqual(3, len(pm._LeafPluginManager__user_plugins))
+        self.check_commands(pm, ["bar", "bar2", "bar3"])
+        self.check_command_rc(pm, "bar", 2)
 
-        self.leafExec(('package', 'uninstall'), 'pluginA_1.1')
-        pm.loadUserPlugins(self.getInstallFolder())
-        self.assertEqual(0, len(pm.builtinPluginMap))
-        self.assertEqual(2, len(pm.userPluginMap))
-        self.checkCommands(pm, ["bar", "bar1"])
-        self.checkCommandRc(pm, "bar", 1)
+        self.leaf_exec(("package", "uninstall"), "pluginA_1.1")
+        pm.load_user_plugins(self.install_folder)
+        self.assertEqual(0, len(pm._LeafPluginManager__builtin_plugins))
+        self.assertEqual(2, len(pm._LeafPluginManager__user_plugins))
+        self.check_commands(pm, ["bar", "bar1"])
+        self.check_command_rc(pm, "bar", 1)
 
-    def testLocation(self):
-        builtinFolder = RESOURCE_FOLDER / "__plugins"
-        self.assertTrue(builtinFolder.is_dir())
+    def test_location(self):
+        builtin_folder = RESOURCE_FOLDER / "__plugins"
+        self.assertTrue(builtin_folder.is_dir())
         pm = LeafPluginManager()
 
-        self.assertEqual(0, len(pm.builtinPluginMap))
-        self.assertEqual(0, len(pm.userPluginMap))
+        self.assertEqual(0, len(pm._LeafPluginManager__builtin_plugins))
+        self.assertEqual(0, len(pm._LeafPluginManager__user_plugins))
 
-        pm.loadBuiltinPlugins(builtinFolder)
-        self.assertEqual(5, len(pm.builtinPluginMap))
-        self.assertEqual(0, len(pm.userPluginMap))
+        pm.load_builtin_plugins(builtin_folder)
+        self.assertEqual(5, len(pm._LeafPluginManager__builtin_plugins))
+        self.assertEqual(0, len(pm._LeafPluginManager__user_plugins))
 
-        self.checkCommands(pm, ["foo", "bar"])
-        self.checkCommands(pm, ["subcommand"],
-                           prefix=("env",))
-        self.checkCommands(pm, ["subcommand"],
-                           prefix=("package",))
-        self.checkCommands(pm, ["subcommand"],
-                           prefix=("unknown",))
-        self.checkCommands(pm, [],
-                           prefix=("unknown",),
-                           ignored=['subcommand'])
+        self.check_commands(pm, ["foo", "bar"])
+        self.check_commands(pm, ["subcommand"], prefix=("env",))
+        self.check_commands(pm, ["subcommand"], prefix=("package",))
+        self.check_commands(pm, ["subcommand"], prefix=("unknown",))
+        self.check_commands(pm, [], prefix=("unknown",), ignored=["subcommand"])
 
-    def testPythonPath(self):
-        self.leafExec(('package', 'install'), 'pluginB_1.0')
-        with self.assertStdout(templateOut="pluginB.out"):
-            self.leafExec("a")
-            self.leafExec("b")
-            self.leafExec("c")
-            self.leafExec("d")
+    def test_pythonpath(self):
+        self.leaf_exec(("package", "install"), "pluginB_1.0")
+        with self.assertStdout(template_out="pluginB.out"):
+            self.leaf_exec("a")
+            self.leaf_exec("b")
+            self.leaf_exec("c")
+            self.leaf_exec("d")

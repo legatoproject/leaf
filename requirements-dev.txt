@@ -1,0 +1,15 @@
+## Tools
+git-review
+rope
+black
+
+## Flake8 & plugins
+flake8
+flake8-html
+pep8-naming
+flake8-builtins
+flake8-blind-except
+flake8-comprehensions
+flake8-string-format
+flake8-pep3101
+flake8-bugbear

@@ -1,244 +1,252 @@
-'''
+"""
 Leaf Package Manager
 
 @author:    Legato Tooling Team <letools@sierrawireless.com>
 @copyright: Sierra Wireless. All rights reserved.
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
-'''
+"""
 import os
 import shutil
-from builtins import Exception
+from builtins import Exception, property
 from collections import OrderedDict
 from pathlib import Path
 
 from leaf.api.packages import PackageManager
 from leaf.core.constants import LeafFiles, LeafSettings
-from leaf.model.dependencies import DependencyUtils
-from leaf.core.error import (InvalidProfileNameException, LeafException,
-                             NoProfileSelected,
-                             ProfileNameAlreadyExistException,
-                             ProfileOutOfSyncException,
-                             ProfileProvisioningException,
-                             WorkspaceNotInitializedException)
+from leaf.core.error import (
+    InvalidProfileNameException,
+    LeafException,
+    NoProfileSelected,
+    ProfileNameAlreadyExistException,
+    ProfileOutOfSyncException,
+    ProfileProvisioningException,
+    WorkspaceNotInitializedException,
+)
+from leaf.core.logger import print_trace
+from leaf.core.utils import mkdirs
 from leaf.model.config import WorkspaceConfiguration
+from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
 from leaf.model.workspace import Profile
 
 
 class WorkspaceManager(PackageManager):
-    '''
+
+    """
     Represent a workspace, where leaf profiles apply
-    '''
+    """
 
     @staticmethod
-    def isWorkspaceRoot(folder):
+    def is_workspace_root(folder):
         return folder is not None and (folder / LeafFiles.WS_CONFIG_FILENAME).is_file()
 
     @staticmethod
-    def findRoot(checkParents=True):
+    def find_root(check_parents=True):
         # Check env if no custom path given
         if LeafSettings.WORKSPACE.as_boolean():
             return Path(LeafSettings.WORKSPACE.value)
 
         # Check parents using PWD to respect symlinks
-        if checkParents and 'PWD' in os.environ:
-            currentFolder = Path(os.getenv('PWD'))
-            if WorkspaceManager.isWorkspaceRoot(currentFolder):
-                return currentFolder
+        if check_parents and LeafSettings.PWD.as_boolean():
+            current_folder = Path(LeafSettings.PWD.value)
+            if WorkspaceManager.is_workspace_root(current_folder):
+                return current_folder
             else:
-                for parent in currentFolder.parents:
-                    if WorkspaceManager.isWorkspaceRoot(parent):
+                for parent in current_folder.parents:
+                    if WorkspaceManager.is_workspace_root(parent):
                         return parent
 
         # Use process current directory
         return Path(os.getcwd())
 
-    def __init__(self, workspaceRootFolder):
+    def __init__(self, ws_root_folder: Path):
         PackageManager.__init__(self)
-        self.workspaceRootFolder = workspaceRootFolder
-        self.workspaceConfigFile = workspaceRootFolder / LeafFiles.WS_CONFIG_FILENAME
-        self.workspaceDataFolder = workspaceRootFolder / LeafFiles.WS_DATA_FOLDERNAME
-        self.currentLink = self.workspaceDataFolder / LeafFiles.CURRENT_PROFILE_LINKNAME
+        self.__ws_root = ws_root_folder
 
-    def isWorkspaceInitialized(self):
-        return WorkspaceManager.isWorkspaceRoot(self.workspaceRootFolder)
+    @property
+    def ws_root_folder(self):
+        return self.__ws_root
 
-    def initializeWorkspace(self):
-        if self.isWorkspaceInitialized():
+    @property
+    def ws_config_file(self):
+        return self.__ws_root / LeafFiles.WS_CONFIG_FILENAME
+
+    @property
+    def ws_data_folder(self):
+        return mkdirs(self.__ws_root / LeafFiles.WS_DATA_FOLDERNAME)
+
+    @property
+    def ws_current_link(self):
+        return self.ws_data_folder / LeafFiles.CURRENT_PROFILE_LINKNAME
+
+    @property
+    def is_initialized(self):
+        return WorkspaceManager.is_workspace_root(self.ws_root_folder)
+
+    def init_ws(self):
+        if self.is_initialized:
             raise LeafException("Workspace is already initialized")
-        self.writeWorkspaceConfiguration(WorkspaceConfiguration())
+        self.write_ws_configuration(WorkspaceConfiguration())
 
-    def readWorkspaceConfiguration(self, initIfNeeded=False):
-        '''
+    def read_ws_configuration(self, init_if_needed: bool = False) -> WorkspaceConfiguration:
+        """
         Return the configuration and if current leaf version is supported
-        '''
-        if not self.isWorkspaceInitialized():
-            if not initIfNeeded:
+        """
+        if not self.is_initialized:
+            if not init_if_needed:
                 raise WorkspaceNotInitializedException()
-            self.initializeWorkspace()
-        return WorkspaceConfiguration(self.workspaceConfigFile)
+            self.init_ws()
+        return WorkspaceConfiguration(self.ws_config_file)
 
-    def writeWorkspaceConfiguration(self, wsc):
-        '''
+    def write_ws_configuration(self, wsc: WorkspaceConfiguration):
+        """
         Write the configuration and set the min leaf version to current version
-        '''
-        if not self.workspaceDataFolder.exists():
-            self.workspaceDataFolder.mkdir()
-        tmpFile = self.workspaceDataFolder / \
-            ("tmp-" + LeafFiles.WS_CONFIG_FILENAME)
-        wsc.writeLayerToFile(tmpFile, pp=True)
-        tmpFile.rename(self.workspaceConfigFile)
+        """
+        tmpfile = self.ws_data_folder / ("tmp-" + LeafFiles.WS_CONFIG_FILENAME)
+        wsc.write_layer(tmpfile, pp=True)
+        tmpfile.rename(self.ws_config_file)
 
-    def getWorkspaceEnvironment(self):
-        out = self.readWorkspaceConfiguration().getEnvironment()
-        out.env.insert(0, (LeafSettings.WORKSPACE.key,
-                           str(self.workspaceRootFolder)))
+    def build_ws_environment(self) -> Environment:
+        out = self.read_ws_configuration().build_environment()
+        out.set_variable(LeafSettings.WORKSPACE.key, str(self.ws_root_folder), replace=True, prepend=True)
         return out
 
-    def updateWorkspaceEnv(self, setMap=None, unsetList=None):
-        wsc = self.readWorkspaceConfiguration()
-        wsc.updateEnv(setMap, unsetList)
-        self.writeWorkspaceConfiguration(wsc)
+    def update_ws_environment(self, set_map=None, unset_list=None):
+        wsc = self.read_ws_configuration()
+        wsc.update_environment(set_map, unset_list)
+        self.write_ws_configuration(wsc)
 
-    def listProfiles(self):
-        '''
+    def list_profiles(self) -> dict:
+        """
         Return a map(name/profile) of all profiles
-        '''
-        wsc = self.readWorkspaceConfiguration()
+        """
+        wsc = self.read_ws_configuration()
         out = OrderedDict()
-        for name, json in wsc.getProfilesMap().items():
-            out[name] = Profile(name, self.workspaceDataFolder / name, json)
+        for name, json in wsc.profiles.items():
+            out[name] = Profile(name, self.ws_data_folder / name, json)
+        # Try to find current profile
         try:
-            out[self.getCurrentProfileName()].isCurrentProfile = True
+            out[self.current_profile_name].is_current = True
         except Exception:
             pass
         return out
 
-    def getProfile(self, name):
+    def get_profile(self, name: str) -> Profile:
         if name is None:
             raise LeafException("Cannot find profile")
-        pfMap = self.listProfiles()
-        if name not in pfMap:
+        pfmap = self.list_profiles()
+        if name not in pfmap:
             raise InvalidProfileNameException(name)
-        return pfMap[name]
+        return pfmap[name]
 
-    def createProfile(self, name):
-        name = Profile.checkValidName(name)
-        wsc = self.readWorkspaceConfiguration()
-        pfMap = wsc.getProfilesMap()
-        if name in pfMap:
+    def create_profile(self, name: str) -> Profile:
+        name = Profile.check_valid_name(name)
+        wsc = self.read_ws_configuration()
+        if name in wsc.profiles:
             raise ProfileNameAlreadyExistException(name)
-        pfMap[name] = {}
-        self.writeWorkspaceConfiguration(wsc)
-        return self.getProfile(name)
+        wsc.profiles[name] = {}
+        self.write_ws_configuration(wsc)
+        return self.get_profile(name)
 
-    def renameProfile(self, oldname, newname):
-        newname = Profile.checkValidName(newname)
+    def rename_profile(self, old_name: str, new_name: str) -> Profile:
+        new_name = Profile.check_valid_name(new_name)
 
         # Delete data folder
-        oldProfile = self.getProfile(oldname)
-        oldFolder = oldProfile.folder
-        if oldProfile.isCurrentProfile:
-            self.updateCurrentLink(None)
+        old_pf = self.get_profile(old_name)
+        if old_pf.is_current:
+            self.update_current_link(None)
 
-        wsc = self.readWorkspaceConfiguration()
-        pfMap = wsc.getProfilesMap()
-        if oldname not in pfMap:
-            raise InvalidProfileNameException(oldname)
-        if newname in pfMap:
-            raise ProfileNameAlreadyExistException(newname)
-        pfMap[newname] = pfMap[oldname]
-        del pfMap[oldname]
-        self.writeWorkspaceConfiguration(wsc)
+        wsc = self.read_ws_configuration()
+        if old_name not in wsc.profiles:
+            raise InvalidProfileNameException(old_name)
+        if new_name in wsc.profiles:
+            raise ProfileNameAlreadyExistException(new_name)
+        wsc.profiles[new_name] = wsc.profiles[old_name]
+        del wsc.profiles[old_name]
+        self.write_ws_configuration(wsc)
 
-        newProfile = self.getProfile(newname)
+        new_pf = self.get_profile(new_name)
         # Rename old folder
-        if newProfile.folder.exists():
-            shutil.rmtree(str(newProfile.folder))
-        if oldFolder.exists():
-            oldFolder.rename(newProfile.folder)
+        if new_pf.folder.exists():
+            shutil.rmtree(str(new_pf.folder))
+        if old_pf.folder.exists():
+            old_pf.folder.rename(new_pf.folder)
         # Update current link
-        if oldProfile.isCurrentProfile:
-            self.switchProfile(newProfile)
-        return newProfile
+        if old_pf.is_current:
+            self.switch_profile(new_pf)
+        return new_pf
 
-    def updateProfile(self, profile):
-        wsc = self.readWorkspaceConfiguration()
-        pfMap = wsc.getProfilesMap()
-        if profile.name not in pfMap:
-            raise LeafException("Cannot update profile %s" % profile.name)
-        pfMap[profile.name] = profile.json
-        self.writeWorkspaceConfiguration(wsc)
-        return self.getProfile(profile.name)
+    def update_profile(self, profile: Profile):
+        wsc = self.read_ws_configuration()
+        if profile.name not in wsc.profiles:
+            raise LeafException("Cannot update profile {pf.name}".format(pf=profile))
+        wsc.profiles[profile.name] = profile.json
+        self.write_ws_configuration(wsc)
 
-    def deleteProfile(self, name):
+    def delete_profile(self, name: str):
         # Clean files
-        profile = self.getProfile(name)
+        profile = self.get_profile(name)
         if profile.folder.exists():
             shutil.rmtree(str(profile.folder))
-        if profile.isCurrentProfile:
-            self.updateCurrentLink(None)
+        if profile.is_current:
+            self.update_current_link(None)
         # Update configuration
-        wsc = self.readWorkspaceConfiguration()
-        pfMap = wsc.getProfilesMap()
-        del pfMap[name]
-        self.writeWorkspaceConfiguration(wsc)
+        wsc = self.read_ws_configuration()
+        del wsc.profiles[name]
+        self.write_ws_configuration(wsc)
 
-    def isProfileSync(self, profile, raiseIfNotSync=False):
-        '''
+    def switch_profile(self, profile: Profile):
+        # Check folder exist
+        mkdirs(profile.folder)
+        # Update symlink
+        self.update_current_link(profile.name)
+        self.logger.print_default("Current profile is now {pf.name}".format(pf=profile))
+
+    def is_profile_sync(self, profile: Profile, raise_if_not_sync=False):
+        """
         Check if a profile contains all needed links to all contained packages
-        '''
+        """
         try:
-            linkedPiList = [ip.getIdentifier()
-                            for ip in profile.getLinkedPackages()]
-            neededPiList = [ip.getIdentifier()
-                            for ip in self.getProfileDependencies(profile)]
-            for pi in neededPiList:
-                if pi not in linkedPiList:
-                    raise LeafException("Missing package link for %s" % pi)
-            for pi in linkedPiList:
-                if pi not in neededPiList:
-                    raise LeafException(
-                        "Package should not be linked: %s" % pi)
+            linked_pi_list = [ip.identifier for ip in profile.list_linked_packages()]
+            needed_pi_list = [ip.identifier for ip in self.get_profile_dependencies(profile)]
+            for pi in needed_pi_list:
+                if pi not in linked_pi_list:
+                    raise LeafException("Missing package link for {pi}".format(pi=pi))
+            for pi in linked_pi_list:
+                if pi not in needed_pi_list:
+                    raise LeafException("Package should not be linked: {pi}".format(pi=pi))
         except Exception as e:
-            if raiseIfNotSync:
+            if raise_if_not_sync:
                 raise ProfileOutOfSyncException(profile, cause=e)
-            self.logger.printVerbose(str(e))
+            self.logger.print_verbose(str(e))
             return False
         return True
 
-    def getCurrentProfileName(self):
-        if self.currentLink.is_symlink():
+    @property
+    def current_profile_name(self):
+        if self.ws_current_link.is_symlink():
             try:
-                return self.currentLink.resolve().name
+                return self.ws_current_link.resolve().name
             except Exception:
-                self.currentLink.unlink()
+                self.ws_current_link.unlink()
                 raise NoProfileSelected()
         else:
             raise NoProfileSelected()
 
-    def switchProfile(self, profile):
-        # Check folder exist
-        if not profile.folder.exists():
-            profile.folder.mkdir(parents=True)
-        # Update symlink
-        self.updateCurrentLink(profile.name)
-        self.logger.printDefault("Current profile is now %s" % profile.name)
-        return profile
-
-    def updateCurrentLink(self, name):
-        '''
+    def update_current_link(self, name: str):
+        """
         Update the current link without any check
-        '''
-        if self.currentLink.is_symlink():
-            self.currentLink.unlink()
+        """
+        lnk = self.ws_current_link
+        if lnk.is_symlink():
+            lnk.unlink()
         if name is not None:
-            self.currentLink.symlink_to(name)
-            self.workspaceConfigFile.touch(exist_ok=True)
+            lnk.symlink_to(name)
+            self.ws_config_file.touch(exist_ok=True)
 
-    def provisionProfile(self, profile):
+    def provision_profile(self, profile):
         if not profile.folder.is_dir():
             # Create folder if needed
             profile.folder.mkdir(parents=True)
@@ -251,63 +259,54 @@ class WorkspaceManager(PackageManager):
                     shutil.rmtree(str(item))
 
         # Check if all needed packages are installed
-        notInstalledPackages = DependencyUtils.install(
-            PackageIdentifier.fromStringList(profile.getPackages()),
-            self.listAvailablePackages(),
-            self.listInstalledPackages(),
-            env=self._getSkelEnvironement(profile))
-        if len(notInstalledPackages) == 0:
-            self.logger.printVerbose("All packages are already installed")
+        missing_packages = DependencyUtils.install(
+            PackageIdentifier.parse_list(profile.packages),
+            self.list_available_packages(),
+            self.list_installed_packages(),
+            env=self.build_pf_environment(profile),
+        )
+        if len(missing_packages) == 0:
+            self.logger.print_verbose("All packages are already installed")
         else:
-            self.logger.printDefault("Profile is out of sync")
+            self.logger.print_default("Profile is out of sync")
             try:
-                self.installFromRemotes(
-                    PackageIdentifier.fromStringList(profile.getPackages()),
-                    env=self._getSkelEnvironement(profile))
+                self.install_packages(PackageIdentifier.parse_list(profile.packages), env=self.build_pf_environment(profile))
             except Exception as e:
                 raise ProfileProvisioningException(e)
 
         # Do all needed links
-        profilesDependencyList = self.getProfileDependencies(profile)
-        errorCount = 0
-        for ip in profilesDependencyList:
-            piFolder = profile.folder / ip.getIdentifier().name
-            if piFolder.exists():
-                piFolder = profile.folder / str(ip.getIdentifier())
+        errors = 0
+        for ip in self.get_profile_dependencies(profile):
+            pi_folder = profile.folder / ip.identifier.name
+            if pi_folder.exists():
+                pi_folder = profile.folder / str(ip.identifier)
             try:
-                env = self._getSkelEnvironement(profile)
-                self.syncPackages([ip.getIdentifier()], env=env)
-                piFolder.symlink_to(ip.folder)
+                env = self.build_pf_environment(profile)
+                self.sync_packages([ip.identifier], env=env)
+                pi_folder.symlink_to(ip.folder)
             except Exception as e:
-                errorCount += 1
-                self.logger.printError(
-                    "Error while sync operation on %s" % ip.getIdentifier())
-                self.logger.printError(str(e))
+                errors += 1
+                self.logger.print_error("Error while sync operation on {ip.identifier}".format(ip=ip))
+                self.logger.print_error(str(e))
+                print_trace()
 
         # Touch folder when provisionning is done without error
-        if errorCount == 0:
+        if errors == 0:
             profile.folder.touch(exist_ok=True)
 
-    def getFullEnvironment(self, profile):
-        self.isProfileSync(profile, raiseIfNotSync=True)
-        out = self._getSkelEnvironement(profile)
-        out.addSubEnv(self.getPackagesEnvironment(
-            self.getProfileDependencies(profile)))
+    def build_full_environment(self, profile: Profile):
+        self.is_profile_sync(profile, raise_if_not_sync=True)
+        out = self.build_pf_environment(profile)
+        out.append(self.build_packages_environment(self.get_profile_dependencies(profile)))
         return out
 
-    def _getSkelEnvironement(self, profile):
-        return Environment.build(
-            self.getBuiltinEnvironment(),
-            self.getUserEnvironment(),
-            self.getWorkspaceEnvironment(),
-            profile.getEnvironment())
+    def build_pf_environment(self, profile: Profile):
+        return Environment.build(self.build_builtin_environment(), self.build_user_environment(), self.build_ws_environment(), profile.build_environment())
 
-    def getProfileDependencies(self, profile):
-        '''
+    def get_profile_dependencies(self, profile):
+        """
         Returns all latest packages needed by a profile
-        '''
+        """
         return DependencyUtils.installed(
-            PackageIdentifier.fromStringList(profile.getPackages()),
-            self.listInstalledPackages(),
-            onlyKeepLatest=True,
-            env=self._getSkelEnvironement(profile))
+            PackageIdentifier.parse_list(profile.packages), self.list_installed_packages(), only_keep_latest=True, env=self.build_pf_environment(profile)
+        )

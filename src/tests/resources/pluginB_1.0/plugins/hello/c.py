@@ -1,11 +1,10 @@
 from leaf.cli.plugins import LeafPluginCommand
-from .d import printHelpMessage
-from .mylib.customlib import printLibMessage
+from .d import print_help_message
+from .mylib.customlib import print_lib_message
 
 
 class PluginC(LeafPluginCommand):
-
     def execute(self, args, uargs):
         print("Hello C")
-        printHelpMessage("C")
-        printLibMessage("C")
+        print_help_message("C")
+        print_lib_message("C")

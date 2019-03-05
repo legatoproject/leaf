@@ -1,43 +1,48 @@
-'''
+"""
 Leaf Package Manager
 
 @author:    Legato Tooling Team <letools@sierrawireless.com>
 @copyright: Sierra Wireless. All rights reserved.
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
-'''
+"""
 
 import json
 from collections import OrderedDict
+from pathlib import Path
+
+__JSON_LOAD_ARGS = {"object_pairs_hook": OrderedDict}
+__JSON_DUMP_PP = {"indent": 4, "separators": (",", ": ")}
 
 
-def jsonToString(data, pp=False):
-    kw = {}
-    if pp:
-        kw.update({'indent': 4,
-                   'separators': (',', ': ')})
+def jtostring(data: dict, pp: bool = False):
+    kw = __JSON_DUMP_PP if pp else {}
     return json.dumps(data, **kw)
 
 
-def jsonWriteFile(file, data, pp=False):
-    with open(str(file), 'w') as fp:
-        fp.write(jsonToString(data, pp=pp))
+def jwritefile(file: Path, data: dict, pp: bool = False):
+    with file.open("w") as fp:
+        fp.write(jtostring(data, pp=pp))
 
 
-def jsonLoadFile(file):
-    with open(str(file), 'r') as fp:
-        return jsonLoad(fp)
+def jloadfile(file: Path):
+    with file.open() as fp:
+        return jload(fp)
 
 
-def jsonLoad(fp):
-    return json.load(fp, object_pairs_hook=OrderedDict)
+def jload(fp):
+    return json.load(fp, **__JSON_LOAD_ARGS)
 
 
-def layerModelUpdate(left, right, listAppend=False):
-    '''
+def jloads(s):
+    return json.loads(s, **__JSON_LOAD_ARGS)
+
+
+def jlayer_update(left: dict, right: dict, list_append: bool = False):
+    """
     Update the *left* model with values from *right*
     Both left & right have to be dict objects
-    '''
+    """
     if not isinstance(left, dict):
         raise ValueError("Problem with json layer")
     if not isinstance(right, dict):
@@ -50,8 +55,8 @@ def layerModelUpdate(left, right, listAppend=False):
                 del left[key]
             elif isinstance(left[key], dict) and isinstance(right[key], dict):
                 # Reccursive update
-                layerModelUpdate(left[key], right[key], listAppend=listAppend)
-            elif listAppend and isinstance(left[key], list) and isinstance(right[key], list):
+                jlayer_update(left[key], right[key], list_append=list_append)
+            elif list_append and isinstance(left[key], list) and isinstance(right[key], list):
                 # Handle list append if option is set
                 left[key] += right[key]
             else:
@@ -64,11 +69,11 @@ def layerModelUpdate(left, right, listAppend=False):
     return left
 
 
-def layerModelDiff(left, right):
-    '''
+def jlayer_diff(left: dict, right: dict):
+    """
     Compute the difference between the *left* and *right* model
     Both left & right have to be dict objects
-    '''
+    """
     if not isinstance(left, dict):
         raise ValueError("Problem with json layer")
     if not isinstance(right, dict):
@@ -85,7 +90,7 @@ def layerModelDiff(left, right):
                 pass
             elif isinstance(left[key], dict) and isinstance(right[key], dict):
                 # Recursive diff
-                out[key] = layerModelDiff(left[key], right[key])
+                out[key] = jlayer_diff(left[key], right[key])
             else:
                 # Value has been updated
                 out[key] = right[key]
@@ -100,35 +105,34 @@ def layerModelDiff(left, right):
     return out
 
 
-class JsonObject():
-    '''
+class JsonObject:
+
+    """
     Represent a json object
-    '''
+    """
 
-    def __init__(self, json):
-        self.json = json
+    def __init__(self, json: dict):
+        self.__json = json
 
-    def has(self, *keys):
-        for key in keys:
-            if key not in self.json:
-                return False
-        return True
+    @property
+    def json(self):
+        return self.__json
 
-    def jsonget(self, key, default=None, mandatory=False):
-        '''
+    def jsonget(self, key: str, default=None, mandatory: bool = False):
+        """
         Utility to browse json and reduce None testing
-        '''
-        if key not in self.json:
+        """
+        if key not in self.__json:
             if mandatory:
-                raise ValueError("Missing mandatory json field '%s'" % key)
+                raise ValueError("Missing mandatory json field '{key}'".format(key=key))
             if default is not None:
-                self.json[key] = default
-        return self.json.get(key)
+                self.__json[key] = default
+        return self.__json.get(key)
 
-    def jsonpath(self, path, default=None, mandatory=False):
-        '''
+    def jsonpath(self, path: list, default=None, mandatory: bool = False):
+        """
         Utility to browse json and reduce None testing
-        '''
+        """
         if not isinstance(path, (list, tuple)):
             raise ValueError(type(path))
         if len(path) == 0:

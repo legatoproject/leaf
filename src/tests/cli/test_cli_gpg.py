@@ -1,17 +1,15 @@
-'''
+"""
 @author: Legato Tooling Team <letools@sierrawireless.com>
-'''
+"""
 
 from leaf.api import GPGManager
 from leaf.core.constants import LeafConstants, LeafFiles, LeafSettings
 from leaf.core.error import LeafException
-from leaf.core.utils import downloadData
-from tests.testutils import (TEST_GPG_FINGERPRINT, LeafTestCaseWithRepo,
-                             LeafTestCaseWithCli)
+from leaf.core.utils import download_data
+from tests.testutils import TEST_GPG_FINGERPRINT, LeafTestCaseWithCli, LeafTestCaseWithRepo
 
 
 class TestGPG(LeafTestCaseWithCli):
-
     def __init__(self, *args, **kwargs):
         LeafTestCaseWithCli.__init__(self, *args, **kwargs)
 
@@ -25,64 +23,46 @@ class TestGPG(LeafTestCaseWithCli):
         # because we don't want default remote configured here
         LeafTestCaseWithRepo.setUp(self)
         LeafSettings.GPG_KEYSERVER.value = "keyserver.ubuntu.com"
-        self.cacheFile = self.getCacheFolder() / LeafFiles.CACHE_REMOTES_FILENAME
+        self.cacheFile = self.cache_folder / LeafFiles.CACHE_REMOTES_FILENAME
 
     def tearDown(self):
         LeafTestCaseWithCli.tearDown(self)
 
-    def testSimple(self):
+    def test_simple(self):
         gpg = GPGManager()
-        print("GPG Home:", gpg.gpgHome)
-        data = downloadData(self.getRemoteUrl())
+        data = download_data(self.remote_url1)
 
         with self.assertRaises(LeafException):
-            gpg.gpgVerifyContent(
-                data,
-                self.getRemoteUrl() + LeafConstants.GPG_SIG_EXTENSION)
+            gpg.gpg_verify_content(data, self.remote_url1 + LeafConstants.GPG_SIG_EXTENSION)
 
-        gpg.gpgImportKeys(TEST_GPG_FINGERPRINT)
+        gpg.gpg_import_keys(TEST_GPG_FINGERPRINT)
 
-        gpg.gpgVerifyContent(
-            data,
-            self.getRemoteUrl() + LeafConstants.GPG_SIG_EXTENSION,
-            TEST_GPG_FINGERPRINT)
+        gpg.gpg_verify_content(data, self.remote_url1 + LeafConstants.GPG_SIG_EXTENSION, TEST_GPG_FINGERPRINT)
 
-        gpg.gpgVerifyContent(
-            data,
-            self.getRemoteUrl() + LeafConstants.GPG_SIG_EXTENSION)
+        gpg.gpg_verify_content(data, self.remote_url1 + LeafConstants.GPG_SIG_EXTENSION)
 
         with self.assertRaises(LeafException):
-            gpg.gpgVerifyContent(
-                data,
-                self.getRemoteUrl() + LeafConstants.GPG_SIG_EXTENSION,
-                "8C20018BE986D5300A346323FAE026860F1F8AEE")
+            gpg.gpg_verify_content(data, self.remote_url1 + LeafConstants.GPG_SIG_EXTENSION, "8C20018BE986D5300A346323FAE026860F1F8AEE")
 
-    def testRemoteWithoutSecurity(self):
+    def test_remote_without_security(self):
         with self.assertRaises(SystemExit):
-            self.leafExec(("remote", "add"),
-                          "default", self.getRemoteUrl())
+            self.leaf_exec(("remote", "add"), "default", self.remote_url1)
 
-    def testRemoteInsecure(self):
-        self.leafExec(("remote", "add"),
-                      "--insecure",
-                      "default", self.getRemoteUrl())
-        self.leafExec(("remote", "fetch"))
+    def test_remote_insecure(self):
+        self.leaf_exec(("remote", "add"), "--insecure", "default", self.remote_url1)
+        self.leaf_exec(("remote", "fetch"))
 
         self.assertTrue(self.cacheFile.exists())
 
-    def testRemoteBadKey(self):
-        self.leafExec(("remote", "add"),
-                      "--gpg", "8C20018BE986D5300A346323FAE026860F1F8AEE",
-                      "default", self.getRemoteUrl())
-        self.leafExec(("remote", "fetch"))
+    def test_remote_bad_key(self):
+        self.leaf_exec(("remote", "add"), "--gpg", "8C20018BE986D5300A346323FAE026860F1F8AEE", "default", self.remote_url1)
+        self.leaf_exec(("remote", "fetch"))
 
         self.assertFalse(self.cacheFile.exists())
 
-    def testRemoteValidKey(self):
-        self.leafExec(("remote", "add"),
-                      "--gpg", TEST_GPG_FINGERPRINT,
-                      "default", self.getRemoteUrl())
-        self.leafExec(("remote", "fetch"))
+    def test_remote_valid_key(self):
+        self.leaf_exec(("remote", "add"), "--gpg", TEST_GPG_FINGERPRINT, "default", self.remote_url1)
+        self.leaf_exec(("remote", "fetch"))
 
-        self.leafExec(("search"), "-a")
+        self.leaf_exec(("search"), "-a")
         self.assertTrue(self.cacheFile.exists())

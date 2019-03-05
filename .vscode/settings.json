@@ -1,0 +1,32 @@
+{
+    "files.exclude": {
+        ".*": true,
+        "**/__pycache__/": true,
+        "build": true,
+        "coverage*": true,
+        "dist": true,
+        "flake*": true,
+        "nosetests*": true,
+        "src/leaf.egg-info/": true,
+        "venv*": true
+    },
+    "python.pythonPath": "${workspaceFolder}/venv/bin/python",
+    "python.autoComplete.extraPaths": [
+        "${workspaceFolder}/src/"
+    ],
+    "python.formatting.provider": "black",
+    "python.formatting.blackArgs": [
+        "-l",
+        "160"
+    ],
+    "editor.formatOnSave": true,
+    "python.unitTest.pyTestEnabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": true,
+    "python.linting.flake8Args": [
+        "--ignore=E501,E203,W503"
+    ],
+    "python.linting.flake8CategorySeverity.N": "Error",
+    "python.linting.flake8CategorySeverity.S": "Error",
+    "python.linting.flake8CategorySeverity.P": "Error",
+}

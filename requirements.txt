@@ -1,14 +1,11 @@
 ## Tests & Releng
 setuptools-scm
-coverage
-flake8
-flake8-html
-nose
 pytest
-## Tools
-autopep8
-git-review
-## Devel
+pytest-xdist
+pytest-cov
+coverage 
+
+## Requirements
 argcomplete
 colorama
 python-gnupg

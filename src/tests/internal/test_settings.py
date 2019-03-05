@@ -1,24 +1,23 @@
-'''
+"""
 @author: Legato Tooling Team <letools@sierrawireless.com>
-'''
+"""
 
 import os
-from tests.testutils import LeafTestCase
+
 from leaf.core.constants import LeafSettings
-from leaf.core.settings import (EnumValidator, RegexValidator, Setting,
-                                StaticSettings)
+from leaf.core.settings import EnumValidator, RegexValidator, Setting, StaticSettings
+from tests.testutils import LeafTestCase
 
 KEY = "LEAF_TEST_MYSETTING"
 
 
 class TestSettings(LeafTestCase):
-
     def setUp(self):
         if KEY in os.environ:
             del os.environ[KEY]
         self.assertFalse(KEY in os.environ)
 
-    def testRegexValidator(self):
+    def test_regex_validator(self):
         v = RegexValidator(r"[A-Z]+")
         self.assertTrue(v("A"))
         self.assertTrue(v("AA"))
@@ -33,14 +32,14 @@ class TestSettings(LeafTestCase):
         self.assertFalse(v("aA"))
         self.assertFalse(v(""))
 
-    def testEnumValidator(self):
-        v = EnumValidator(["None", None, 1, 'A', "A"])
+    def test_enum_validator(self):
+        v = EnumValidator(["None", None, 1, "A", "A"])
         self.assertTrue(v("A"))
         self.assertTrue(v("None"))
         self.assertTrue(v(None))
         self.assertFalse(v("AA"))
 
-    def testSettingSimple(self):
+    def test_setting_simple(self):
         s = Setting(KEY)
         self.assertEqual(None, s.value)
 
@@ -59,10 +58,8 @@ class TestSettings(LeafTestCase):
         os.environ[KEY] = "123"
         self.assertEqual("123", s.value)
 
-    def testSettingRegex(self):
-        s = Setting(KEY,
-                    default="MyDefaultValue",
-                    validator=RegexValidator("[A-Za-z]+"))
+    def test_setting_regex(self):
+        s = Setting(KEY, default="MyDefaultValue", validator=RegexValidator("[A-Za-z]+"))
 
         self.assertEqual("MyDefaultValue", s.value)
         self.assertFalse(KEY in os.environ)
@@ -92,18 +89,13 @@ class TestSettings(LeafTestCase):
         self.assertEqual("MyDefaultValue", s.value)
 
         with self.assertRaises(ValueError):
-            s = Setting(KEY,
-                        default="123",
-                        validator=RegexValidator("[A-Za-z]+"))
+            s = Setting(KEY, default="123", validator=RegexValidator("[A-Za-z]+"))
 
-    def testSettingEnum(self):
+    def test_setting_enum(self):
         with self.assertRaises(ValueError):
-            s = Setting(KEY,
-                        default="B",
-                        validator=EnumValidator(("A", 1)))
+            s = Setting(KEY, default="B", validator=EnumValidator(("A", 1)))
 
-        s = Setting(KEY,
-                    validator=EnumValidator(("A", "1", 2, None)))
+        s = Setting(KEY, validator=EnumValidator(("A", "1", 2, None)))
 
         self.assertEqual(None, s.value)
 
@@ -124,33 +116,35 @@ class TestSettings(LeafTestCase):
         with self.assertRaises(ValueError):
             s.value = "2"
 
-    def testBoolean(self):
+    def test_boolean(self):
 
         s = Setting(KEY)
         self.assertFalse(s.as_boolean())
 
-        for v, b in (("0", False),
-                     ("False", False),
-                     ("FALSE", False),
-                     ("NO", False),
-                     ("no", False),
-                     ("", False),
-                     ("  ", False),
-                     ("1", True),
-                     (" 1 ", True),
-                     ("A", True),
-                     ("True", True)):
+        for v, b in (
+            ("0", False),
+            ("False", False),
+            ("FALSE", False),
+            ("NO", False),
+            ("no", False),
+            ("", False),
+            ("  ", False),
+            ("1", True),
+            (" 1 ", True),
+            ("A", True),
+            ("True", True),
+        ):
             s.value = v
             self.assertEqual(v, s.value)
             self.assertEqual(b, s.as_boolean())
 
-    def testLeafSettings(self):
+    def test_leaf_settings(self):
         for e in LeafSettings.values():
             if e.default is not None:
                 self.assertIsNotNone(e.value)
         self.assertIsNotNone(LeafSettings.get_by_key("LEAF_DEBUG"))
 
-    def testMisc(self):
+    def test_misc(self):
         class SettingsA(StaticSettings):
             A = Setting(KEY)
 

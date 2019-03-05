@@ -1,120 +1,113 @@
-'''
+"""
 Renderer for profile list command
 
 @author:    Legato Tooling Team <letools@sierrawireless.com>
 @copyright: Sierra Wireless. All rights reserved.
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
-'''
+"""
 from leaf.rendering.alignment import HAlign
 from leaf.rendering.renderer.renderer import Renderer
 from leaf.rendering.table import Table
 
 
 class ProfileListRenderer(Renderer):
-    '''
+
+    """
     Renderer for profile list command
-    profilesInfoMap is a dict with profiles as key and the dict returned by WorkspaceManager#computeProfileInfo as values
-    '''
+    profiles_infomap is a dict with profiles as key and the dict returned by WorkspaceManager#_compute_profile_info as values
+    """
 
-    def __init__(self, workspaceRootFolder, profilesInfoMap):
+    def __init__(self, ws_root_folder, profile_infomap):
         Renderer.__init__(self)
-        self.workspaceRootFolder = workspaceRootFolder
-        self.extend(profilesInfoMap.keys())
+        self.ws_root_folder = ws_root_folder
+        self.extend(profile_infomap.keys())
         self.sort(key=str)
-        self.profilesInfoMap = profilesInfoMap
+        self.profile_infomap = profile_infomap
 
-    def _addPackagesRows(self, table, label, packMap):
+    def _add_packages_rows(self, table, label, package_map):
         label = self.tm.LABEL(label)
-        for pi, p in sorted(packMap.items()):
-            table.newRow().newSep() \
-                .newCell(label, hAlign=HAlign.CENTER).newSep() \
-                .newCell(str(pi)).newSep() \
-                .newCell(p.getDescription() if p is not None else "").newSep()
+        for pi, pkg in sorted(package_map.items()):
+            description = ""
+            if pkg is not None:
+                description = pkg.description or ""
+            table.new_row().new_separator().new_cell(label, halign=HAlign.CENTER).new_separator().new_cell(str(pi)).new_separator().new_cell(
+                description
+            ).new_separator()
             label = ""
 
-    def _addHeader(self, table, nbElements):
+    def _add_header(self, table, nb_elements):
         # Header
-        table.newRow().newSep(nbElements)
-        headerText = ("{label_theme}Workspace:{reset_theme} {workspace_folder}") \
-            .format(
-                label_theme=self.tm.LABEL,
-                reset_theme=self.tm.RESET,
-                workspace_folder=self.workspaceRootFolder)
-        table.newRow().newSep().newCell(
-            headerText, hAlign=HAlign.CENTER).newHSpan(nbElements - 3).newSep()
+        table.new_row().new_separator(nb_elements)
+        text = ("{label_theme}Workspace:{reset_theme} {workspace_folder}").format(
+            label_theme=self.tm.LABEL, reset_theme=self.tm.RESET, workspace_folder=self.ws_root_folder
+        )
+        table.new_row().new_separator().new_cell(text, halign=HAlign.CENTER).new_hspan(nb_elements - 3).new_separator()
 
-    def _addProfile(self, table, showEnv, showDependencies, nbElements, profile, sync, includedPackagesMap, dependenciesMap):
+    def _add_profile(self, table, show_env, show_dependencies, element_count, profile, sync, included_packages_map, dependencies_map):
         # Profile header
-        table.newRow().newDblSep(nbElements)
-        profileName = profile.name
-        if profile.isCurrentProfile:
-            profileName += " " + self.tm.PROFILE_CURRENT("[current]")
-        headerText = ("{label_theme}Profile:{reset_theme} {profile_name} ({sync_state})") \
-            .format(
-                label_theme=self.tm.LABEL,
-                reset_theme=self.tm.RESET,
-                profile_name=profileName,
-                sync_state="sync" if sync else "not sync")
-        table.newRow().newSep().newCell(
-            headerText, hAlign=HAlign.CENTER).newHSpan(nbElements - 3).newSep()
+        table.new_row().new_double_separator(element_count)
+        pfname = profile.name
+        if profile.is_current:
+            pfname += " " + self.tm.PROFILE_CURRENT("[current]")
+        header_text = ("{label_theme}Profile:{reset_theme} {profile_name} ({sync_state})").format(
+            label_theme=self.tm.LABEL, reset_theme=self.tm.RESET, profile_name=pfname, sync_state="sync" if sync else "not sync"
+        )
+        table.new_row().new_separator().new_cell(header_text, halign=HAlign.CENTER).new_hspan(element_count - 3).new_separator()
 
         # Environment
-        if showEnv:
-            env = sorted(["%s=%s" % (k, v)
-                          for (k, v) in profile.getEnvMap().items()])
+        if show_env:
+            env = []
+            profile.build_environment().print_env(kv_consumer=lambda k, v: env.append("{0}={1}".format(k, v)))
             if len(env) > 0:
-                table.newRow().newSep(nbElements)
-                table.newRow().newSep() \
-                    .newCell(self.tm.LABEL("Environment"), hAlign=HAlign.CENTER).newSep() \
-                    .newCell("\n".join(env)).newHSpan(2).newSep()
+                table.new_row().new_separator(element_count)
+                table.new_row().new_separator().new_cell(self.tm.LABEL("Environment"), halign=HAlign.CENTER).new_separator().new_cell("\n".join(env)).new_hspan(
+                    2
+                ).new_separator()
 
         # Included packages
-        inclPkgCount = len(includedPackagesMap)
+        included_packages_count = len(included_packages_map)
 
-        if showDependencies:
+        if show_dependencies:
             # Dependencies
-            depsCount = len(dependenciesMap)
+            dependencies_count = len(dependencies_map)
         else:
-            depsCount = 0
+            dependencies_count = 0
 
         # Packages header
-        if inclPkgCount > 0 or depsCount > 0:
-            table.newRow().newSep(nbElements)
-            table.newRow().newSep() \
-                .newCell(self.tm.LABEL("Packages"), hAlign=HAlign.CENTER).newSep() \
-                .newCell(self.tm.LABEL("Identifier"), hAlign=HAlign.CENTER).newSep() \
-                .newCell(self.tm.LABEL("Description"), hAlign=HAlign.CENTER).newSep()
+        if included_packages_count > 0 or dependencies_count > 0:
+            table.new_row().new_separator(element_count)
+            table.new_row().new_separator().new_cell(self.tm.LABEL("Packages"), halign=HAlign.CENTER).new_separator().new_cell(
+                self.tm.LABEL("Identifier"), halign=HAlign.CENTER
+            ).new_separator().new_cell(self.tm.LABEL("Description"), halign=HAlign.CENTER).new_separator()
 
             # Included packages
-            if inclPkgCount > 0:
-                table.newRow().newSep(nbElements)
-                self._addPackagesRows(table, "Included", includedPackagesMap)
+            if included_packages_count > 0:
+                table.new_row().new_separator(element_count)
+                self._add_packages_rows(table, "Included", included_packages_map)
 
-            if depsCount > 0:
+            if dependencies_count > 0:
                 # Dependencies
-                table.newRow().newSep(nbElements)
-                self._addPackagesRows(
-                    table, "Dependencies" if depsCount > 1 else "Dependency", dependenciesMap)
+                table.new_row().new_separator(element_count)
+                self._add_packages_rows(table, "Dependencies" if dependencies_count > 1 else "Dependency", dependencies_map)
 
-    def _toString(self, showEnv, showDependencies):
-        nbElements = 7
+    def _tostring(self, show_env, show_dependencies):
+        count = 7
         table = Table(self.tm)
 
         # Workspace header
-        self._addHeader(table, nbElements)
+        self._add_header(table, count)
 
         # Profile
         for profile in self:
-            profileInfos = self.profilesInfoMap[profile]
-            self._addProfile(table, showEnv, showDependencies,
-                             nbElements, profile, **profileInfos)
+            info = self.profile_infomap[profile]
+            self._add_profile(table, show_env, show_dependencies, count, profile, **info)
 
-        table.newRow().newSep(nbElements)
+        table.new_row().new_separator(count)
         return table
 
-    def _toStringDefault(self):
-        '''
+    def _tostring_default(self):
+        """
         ┌───────────────────────────────────────────────────────────────┐
         │                  Workspace: fake/root/folder                  │
         ╞═══════════════════════════════════════════════════════════════╡
@@ -134,11 +127,11 @@ class ProfileListRenderer(Renderer):
         ╞═══════════════════════════════════════════════════════════════╡
         │                  Profile: profile4 (not sync)                 │
         └───────────────────────────────────────────────────────────────┘
-        '''
-        return self._toString(showEnv=False, showDependencies=False)
+        """
+        return self._tostring(show_env=False, show_dependencies=False)
 
-    def _toStringVerbose(self):
-        '''
+    def _tostring_verbose(self):
+        """
         ┌───────────────────────────────────────────────────────────────────┐
         │                    Workspace: fake/root/folder                    │
         ╞═══════════════════════════════════════════════════════════════════╡
@@ -172,5 +165,5 @@ class ProfileListRenderer(Renderer):
         ╞══════════════╧═════════════════╧══════════════════════════════════╡
         │                    Profile: profile4 (not sync)                   │
         └───────────────────────────────────────────────────────────────────┘
-        '''
-        return self._toString(showEnv=True, showDependencies=True)
+        """
+        return self._tostring(show_env=True, show_dependencies=True)
