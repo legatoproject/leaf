@@ -375,6 +375,72 @@ Boolean property (default _true_) stating if the binary has to be executed in a 
 +
 If set to _false_, the binary will be called directly by leaf, without running a shell to process the environment.
 
+== plugins node
+
+The *plugins* node allows to contribute additional sub-commands to the *leaf* command line interface.
+The contributed commands become globally available as soon as the package is installed.
+
+=== Example
+
+Here is an example of a *plugins* node:
+
+....
+  "plugins": {
+    "mycmd": {
+      "source": "src/mycmd.py",
+      "description": "some extra command",
+      "class": "MyCmd"
+    }
+  }
+....
+
+=== Contributed commands
+
+The *plugins* node is map; keys are the contributed command names and values are a map of properties
+of the contributed command.
+
+Command names can be used to extend existing commands that are already supporting sub-commands. Examples:
+
+  - *"mycmd"* name definition will create a *leaf mycmd* command
+  - *"build mything"* name definition will create a *leaf build mything* command
+    and *leaf build -h* will list *mything* as part of the available sub-commands
+
+Commands contribution follows the following rules to resolve potential conflicts and issues:
+
+  - standard *leaf* commands can't be overriden by plugins. If a plugin tries to define a command that already exists
+    in leaf core implementation, the contribution will simply be ignored.
+  - when several versions of the same package (definning plugins) are installed, only the latest installed version
+    will be used to contribute plugins.
+  - if a command name is contributed by two different packages, there is a conflict and the contributed command won't
+    be available. The *LEAF_DEBUG* setting can be used to get more information on the conflicting packages.
+  - if the Python code of a contributed command fails to load when reading plugins, the command won't be available.
+    The *LEAF_DEBUG* setting can be used to get more information about the loading error.
+
+Properties of contributed plugins are described in the next chapters.
+
+*source*::
+
+Relative path to the Python code of the contributed command. Command are contributed thanks to a sub-class of the *LeafPluginCommand* class
+(from *leaf.cli.plugins* Python package).
++
+Contributed sub-class must implement the *execute(args: Namespace, uargs: list)* method, which will be called when the command is executed.
++
+In order to define specific arguments, the sub-class can override the *_configure_parser(parser)* method to contribute to
+the parser object (using *argparse* library API).
++
+The *source* parameter must be either a single Python file, or a package folder.
+If a folder is specified, the package *__init.py__* file must be present in order to let *leaf* loading the full package correctly.
+
+*class*::
+
+Name of the Python class that implements the command, from the code defined in the *source* location.
++
+This parameter is optional if the *source* location contains one and only one *LeafPluginCommand* sub-class.
+
+*description*::
+
+Text string that will be displayed in *leaf --help* to describe the command.
+
 == SEE ALSO
 
 *leaf build*, *leaf search*, *leaf package*, *leaf feature*, *leaf env*, *leaf shell*, *leaf run*
