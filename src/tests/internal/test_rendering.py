@@ -22,25 +22,6 @@ from leaf.rendering.renderer.remote import RemoteListRenderer
 from leaf.rendering.renderer.status import StatusRenderer
 from tests.testutils import RESOURCE_FOLDER, LeafTestCase
 
-FAKE_URL = "http://fakeUrl"
-FAKE_ENV_123 = """
-{
-    "env": {
-        "Foo1": "Bar1",
-        "Foo2": "Bar2",
-        "Foo3": "Bar3"
-    }
-}
-"""
-FAKE_ENV_23 = """
-{
-    "env": {
-        "Foo2": "Bar2",
-        "Foo3": "Bar3"
-    }
-}
-"""
-
 
 class AvailablePackage2(AvailablePackage):
     @property
@@ -55,6 +36,11 @@ class InstalledPackage2(InstalledPackage):
 
 
 class TestRendering(LeafTestCase):
+
+    PKG1 = Manifest(jloads('{"info": {"name": "container-A","version": "1.0","description": "Fake description for container A"}}'))
+    PKG2 = Manifest(jloads('{"info": {"name": "container-B","version": "1.0","description": "Fake description for container B"}}'))
+    PKG3 = Manifest(jloads('{"info": {"name": "container-C","version": "1.0","description": "Fake description for container C"}}'))
+
     def __init__(self, *args, **kwargs):
         LeafTestCase.__init__(self, *args, **kwargs)
         self.loggerManager = LoggerManager()
@@ -65,7 +51,7 @@ class TestRendering(LeafTestCase):
             if folder.is_dir():
                 mffile = folder / LeafFiles.MANIFEST
                 if mffile.is_file():
-                    out.append(AvailablePackage2(jloadfile(mffile), FAKE_URL))
+                    out.append(AvailablePackage2(jloadfile(mffile), "http://fakeUrl"))
                     out.append(InstalledPackage2(mffile))
         return sorted(out, key=lambda mf: str(type(mf)) + str(mf))
 
@@ -118,129 +104,66 @@ class TestRendering(LeafTestCase):
             self.loggerManager.print_renderer(rend)
 
     def test_status(self):
-        profile1 = Profile("profile1", "fake/folder", jloads(FAKE_ENV_123))
-        profile1.is_current = True
+        profile1 = Profile(
+            "profile1", "fake/folder", jloads('{"env": {"Foo1": "Bar1", "Foo2": "Bar2", "Foo3": "Bar3"}, "packages": ["container-A_1.0", "container-B_1.0"]}')
+        )
         profile2 = Profile("profile2", "fake/folder", {})
-        profile2.is_current = True
-        profile3 = Profile("profile3", "fake/folder", {})
-        profile3.is_current = True
-        p1 = Manifest(
-            {
-                JsonConstants.INFO: {
-                    JsonConstants.INFO_NAME: "container-A",
-                    JsonConstants.INFO_VERSION: "1.0",
-                    JsonConstants.INFO_DESCRIPTION: "Fake description for container A",
-                }
-            }
-        )
-        p2 = Manifest(
-            {
-                JsonConstants.INFO: {
-                    JsonConstants.INFO_NAME: "container-B",
-                    JsonConstants.INFO_VERSION: "1.0",
-                    JsonConstants.INFO_DESCRIPTION: "Fake description for container B",
-                }
-            }
-        )
-        p3 = Manifest(
-            {
-                JsonConstants.INFO: {
-                    JsonConstants.INFO_NAME: "container-C",
-                    JsonConstants.INFO_VERSION: "1.0",
-                    JsonConstants.INFO_DESCRIPTION: "Fake description for container C",
-                }
-            }
-        )
+        profile3 = Profile("profile3", "fake/folder", jloads('{"packages": ["container-C_1.0"]}'))
 
         with self.assertStdout(template_out="status.out"):
             print("####### Test with 2 other profiles, 2 incl, 1 deps #######")
-            self.loggerManager.print_renderer(
-                StatusRenderer(
-                    ws_root_folder="fake/root/folder",
-                    current_profile=profile1,
-                    sync=True,
-                    included_packages_map={p1.identifier: p1, p2.identifier: p2},
-                    dependencies_map={p3.identifier: p3},
-                    other_profiles=[profile2, profile3],
-                )
-            )
-            print("\n\n\n####### Test with 1 other profile, 0 incl, 2 deps #######")
-            self.loggerManager.print_renderer(
-                StatusRenderer(
-                    ws_root_folder="fake/root/folder",
-                    current_profile=profile1,
-                    sync=True,
-                    included_packages_map={},
-                    dependencies_map={p3.identifier: p3, p2.identifier: p2},
-                    other_profiles=[profile2],
-                )
-            )
-            print("\n\n\n####### Test with 1 other profile, 1 incl, 0 deps #######")
-            self.loggerManager.print_renderer(
-                StatusRenderer(
-                    ws_root_folder="fake/root/folder",
-                    current_profile=profile1,
-                    sync=False,
-                    included_packages_map={p3.identifier: p3},
-                    dependencies_map={},
-                    other_profiles=[profile2],
-                )
-            )
+            profile1.is_current = True
+            profile2.is_current = False
+            profile3.is_current = False
+            renderer = StatusRenderer(Path("fake/root/folder"), Environment("test", {"WS_KEY": "VALUE"}))
+            renderer.append_profile(profile1, True, [TestRendering.PKG1, TestRendering.PKG2, TestRendering.PKG3])
+            renderer.append_profile(profile2, False, [])
+            renderer.append_profile(profile3, False, [])
+            self.loggerManager.print_renderer(renderer)
+
+            print("\n\n\n####### Test with 1 other profile, 0 incl, 0 deps #######")
+            profile1.is_current = False
+            profile2.is_current = True
+            profile3.is_current = False
+            renderer = StatusRenderer(Path("fake/root/folder"), Environment("test", {"WS_KEY": "VALUE"}))
+            renderer.append_profile(profile1, True, [TestRendering.PKG1, TestRendering.PKG2, TestRendering.PKG3])
+            renderer.append_profile(profile2, False, [])
+            self.loggerManager.print_renderer(renderer)
+
+            print("\n\n\n####### Test with 1 other profile, 1 incl (not fetched), 0 deps #######")
+            profile1.is_current = False
+            profile2.is_current = False
+            profile3.is_current = True
+            renderer = StatusRenderer(Path("fake/root/folder"), Environment("test", {"WS_KEY": "VALUE"}))
+            renderer.append_profile(profile2, False, [])
+            renderer.append_profile(profile3, False, [])
+            self.loggerManager.print_renderer(renderer)
+
             print("\n\n\n####### Test with no other profiles, no included nor deps nor envvars #######")
-            self.loggerManager.print_renderer(
-                StatusRenderer(
-                    ws_root_folder="fake/root/folder", current_profile=profile2, sync=False, included_packages_map={}, dependencies_map={}, other_profiles=[]
-                )
-            )
+            profile1.is_current = False
+            profile2.is_current = True
+            profile3.is_current = False
+            renderer = StatusRenderer(Path("fake/root/folder"), Environment("test", {"WS_KEY": "VALUE"}))
+            renderer.append_profile(profile2, False, [])
+            self.loggerManager.print_renderer(renderer)
 
     def test_profile(self):
-        pack1 = Manifest(
-            {
-                JsonConstants.INFO: {
-                    JsonConstants.INFO_NAME: "container-A",
-                    JsonConstants.INFO_VERSION: "1.0",
-                    JsonConstants.INFO_DESCRIPTION: "Fake description for container A",
-                }
-            }
-        )
-        pack2 = Manifest(
-            {
-                JsonConstants.INFO: {
-                    JsonConstants.INFO_NAME: "container-B",
-                    JsonConstants.INFO_VERSION: "1.0",
-                    JsonConstants.INFO_DESCRIPTION: "Fake description for container B",
-                }
-            }
-        )
-        pack3 = Manifest(
-            {
-                JsonConstants.INFO: {
-                    JsonConstants.INFO_NAME: "container-C",
-                    JsonConstants.INFO_VERSION: "1.0",
-                    JsonConstants.INFO_DESCRIPTION: "Fake description for container C",
-                }
-            }
-        )
-        profile1 = Profile("profile1", "fake/folder", jloads(FAKE_ENV_123))
-        profile2 = Profile("profile2", "fake/folder", {})
+
+        profile1 = Profile("profile1", "fake/folder", jloads('{"env": {"Foo1": "Bar1", "Foo2": "Bar2", "Foo3": "Bar3"}, "packages": ["container-A_1.0"]}'))
+        profile2 = Profile("profile2", "fake/folder", jloads('{"packages": ["container-B_1.0"]}'))
         profile2.is_current = True
-        profile3 = Profile("profile3", "fake/folder", jloads(FAKE_ENV_23))
+        profile3 = Profile("profile3", "fake/folder", jloads('{"env": {"Foo2": "Bar2", "Foo3": "Bar3"}}'))
         profile4 = Profile("profile4", "fake/folder", {})
-        profiles_infomap = {
-            profile2: {"sync": False, "included_packages_map": {pack2.identifier: pack2}, "dependencies_map": {}},
-            profile3: {"sync": True, "included_packages_map": {}, "dependencies_map": {pack2.identifier: pack2}},
-            profile1: {
-                "sync": True,
-                "included_packages_map": {pack1.identifier: pack1},
-                "dependencies_map": {pack2.identifier: pack2, pack3.identifier: pack3},
-            },
-            profile4: {"sync": False, "included_packages_map": {}, "dependencies_map": {}},
-        }
         with self.assertStdout(template_out="profile.out"):
             print("####### Test with no profile #######")
-            self.loggerManager.print_renderer(ProfileListRenderer(Path("fake/root/folder"), {}))
+            renderer = ProfileListRenderer(Path("fake/root/folder"), Environment("test", {"WS_KEY": "VALUE"}))
+            self.loggerManager.print_renderer(renderer)
             print("\n\n\n####### Test with various profiles #######")
-            self.loggerManager.print_renderer(ProfileListRenderer(Path("fake/root/folder"), profiles_infomap))
+            renderer.append_profile(profile1, True, [TestRendering.PKG1, TestRendering.PKG2, TestRendering.PKG3])
+            renderer.append_profile(profile2, False, [TestRendering.PKG2])
+            renderer.append_profile(profile3, True, [TestRendering.PKG2])
+            renderer.append_profile(profile4, False, [])
+            self.loggerManager.print_renderer(renderer)
 
     def test_feature(self):
         rend = FeatureListRenderer()

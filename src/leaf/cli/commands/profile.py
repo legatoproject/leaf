@@ -7,12 +7,10 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 """
 
-from leaf.api import WorkspaceManager
 from leaf.cli.base import LeafCommand
 from leaf.cli.cliutils import init_common_args
-from leaf.model.modelutils import find_latest_version
+from leaf.model.modelutils import find_latest_version, find_manifest_list
 from leaf.model.package import PackageIdentifier
-from leaf.model.workspace import Profile
 from leaf.rendering.renderer.profile import ProfileListRenderer
 
 
@@ -52,32 +50,19 @@ class ProfileListCommand(AbstractProfileCommand):
         else:
             profiles.extend(wm.list_profiles().values())
 
-        profiles_infomap = {}
+        ipmap = wm.list_installed_packages()
+
+        renderer = ProfileListRenderer(wm.ws_root_folder)
         for profile in profiles:
-            profiles_infomap[profile] = _compute_profile_info(wm, profile)
-        rend = ProfileListRenderer(wm.ws_root_folder, profiles_infomap)
-        wm.print_renderer(rend)
+            sync = wm.is_profile_sync(profile)
+            iplist = []
+            if sync:
+                iplist = wm.get_profile_dependencies(profile)
+            else:
+                iplist = find_manifest_list(list(map(PackageIdentifier.parse, profile.packages)), ipmap, ignore_unknown=True)
+            renderer.append_profile(profile, sync, iplist)
 
-
-def _compute_profile_info(wm: WorkspaceManager, profile: Profile):
-    # Sync
-    sync = wm.is_profile_sync(profile)
-
-    # Included Packages
-    ipmap = wm.list_installed_packages()
-    included_packages_map = {}
-    for pi in profile.packages_map.values():
-        included_packages_map[pi] = ipmap.get(pi)
-
-    # Dependencies
-    depends_packages_map = {}
-    if sync:
-        # Filter dependencies which are not directly included
-        for ip in wm.get_profile_dependencies(profile):
-            if ip.identifier not in included_packages_map:
-                depends_packages_map[ip.identifier] = ip
-
-    return {"sync": sync, "included_packages_map": included_packages_map, "dependencies_map": depends_packages_map}
+        wm.print_renderer(renderer)
 
 
 class ProfileCreateCommand(AbstractProfileCommand):

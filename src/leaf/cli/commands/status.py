@@ -8,8 +8,9 @@ Leaf Package Manager
 """
 
 from leaf.cli.base import LeafCommand
-from leaf.cli.commands.profile import _compute_profile_info
 from leaf.core.error import NoProfileSelected
+from leaf.model.modelutils import find_manifest_list
+from leaf.model.package import PackageIdentifier
 from leaf.rendering.renderer.status import StatusRenderer
 
 
@@ -22,24 +23,29 @@ class StatusCommand(LeafCommand):
         if not wm.is_initialized:
             wm.logger.print_default("Not in a workspace, use 'leaf init' to create one")
         else:
-            profiles = wm.list_profiles().values()
-            profile_count = len(profiles)
-            if profile_count == 0:
+            ipmap = wm.list_installed_packages()
+            profiles_map = wm.list_profiles()
+
+            if len(profiles_map) == 0:
                 wm.print_hints("There is no profile yet. You should create a new profile xxx with 'leaf profile create xxx'")
-                return
+            else:
+                # Current profile
+                try:
+                    renderer = StatusRenderer(wm.ws_root_folder, wm.build_ws_environment())
 
-            # Current profile
-            try:
-                current_pfname = wm.current_profile_name
-                current_profile = wm.get_profile(current_pfname)
+                    for profile in profiles_map.values():
+                        sync = wm.is_profile_sync(profile)
+                        iplist = []
+                        if sync:
+                            # if profile is sync, build the dependency list
+                            iplist = wm.get_profile_dependencies(profile)
+                        else:
+                            # If profile is not sync, try to get installed packages for all included packages in profile
+                            iplist = find_manifest_list(list(map(PackageIdentifier.parse, profile.packages)), ipmap, ignore_unknown=True)
 
-                # Sync and dependencies
-                profile_infos = _compute_profile_info(wm, current_profile)
+                        renderer.append_profile(profile, sync, iplist)
 
-                # Other profiles
-                profile_infos["other_profiles"] = list(filter(lambda pf: pf.name != current_pfname, profiles))
-
-                wm.print_renderer(StatusRenderer(ws_root_folder=wm.ws_root_folder, current_profile=current_profile, **profile_infos))
-            except NoProfileSelected as nps:
-                # Just print, return code is still 0
-                wm.print_exception(nps)
+                    wm.print_renderer(renderer)
+                except NoProfileSelected as nps:
+                    # Just print, return code is still 0
+                    wm.print_exception(nps)

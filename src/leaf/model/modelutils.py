@@ -93,6 +93,19 @@ def find_manifest(pi, mfmap, ignore_unknown=False):
         raise InvalidPackageNameException(pi)
 
 
+def find_manifest_list(pilist, mfmap, ignore_unknown=False):
+    """
+    Return the list of Manifest from the given map from their PackageIdentifier.
+    If the given PackageIdentifier is *latest*, then return the highest version of the package.
+    """
+    out = []
+    for pi in pilist:
+        mf = find_manifest(pi, mfmap, ignore_unknown=ignore_unknown)
+        if mf is not None and mf not in out:
+            out.append(mf)
+    return out
+
+
 def group_package_identifiers_by_name(pilist, pkgmap=None, sort=True) -> dict:
     out = pkgmap if pkgmap is not None else {}
     for pi in pilist:

@@ -4,7 +4,8 @@
 ╞══════════════════════════════════════════════════════════════════╡
 │                Profile: profile1 [current] (sync)                │
 ├─────────────┬────────────────────────────────────────────────────┤
-│ Environment │ LEAF_PROFILE=profile1                              │
+│ Environment │ WS_KEY=VALUE                                       │
+│             │ LEAF_PROFILE=profile1                              │
 │             │ Foo1=Bar1                                          │
 │             │ Foo2=Bar2                                          │
 │             │ Foo3=Bar3                                          │
@@ -20,41 +21,32 @@ Other profiles: profile2, profile3
 
 
 
-####### Test with 1 other profile, 0 incl, 2 deps #######
-┌───────────────────────────────────────────────────────────────────┐
-│                    Workspace: fake/root/folder                    │
-╞═══════════════════════════════════════════════════════════════════╡
-│                 Profile: profile1 [current] (sync)                │
-├──────────────┬────────────────────────────────────────────────────┤
-│ Environment  │ LEAF_PROFILE=profile1                              │
-│              │ Foo1=Bar1                                          │
-│              │ Foo2=Bar2                                          │
-│              │ Foo3=Bar3                                          │
-├──────────────┼─────────────────┬──────────────────────────────────┤
-│   Packages   │    Identifier   │           Description            │
-├──────────────┼─────────────────┼──────────────────────────────────┤
-│ Dependencies │ container-B_1.0 │ Fake description for container B │
-│              │ container-C_1.0 │ Fake description for container C │
-└──────────────┴─────────────────┴──────────────────────────────────┘
-Other profile: profile2
+####### Test with 1 other profile, 0 incl, 0 deps #######
+┌────────────────────────────────────────┐
+│      Workspace: fake/root/folder       │
+╞════════════════════════════════════════╡
+│ Profile: profile2 [current] (not sync) │
+├─────────────┬──────────────────────────┤
+│ Environment │ WS_KEY=VALUE             │
+│             │ LEAF_PROFILE=profile2    │
+└─────────────┴──────────────────────────┘
+Other profile: profile1
 
 
 
-####### Test with 1 other profile, 1 incl, 0 deps #######
-┌──────────────────────────────────────────────────────────────────┐
-│                   Workspace: fake/root/folder                    │
-╞══════════════════════════════════════════════════════════════════╡
-│              Profile: profile1 [current] (not sync)              │
-├─────────────┬────────────────────────────────────────────────────┤
-│ Environment │ LEAF_PROFILE=profile1                              │
-│             │ Foo1=Bar1                                          │
-│             │ Foo2=Bar2                                          │
-│             │ Foo3=Bar3                                          │
-├─────────────┼─────────────────┬──────────────────────────────────┤
-│   Packages  │    Identifier   │           Description            │
-├─────────────┼─────────────────┼──────────────────────────────────┤
-│   Included  │ container-C_1.0 │ Fake description for container C │
-└─────────────┴─────────────────┴──────────────────────────────────┘
+####### Test with 1 other profile, 1 incl (not fetched), 0 deps #######
+┌─────────────────────────────────────────────┐
+│         Workspace: fake/root/folder         │
+╞═════════════════════════════════════════════╡
+│    Profile: profile3 [current] (not sync)   │
+├─────────────┬───────────────────────────────┤
+│ Environment │ WS_KEY=VALUE                  │
+│             │ LEAF_PROFILE=profile3         │
+├─────────────┼─────────────────┬─────────────┤
+│   Packages  │    Identifier   │ Description │
+├─────────────┼─────────────────┼─────────────┤
+│   Included  │ container-C_1.0 │             │
+└─────────────┴─────────────────┴─────────────┘
 Other profile: profile2
 
 
@@ -65,5 +57,6 @@ Other profile: profile2
 ╞════════════════════════════════════════╡
 │ Profile: profile2 [current] (not sync) │
 ├─────────────┬──────────────────────────┤
-│ Environment │ LEAF_PROFILE=profile2    │
+│ Environment │ WS_KEY=VALUE             │
+│             │ LEAF_PROFILE=profile2    │
 └─────────────┴──────────────────────────┘

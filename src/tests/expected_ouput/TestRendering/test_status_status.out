@@ -13,26 +13,26 @@ Other profiles: profile2, profile3
 
 
 
-####### Test with 1 other profile, 0 incl, 2 deps #######
-┌────────────────────────────────────┐
-│    Workspace: fake/root/folder     │
-╞════════════════════════════════════╡
-│ Profile: profile1 [current] (sync) │
-└────────────────────────────────────┘
-Other profile: profile2
+####### Test with 1 other profile, 0 incl, 0 deps #######
+┌────────────────────────────────────────┐
+│      Workspace: fake/root/folder       │
+╞════════════════════════════════════════╡
+│ Profile: profile2 [current] (not sync) │
+└────────────────────────────────────────┘
+Other profile: profile1
 
 
 
-####### Test with 1 other profile, 1 incl, 0 deps #######
-┌───────────────────────────────────────────────────────────────┐
-│                  Workspace: fake/root/folder                  │
-╞═══════════════════════════════════════════════════════════════╡
-│             Profile: profile1 [current] (not sync)            │
-├──────────┬─────────────────┬──────────────────────────────────┤
-│ Packages │    Identifier   │           Description            │
-├──────────┼─────────────────┼──────────────────────────────────┤
-│ Included │ container-C_1.0 │ Fake description for container C │
-└──────────┴─────────────────┴──────────────────────────────────┘
+####### Test with 1 other profile, 1 incl (not fetched), 0 deps #######
+┌──────────────────────────────────────────┐
+│       Workspace: fake/root/folder        │
+╞══════════════════════════════════════════╡
+│  Profile: profile3 [current] (not sync)  │
+├──────────┬─────────────────┬─────────────┤
+│ Packages │    Identifier   │ Description │
+├──────────┼─────────────────┼─────────────┤
+│ Included │ container-C_1.0 │             │
+└──────────┴─────────────────┴─────────────┘
 Other profile: profile2
 
 

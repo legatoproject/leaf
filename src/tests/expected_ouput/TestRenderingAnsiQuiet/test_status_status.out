@@ -3,12 +3,12 @@ Workspace fake/root/folder
 
 
 
-####### Test with 1 other profile, 0 incl, 2 deps #######
+####### Test with 1 other profile, 0 incl, 0 deps #######
 Workspace fake/root/folder
 
 
 
-####### Test with 1 other profile, 1 incl, 0 deps #######
+####### Test with 1 other profile, 1 incl (not fetched), 0 deps #######
 Workspace fake/root/folder
 
 

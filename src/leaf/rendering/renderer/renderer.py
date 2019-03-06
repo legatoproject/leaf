@@ -32,11 +32,14 @@ class Renderer(list, ABC):
         self.verbosity = None
         self.use_pager_if_needed = True
 
+    def _custom_item_str(self, item):
+        return str(item)
+
     def _tostring_quiet(self):
         """
         Render inputList in quiet verbosity
         """
-        return "\n".join(map(str, self))
+        return "\n".join(map(self._custom_item_str, self))
 
     @abstractmethod
     def _tostring_default(self):
