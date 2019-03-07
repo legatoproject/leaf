@@ -1,8 +1,7 @@
-import shutil
+import platform
 import subprocess
 import sys
 import unittest
-import platform
 from builtins import ValueError
 from pathlib import Path
 from tempfile import mkdtemp
@@ -15,6 +14,7 @@ from leaf.api import RelengManager
 from leaf.core.constants import JsonConstants, LeafFiles, LeafSettings
 from leaf.core.jsonutils import jloadfile, jwritefile
 from leaf.core.settings import Setting
+from leaf.core.utils import rmtree_force
 from leaf.model.package import Manifest, PackageIdentifier
 
 LeafSettings.NON_INTERACTIVE.value = 1
@@ -182,7 +182,7 @@ class LeafTestCaseWithRepo(LeafTestCase):
         LeafTestCaseWithRepo.REPO_FOLDER = LeafTestCaseWithRepo.ROOT_FOLDER / "repository"
         LeafTestCaseWithRepo.VOLATILE_FOLDER = LeafTestCaseWithRepo.ROOT_FOLDER / "volatile"
 
-        shutil.rmtree(str(LeafTestCaseWithRepo.ROOT_FOLDER), ignore_errors=True)
+        rmtree_force(LeafTestCaseWithRepo.ROOT_FOLDER)
 
         assert RESOURCE_FOLDER.exists(), "Cannot find resources folder!"
         cls.__generate_repository(RESOURCE_FOLDER, LeafTestCaseWithRepo.REPO_FOLDER)
@@ -190,7 +190,7 @@ class LeafTestCaseWithRepo(LeafTestCase):
     @classmethod
     def tearDownClass(cls):
         if not LEAF_UT_DEBUG.as_boolean():
-            shutil.rmtree(str(LeafTestCaseWithRepo.ROOT_FOLDER), True)
+            rmtree_force(LeafTestCaseWithRepo.ROOT_FOLDER)
 
     @classmethod
     def __generate_repository(cls, source_folder, output_folder):
@@ -276,7 +276,7 @@ class LeafTestCaseWithRepo(LeafTestCase):
         return out
 
     def setUp(self):
-        shutil.rmtree(str(LeafTestCaseWithRepo.VOLATILE_FOLDER), ignore_errors=True)
+        rmtree_force(LeafTestCaseWithRepo.VOLATILE_FOLDER)
         LeafTestCaseWithRepo.VOLATILE_FOLDER.mkdir()
         LeafSettings.CONFIG_FOLDER.value = self.configuration_folder
         LeafSettings.CACHE_FOLDER.value = self.cache_folder

@@ -7,7 +7,6 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 """
 
-import shutil
 from builtins import Exception
 from collections import OrderedDict
 from datetime import datetime
@@ -18,7 +17,15 @@ from leaf.api.remotes import RemoteManager
 from leaf.core.constants import LeafConstants, LeafFiles
 from leaf.core.error import InvalidPackageNameException, LeafException, NoPackagesInCacheException
 from leaf.core.lock import LockFile
-from leaf.core.utils import download_file, fs_compute_total_size, get_cached_artifact_name, is_folder_ignored, mark_folder_as_ignored, mkdir_tmp_leaf_dir
+from leaf.core.utils import (
+    download_file,
+    fs_compute_total_size,
+    get_cached_artifact_name,
+    is_folder_ignored,
+    mark_folder_as_ignored,
+    mkdir_tmp_leaf_dir,
+    rmtree_force,
+)
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
 from leaf.model.modelutils import find_manifest, is_latest_package
@@ -157,7 +164,7 @@ class PackageManager(RemoteManager):
                 self.logger.print_verbose("Mark folder as ignored: {folder}".format(folder=target_folder))
             else:
                 self.logger.print_verbose("Remove folder: {folder}".format(folder=target_folder))
-                shutil.rmtree(str(target_folder), True)
+                rmtree_force(target_folder)
             raise e
 
     def install_prereq(self, pilist: list, tmp_install_folder: Path, apmap: dict = None, env: Environment = None, raise_on_error: bool = True):
@@ -247,7 +254,7 @@ class PackageManager(RemoteManager):
             finally:
                 if not keep_folder_on_error and prereq_install_folder is not None:
                     self.logger.print_verbose("Remove prereq root folder {folder}".format(folder=prereq_install_folder))
-                    shutil.rmtree(str(prereq_install_folder), True)
+                    rmtree_force(prereq_install_folder)
 
             return out
 
@@ -271,7 +278,7 @@ class PackageManager(RemoteManager):
                     self.logger.print_default("Removing {ip.identifier}".format(ip=ip))
                     self.__execute_steps(ip.identifier, ipmap, StepExecutor.uninstall)
                     self.logger.print_verbose("Remove folder: {ip.folder}".format(ip=ip))
-                    shutil.rmtree(str(ip.folder))
+                    rmtree_force(ip.folder)
                     del ipmap[ip.identifier]
 
                 self.logger.print_default("{count} package(s) removed".format(count=len(iplist_to_remove)))

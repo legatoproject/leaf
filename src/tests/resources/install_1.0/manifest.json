@@ -8,6 +8,14 @@
     "install": [
         {
             "command": [
+                "chmod",
+                "-R",
+                "-w",
+                "folder"
+            ]
+        },
+        {
+            "command": [
                 "touch",
                 "postinstall.log"
             ]

@@ -3,9 +3,9 @@
 """
 
 import os
-import shutil
 
 from leaf.core.constants import LeafFiles
+from leaf.core.utils import rmtree_force
 from tests.testutils import LeafTestCaseWithCli, env_file_to_map, get_lines
 
 
@@ -126,7 +126,7 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         self.check_profile_content("foo", ["container-A", "container-C", "container-D"])
         data_folder = self.ws_folder / LeafFiles.WS_DATA_FOLDERNAME
         self.assertTrue(data_folder.exists())
-        shutil.rmtree(str(data_folder))
+        rmtree_force(data_folder)
         self.assertFalse(data_folder.exists())
 
         self.leaf_exec("status")

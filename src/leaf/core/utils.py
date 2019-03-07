@@ -11,6 +11,7 @@ import hashlib
 import os
 import random
 import re
+import shutil
 import string
 import sys
 import tempfile
@@ -255,8 +256,44 @@ def env_list_to_map(kv_list: list):
     return out
 
 
+def fs_compute_total_size(item: Path):
+    """
+    Get the size of a file or a folder (reccursive)
+    """
+    if not item.exists():
+        return -1
+    if not item.is_dir():
+        return item.stat().st_size
+    out = 0
+    for sub in item.iterdir():
+        out += fs_compute_total_size(sub)
+    return out
+
+
+def mkdirs(folder: Path):
+    if not folder.is_dir():
+        folder.mkdir(parents=True)
+    return folder
+
+
 def mkdir_tmp_leaf_dir():
     return Path(tempfile.mkdtemp(prefix="leaf-alt-root_"))
+
+
+def chmod_write(item: Path):
+    if item.exists() and not item.is_symlink():
+        item.chmod(item.stat().st_mode | 0o222)
+    if item.is_dir():
+        for i in item.iterdir():
+            chmod_write(i)
+
+
+def rmtree_force(item: Path):
+    if item.exists():
+        chmod_write(item)
+        shutil.rmtree(str(item), ignore_errors=True)
+        if item.exists():
+            raise IOError("Could not remove {0}".format(item))
 
 
 __HASH_NAME = "sha384"
@@ -297,23 +334,3 @@ def hash_check(file: Path, expected: str, raise_exception: bool = False):
             raise InvalidHashException(file, actual, expected)
         return False
     return True
-
-
-def fs_compute_total_size(item: Path):
-    """
-    Get the size of a file or a folder (reccursive)
-    """
-    if not item.exists():
-        return -1
-    if not item.is_dir():
-        return item.stat().st_size
-    out = 0
-    for sub in item.iterdir():
-        out += fs_compute_total_size(sub)
-    return out
-
-
-def mkdirs(folder: Path):
-    if not folder.is_dir():
-        folder.mkdir(parents=True)
-    return folder
