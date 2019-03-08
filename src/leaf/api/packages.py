@@ -128,7 +128,7 @@ class PackageManager(RemoteManager):
         @return LeafArtifact
         """
         filename = get_cached_artifact_name(ap.filename, ap.hashsum)
-        cachedfile = download_file(ap.url, self.cache_folder, self.logger, filename=filename, hashstr=ap.hashsum)
+        cachedfile = download_file(ap.url, self.__download_cache_folder, self.logger, filename=filename, hashstr=ap.hashsum)
         return LeafArtifact(cachedfile)
 
     def __extract_artifact(self, la: LeafArtifact, env: Environment, install_folder: Path, keep_folder_on_error: bool = False) -> InstalledPackage:
