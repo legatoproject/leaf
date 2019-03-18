@@ -79,7 +79,7 @@ class UpdagePlugin(LeafPluginCommand):
                     pass
 
         if len(update_pilist) == 0:
-            logger.printDefault("Nothing to do")
+            logger.print_default("Nothing to do")
         else:
             profile.add_packages(update_pilist)
             wm.update_profile(profile)
