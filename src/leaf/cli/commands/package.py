@@ -28,7 +28,7 @@ class PackageListCommand(LeafCommand):
 
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
-        parser.add_argument("-a", "--all", dest="only_master_packages", action="store_false", help="display all packages, not only master packages")
+        parser.add_argument("-a", "--all", dest="show_all_packages", action="store_true", help="display all packages, not only master packages")
         parser.add_argument("-t", "--tag", dest="tags", metavar="TAG", action="append", help="filter search results matching with given tag")
         parser.add_argument("keywords", metavar="KEYWORD", nargs=argparse.ZERO_OR_MORE, help="filter with given keywords")
 
@@ -36,7 +36,7 @@ class PackageListCommand(LeafCommand):
         pm = PackageManager()
         metafilter = MetaPackageFilter()
 
-        if "only_master_packages" in vars(args) and args.only_master_packages:
+        if "show_all_packages" not in vars(args) or not args.show_all_packages:
             metafilter.only_master_packages()
 
         if "tags" in vars(args) and args.tags is not None:
