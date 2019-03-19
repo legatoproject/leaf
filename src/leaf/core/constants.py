@@ -33,7 +33,7 @@ class LeafSettings(CommonSettings):
     $ leaf search
     """
 
-    DOWNLOAD_TIMEOUT = Setting("LEAF_TIMEOUT", "5", RegexValidator("[0-9]+"))
+    DOWNLOAD_TIMEOUT = Setting("LEAF_TIMEOUT", "20", RegexValidator("[0-9]+"))
     DOWNLOAD_RETRY = Setting("LEAF_RETRY", "5", RegexValidator("[0-9]+"))
     DOWNLOAD_RESUME = Setting("LEAF_RESUME", "1")
     DEBUG_MODE = Setting("LEAF_DEBUG")

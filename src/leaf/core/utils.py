@@ -150,31 +150,48 @@ def download_data(url, outputfile=None):
                 fp.write(stream.read())
 
 
-def download_with_retry(url: str, out, logger: TextLogger, message: str, timeout: int = None, retry: int = None, buffer_size: int = 262144):
+def download_file_with_resume(url: str, output: Path, logger: TextLogger, message: str, timeout: int = None, resume: bool = None, buffer_size: int = 262144):
+    # Handle default values
     if timeout is None:
         timeout = LeafSettings.DOWNLOAD_TIMEOUT.as_int()
+    if resume is None:
+        resume = LeafSettings.DOWNLOAD_RESUME.as_boolean()
+
+    headers = {}
+    size_current = 0
+    open_mode = "wb"
+
+    if resume and output.exists():
+        size_current = output.stat().st_size
+        headers = {"Range": "bytes={0}-".format(size_current)}
+        open_mode = "ab"
+
+    with output.open(open_mode) as fp:
+        req = requests.get(url, stream=True, headers=headers, timeout=timeout)
+        # Get total size on first request
+        size_total = int(req.headers.get("content-length", -1)) + size_current
+
+        # Read remote data and write to output file
+        for data in req.iter_content(buffer_size):
+            size_current += fp.write(data)
+            display_progress(logger, message, size_current, size_total)
+
+        # Rare case when no exception raised and download is not finished
+        if 0 < size_current < size_total:
+            raise ValueError("Incomplete download")
+
+        return size_current
+
+
+def download_file_with_retry(url: str, output: Path, logger: TextLogger, message: str, retry: int = None, **kwargs):
+    # Handle default values
     if retry is None:
         retry = LeafSettings.DOWNLOAD_RETRY.as_int()
 
-    # Get total size
-    size_total = size_current = 0
-    headers = None
     iteration = 0
     while True:
         try:
-            req = requests.get(url, stream=True, headers=headers, timeout=timeout)
-            if size_total <= 0:
-                # Get total size on first request
-                size_total = int(req.headers.get("content-length", -1))
-            # REad&Write data
-            for data in req.iter_content(buffer_size):
-                size_current += out.write(data)
-                display_progress(logger, message, size_current, size_total)
-            if 0 < size_current < size_total:
-                # Rare case when no exception raised and download is not
-                # finished
-                raise ValueError("Incomplete download")
-            return size_current
+            return download_file_with_resume(url, output, logger, message, **kwargs)
         except (ValueError, requests.RequestException, requests.ConnectionError, requests.HTTPError, requests.Timeout) as e:
             iteration += 1
             # Check retry
@@ -183,14 +200,11 @@ def download_with_retry(url: str, out, logger: TextLogger, message: str, timeout
             # Log the retry attempt
             logger.print_default("\nError while downloading, retry {0}/{1}".format(iteration, retry))
             print_trace()
-            # Resume mode
-            if size_current < size_total:
-                headers = {"Range": "bytes={0}-{1}".format(size_current, size_total)}
             # Prevent imediate retry
             sleep(1)
 
 
-def download_file(url: str, folder: Path, logger: TextLogger, filename: str = None, hashstr: str = None):
+def download_and_check_file(url: str, folder: Path, logger: TextLogger, filename: str = None, hashstr: str = None):
     """
     Download an artifact and check its hash if given
     """
@@ -222,8 +236,7 @@ def download_file(url: str, folder: Path, logger: TextLogger, filename: str = No
                 # http/https mode, get file length before
                 message = "Downloading {file.name}".format(file=targetfile)
                 display_progress(logger, message, 0, 1)
-                with targetfile.open("wb") as fp:
-                    download_with_retry(url, fp, logger, message)
+                download_file_with_retry(url, targetfile, logger, message)
             else:
                 # other scheme, use urllib
                 display_progress(logger, message, 0, 1)
@@ -237,11 +250,13 @@ def download_file(url: str, folder: Path, logger: TextLogger, filename: str = No
     return targetfile
 
 
-def display_progress(logger: TextLogger, message: str, worked: int, total: int, end: str = ""):
-    kwargs = {"message": message, "worked": worked, "total": total, "percent": "??"}
-    if 0 <= worked <= total and total > 0:
-        kwargs["percent"] = int(worked * 100 / total)
-    logger.print_default("\r[{percent}%] {message} ".format(**kwargs), end=end, flush=True)
+def display_progress(logger: TextLogger, message: str, worked: int, total: int, end: str = "", try_percent=True):
+    kwargs = {"message": message, "worked": worked, "total": total, "progress": "??"}
+    if try_percent and 0 <= worked <= total and total > 0:
+        kwargs["progress"] = "{0:.0%}".format(worked / total)
+    else:
+        kwargs["progress"] = "{0}/{1}".format(worked, total)
+    logger.print_default("\r[{progress}] {message} ".format(**kwargs), end=end, flush=True)
 
 
 def env_list_to_map(kv_list: list):

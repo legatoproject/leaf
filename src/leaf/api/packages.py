@@ -18,7 +18,7 @@ from leaf.core.constants import LeafConstants, LeafFiles
 from leaf.core.error import InvalidPackageNameException, LeafException, NoPackagesInCacheException
 from leaf.core.lock import LockFile
 from leaf.core.utils import (
-    download_file,
+    download_and_check_file,
     fs_compute_total_size,
     get_cached_artifact_name,
     is_folder_ignored,
@@ -128,7 +128,7 @@ class PackageManager(RemoteManager):
         @return LeafArtifact
         """
         filename = get_cached_artifact_name(ap.filename, ap.hashsum)
-        cachedfile = download_file(ap.url, self.__download_cache_folder, self.logger, filename=filename, hashstr=ap.hashsum)
+        cachedfile = download_and_check_file(ap.url, self.__download_cache_folder, self.logger, filename=filename, hashstr=ap.hashsum)
         return LeafArtifact(cachedfile)
 
     def __extract_artifact(self, la: LeafArtifact, env: Environment, install_folder: Path, keep_folder_on_error: bool = False) -> InstalledPackage:
