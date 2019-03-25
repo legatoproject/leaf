@@ -146,7 +146,7 @@ class BuildManifestSubCommand(LeafCommand):
         rm = RelengManager()
 
         # Guess output file
-        output_file = LeafFiles.MANIFEST
+        output_file = Path(LeafFiles.MANIFEST)
         if args.output_folder is not None:
             if not args.output_folder.is_dir():
                 raise LeafException("Invalid output folder: {folder}".format(folder=args.output_folder))

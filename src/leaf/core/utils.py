@@ -297,7 +297,7 @@ def fs_check_free_space(folder: Path, neededspace: int):
 
 
 def mkdirs(folder: Path):
-    if not folder.is_dir():
+    if not folder.exists():
         folder.mkdir(parents=True)
     return folder
 
