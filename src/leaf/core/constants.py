@@ -141,6 +141,7 @@ class JsonConstants(object):
     INFO_VERSION = "version"
     INFO_DATE = "date"
     INFO_LEAF_MINVER = "leafMinVersion"
+    INFO_FINALSIZE = "finalSize"
     INFO_DEPENDS = "depends"
     INFO_REQUIRES = "requires"
     INFO_MASTER = "master"

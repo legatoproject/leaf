@@ -247,6 +247,13 @@ class LeafTestCaseWithRepo(LeafTestCase):
             output_folder / "index2.json", artifacts_list2, name="Second repository", description="Second repository description", prettyprint=True
         )
 
+        # Alter some values for test purpose
+        index1json = jloadfile(output_folder / "index.json")
+        for pkgjson in index1json[JsonConstants.REMOTE_PACKAGES]:
+            if pkgjson["info"]["name"] == "failure-large-ap":
+                pkgjson["size"] = 999999999999
+        jwritefile(output_folder / "index.json", index1json, pp=True)
+
         # Sign with GPG
         subprocess.check_call(["gpg", "--homedir", str(TEST_GPG_HOMEDIR), "--detach-sign", "--armor", str(output_folder / "index.json")])
         subprocess.check_call(["gpg", "--homedir", str(TEST_GPG_HOMEDIR), "--detach-sign", "--armor", str(output_folder / "index2.json")])

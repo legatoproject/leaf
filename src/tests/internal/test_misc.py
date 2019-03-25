@@ -17,6 +17,7 @@ from tests.testutils import RESOURCE_FOLDER, LeafTestCase
 
 
 class TestMisc(LeafTestCase):
+
     def test_leaf_minver(self):
         self.assertTrue(check_leaf_min_version(None))
         self.assertTrue(check_leaf_min_version("2.0", "2.0"))

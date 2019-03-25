@@ -8,6 +8,9 @@ Error management
 """
 
 from builtins import Exception
+from pathlib import Path
+
+from leaf.rendering.formatutils import sizeof_fmt
 
 HINTS_CMD_DELIMITER = "'"
 
@@ -163,3 +166,8 @@ class LeafOutOfDateException(LeafException):
 class UnknownArgsException(LeafException):
     def __init__(self, uargs):
         LeafException.__init__(self, "Unknown arguments {uargs}".format(uargs=" ".join(uargs)))
+
+
+class NotEnoughSpaceException(LeafException):
+    def __init__(self, folder: Path, freespace: int, neededspace: int):
+        LeafException.__init__(self, "Not enough space in folder {folder}, missing {size}".format(folder=folder, size=sizeof_fmt(neededspace - freespace)))

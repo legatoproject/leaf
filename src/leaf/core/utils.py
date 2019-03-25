@@ -28,7 +28,7 @@ import requests
 
 from leaf import __version__
 from leaf.core.constants import LeafConstants, LeafSettings
-from leaf.core.error import InvalidHashException, LeafException, LeafOutOfDateException
+from leaf.core.error import InvalidHashException, LeafException, LeafOutOfDateException, NotEnoughSpaceException
 from leaf.core.logger import TextLogger, print_trace
 
 _IGNORED_PATTERN = re.compile("^.*_ignored[0-9]*$")
@@ -283,6 +283,17 @@ def fs_compute_total_size(item: Path):
     for sub in item.iterdir():
         out += fs_compute_total_size(sub)
     return out
+
+
+def fs_get_free_space(folder: Path) -> int:
+    statvfs = os.statvfs(str(folder))
+    return statvfs.f_frsize * statvfs.f_bavail
+
+
+def fs_check_free_space(folder: Path, neededspace: int):
+    freespace = fs_get_free_space(folder)
+    if neededspace > freespace:
+        raise NotEnoughSpaceException(folder, freespace, neededspace)
 
 
 def mkdirs(folder: Path):

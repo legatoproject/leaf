@@ -15,18 +15,21 @@ from time import sleep
 
 from leaf.api import PackageManager
 from leaf.core.constants import LeafSettings
-from leaf.core.error import (InvalidHashException, InvalidPackageNameException,
-                             LeafException, NoEnabledRemoteException,
-                             NoRemoteException)
+from leaf.core.error import (
+    InvalidHashException,
+    InvalidPackageNameException,
+    LeafException,
+    NoEnabledRemoteException,
+    NoRemoteException,
+    NotEnoughSpaceException,
+)
 from leaf.core.settings import Setting
 from leaf.core.utils import is_folder_ignored
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
 from leaf.model.features import FeatureManager
-from leaf.model.package import (AvailablePackage, InstalledPackage,
-                                PackageIdentifier)
-from tests.testutils import (ALT_INDEX_CONTENT, LEAF_UT_SKIP,
-                             LeafTestCaseWithRepo, env_file_to_map, get_lines)
+from leaf.model.package import AvailablePackage, InstalledPackage, LeafArtifact, PackageIdentifier
+from tests.testutils import ALT_INDEX_CONTENT, LEAF_UT_SKIP, LeafTestCaseWithRepo, env_file_to_map, get_lines
 
 HTTP_PORT = Setting("LEAF_HTTP_PORT", str(random.randint(54000, 54999)))
 
@@ -472,6 +475,19 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
         self.assertEqual(
             ["staticTag1", "staticTag2", "volatileTag1", "volatileTag2", "volatileTag3", "volatileTag4"], self.pm.list_available_packages()[pi].tags
         )
+
+    def test_free_space_issue(self):
+        with self.assertRaises(NotEnoughSpaceException):
+            self.pm.install_packages(PackageIdentifier.parse_list(["failure-large-ap_1.0"]))
+        with self.assertRaises(NotEnoughSpaceException):
+            self.pm.install_packages(PackageIdentifier.parse_list(["failure-large-extracted_1.0"]))
+
+    def test_tar_size(self):
+        for filename, testfunc in (("compress-tar_1.0.leaf", self.assertGreater), ("compress-xz_1.0.leaf", self.assertLess)):
+            file = LeafTestCaseWithRepo.REPO_FOLDER / filename
+            self.assertTrue(file.exists())
+            la = LeafArtifact(file)
+            testfunc(file.stat().st_size, la.get_total_size())
 
 
 def start_http_server(folder):

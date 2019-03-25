@@ -19,11 +19,13 @@ from leaf.core.error import InvalidPackageNameException, LeafException, NoPackag
 from leaf.core.lock import LockFile
 from leaf.core.utils import (
     download_and_check_file,
+    fs_check_free_space,
     fs_compute_total_size,
     get_cached_artifact_name,
     is_folder_ignored,
     mark_folder_as_ignored,
     mkdir_tmp_leaf_dir,
+    mkdirs,
     rmtree_force,
 )
 from leaf.model.dependencies import DependencyUtils
@@ -53,20 +55,22 @@ class PackageManager(RemoteManager):
     def application_lock(self):
         return self.__application_lock
 
+    @property
+    def download_cache_folder(self):
+        return mkdirs(self.__download_cache_folder)
+
     def __check_cache_folder_size(self):
-        # Check if the download cache folder exists
-        if self.__download_cache_folder.exists():
-            # Check if it has been checked recently
-            artifact_date = datetime.fromtimestamp(self.__download_cache_folder.stat().st_mtime)
-            if artifact_date < datetime.now() - LeafConstants.CACHE_DELTA:
-                # Compute the folder total size
-                totalsize = fs_compute_total_size(self.__download_cache_folder)
-                if totalsize > LeafConstants.CACHE_SIZE_MAX:
-                    # Display a message
-                    self.logger.print_error("You can save {size} by cleaning the leaf cache folder".format(size=sizeof_fmt(totalsize)))
-                    self.print_hints("to clean the cache, you can run: 'rm -r {folder}'".format(folder=self.__download_cache_folder))
-                    # Update the mtime
-                    self.__download_cache_folder.touch()
+        # Check if it has been checked recently
+        artifact_date = datetime.fromtimestamp(self.download_cache_folder.stat().st_mtime)
+        if artifact_date < datetime.now() - LeafConstants.CACHE_DELTA:
+            # Compute the folder total size
+            totalsize = fs_compute_total_size(self.download_cache_folder)
+            if totalsize > LeafConstants.CACHE_SIZE_MAX:
+                # Display a message
+                self.logger.print_error("You can save {size} by cleaning the leaf cache folder".format(size=sizeof_fmt(totalsize)))
+                self.print_hints("to clean the cache, you can run: 'rm -r {folder}'".format(folder=self.download_cache_folder))
+                # Update the mtime
+                self.download_cache_folder.touch()
 
     def get_install_folder(self):
         out = self.read_user_configuration().install_folder
@@ -218,15 +222,18 @@ class PackageManager(RemoteManager):
                 if len(ap_to_install) == 0:
                     self.logger.print_default("All packages are installed")
                 else:
+                    # Check available size
+                    download_totalsize = 0
+                    for ap in ap_to_install:
+                        if ap.size is not None:
+                            download_totalsize += ap.size
+                    fs_check_free_space(self.download_cache_folder, download_totalsize)
+
                     # Confirm
                     text = ", ".join([str(ap.identifier) for ap in ap_to_install])
                     self.logger.print_quiet("Packages to install: {packages}".format(packages=text))
-                    totalsize = 0
-                    for ap in ap_to_install:
-                        if ap.size is not None:
-                            totalsize += ap.size
-                    if totalsize > 0:
-                        self.logger.print_default("Total size:", sizeof_fmt(totalsize))
+                    if download_totalsize > 0:
+                        self.logger.print_default("Total size:", sizeof_fmt(download_totalsize))
                     self.print_with_confirm(raise_on_decline=True)
 
                     # Install prereq
@@ -242,6 +249,15 @@ class PackageManager(RemoteManager):
                     la_to_install = []
                     for ap in ap_to_install:
                         la_to_install.append(self.__download_ap(ap))
+
+                    # Check the extracted size
+                    extracted_totalsize = 0
+                    for la in la_to_install:
+                        if la.final_size is not None:
+                            extracted_totalsize += la.final_size
+                        else:
+                            extracted_totalsize += la.get_total_size()
+                    fs_check_free_space(self.get_install_folder(), extracted_totalsize)
 
                     # Extract la list
                     for la in la_to_install:

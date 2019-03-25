@@ -141,6 +141,10 @@ class TestCliPackageManager(LeafTestCaseWithCli):
         self.leaf_exec(["package", "upgrade"], "--clean")
         self.check_installed_packages(["upgrade_1.0", "upgrade_2.0"])
 
+    def test_free_space_issue(self):
+        self.leaf_exec(["package", "install"], "failure-large-ap_1.0", expected_rc=2)
+        self.leaf_exec(["package", "install"], "failure-large-extracted_1.0", expected_rc=2)
+
 
 class TestCliPackageManagerVerbose(TestCliPackageManager):
     @classmethod

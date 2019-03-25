@@ -199,6 +199,10 @@ class Manifest(JsonObject):
         return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_MASTER], default=False)
 
     @property
+    def final_size(self):
+        return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_FINALSIZE])
+
+    @property
     def depends_packages(self) -> list:
         return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_DEPENDS], default=[])
 
@@ -264,6 +268,13 @@ class LeafArtifact(Manifest):
     @property
     def path(self):
         return self.__path
+
+    def get_total_size(self):
+        out = 0
+        with TarFile.open(str(self.__path), "r") as tarfile:
+            for ti in tarfile.getmembers():
+                out += ti.size
+        return out
 
 
 class AvailablePackage(Manifest):
