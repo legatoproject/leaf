@@ -5,6 +5,7 @@ DIST:=dist
 MAN_OUTPUT_DIR?=resources/man
 MAN_INPUT_DIR?=doc/manpages
 LEAF_TEST_TOX_ARGS?=
+VENV_PYTHON_PATH?=python3
 
 #.SILENT:
 .PHONY: docker-build docker-test clean test sdist manpages
@@ -33,7 +34,7 @@ docker-test:
 		sh -c 'cp -R /mnt/leaf /leaf && cd /leaf && git clean -fdX && make clean manpages test'
 
 venv: requirements.txt
-	virtualenv -p python3 venv --no-site-packages
+	virtualenv -p $(VENV_PYTHON_PATH) venv --no-site-packages
 	./venv/bin/pip install -r requirements.txt
 	./venv/bin/pip install -r requirements-dev.txt
 	touch venv
