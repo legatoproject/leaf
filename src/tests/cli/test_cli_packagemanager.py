@@ -2,7 +2,6 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 """
 
-from leaf.core.constants import LeafSettings
 from tests.testutils import LeafTestCaseWithCli
 
 
@@ -52,14 +51,65 @@ class TestCliPackageManager(LeafTestCaseWithCli):
         self.leaf_exec("search", "--tag", "tag1,tag2" "keyword1", "keyword2")
         self.leaf_exec("search", "--tag", "tag1,tag2" "keyword1,keyword2")
 
-    def test_depends(self):
-        self.leaf_exec(["package", "deps"], "--available", "container-A_1.0")
-        self.leaf_exec(["package", "deps"], "--install", "container-A_1.0")
-        self.leaf_exec(["package", "deps"], "--uninstall", "container-A_1.0")
-        self.leaf_exec(["package", "deps"], "--prereq", "container-A_1.0")
-        self.leaf_exec(["package", "deps"], "--installed", "container-A_1.0", expected_rc=2)
-        self.leaf_exec(["package", "install"], "container-A_1.0")
-        self.leaf_exec(["package", "deps"], "--installed", "container-A_1.0")
+    def test_depends_available(self):
+        self.leaf_exec(["remote", "fetch"])
+
+        with self.assertStdout("a.out"):
+            self.leaf_exec(["package", "deps"], "--available", "condition_1.0")
+
+        with self.assertStdout("b.out"):
+            self.leaf_exec(["package", "deps"], "--available", "condition_1.0", "--env", "HELLO=WORLD")
+
+    def test_depends_install(self):
+        self.leaf_exec(["remote", "fetch"])
+
+        with self.assertStdout("a.out"):
+            self.leaf_exec(["package", "deps"], "--install", "condition_1.0")
+
+        with self.assertStdout("b.out"):
+            self.leaf_exec(["package", "deps"], "--install", "condition_1.0", "--env", "HELLO=WORLD")
+
+        self.leaf_exec(["package", "install"], "condition-A_1.0")
+
+        with self.assertStdout("c.out"):
+            self.leaf_exec(["package", "deps"], "--install", "condition_1.0")
+
+    def test_depends_installed(self):
+        self.leaf_exec(["remote", "fetch"])
+
+        with self.assertStdout("a.out"):
+            self.leaf_exec(["package", "deps"], "--installed", "condition_1.0")
+
+        self.leaf_exec(["package", "install"], "condition_1.0")
+
+        with self.assertStdout("b.out"):
+            self.leaf_exec(["package", "deps"], "--installed", "condition_1.0")
+
+    def test_depends_prereq(self):
+        self.leaf_exec(["remote", "fetch"])
+
+        with self.assertStdout("a.out"):
+            self.leaf_exec(["package", "deps"], "--prereq", "prereq-A_1.0")
+
+    def test_depends_uninstall(self):
+        self.leaf_exec(["remote", "fetch"])
+
+        with self.assertStdout("a.out"):
+            self.leaf_exec(["package", "deps"], "--uninstall", "condition_1.0")
+
+        self.leaf_exec(["package", "install"], "condition_1.0")
+
+        with self.assertStdout("b.out"):
+            self.leaf_exec(["package", "deps"], "--uninstall", "condition_1.0")
+
+    def test_depends_rdepends(self):
+        self.leaf_exec(["remote", "fetch"])
+
+        with self.assertStdout("a.out"):
+            self.leaf_exec(["package", "deps"], "--rdepends", "condition-A_1.0")
+
+        with self.assertStdout("b.out"):
+            self.leaf_exec(["package", "deps"], "--rdepends", "condition-A_1.0", "--env", "HELLO=WORLD")
 
     def test_install(self):
         self.leaf_exec(["package", "install"], "container-A_2.1")
@@ -149,14 +199,10 @@ class TestCliPackageManager(LeafTestCaseWithCli):
 
 
 class TestCliPackageManagerVerbose(TestCliPackageManager):
-    @classmethod
-    def setUpClass(cls):
-        TestCliPackageManager.setUpClass()
-        LeafSettings.VERBOSITY.value = "verbose"
+    def __init__(self, *args, **kwargs):
+        TestCliPackageManager.__init__(self, *args, verbosity="verbose", **kwargs)
 
 
 class TestCliPackageManagerQuiet(TestCliPackageManager):
-    @classmethod
-    def setUpClass(cls):
-        TestCliPackageManager.setUpClass()
-        LeafSettings.VERBOSITY.value = "quiet"
+    def __init__(self, *args, **kwargs):
+        TestCliPackageManager.__init__(self, *args, verbosity="quiet", **kwargs)

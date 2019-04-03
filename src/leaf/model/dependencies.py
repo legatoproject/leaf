@@ -7,6 +7,8 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 """
 
+from collections import OrderedDict
+
 from leaf.core.logger import TextLogger
 from leaf.model.environment import Environment
 from leaf.model.modelutils import find_latest_version, find_manifest
@@ -105,16 +107,22 @@ class DependencyUtils:
         DependencyUtils.__build_tree(pilist, ipmap, out, env=env, ignore_unknown=True)
         # for uninstall, reverse order
         out = list(reversed(out))
+
+        # Remove read only packages
+        ro_packages = list(filter(lambda ip: ip.read_only, out))
+        if len(ro_packages) > 0 and logger is not None and logger.isverbose():
+            logger.print_verbose("System package(s) cannot be uninstalled: " + ", ".join(map(str, ro_packages)))
+
         # Maintain dependencies
         other_pi_list = [ip.identifier for ip in ipmap.values() if ip not in out]
         # Keep all configurations (ie env=None) for all other installed packages
         for needed_ip in DependencyUtils.installed(other_pi_list, ipmap, env=None, ignore_unknown=True):
             if needed_ip in out:
+                if logger is not None and logger.isverbose():
+                    # Print packages which needs this package
+                    rdepends = DependencyUtils.rdepends([needed_ip.identifier], ipmap, env=env)
+                    _log("Cannot uninstall {ip.identifier} (dependency of {text})".format(ip=needed_ip, text=", ".join(map(str, rdepends))))
                 out.remove(needed_ip)
-        # Remove read only packages
-        ro_packages = list(filter(lambda ip: ip.read_only, out))
-        if len(ro_packages) > 0 and logger is not None and logger.isverbose():
-            logger.print_verbose("System package(s) cannot be uninstalled: " + ", ".join(map(str, ro_packages)))
         out = [ip for ip in out if ip not in ro_packages]
         return out
 
@@ -167,3 +175,15 @@ class DependencyUtils:
                     uninstall_list.append(ip)
         uninstall_list = sorted(uninstall_list, key=IDENTIFIER_GETTER)
         return (install_list, uninstall_list)
+
+    @staticmethod
+    def rdepends(pilist: list, mfmap: dict, env: Environment = None):
+        out = OrderedDict()
+        for pi, mf in mfmap.items():
+            try:
+                for cpi in mf.get_depends_from_env(env):
+                    if cpi in pilist and pi not in out:
+                        out[pi] = mf
+            except Exception:
+                pass
+        return out

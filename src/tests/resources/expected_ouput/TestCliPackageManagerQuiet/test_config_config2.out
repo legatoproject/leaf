@@ -1,9 +1,3 @@
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│          Configuration folder: {TESTS_FOLDER}/volatile/config         │
-├──────────────────────────────┬──────────────────────────────────────────┬───────┤
-│          Identifier          │               Description                │ Value │
-╞══════════════════════════════╪══════════════════════════════════════════╪═══════╡
-│ leaf.download.resume.disable │ Disable resume when a download fails     │       │
-│ leaf.download.retry          │ Retry count for download operations      │ "5"   │
-│ leaf.download.timeout        │ Timeout (in sec) for download operations │ "20"  │
-└──────────────────────────────┴──────────────────────────────────────────┴───────┘
+leaf.download.resume.disable
+leaf.download.retry
+leaf.download.timeout

@@ -36,6 +36,9 @@ class TestApiDepends(LeafTestCase):
         LeafTestCase.setUpClass()
 
         for f in sorted(TEST_REMOTE_PACKAGE_SOURCE.iterdir(), key=operator.attrgetter("name")):
+            if "failure" in f.name:
+                # Skip these packages for tests
+                continue
             mffile = f / LeafFiles.MANIFEST
             if mffile.exists():
                 try:
@@ -187,3 +190,24 @@ class TestApiDepends(LeafTestCase):
         ideps, udeps = DependencyUtils.upgrade(None, APMAP, filtermap(IPMAP, "upgrade_1.0", "upgrade_1.1", "upgrade_1.2"))
         self.assertEqual(["upgrade_2.0"], [str(mf.identifier) for mf in ideps])
         self.assertEqual(["upgrade_1.1", "upgrade_1.2"], [str(mf.identifier) for mf in udeps])
+
+    def test_rdepends(self):
+
+        for mfmap in (IPMAP, APMAP):
+            pilist = DependencyUtils.rdepends(PackageIdentifier.parse_list(["condition-A_1.0"]), mfmap)
+            self.assertEqual(["condition_1.0"], list(map(str, pilist)))
+
+            pilist = DependencyUtils.rdepends(PackageIdentifier.parse_list(["condition-A_1.0"]), mfmap, env=Environment(None, {}))
+            self.assertEqual([], list(map(str, pilist)))
+
+            pilist = DependencyUtils.rdepends(PackageIdentifier.parse_list(["condition-A_1.0"]), mfmap, env=Environment(None, {"FOO": "BAR"}))
+            self.assertEqual(["condition_1.0"], list(map(str, pilist)))
+
+            pilist = DependencyUtils.rdepends(PackageIdentifier.parse_list(["condition-B_1.0"]), mfmap, env=Environment(None, {}))
+            self.assertEqual(["condition_1.0"], list(map(str, pilist)))
+
+            pilist = DependencyUtils.rdepends(PackageIdentifier.parse_list(["condition-B_1.0"]), mfmap, env=Environment(None, {"FOO": "BAR"}))
+            self.assertEqual([], list(map(str, pilist)))
+
+            pilist = DependencyUtils.rdepends(PackageIdentifier.parse_list(["condition-B_1.0"]), {})
+            self.assertEqual([], list(map(str, pilist)))
