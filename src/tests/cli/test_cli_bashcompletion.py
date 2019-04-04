@@ -5,9 +5,9 @@
 import subprocess
 
 from leaf.model.package import PackageIdentifier
-from tests.testutils import RESOURCE_FOLDER, LeafTestCaseWithCli
+from tests.testutils import TEST_RESOURCE_FOLDER, LeafTestCaseWithCli
 
-COMPLETION_SCRIPT = RESOURCE_FOLDER / "leaf-completion-test.sh"
+COMPLETION_SCRIPT = TEST_RESOURCE_FOLDER / "leaf-completion-test.sh"
 
 
 def get_completion_list(cmd):
@@ -98,15 +98,13 @@ class TestCliBashCompletion(LeafTestCaseWithCli):
         self.assertEqual(get_completion_list("env user --unset"), ["FOO1", "FOO2", "PLOP"])
         self.assertEqual(get_completion_list("env user --unset F..."), ["FOO1", "FOO2"])
 
-    def test_feature(self):
-        for v in ("toggle", "query"):
+    def test_settings(self):
+        self.leaf_exec(("package", "install"), "settings_1.0")
+        for v in ("set", "reset", "get"):
             self.assertEqual(
-                get_completion_list("feature {verb}".format(verb=v)),
-                ["featureWithDups", "featureWithMultipleKeys", "myFeatureFoo", "myFeatureHello", "test-src"],
+                get_completion_list("config {verb} settings...".format(verb=v)),
+                ["settings.user", "settings.workspace", "settings.workspace-profile", "settings.lowercase", "settings.enum", "settings.foo"],
             )
-            self.assertEqual(get_completion_list("feature {verb} my...".format(verb=v)), ["myFeatureFoo", "myFeatureHello"])
-
-        self.assertEqual(get_completion_list("feature toggle myFeatureHello"), ["default", "world"])
 
     def test_help(self):
         self.assertEqual(
@@ -132,9 +130,6 @@ class TestCliBashCompletion(LeafTestCaseWithCli):
                 "update",
             ],
         )
-
-    def test_getsrc(self):
-        self.assertEqual(get_completion_list("getsrc"), ["test"])
 
     def test_run(self):
         self.leaf_exec(("package", "install"), "scripts_1.0")

@@ -11,7 +11,7 @@ from collections import OrderedDict
 from pathlib import Path
 
 from leaf import __version__
-from leaf.core.constants import JsonConstants, LeafFiles
+from leaf.core.constants import JsonConstants
 from leaf.core.jsonutils import JsonObject, jlayer_diff, jlayer_update, jloadfile, jwritefile
 from leaf.core.utils import check_leaf_min_version
 from leaf.model.environment import IEnvProvider
@@ -73,17 +73,6 @@ class UserConfiguration(ConfigFileWithLayer, IEnvProvider):
             self.json[JsonConstants.CONFIG_REMOTES] = OrderedDict()
         return self.json[JsonConstants.CONFIG_REMOTES]
 
-    @property
-    def install_folder(self) -> Path:
-        if JsonConstants.CONFIG_ROOT in self.json:
-            return Path(self.json[JsonConstants.CONFIG_ROOT])
-        # Default value
-        return LeafFiles.DEFAULT_LEAF_ROOT
-
-    @install_folder.setter
-    def install_folder(self, folder: Path):
-        self.json[JsonConstants.CONFIG_ROOT] = str(folder)
-
 
 class WorkspaceConfiguration(ConfigFileWithLayer, IEnvProvider):
 
@@ -109,3 +98,19 @@ class WorkspaceConfiguration(ConfigFileWithLayer, IEnvProvider):
         if JsonConstants.WS_PROFILES not in self.json:
             self.json[JsonConstants.WS_PROFILES] = OrderedDict()
         return self.json[JsonConstants.WS_PROFILES]
+
+
+class ConfigContextManager:
+    def __init__(self, read_function: callable, write_function: callable):
+        self.__read = read_function
+        self.__write = write_function
+        self.__config = None
+        pass
+
+    def __enter__(self):
+        self.__config = self.__read()
+        return self.__config
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if not exc_type and not exc_value and not traceback:
+            self.__write(self.__config)

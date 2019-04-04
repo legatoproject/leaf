@@ -4,32 +4,32 @@ export LEAF_PLATFORM_SYSTEM="{TESTS_PLATFORM_SYSTEM}";
 export LEAF_PLATFORM_MACHINE="{TESTS_PLATFORM_MACHINE}";
 export LEAF_PLATFORM_RELEASE="{TESTS_PLATFORM_RELEASE}";
 # Exported by workspace
-export LEAF_WORKSPACE="{TESTS_WORKSPACE_FOLDER}";
+export LEAF_WORKSPACE="{TESTS_FOLDER}/volatile/workspace";
 # Exported by profile bar
 export LEAF_PROFILE="bar";
 # Exported by user configuration
 export UNKNWONVAR="TOTO";
 # Exported by workspace
-export LEAF_WORKSPACE="{TESTS_WORKSPACE_FOLDER}";
+export LEAF_WORKSPACE="{TESTS_FOLDER}/volatile/workspace";
 export FOO="BAR";
 # Exported by workspace
-export LEAF_WORKSPACE="{TESTS_WORKSPACE_FOLDER}";
+export LEAF_WORKSPACE="{TESTS_FOLDER}/volatile/workspace";
 export FOO="BAR";
 export HELLO="PLOP";
 # Exported by workspace
-export LEAF_WORKSPACE="{TESTS_WORKSPACE_FOLDER}";
+export LEAF_WORKSPACE="{TESTS_FOLDER}/volatile/workspace";
 export FOO="BAR";
 export HELLO="wOrlD";
 export FOO2="BAR2";
 # Exported by package env-B_1.0
 export LEAF_ENV_B="BAR";
-export LEAF_PATH_B="$PATH:{TESTS_INSTALL_FOLDER}/env-B_1.0";
+export LEAF_PATH_B="$PATH:{TESTS_FOLDER}/volatile/packages/env-B_1.0";
 # Exported by package env-A_1.0
 export LEAF_ENV_A="FOO";
-export LEAF_PATH_A="$PATH:{TESTS_INSTALL_FOLDER}/env-A_1.0:{TESTS_INSTALL_FOLDER}/env-B_1.0";
+export LEAF_PATH_A="$PATH:{TESTS_FOLDER}/volatile/packages/env-A_1.0:{TESTS_FOLDER}/volatile/packages/env-B_1.0";
 # Exported by package env-A_1.0
 export LEAF_ENV_A="FOO";
-export LEAF_PATH_A="$PATH:{TESTS_INSTALL_FOLDER}/env-A_1.0:{TESTS_INSTALL_FOLDER}/env-B_1.0";
+export LEAF_PATH_A="$PATH:{TESTS_FOLDER}/volatile/packages/env-A_1.0:{TESTS_FOLDER}/volatile/packages/env-B_1.0";
 # Leaf built-in variables
 export LEAF_VERSION="{TESTS_LEAF_VERSION}";
 export LEAF_PLATFORM_SYSTEM="{TESTS_PLATFORM_SYSTEM}";

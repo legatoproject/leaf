@@ -3,6 +3,7 @@ import subprocess
 import sys
 import unittest
 from builtins import ValueError
+from collections import OrderedDict
 from pathlib import Path
 from tempfile import mkdtemp
 from unittest.case import TestCase
@@ -11,21 +12,21 @@ from _io import StringIO
 from leaf import __version__
 from leaf.__main__ import run_leaf
 from leaf.api import RelengManager
-from leaf.core.constants import JsonConstants, LeafFiles, LeafSettings
+from leaf.core.constants import CommonSettings, JsonConstants, LeafFiles, LeafSettings
 from leaf.core.jsonutils import jloadfile, jwritefile
-from leaf.core.settings import Setting
+from leaf.core.settings import EnvVar
 from leaf.core.utils import rmtree_force
 from leaf.model.package import Manifest, PackageIdentifier
 
 LeafSettings.NON_INTERACTIVE.value = 1
 
 TestCase.maxDiff = None
-LEAF_UT_DEBUG = Setting("LEAF_UT_DEBUG")
-LEAF_UT_SKIP = Setting("LEAF_UT_SKIP", "")
-LEAF_UT_CREATE_TEMPLATE = Setting("LEAF_UT_CREATE_TEMPLATE")
+LEAF_UT_DEBUG = EnvVar("LEAF_UT_DEBUG")
+LEAF_UT_SKIP = EnvVar("LEAF_UT_SKIP", "")
+LEAF_UT_CREATE_TEMPLATE = EnvVar("LEAF_UT_CREATE_TEMPLATE")
 
 PROJECT_ROOT_FOLDER = Path(__file__).parent.parent.parent
-RESOURCE_FOLDER = PROJECT_ROOT_FOLDER / "src/tests/resources"
+TEST_RESOURCE_FOLDER = PROJECT_ROOT_FOLDER / "src/tests/resources"
 EXPECTED_OUTPUT_FOLDER = PROJECT_ROOT_FOLDER / "src/tests/expected_ouput"
 PLUGINS_FOLDER = PROJECT_ROOT_FOLDER / "resources/share/leaf/plugins"
 
@@ -143,13 +144,13 @@ class LeafTestCase(unittest.TestCase):
         LeafSettings.VERBOSITY.value = self.__verbosity
 
     def _get_default_variables(self):
-        return {
-            "{TESTS_LEAF_VERSION}": __version__,
-            "{TESTS_PLATFORM_SYSTEM}": platform.system(),
-            "{TESTS_PLATFORM_MACHINE}": platform.machine(),
-            "{TESTS_PLATFORM_RELEASE}": platform.release(),
-            "{TESTS_PROJECT_FOLDER}": PROJECT_ROOT_FOLDER,
-        }
+        out = OrderedDict()
+        out["{TESTS_LEAF_VERSION}"] = __version__
+        out["{TESTS_PLATFORM_SYSTEM}"] = platform.system()
+        out["{TESTS_PLATFORM_MACHINE}"] = platform.machine()
+        out["{TESTS_PLATFORM_RELEASE}"] = platform.release()
+        out["{TESTS_SRC_FOLDER}"] = PROJECT_ROOT_FOLDER / "src"
+        return out
 
     def assertStdout(self, template_out=None, template_err=[], variables=None):  # noqa: N802
         """
@@ -184,8 +185,8 @@ class LeafTestCaseWithRepo(LeafTestCase):
 
         rmtree_force(LeafTestCaseWithRepo.ROOT_FOLDER)
 
-        assert RESOURCE_FOLDER.exists(), "Cannot find resources folder!"
-        cls.__generate_repository(RESOURCE_FOLDER, LeafTestCaseWithRepo.REPO_FOLDER)
+        assert TEST_RESOURCE_FOLDER.exists(), "Cannot find resources folder!"
+        cls.__generate_repository(TEST_RESOURCE_FOLDER, LeafTestCaseWithRepo.REPO_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -271,25 +272,22 @@ class LeafTestCaseWithRepo(LeafTestCase):
 
     def _get_default_variables(self):
         out = super()._get_default_variables()
-        out.update(
-            {
-                "{TESTS_WORKSPACE_FOLDER}": self.ws_folder,
-                "{TESTS_REMOTE_URL}": self.remote_url1,
-                "{TESTS_REMOTE_URL2}": self.remote_url2,
-                "{TESTS_INSTALL_FOLDER}": self.install_folder,
-                "{TESTS_CACHE_FOLDER}": self.cache_folder,
-            }
-        )
+        out["{TESTS_REMOTE_URL}"] = self.remote_url1
+        out["{TESTS_REMOTE_URL2}"] = self.remote_url2
+        out["{TESTS_FOLDER}"] = LeafTestCaseWithRepo.ROOT_FOLDER
         return out
 
     def setUp(self):
         rmtree_force(LeafTestCaseWithRepo.VOLATILE_FOLDER)
         LeafTestCaseWithRepo.VOLATILE_FOLDER.mkdir()
-        LeafSettings.CONFIG_FOLDER.value = self.configuration_folder
+        CommonSettings.CONFIG_FOLDER.value = self.configuration_folder
+        LeafSettings.INSTALL_FOLDER.value = self.install_folder
         LeafSettings.CACHE_FOLDER.value = self.cache_folder
 
     def tearDown(self):
-        pass
+        CommonSettings.CONFIG_FOLDER.value = None
+        LeafSettings.INSTALL_FOLDER.value = None
+        LeafSettings.CACHE_FOLDER.value = None
 
     @property
     def remote_url1(self):
@@ -369,6 +367,7 @@ class LeafTestCaseWithCli(LeafTestCaseWithRepo):
 
     @classmethod
     def tearDownClass(cls):
+        LeafSettings.RESOURCES_FOLDER.value = None
         LeafTestCaseWithRepo.tearDownClass()
 
     def _get_default_variables(self):
@@ -378,7 +377,6 @@ class LeafTestCaseWithCli(LeafTestCaseWithRepo):
 
     def setUp(self):
         LeafTestCaseWithRepo.setUp(self)
-        self.leaf_exec("config", "--root", self.install_folder)
         self.leaf_exec(("remote", "add"), "--insecure", "default", self.remote_url1)
         self.leaf_exec(("remote", "add"), "--insecure", "other", self.remote_url2)
 

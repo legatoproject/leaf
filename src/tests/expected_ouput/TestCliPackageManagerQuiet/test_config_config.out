@@ -1,2 +1,7 @@
-Configuration file: {TESTS_VOLATILE_FOLDER}/config/config.json
-Packages install folder: {TESTS_INSTALL_FOLDER}
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                    Configuration folder: {TESTS_FOLDER}/volatile/config                    │
+├────────────┬──────────────────────────────────────────┬──────────────────────────────────────────────┤
+│ Identifier │               Description                │                    Value                     │
+╞════════════╪══════════════════════════════════════════╪══════════════════════════════════════════════╡
+│ leaf.root  │ Folder where leaf packages are installed │ "{TESTS_FOLDER}/volatile/packages" │
+└────────────┴──────────────────────────────────────────┴──────────────────────────────────────────────┘

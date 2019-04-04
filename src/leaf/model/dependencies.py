@@ -101,8 +101,7 @@ class DependencyUtils:
         out = list(reversed(out))
         # Maintain dependencies
         other_pi_list = [ip.identifier for ip in ipmap.values() if ip not in out]
-        # Keep all configurations (ie env=None) for all other installed
-        # packages
+        # Keep all configurations (ie env=None) for all other installed packages
         for needed_ip in DependencyUtils.installed(other_pi_list, ipmap, env=None, ignore_unknown=True):
             if needed_ip in out:
                 out.remove(needed_ip)

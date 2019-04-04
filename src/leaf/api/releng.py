@@ -244,7 +244,10 @@ class RelengManager(LoggerManager):
             fp.write(jsonstr)
 
     def __exec_tar(self, output: Path, workdir: Path, extra_args: list = None):
-        command = [LeafSettings.TAR_BINARY.value, "-c"]
+        tar = "tar"
+        if LeafSettings.CUSTOM_TAR.is_set():
+            tar = LeafSettings.CUSTOM_TAR.value
+        command = [tar, "-c"]
         command += ["-f", output]
         command += ["-C", workdir]
 

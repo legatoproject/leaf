@@ -11,40 +11,40 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from leaf.core.settings import RegexValidator, Setting, StaticSettings
+from leaf.core.settings import EnvVar, LeafSetting, RegexValidator, StaticSettings
 
 
 class CommonSettings(StaticSettings):
-    PWD = Setting("PWD")
-    WORKSPACE = Setting("LEAF_WORKSPACE")
-    CONFIG_FOLDER = Setting("LEAF_CONFIG", os.path.expanduser("~/.config/leaf"))
-    CACHE_FOLDER = Setting("LEAF_CACHE", os.path.expanduser("~/.cache/leaf"))
-    RESOURCES_FOLDER = Setting("LEAF_RESOURCES")
+    PWD = EnvVar("PWD")
+    WORKSPACE = EnvVar("LEAF_WORKSPACE")
+    CONFIG_FOLDER = EnvVar("LEAF_CONFIG", default="~/.config/leaf")
+    VERBOSITY = EnvVar("LEAF_VERBOSE", validator=RegexValidator("(default|verbose|quiet)"))
 
 
 class LeafSettings(CommonSettings):
 
-    """
-    Leaf settings are some env vars that user can configure either in is environment or in user scope
-    For example, LEAF_DEBUG can be set to 1 with:
-    $ LEAF_DEBUG=1 leaf search
-    --or--
-    $ leaf env user --set LEAF_DEBUG=1
-    $ leaf search
-    """
+    INSTALL_FOLDER = LeafSetting("leaf.root", "LEAF_ROOT", description="Folder where leaf packages are installed", default="~/.leaf")
+    CACHE_FOLDER = LeafSetting("leaf.cache", "LEAF_CACHE", description="Leaf cache", default="~/.cache/leaf")
+    RESOURCES_FOLDER = LeafSetting("leaf.resources", "LEAF_RESOURCES", description="Leaf resources folder")
 
-    DOWNLOAD_TIMEOUT = Setting("LEAF_TIMEOUT", "20", RegexValidator("[0-9]+"))
-    DOWNLOAD_RETRY = Setting("LEAF_RETRY", "5", RegexValidator("[0-9]+"))
-    DOWNLOAD_RESUME = Setting("LEAF_RESUME", "1")
-    DEBUG_MODE = Setting("LEAF_DEBUG")
-    GPG_KEYSERVER = Setting("LEAF_GPG_KEYSERVER", "subset.pool.sks-keyservers.net")
-    NON_INTERACTIVE = Setting("LEAF_NON_INTERACTIVE")
-    TAR_BINARY = Setting("LEAF_TAR_BIN", "tar")
-    DISABLE_LOCKS = Setting("LEAF_DISABLE_LOCKS")
-    CUSTOM_THEME = Setting("LEAF_THEME")
-    PAGER = Setting("LEAF_PAGER")
-    NOPLUGIN = Setting("LEAF_NOPLUGIN")
-    VERBOSITY = Setting("LEAF_VERBOSE", "default")
+    DEBUG_MODE = LeafSetting("leaf.debug", "LEAF_DEBUG", description="Enable traces")
+    NON_INTERACTIVE = LeafSetting("leaf.noninteractive", "LEAF_NON_INTERACTIVE", description="Do not ask for confirmations, assume yes")
+    DISABLE_LOCKS = LeafSetting("leaf.locks.disable", "LEAF_DISABLE_LOCKS", description="Disable lock files for install operations")
+    NOPLUGIN = LeafSetting("leaf.plugins.disable", "LEAF_NOPLUGIN", description="Disable plugins")
+    PAGER = LeafSetting("leaf.pager", "LEAF_PAGER", description="Force a pager when a pager is needed")
+
+    DOWNLOAD_TIMEOUT = LeafSetting(
+        "leaf.download.timeout", "LEAF_TIMEOUT", description="Timeout (in sec) for download operations", default=20, validator=RegexValidator("[0-9]+")
+    )
+    DOWNLOAD_RETRY = LeafSetting(
+        "leaf.download.retry", "LEAF_RETRY", description="Retry count for download operations", default=5, validator=RegexValidator("[0-9]+")
+    )
+    DOWNLOAD_NORESUME = LeafSetting("leaf.download.resume.disable", "LEAF_NORESUME", description="Disable resume when a download fails")
+    GPG_KEYSERVER = LeafSetting(
+        "leaf.gpg.server", "LEAF_GPG_KEYSERVER", description="Server where GPG keys will be fetched", default="subset.pool.sks-keyservers.net"
+    )
+    CUSTOM_TAR = LeafSetting("leaf.build.tar", "LEAF_CUSTOM_TAR", description="Use custom tar binary instead of *tar* command when generating artifacts")
+    CUSTOM_THEME = LeafSetting("leaf.theme", "LEAF_THEME", description="Custom color theme")
 
 
 class LeafConstants:
@@ -78,7 +78,6 @@ class LeafFiles:
     CURRENT_PROFILE_LINKNAME = "current"
     # Configuration folders
     ETC_PREFIX = Path("/etc/leaf")
-    DEFAULT_LEAF_ROOT = Path(os.path.expanduser("~/.leaf"))
     USER_RESOURCE_FOLDER = Path(os.path.expanduser("~/.local/share/leaf"))
     SYSTEM_RESOURCE_FOLDER = Path("/usr/share/leaf")
     # Configuration files
@@ -94,7 +93,7 @@ class LeafFiles:
     EXTINFO_EXTENSION = ".info"
 
     @staticmethod
-    def find_leaf_resource(name: str = None, check_exists=True):
+    def find_leaf_resource(name: str = None):
         folder = None
         if LeafSettings.RESOURCES_FOLDER.is_set():
             folder = Path(LeafSettings.RESOURCES_FOLDER.value)
@@ -103,13 +102,10 @@ class LeafFiles:
         else:
             folder = LeafFiles.SYSTEM_RESOURCE_FOLDER
 
-        if not folder.is_dir():
-            raise ValueError("Cannot find leaf resources folder: {folder}".format(folder=folder))
-
-        out = folder if name is None else folder / name
-        if check_exists and not out.exists():
-            return None
-        return out
+        if folder.is_dir():
+            out = folder if name is None else folder / name
+            if out.exists():
+                return out
 
 
 class JsonConstants(object):
@@ -124,7 +120,6 @@ class JsonConstants(object):
     CONFIG_REMOTE_ENABLED = "enabled"
     CONFIG_REMOTE_GPGKEY = "gpgKey"
     CONFIG_ENV = "env"
-    CONFIG_ROOT = "rootfolder"
 
     # Index
     REMOTE_NAME = "name"
@@ -147,10 +142,6 @@ class JsonConstants(object):
     INFO_MASTER = "master"
     INFO_DESCRIPTION = "description"
     INFO_TAGS = "tags"
-    INFO_FEATURES = "features"
-    INFO_FEATURE_DESCRIPTION = "description"
-    INFO_FEATURE_KEY = "key"
-    INFO_FEATURE_VALUES = "values"
     INFO_AUTOUPGRADE = "upgrade"
     INSTALL = "install"
     SYNC = "sync"
@@ -171,6 +162,11 @@ class JsonConstants(object):
     PLUGIN_DESCRIPTION = "description"
     PLUGIN_SOURCE = "source"
     PLUGIN_CLASS = "class"
+    SETTINGS = "settings"
+    SETTING_DESCRIPTION = "description"
+    SETTING_KEY = "key"
+    SETTING_REGEX = "regex"
+    SETTING_SCOPES = "scopes"
 
     # Profiles
     WS_PROFILES = "profiles"

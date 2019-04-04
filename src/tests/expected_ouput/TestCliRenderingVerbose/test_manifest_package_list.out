@@ -7,13 +7,13 @@
 │    Identifier   │                                   Properties                                  │
 ╞═════════════════╪═══════════════════════════════════════════════════════════════════════════════╡
 │ container-A_2.1 │              Tags: foo,bar                                                    │
-│                 │            Folder: {TESTS_INSTALL_FOLDER}/container-A_2.1 │
+│                 │            Folder: {TESTS_FOLDER}/volatile/packages/container-A_2.1 │
 │                 │ Included Packages: container-C_1.0                                            │
 │                 │                    container-D_1.0                                            │
 ├─────────────────┼───────────────────────────────────────────────────────────────────────────────┤
 │ container-C_1.0 │               Tag: bar                                                        │
-│                 │            Folder: {TESTS_INSTALL_FOLDER}/container-C_1.0 │
+│                 │            Folder: {TESTS_FOLDER}/volatile/packages/container-C_1.0 │
 ├─────────────────┼───────────────────────────────────────────────────────────────────────────────┤
 │ container-D_1.0 │              Tags: foo,bar                                                    │
-│                 │            Folder: {TESTS_INSTALL_FOLDER}/container-D_1.0 │
+│                 │            Folder: {TESTS_FOLDER}/volatile/packages/container-D_1.0 │
 └─────────────────┴───────────────────────────────────────────────────────────────────────────────┘

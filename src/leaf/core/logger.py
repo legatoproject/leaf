@@ -17,7 +17,7 @@ from leaf.core.constants import LeafSettings
 def print_trace(message=None):
     if LeafSettings.DEBUG_MODE.as_boolean():
         if message is not None:
-            print(message, file=sys.stderr)
+            print("[DEBUG]", message, file=sys.stderr)
         if sys.exc_info()[0] is not None:
             traceback.print_exc(file=sys.stderr)
 

@@ -1,0 +1,19 @@
+[90m┌[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m──────────────────────────[0m[90m┐[0m
+[90m│[0m [1mConfiguration folder: /fake/folder[0m [90m│[0m
+[90m└[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m──────────────────────────[0m[90m┘[0m
+[90m┌[0m[90m────────────[0m[90m─[0m[90m──────────────────[0m[90m─[0m[90m─────[0m[90m─[0m[90m───────────────[0m[90m─[0m[90m───────────────[0m[90m─[0m[90m───────[0m[90m┐[0m
+[90m│[0m                      [1mConfiguration folder: /fake/folder[0m                     [90m│[0m
+[90m├[0m[90m────────────[0m[90m┬[0m[90m──────────────────[0m[90m┬[0m[90m─────[0m[90m┬[0m[90m───────────────[0m[90m┬[0m[90m───────────────[0m[90m┬[0m[90m───────[0m[90m┤[0m
+[90m│[0m [1mIdentifier[0m [90m│[0m   [1mDescription[0m    [90m│[0m [1mKey[0m [90m│[0m     [1mValue[0m     [90m│[0m   [1mValidator[0m   [90m│[0m [1mScope[0m [90m│[0m
+[90m╞[0m[90m════════════[0m[90m╪[0m[90m══════════════════[0m[90m╪[0m[90m═════[0m[90m╪[0m[90m═══════════════[0m[90m╪[0m[90m═══════════════[0m[90m╪[0m[90m═══════[0m[90m╡[0m
+[90m│[0m foo.id1    [90m│[0m                  [90m│[0m KEY [90m│[0m "Hello world" [90m│[0m               [90m│[0m U     [90m│[0m
+[90m│[0m foo.id1    [90m│[0m some description [90m│[0m KEY [90m│[0m "Hello world" [90m│[0m               [90m│[0m U     [90m│[0m
+[90m│[0m foo.id2    [90m│[0m some description [90m│[0m KEY [90m│[0m               [90m│[0m               [90m│[0m U     [90m│[0m
+[90m│[0m foo.id1    [90m│[0m some description [90m│[0m KEY [90m│[0m "Hello world" [90m│[0m               [90m│[0m U W P [90m│[0m
+[90m│[0m foo.id1    [90m│[0m some description [90m│[0m KEY [90m│[0m "Hello world" [90m│[0m               [90m│[0m U W   [90m│[0m
+[90m│[0m foo.id1    [90m│[0m some description [90m│[0m KEY [90m│[0m "Hello world" [90m│[0m               [90m│[0m U   P [90m│[0m
+[90m│[0m foo.id1    [90m│[0m some description [90m│[0m KEY [90m│[0m "Hello world" [90m│[0m               [90m│[0m   W P [90m│[0m
+[90m│[0m foo.id1    [90m│[0m some description [90m│[0m KEY [90m│[0m "Hello world" [90m│[0m               [90m│[0m U     [90m│[0m
+[90m│[0m foo.id1    [90m│[0m some description [90m│[0m KEY [90m│[0m "Hello world" [90m│[0m .*            [90m│[0m U     [90m│[0m
+[90m│[0m foo.id1    [90m│[0m some description [90m│[0m KEY [90m│[0m "Hello world" [90m│[0m (HELLO|WORLD) [90m│[0m U     [90m│[0m
+[90m└[0m[90m────────────[0m[90m┴[0m[90m──────────────────[0m[90m┴[0m[90m─────[0m[90m┴[0m[90m───────────────[0m[90m┴[0m[90m───────────────[0m[90m┴[0m[90m───────[0m[90m┘[0m

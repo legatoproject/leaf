@@ -161,13 +161,7 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         self.leaf_exec(("profile", "sync"))
         self.leaf_exec(("env", "profile"), "ENV-A")
         self.leaf_exec(("env", "profile"))
-        self.leaf_exec(
-            ("env", "profile"),
-            "--activate-script",
-            str(self.ws_folder / "in.env"),
-            "--deactivate-script",
-            str(self.ws_folder / "out.env"),
-        )
+        self.leaf_exec(("env", "profile"), "--activate-script", str(self.ws_folder / "in.env"), "--deactivate-script", str(self.ws_folder / "out.env"))
         self.assertTrue((self.ws_folder / "in.env").exists())
         self.assertTrue((self.ws_folder / "out.env").exists())
 
@@ -395,22 +389,45 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         )
         self.check_profile_content("foo", ["condition", "condition-A", "condition-C", "condition-F"])
 
-    def test_features(self):
-        self.leaf_exec(("feature", "list"))
-        self.leaf_exec(("feature", "query"), "featureWithDups")
-        self.leaf_exec(("feature", "toggle"), "--user", "featureWithDups", "enum1")
-        self.leaf_exec(("feature", "toggle"), "--workspace", "featureWithDups", "enum1", expected_rc=2)
-        self.leaf_exec(("feature", "toggle"), "--profile", "featureWithDups", "enum1", expected_rc=2)
+    def test_settings1(self):
 
-        self.leaf_exec(("init"))
-        self.leaf_exec(("feature", "toggle"), "--user", "featureWithDups", "enum1")
-        self.leaf_exec(("feature", "toggle"), "--workspace", "featureWithDups", "enum1")
-        self.leaf_exec(("feature", "toggle"), "--profile", "featureWithDups", "enum1", expected_rc=2)
+        self.leaf_exec(("config", "list"))
+        self.leaf_exec(("config", "list"), "-a")
 
+        self.leaf_exec(("config", "get"), "settings.lowercase", expected_rc=2)
+        self.leaf_exec(("package", "install"), "settings_1.0")
+        self.leaf_exec(("config", "get"), "settings.lowercase")
+
+        self.leaf_exec(("config", "set"), "--user", "settings.lowercase", "HELLO", expected_rc=2)
+        self.leaf_exec(("config", "set"), "--user", "settings.lowercase", "hello")
+
+        self.leaf_exec(("config", "set"), "--workspace", "settings.lowercase", "hello", expected_rc=2)
+        self.leaf_exec("init")
+        self.leaf_exec(("config", "set"), "--workspace", "settings.lowercase", "hello")
+
+        self.leaf_exec(("config", "set"), "--profile", "settings.lowercase", "hello", expected_rc=2)
+        self.leaf_exec(("profile", "create"), "myprofile")
+        self.leaf_exec(("config", "set"), "--profile", "settings.lowercase", "hello")
+
+    def test_settings2(self):
+
+        self.leaf_exec(("package", "install"), "settings_1.0")
+        self.leaf_exec(("config", "get"), "settings.foo")
+
+        self.leaf_exec("init")
         self.leaf_exec(("profile", "create"), "foo")
-        self.leaf_exec(("feature", "toggle"), "--user", "featureWithDups", "enum1")
-        self.leaf_exec(("feature", "toggle"), "--workspace", "featureWithDups", "enum1")
-        self.leaf_exec(("feature", "toggle"), "--profile", "featureWithDups", "enum1")
+        self.leaf_exec(("profile", "config"), "-p" "condition")
+
+        self.leaf_exec(("profile", "sync"))
+        self.check_installed_packages(["condition_1.0", "condition-B_1.0", "condition-D_1.0", "condition-F_1.0", "condition-H_1.0", "settings_1.0"])
+        self.check_profile_content("foo", ["condition-B", "condition-D", "condition-F", "condition-H", "condition"])
+
+        self.leaf_exec(("config", "set"), "--profile", "settings.foo", "BAR")
+        self.leaf_exec(("profile", "sync"))
+        self.check_installed_packages(
+            ["condition_1.0", "condition-A_1.0", "condition-B_1.0", "condition-C_1.0", "condition-D_1.0", "condition-F_1.0", "condition-H_1.0", "settings_1.0"]
+        )
+        self.check_profile_content("foo", ["condition-A", "condition-C", "condition-F", "condition"])
 
     def test_sync(self):
         sync_file = self.install_folder / "sync_1.0" / "sync.log"

@@ -31,10 +31,10 @@ _leaf_command_matches() {
 _leaf_completions()
 {
 	## DEBUG
-	# echo "[DEBUG]  COMP_LINE=$COMP_LINE"
-	# echo "[DEBUG]  COMP_WORDS[${#COMP_WORDS[@]}]=${COMP_WORDS[@]}"
-	# echo "[DEBUG]  COMP_WORDS=$COMP_CWORD"
-	# echo "[DEBUG]  COMP_POINT=$COMP_POINT"
+	#echo "[DEBUG]  COMP_LINE=$COMP_LINE"
+	#echo "[DEBUG]  COMP_WORDS[${#COMP_WORDS[@]}]=${COMP_WORDS[@]}"
+	#echo "[DEBUG]  COMP_WORDS=$COMP_CWORD"
+	#echo "[DEBUG]  COMP_POINT=$COMP_POINT"
 
 	local cur prev 
 	_get_comp_words_by_ref cur prev  
@@ -62,21 +62,12 @@ _leaf_completions()
 		## ENV UNSET
 		local scope=${COMP_WORDS[2]}
 		_leaf_build_completion "leaf env $scope -q | awk -F '[ =]' '{print \$2}'" $cur
-	elif _leaf_command_matches "feature (toggle|query) "; then
-		## FEATURES
-		if test "$prev" = "toggle" -o "$prev" = "query"; then
-			## FEATURE NAMES
-			_leaf_build_completion "leaf feature list -q | awk -F '=' '{print \$1}'" $cur
-		else
-			## FEATURE VALUES
-			_leaf_build_completion "leaf feature list -q | awk -F '[=|]' '/^$prev=/ {for (i=2; i<=NF; i++) print \$i}'" $cur
-		fi
+	elif _leaf_command_matches "config (set|reset|get) "; then
+		## SETTINGS
+		_leaf_build_completion "leaf config list -aq $cur" $cur
 	elif _leaf_command_matches "help "; then
 		## MANPAGES
 		_leaf_build_completion "leaf help --list" $cur
-	elif _leaf_command_matches "getsrc " && test "$prev" = "getsrc"; then
-		## GETSRC
-		_leaf_build_completion "leaf getsrc" $cur
 	elif _leaf_command_matches "run [^[:space:]]*$"; then
 		## RUN
 		_leaf_build_completion "leaf run --oneline | awk -F '[/:]' '{print \$2}'" $cur

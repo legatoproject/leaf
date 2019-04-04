@@ -29,7 +29,6 @@ failure-large-ap_1.0
 failure-large-extracted_1.0
 failure-postinstall-exec-silent_1.0
 failure-postinstall-exec_1.0
-featured-with-source_1.0
 install_1.0
 multitags_1.0
 pluginA_1.0
@@ -43,7 +42,7 @@ prereq-env_1.0
 prereq-false_1.0
 prereq-true_1.0
 scripts_1.0
-source_1.0
+settings_1.0
 subscripts_1.0
 subscripts_1.1
 sync_1.0
@@ -88,7 +87,6 @@ failure-large-ap_1.0
 failure-large-extracted_1.0
 failure-postinstall-exec-silent_1.0
 failure-postinstall-exec_1.0
-featured-with-source_1.0
 install_1.0
 multitags_1.0
 pluginA_1.0
@@ -102,7 +100,7 @@ prereq-env_1.0
 prereq-false_1.0
 prereq-true_1.0
 scripts_1.0
-source_1.0
+settings_1.0
 subscripts_1.0
 subscripts_1.1
 sync_1.0

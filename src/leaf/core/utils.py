@@ -155,7 +155,7 @@ def download_file_with_resume(url: str, output: Path, logger: TextLogger, messag
     if timeout is None:
         timeout = LeafSettings.DOWNLOAD_TIMEOUT.as_int()
     if resume is None:
-        resume = LeafSettings.DOWNLOAD_RESUME.as_boolean()
+        resume = not LeafSettings.DOWNLOAD_NORESUME.as_boolean()
 
     headers = {}
     size_current = 0
@@ -298,7 +298,7 @@ def fs_check_free_space(folder: Path, neededspace: int):
 
 def mkdirs(folder: Path):
     if not folder.exists():
-        folder.mkdir(parents=True)
+        os.makedirs(str(folder), exist_ok=True)
     return folder
 
 

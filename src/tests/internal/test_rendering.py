@@ -9,18 +9,20 @@ from leaf.api import LoggerManager, PackageManager
 from leaf.core.constants import JsonConstants, LeafFiles, LeafSettings
 from leaf.core.error import LeafException
 from leaf.core.jsonutils import jloadfile, jloads
+from leaf.core.settings import RegexValidator
+from leaf.model.base import Scope
 from leaf.model.environment import Environment
-from leaf.model.package import AvailablePackage, Feature, InstalledPackage, Manifest
+from leaf.model.package import AvailablePackage, InstalledPackage, Manifest, ScopeSetting
 from leaf.model.remote import Remote
 from leaf.model.workspace import Profile
 from leaf.rendering.ansi import ANSI
 from leaf.rendering.renderer.environment import EnvironmentRenderer
-from leaf.rendering.renderer.feature import FeatureListRenderer
 from leaf.rendering.renderer.manifest import ManifestListRenderer
 from leaf.rendering.renderer.profile import ProfileListRenderer
 from leaf.rendering.renderer.remote import RemoteListRenderer
+from leaf.rendering.renderer.settings import SettingsListRenderer
 from leaf.rendering.renderer.status import StatusRenderer
-from tests.testutils import RESOURCE_FOLDER, LeafTestCase
+from tests.testutils import TEST_RESOURCE_FOLDER, LeafTestCase
 
 
 class AvailablePackage2(AvailablePackage):
@@ -47,7 +49,7 @@ class TestRendering(LeafTestCase):
 
     def __load_manifest(self):
         out = []
-        for folder in RESOURCE_FOLDER.iterdir():
+        for folder in TEST_RESOURCE_FOLDER.iterdir():
             if folder.is_dir():
                 mffile = folder / LeafFiles.MANIFEST
                 if mffile.is_file():
@@ -58,7 +60,7 @@ class TestRendering(LeafTestCase):
     def test_manifest(self):
         mflist = self.__load_manifest()
         rend = ManifestListRenderer()
-        with self.assertStdout(template_out="manifest.out", variables={"{RESOURCE_FOLDER}": RESOURCE_FOLDER}):
+        with self.assertStdout(template_out="manifest.out", variables={"{TEST_RESOURCE_FOLDER}": TEST_RESOURCE_FOLDER}):
             self.loggerManager.print_renderer(rend)
             rend.extend(mflist)
             self.loggerManager.print_renderer(rend)
@@ -165,31 +167,23 @@ class TestRendering(LeafTestCase):
             renderer.append_profile(profile4, False, [])
             self.loggerManager.print_renderer(renderer)
 
-    def test_feature(self):
-        rend = FeatureListRenderer()
-        with self.assertStdout(template_out="feature.out"):
-            self.loggerManager.print_renderer(rend)
-            rend.append(
-                Feature(
-                    "id1",
-                    {
-                        JsonConstants.INFO_FEATURE_KEY: "KEY1",
-                        JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-                        JsonConstants.INFO_FEATURE_DESCRIPTION: "message1",
-                    },
-                )
-            )
-            rend.append(
-                Feature(
-                    "id2",
-                    {
-                        JsonConstants.INFO_FEATURE_KEY: "KEY2",
-                        JsonConstants.INFO_FEATURE_VALUES: {"enum2": "value2", "enum3": "value3"},
-                        JsonConstants.INFO_FEATURE_DESCRIPTION: "message2",
-                    },
-                )
-            )
-            self.loggerManager.print_renderer(rend)
+    def test_settings(self):
+        for filter_unset in (True, False):
+            with self.assertStdout(template_out="filter{filter}.out".format(filter=filter_unset)):
+                rend = SettingsListRenderer(Path("/fake/folder"), {"foo.id1": "Hello world"}, filter_unset=filter_unset)
+                self.loggerManager.print_renderer(rend)
+
+                rend.append(ScopeSetting("foo.id1", "KEY", None, [Scope.USER]))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.USER]))
+                rend.append(ScopeSetting("foo.id2", "KEY", "some description", [Scope.USER]))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.USER, Scope.WORKSPACE, Scope.PROFILE]))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.USER, Scope.WORKSPACE]))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.USER, Scope.PROFILE]))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.WORKSPACE, Scope.PROFILE]))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.USER], default="Hello"))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.USER], validator=RegexValidator(".*")))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.USER], validator=RegexValidator("(HELLO|WORLD)")))
+                self.loggerManager.print_renderer(rend)
 
     def __create_exception(self, cause=None):
         if cause is None:

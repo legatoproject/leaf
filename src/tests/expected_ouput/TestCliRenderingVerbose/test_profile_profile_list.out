@@ -1,6 +1,6 @@
 Unknown package container-A_1.0
 ┌────────────────────────────────────────────────────────┐
-│ Workspace: {TESTS_WORKSPACE_FOLDER} │
+│ Workspace: {TESTS_FOLDER}/volatile/workspace │
 ╞════════════════════════════════════════════════════════╡
 │           Profile: foo [current] (not sync)            │
 ├─────────────┬──────────────────────────────────────────┤

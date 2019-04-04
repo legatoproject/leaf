@@ -306,7 +306,7 @@ class _TableElement(ABC):
         elif isinstance(parent, _Column):
             self.column = parent
         else:
-            assert False, "table element's parent must be a row or a column"
+            raise ValueError("table element's parent must be a row or a column")
 
     def _get_up_element(self):
         """

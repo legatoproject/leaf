@@ -4,8 +4,9 @@
 
 from pathlib import Path
 
+from leaf.api import ConfigurationManager
 from leaf.cli.plugins import LeafPluginCommand, LeafPluginManager
-from tests.testutils import RESOURCE_FOLDER, LeafTestCaseWithCli
+from tests.testutils import TEST_RESOURCE_FOLDER, LeafTestCaseWithCli
 
 
 class TestPluginManagerCli(LeafTestCaseWithCli):
@@ -24,66 +25,68 @@ class TestPluginManagerCli(LeafTestCaseWithCli):
 
     def test_builtin(self):
 
-        builtin_folder = RESOURCE_FOLDER / "__plugins"
+        builtin_folder = TEST_RESOURCE_FOLDER / "__plugins"
         self.assertTrue(builtin_folder.is_dir())
 
+        cm = ConfigurationManager()
         pm = LeafPluginManager()
 
         self.assertEqual(0, len(pm._LeafPluginManager__builtin_plugins))
         self.assertEqual(0, len(pm._LeafPluginManager__user_plugins))
 
-        pm.load_builtin_plugins(builtin_folder)
+        pm.load_builtin_plugins(cm._list_installed_packages(builtin_folder, only_latest=True))
         self.assertEqual(5, len(pm._LeafPluginManager__builtin_plugins))
         self.assertEqual(0, len(pm._LeafPluginManager__user_plugins))
         self.check_commands(pm, ["foo", "bar"])
 
-        pm.load_user_plugins(Path("/unknownFolder/"))
+        pm.load_user_plugins(cm._list_installed_packages(Path("/unknownFolder/"), only_latest=True))
         self.assertEqual(5, len(pm._LeafPluginManager__builtin_plugins))
         self.assertEqual(0, len(pm._LeafPluginManager__user_plugins))
         self.check_commands(pm, ["foo", "bar"])
 
-        pm.load_user_plugins(self.install_folder)
+        pm.load_user_plugins(cm._list_installed_packages(self.install_folder, only_latest=True))
         self.assertEqual(5, len(pm._LeafPluginManager__builtin_plugins))
         self.assertEqual(0, len(pm._LeafPluginManager__user_plugins))
         self.check_commands(pm, ["foo", "bar"])
         self.assertEqual(0, pm.get_commands(())[1].execute(None, None))
 
         self.leaf_exec(("package", "install"), "pluginA_1.0")
-        pm.load_user_plugins(self.install_folder)
+        pm.load_user_plugins(cm._list_installed_packages(self.install_folder, only_latest=True))
         self.assertEqual(5, len(pm._LeafPluginManager__builtin_plugins))
         self.assertEqual(2, len(pm._LeafPluginManager__user_plugins))
         self.check_commands(pm, ["foo", "bar", "bar1"])
         self.check_command_rc(pm, "bar", 0)
 
         self.leaf_exec(("package", "install"), "pluginA_1.1")
-        pm.load_user_plugins(self.install_folder)
+        pm.load_user_plugins(cm._list_installed_packages(self.install_folder, only_latest=True))
         self.assertEqual(5, len(pm._LeafPluginManager__builtin_plugins))
         self.assertEqual(3, len(pm._LeafPluginManager__user_plugins))
         self.check_commands(pm, ["foo", "bar", "bar2", "bar3"])
         self.check_command_rc(pm, "bar", 0)
 
-        pm.load_builtin_plugins(None)
+        pm.load_builtin_plugins({})
         self.assertEqual(0, len(pm._LeafPluginManager__builtin_plugins))
         self.assertEqual(3, len(pm._LeafPluginManager__user_plugins))
         self.check_commands(pm, ["bar", "bar2", "bar3"])
         self.check_command_rc(pm, "bar", 2)
 
         self.leaf_exec(("package", "uninstall"), "pluginA_1.1")
-        pm.load_user_plugins(self.install_folder)
+        pm.load_user_plugins(cm._list_installed_packages(self.install_folder, only_latest=True))
         self.assertEqual(0, len(pm._LeafPluginManager__builtin_plugins))
         self.assertEqual(2, len(pm._LeafPluginManager__user_plugins))
         self.check_commands(pm, ["bar", "bar1"])
         self.check_command_rc(pm, "bar", 1)
 
     def test_location(self):
-        builtin_folder = RESOURCE_FOLDER / "__plugins"
+        builtin_folder = TEST_RESOURCE_FOLDER / "__plugins"
         self.assertTrue(builtin_folder.is_dir())
         pm = LeafPluginManager()
+        cm = ConfigurationManager()
 
         self.assertEqual(0, len(pm._LeafPluginManager__builtin_plugins))
         self.assertEqual(0, len(pm._LeafPluginManager__user_plugins))
 
-        pm.load_builtin_plugins(builtin_folder)
+        pm.load_builtin_plugins(cm._list_installed_packages(builtin_folder, only_latest=True))
         self.assertEqual(5, len(pm._LeafPluginManager__builtin_plugins))
         self.assertEqual(0, len(pm._LeafPluginManager__user_plugins))
 

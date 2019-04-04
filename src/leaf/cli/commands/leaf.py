@@ -12,9 +12,8 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from leaf import __help_description__, __version__
 from leaf.cli.cliutils import EnvSetterAction
 from leaf.cli.commands.build import BuildIndexSubCommand, BuildManifestSubCommand, BuildPackSubCommand
-from leaf.cli.commands.config import ConfigCommand
+from leaf.cli.commands.config import ConfigListCommand, SettingGetCommand, SettingResetCommand, SettingSetCommand
 from leaf.cli.commands.env import EnvBuiltinCommand, EnvPackageCommand, EnvPrintCommand, EnvProfileCommand, EnvUserCommand, EnvWorkspaceCommand
-from leaf.cli.commands.feature import FeatureListCommand, FeatureQueryCommand, FeatureToggleCommand
 from leaf.cli.commands.package import (
     PackageDepsCommand,
     PackageInstallCommand,
@@ -65,11 +64,11 @@ class LeafRootCommand(LeafMetaCommand):
                 ),
                 # Entry points
                 RunCommand(),
-                # Features
+                # Config&settings
                 LeafMetaCommand(
-                    "feature",
-                    "manage features from available packages",
-                    [FeatureListCommand(), FeatureToggleCommand(), FeatureQueryCommand()],
+                    "config",
+                    "manage leaf configuration",
+                    [ConfigListCommand(), SettingGetCommand(), SettingSetCommand(), SettingResetCommand()],
                     accept_default=True,
                     plugins_manager=plugins_manager,
                 ),
@@ -90,8 +89,7 @@ class LeafRootCommand(LeafMetaCommand):
                     accept_default=True,
                     plugins_manager=plugins_manager,
                 ),
-                # Config & remotes
-                ConfigCommand(),
+                # Remotes
                 LeafMetaCommand(
                     "remote",
                     "display and manage remote repositories",

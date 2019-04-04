@@ -8,7 +8,7 @@ from leaf.core.constants import LeafFiles
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
 from leaf.model.package import IDENTIFIER_GETTER, Manifest, PackageIdentifier
-from tests.testutils import RESOURCE_FOLDER, LeafTestCase
+from tests.testutils import TEST_RESOURCE_FOLDER, LeafTestCase
 
 
 def deps2strlist(deps):
@@ -21,7 +21,7 @@ class TestApiDepends(LeafTestCase):
 
     @classmethod
     def setUpClass(cls):
-        for f in RESOURCE_FOLDER.iterdir():
+        for f in TEST_RESOURCE_FOLDER.iterdir():
             mffile = f / LeafFiles.MANIFEST
             if mffile.exists():
                 try:

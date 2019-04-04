@@ -99,52 +99,52 @@ class RemoteManager(GPGManager):
         return out
 
     def create_remote(self, alias, url, enabled=True, insecure=False, gpgkey=None):
-        usrc = self.read_user_configuration()
-        remotes = usrc.remotes
-        if alias in remotes:
-            raise LeafException("Remote {alias} already exists".format(alias=alias))
-        if insecure:
-            remotes[alias] = {JsonConstants.CONFIG_REMOTE_URL: str(url), JsonConstants.CONFIG_REMOTE_ENABLED: enabled}
-        elif gpgkey is not None:
-            remotes[alias] = {
-                JsonConstants.CONFIG_REMOTE_URL: str(url),
-                JsonConstants.CONFIG_REMOTE_ENABLED: enabled,
-                JsonConstants.CONFIG_REMOTE_GPGKEY: gpgkey,
-            }
-        else:
-            raise LeafException("Invalid security for remote {alias}".format(alias=alias))
-        # Save and clean cache
-        self.write_user_configuration(usrc)
+        with self.open_user_configuration() as usrc:
+            remotes = usrc.remotes
+            if alias in remotes:
+                raise LeafException("Remote {alias} already exists".format(alias=alias))
+            if insecure:
+                remotes[alias] = {JsonConstants.CONFIG_REMOTE_URL: str(url), JsonConstants.CONFIG_REMOTE_ENABLED: enabled}
+            elif gpgkey is not None:
+                remotes[alias] = {
+                    JsonConstants.CONFIG_REMOTE_URL: str(url),
+                    JsonConstants.CONFIG_REMOTE_ENABLED: enabled,
+                    JsonConstants.CONFIG_REMOTE_GPGKEY: gpgkey,
+                }
+            else:
+                raise LeafException("Invalid security for remote {alias}".format(alias=alias))
+
+        # clean cache
         self.clean_remotes_cache_file()
 
     def rename_remote(self, oldalias, newalias):
-        usrc = self.read_user_configuration()
-        remotes = usrc.remotes
-        if oldalias not in remotes:
-            raise LeafException("Cannot find remote {alias}".format(alias=oldalias))
-        if newalias in remotes:
-            raise LeafException("Remote {alias} already exists".format(alias=newalias))
-        remotes[newalias] = remotes[oldalias]
-        del remotes[oldalias]
-        self.write_user_configuration(usrc)
+        with self.open_user_configuration() as usrc:
+            remotes = usrc.remotes
+            if oldalias not in remotes:
+                raise LeafException("Cannot find remote {alias}".format(alias=oldalias))
+            if newalias in remotes:
+                raise LeafException("Remote {alias} already exists".format(alias=newalias))
+            remotes[newalias] = remotes[oldalias]
+            del remotes[oldalias]
+
         self.clean_remotes_cache_file()
 
     def update_remote(self, remote):
-        usrc = self.read_user_configuration()
-        remotes = usrc.remotes
-        if remote.alias not in remotes:
-            raise LeafException("Cannot find remote {remote.alias}".format(remote=remote))
-        remotes[remote.alias] = remote.json
-        self.write_user_configuration(usrc)
+        with self.open_user_configuration() as usrc:
+            remotes = usrc.remotes
+            if remote.alias not in remotes:
+                raise LeafException("Cannot find remote {remote.alias}".format(remote=remote))
+            remotes[remote.alias] = remote.json
+
         self.clean_remotes_cache_file()
 
     def delete_remote(self, alias):
-        usrc = self.read_user_configuration()
-        remotes = usrc.remotes
-        if alias not in remotes:
-            raise LeafException("Cannot find remote {alias}".format(alias=alias))
-        del remotes[alias]
-        self.write_user_configuration(usrc)
+        with self.open_user_configuration() as usrc:
+            remotes = usrc.remotes
+            if alias not in remotes:
+                raise LeafException("Cannot find remote {alias}".format(alias=alias))
+            del remotes[alias]
+
         self.clean_remotes_cache_file()
 
     def fetch_remotes(self, smart_refresh=True):

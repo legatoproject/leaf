@@ -9,12 +9,12 @@ import time
 from leaf.core.constants import JsonConstants, LeafFiles
 from leaf.core.jsonutils import jloadfile, jwritefile
 from leaf.core.utils import hash_compute
-from tests.testutils import RESOURCE_FOLDER, LeafTestCaseWithCli, check_mime
+from tests.testutils import TEST_RESOURCE_FOLDER, LeafTestCaseWithCli, check_mime
 
 
 class TestCliRelengManager(LeafTestCaseWithCli):
     def test_package_compression(self):
-        folder = RESOURCE_FOLDER / "install_1.0"
+        folder = TEST_RESOURCE_FOLDER / "install_1.0"
 
         def check_all_compressions(extension, default_mime):
             output_file = self.ws_folder / ("myPackage" + extension)
@@ -30,7 +30,7 @@ class TestCliRelengManager(LeafTestCaseWithCli):
         check_all_compressions(".leaf", "x-tar")
 
     def test_external_hash_file(self):
-        folder = RESOURCE_FOLDER / "install_1.0"
+        folder = TEST_RESOURCE_FOLDER / "install_1.0"
         output_file = self.ws_folder / "myPackage.leaf"
         info_file = self.ws_folder / "myPackage.leaf.info"
 
@@ -132,8 +132,8 @@ class TestCliRelengManager(LeafTestCaseWithCli):
         index = self.ws_folder / "index.json"
 
         # Build some packages
-        self.leaf_exec(("build", "pack"), "--output", self.ws_folder / "a.leaf", "--input", RESOURCE_FOLDER / "install_1.0")
-        self.leaf_exec(("build", "pack"), "--output", self.ws_folder / "b.leaf", "--input", RESOURCE_FOLDER / "condition_1.0")
+        self.leaf_exec(("build", "pack"), "--output", self.ws_folder / "a.leaf", "--input", TEST_RESOURCE_FOLDER / "install_1.0")
+        self.leaf_exec(("build", "pack"), "--output", self.ws_folder / "b.leaf", "--input", TEST_RESOURCE_FOLDER / "condition_1.0")
 
         self.leaf_exec(("build", "index"), "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", self.ws_folder / "a.leaf")
         self.assertTrue(index.exists())
@@ -157,7 +157,7 @@ class TestCliRelengManager(LeafTestCaseWithCli):
     def test_index_generation_with_extra_tags(self):
         index1 = self.ws_folder / "index1.json"
         index2 = self.ws_folder / "index2.json"
-        folder = RESOURCE_FOLDER / "container-A_1.0"
+        folder = TEST_RESOURCE_FOLDER / "container-A_1.0"
         leaf_file = self.ws_folder / "a.leaf"
         tags_file = self.ws_folder / "a.leaf.tags"
 
@@ -190,7 +190,7 @@ class TestCliRelengManager(LeafTestCaseWithCli):
     def test_reproductible_build(self):
         # Build some packages
         pis = "install_1.0"
-        folder = RESOURCE_FOLDER / pis
+        folder = TEST_RESOURCE_FOLDER / pis
         manifest = folder / LeafFiles.MANIFEST
         self.assertTrue(manifest.exists())
 
@@ -226,7 +226,7 @@ class TestCliRelengManager(LeafTestCaseWithCli):
             self.assertEqual(hash_compute(output3), hash_compute(output4))
 
     def test_package_custom_content(self):
-        folder = RESOURCE_FOLDER / "install_1.0"
+        folder = TEST_RESOURCE_FOLDER / "install_1.0"
         artifact1 = self.ws_folder / "a.leaf"
         artifact2 = self.ws_folder / "b.leaf"
         self.leaf_exec(

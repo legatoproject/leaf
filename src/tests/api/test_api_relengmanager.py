@@ -11,7 +11,7 @@ from leaf.core.error import LeafException
 from leaf.core.jsonutils import jloadfile, jwritefile
 from leaf.core.utils import hash_compute, mkdirs
 from leaf.model.package import AvailablePackage
-from tests.testutils import RESOURCE_FOLDER, LeafTestCaseWithRepo, check_mime
+from tests.testutils import TEST_RESOURCE_FOLDER, LeafTestCaseWithRepo, check_mime
 
 
 class TestApiRelengManager(LeafTestCaseWithRepo):
@@ -20,7 +20,7 @@ class TestApiRelengManager(LeafTestCaseWithRepo):
         self.rm = RelengManager()
 
     def test_package_compression(self):
-        folder = RESOURCE_FOLDER / "install_1.0"
+        folder = TEST_RESOURCE_FOLDER / "install_1.0"
 
         def check_all_compressions(extension, mime):
             output_file = self.ws_folder / ("myPackage" + extension)
@@ -36,7 +36,7 @@ class TestApiRelengManager(LeafTestCaseWithRepo):
         check_all_compressions(".tar.xz", "x-xz")
 
     def test_external_info_file(self):
-        folder = RESOURCE_FOLDER / "install_1.0"
+        folder = TEST_RESOURCE_FOLDER / "install_1.0"
         artifact = self.ws_folder / "myPackage.leaf"
         info_file = self.ws_folder / "myPackage.leaf.info"
 
@@ -180,7 +180,7 @@ class TestApiRelengManager(LeafTestCaseWithRepo):
             "condition-G_1.0",
             "condition-H_1.0",
         ):
-            folder = RESOURCE_FOLDER / pis
+            folder = TEST_RESOURCE_FOLDER / pis
             output_file = self.ws_folder / (pis + ".leaf")
             self.rm.create_package(folder, output_file)
 

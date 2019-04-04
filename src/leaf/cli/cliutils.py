@@ -67,6 +67,6 @@ def init_common_args(parser, add_rm_env=False, env_scripts=False, add_rm_package
         parser.add_argument("--rm-package", dest="pkg_rm_list", action="append", metavar="PKGNAME", help="remove given package")
     if with_scope:
         group = parser.add_mutually_exclusive_group()
-        group.add_argument("--user", dest="env_scope", action="store_const", const=Scope.USER, default=Scope.PROFILE, help="use user configuration environment")
-        group.add_argument("--workspace", dest="env_scope", action="store_const", const=Scope.WORKSPACE, help="use workspace environment")
-        group.add_argument("--profile", dest="env_scope", action="store_const", const=Scope.PROFILE, help="use profile environment")
+        group.add_argument("-U", "--user", dest="env_scope", action="store_const", const=Scope.USER, help="use user configuration environment")
+        group.add_argument("-W", "--workspace", dest="env_scope", action="store_const", const=Scope.WORKSPACE, help="use workspace environment")
+        group.add_argument("-P", "--profile", dest="env_scope", action="store_const", const=Scope.PROFILE, help="use profile environment")

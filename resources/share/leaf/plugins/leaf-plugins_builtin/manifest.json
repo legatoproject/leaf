@@ -17,10 +17,6 @@
             "source": "shell.py",
             "description": "run a sub-shell that tracks the environment for your Leaf workspace"
         },
-        "getsrc": {
-            "source": "getsrc.py",
-            "description": "source code mode toggling"
-        },
         "version": {
             "source": "version.py",
             "description": "display leaf version"

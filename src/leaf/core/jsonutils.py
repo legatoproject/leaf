@@ -143,3 +143,10 @@ class JsonObject:
         if not isinstance(child, dict):
             raise ValueError()
         return JsonObject(child).jsonpath(path[1:], default=default, mandatory=mandatory)
+
+    def has(self, *keys: str) -> bool:
+        out = 0
+        for key in keys:
+            if key in self.__json:
+                out += 1
+        return out

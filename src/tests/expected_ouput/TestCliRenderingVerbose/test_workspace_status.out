@@ -1,9 +1,9 @@
 ┌───────────────────────────────────────────────────────────────────────────┐
-│           Workspace: {TESTS_WORKSPACE_FOLDER}          │
+│           Workspace: {TESTS_FOLDER}/volatile/workspace          │
 ╞═══════════════════════════════════════════════════════════════════════════╡
 │                       Profile: foo [current] (sync)                       │
 ├──────────────┬────────────────────────────────────────────────────────────┤
-│ Environment  │ LEAF_WORKSPACE={TESTS_WORKSPACE_FOLDER} │
+│ Environment  │ LEAF_WORKSPACE={TESTS_FOLDER}/volatile/workspace │
 │              │ LEAF_PROFILE=foo                                           │
 │              │ FOO=BAR                                                    │
 ├──────────────┼─────────────────┬──────────────────────────────────────────┤

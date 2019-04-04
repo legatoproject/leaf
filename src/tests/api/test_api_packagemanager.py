@@ -14,24 +14,15 @@ from multiprocessing import Process
 from time import sleep
 
 from leaf.api import PackageManager
-from leaf.core.constants import LeafSettings
-from leaf.core.error import (
-    InvalidHashException,
-    InvalidPackageNameException,
-    LeafException,
-    NoEnabledRemoteException,
-    NoRemoteException,
-    NotEnoughSpaceException,
-)
-from leaf.core.settings import Setting
-from leaf.core.utils import is_folder_ignored
+from leaf.core.error import InvalidHashException, InvalidPackageNameException, LeafException, NoEnabledRemoteException, NoRemoteException
+from leaf.core.settings import EnvVar
+from leaf.core.utils import NotEnoughSpaceException, is_folder_ignored
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
-from leaf.model.features import FeatureManager
 from leaf.model.package import AvailablePackage, InstalledPackage, LeafArtifact, PackageIdentifier
 from tests.testutils import ALT_INDEX_CONTENT, LEAF_UT_SKIP, LeafTestCaseWithRepo, env_file_to_map, get_lines
 
-HTTP_PORT = Setting("LEAF_HTTP_PORT", str(random.randint(54000, 54999)))
+HTTP_PORT = EnvVar("LEAF_HTTP_PORT", random.randint(54000, 54999))
 
 # Needed for http server
 sys.path.insert(0, os.path.abspath("../.."))
@@ -43,10 +34,6 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
 
         self.pm = PackageManager()
 
-        # Fix CI timeout
-        LeafSettings.DOWNLOAD_TIMEOUT.value = 30
-
-        self.pm.set_install_folder(self.install_folder)
         with self.assertRaises(NoRemoteException):
             self.pm.list_available_packages()
         self.assertEqual(0, len(self.pm.list_installed_packages()))
@@ -401,20 +388,6 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
             self.assertTrue(isinstance(item, itemtype))
         deps = [str(mf.identifier) for mf in result]
         self.assertEqual(expected, deps)
-
-    def test_features(self):
-        apmap = self.pm.list_available_packages()
-        pkg = apmap.get(PackageIdentifier.parse("condition_1.0"))
-        self.assertEqual(4, len(pkg.features))
-        fm = FeatureManager()
-        fm.append_features(self.pm.list_installed_packages().values())
-        fm.append_features(self.pm.list_available_packages().values())
-        self.assertEqual(5, len(fm.features))
-        fm.get_feature("myFeatureFoo").check()
-        fm.get_feature("myFeatureHello").check()
-        fm.get_feature("featureWithDups").check()
-        with self.assertRaises(LeafException):
-            fm.get_feature("featureWithMultipleKeys").check()
 
     def test_sync(self):
         self.pm.install_packages(PackageIdentifier.parse_list(["sync_1.0"]))

@@ -1,0 +1,18 @@
+┌────────────────────────────────────┐
+│ Configuration folder: /fake/folder │
+└────────────────────────────────────┘
+┌───────────────────────────────────────────────┐
+│       Configuration folder: /fake/folder      │
+├────────────┬──────────────────┬───────────────┤
+│ Identifier │   Description    │     Value     │
+╞════════════╪══════════════════╪═══════════════╡
+│ foo.id1    │                  │ "Hello world" │
+│ foo.id1    │ some description │ "Hello world" │
+│ foo.id1    │ some description │ "Hello world" │
+│ foo.id1    │ some description │ "Hello world" │
+│ foo.id1    │ some description │ "Hello world" │
+│ foo.id1    │ some description │ "Hello world" │
+│ foo.id1    │ some description │ "Hello world" │
+│ foo.id1    │ some description │ "Hello world" │
+│ foo.id1    │ some description │ "Hello world" │
+└────────────┴──────────────────┴───────────────┘

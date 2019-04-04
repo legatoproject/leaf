@@ -1,0 +1,18 @@
+┌────────────────────────────────────┐
+│ Configuration folder: /fake/folder │
+└────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      Configuration folder: /fake/folder                     │
+├────────────┬──────────────────┬─────┬───────────────┬───────────────┬───────┤
+│ Identifier │   Description    │ Key │     Value     │   Validator   │ Scope │
+╞════════════╪══════════════════╪═════╪═══════════════╪═══════════════╪═══════╡
+│ foo.id1    │                  │ KEY │ "Hello world" │               │ U     │
+│ foo.id1    │ some description │ KEY │ "Hello world" │               │ U     │
+│ foo.id1    │ some description │ KEY │ "Hello world" │               │ U W P │
+│ foo.id1    │ some description │ KEY │ "Hello world" │               │ U W   │
+│ foo.id1    │ some description │ KEY │ "Hello world" │               │ U   P │
+│ foo.id1    │ some description │ KEY │ "Hello world" │               │   W P │
+│ foo.id1    │ some description │ KEY │ "Hello world" │               │ U     │
+│ foo.id1    │ some description │ KEY │ "Hello world" │ .*            │ U     │
+│ foo.id1    │ some description │ KEY │ "Hello world" │ (HELLO|WORLD) │ U     │
+└────────────┴──────────────────┴─────┴───────────────┴───────────────┴───────┘
