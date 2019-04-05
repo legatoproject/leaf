@@ -14,17 +14,20 @@ import os
 from pathlib import Path
 
 from leaf.cli.plugins import LeafPluginCommand
-from leaf.core.constants import LeafFiles
 from leaf.core.error import LeafException
 
 
 class ShellPlugin(LeafPluginCommand):
+
+    SHELL_DIRNAME = "shell"
+
     def _configure_parser(self, parser):
         parser.add_argument("-n", "--name", dest="shell", help="run the named shell instead of the default")
         parser.add_argument("-c", "--command", dest="command", nargs=argparse.REMAINDER, default=[], help="run a command in the given shell and exit")
 
     def execute(self, args, uargs):
-        shell_folder = LeafFiles.find_leaf_resource(LeafFiles.SHELL_DIRNAME)
+        shell_folder = self.installed_package.folder / ShellPlugin.SHELL_DIRNAME
+
         if shell_folder is None:
             raise LeafException("Cannot find leaf shell configuration files")
         shell_name = None

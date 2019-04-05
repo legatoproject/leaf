@@ -86,7 +86,6 @@ class LeafFiles:
     CACHE_REMOTES_FILENAME = "remotes.json"
     THEMES_FILENAME = "themes.ini"
     PLUGINS_DIRNAME = "plugins"
-    SHELL_DIRNAME = "shell"
     GPG_DIRNAME = "gpg"
     LOCK_FILENAME = "lock"
     # Releng
