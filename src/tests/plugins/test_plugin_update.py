@@ -2,10 +2,15 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 """
 
-from tests.testutils import LeafTestCaseWithCli
+from leaf.core.constants import LeafSettings
+from tests.testutils import LeafTestCaseWithCli, LEAF_SYSTEM_ROOT
 
 
 class TestPluginUpdate(LeafTestCaseWithCli):
+    def setUp(self):
+        super().setUp()
+        LeafSettings.SYSTEM_PKG_FOLDERS.value = LEAF_SYSTEM_ROOT
+
     def test_update(self):
         self.leaf_exec(("init"))
         self.leaf_exec(("profile", "create"), "myprofile")

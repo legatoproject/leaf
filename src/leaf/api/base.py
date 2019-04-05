@@ -8,6 +8,7 @@ Leaf Package Manager
 """
 
 import operator
+import os
 import platform
 from collections import OrderedDict
 from pathlib import Path
@@ -42,7 +43,7 @@ class ConfigurationManager:
 
     @property
     def install_folder(self):
-        return mkdirs(LeafSettings.INSTALL_FOLDER.as_path())
+        return mkdirs(LeafSettings.USER_PKG_FOLDER.as_path())
 
     def init_leaf_settings(self):
         userenvmap = self.read_user_configuration()._getenvmap()
@@ -94,7 +95,7 @@ class ConfigurationManager:
         with self.open_user_configuration() as config:
             config.update_environment(set_map, unset_list)
 
-    def _list_installed_packages(self, root_folder: Path, only_latest: bool) -> dict:
+    def _list_installed_packages(self, root_folder: Path, read_only: bool) -> dict:
         """
         Return all installed packages in given folder
         @return: PackageIdentifier/InstalledPackage dict
@@ -108,24 +109,29 @@ class ConfigurationManager:
                     mffile = folder / LeafFiles.MANIFEST
                     if mffile.is_file():
                         try:
-                            ip = InstalledPackage(mffile)
+                            ip = InstalledPackage(mffile, read_only=read_only)
                             out[ip.identifier] = ip
                         except BaseException:
                             pass
+        return out
 
-            # only keep latest if needed
-            if only_latest:
-                latest_pi_list = keep_latest(out.keys())
-                out = {pi: ip for pi, ip in out.items() if pi in latest_pi_list}
+    def list_installed_packages(self, only_latest=False) -> dict:
+        out = {}
+        # Scan readonly system folder
+        if LeafSettings.SYSTEM_PKG_FOLDERS.as_boolean():
+            for system_root in LeafSettings.SYSTEM_PKG_FOLDERS.value.split(os.pathsep):
+                out.update(self._list_installed_packages(Path(os.path.expanduser(system_root)), True))
+
+        # Scan user root folder
+        out.update(self._list_installed_packages(self.install_folder, False))
+
+        # only keep latest if needed
+        if only_latest:
+            latest_pi_list = keep_latest(out.keys())
+            out = {pi: ip for pi, ip in out.items() if pi in latest_pi_list}
 
         # sort dict by package identifier
         return OrderedDict(sorted(out.items(), key=operator.itemgetter(0)))
-
-    def list_builtin_packages(self, only_latest=False) -> dict:
-        return self._list_installed_packages(LeafFiles.find_leaf_resource(LeafFiles.PLUGINS_DIRNAME), only_latest=only_latest)
-
-    def list_installed_packages(self, only_latest=False) -> dict:
-        return self._list_installed_packages(self.install_folder, only_latest=only_latest)
 
     def get_setting(self, setting_id: str) -> ScopeSetting:
         out = self.get_settings().get(setting_id)
@@ -134,26 +140,17 @@ class ConfigurationManager:
         return out
 
     def get_settings(self) -> dict:
-
-        # Search settings in builtin packages
-        builtin_settings = OrderedDict()
-        for ip in self.list_builtin_packages(only_latest=True).values():
-            builtin_settings.update(ip.settings)
-
-        # Search settings in user packages
-        user_settings = OrderedDict()
-        for ip in self.list_installed_packages(only_latest=True).values():
-            user_settings.update(ip.settings)
+        out = OrderedDict()
 
         # Leaf python settings
-        out = OrderedDict()
         for s in sorted(LeafSettings.values(), key=lambda s: s.identifier):
             out[s.identifier] = ScopeSetting(s.identifier, s.key, s.description, [Scope.USER], default=s.default, validator=s.is_valid)
 
-        # Do not overide settings
-        for setting_map in (builtin_settings, user_settings):
-            for sid, setting in setting_map.items():
+        # Search settings in installed packages
+        for ip in self.list_installed_packages(only_latest=True).values():
+            for sid, setting in ip.settings.items():
                 if sid not in out:
+                    # Prevent setting shadowing
                     out[sid] = setting
 
         return out

@@ -82,7 +82,7 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         self.leaf_exec(("profile", "create"), "foo", expected_rc=2)
 
     def test_auto_find_workspace(self):
-        pf_config_file = self.ws_folder / LeafFiles.WS_CONFIG_FILENAME
+        pf_config_file = self.workspace_folder / LeafFiles.WS_CONFIG_FILENAME
         self.assertFalse(pf_config_file.exists())
 
         self.leaf_exec("init")
@@ -91,9 +91,9 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         self.leaf_exec("select", "foo")
 
         self.leaf_exec("status")
-        self.leaf_exec("select", "foo", alt_ws=self.alt_ws_folder, expected_rc=2)
+        self.leaf_exec("select", "foo", alt_ws=self.alt_workspace_folder, expected_rc=2)
 
-        subfolder = self.ws_folder / "foo" / "bar"
+        subfolder = self.workspace_folder / "foo" / "bar"
         subfolder.mkdir(parents=True)
         self.leaf_exec("select", "foo", alt_ws=subfolder, expected_rc=2)
 
@@ -124,7 +124,7 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         self.leaf_exec("status")
         self.leaf_exec(("env", "print"))
         self.check_profile_content("foo", ["container-A", "container-C", "container-D"])
-        data_folder = self.ws_folder / LeafFiles.WS_DATA_FOLDERNAME
+        data_folder = self.workspace_folder / LeafFiles.WS_DATA_FOLDERNAME
         self.assertTrue(data_folder.exists())
         rmtree_force(data_folder)
         self.assertFalse(data_folder.exists())
@@ -161,9 +161,9 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         self.leaf_exec(("profile", "sync"))
         self.leaf_exec(("env", "profile"), "ENV-A")
         self.leaf_exec(("env", "profile"))
-        self.leaf_exec(("env", "profile"), "--activate-script", str(self.ws_folder / "in.env"), "--deactivate-script", str(self.ws_folder / "out.env"))
-        self.assertTrue((self.ws_folder / "in.env").exists())
-        self.assertTrue((self.ws_folder / "out.env").exists())
+        self.leaf_exec(("env", "profile"), "--activate-script", str(self.workspace_folder / "in.env"), "--deactivate-script", str(self.workspace_folder / "out.env"))
+        self.assertTrue((self.workspace_folder / "in.env").exists())
+        self.assertTrue((self.workspace_folder / "out.env").exists())
 
     def test_conditional_install_user(self):
         self.leaf_exec("init")
@@ -309,8 +309,8 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
 
         self.leaf_exec(("env", "profile"), "--set FOO=BAR", expected_rc=2)
         self.leaf_exec(("env", "profile"))
-        in_script = self.ws_folder / "in.env"
-        out_script = self.ws_folder / "out.env"
+        in_script = self.workspace_folder / "in.env"
+        out_script = self.workspace_folder / "out.env"
         self.leaf_exec(("env", "print"), "--activate-script", in_script, "--deactivate-script", out_script)
         self.assertTrue(in_script.exists())
         self.assertTrue(out_script.exists())

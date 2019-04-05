@@ -23,16 +23,19 @@ class CommonSettings(StaticSettings):
 
 class LeafSettings(CommonSettings):
 
-    INSTALL_FOLDER = LeafSetting("leaf.root", "LEAF_ROOT", description="Folder where leaf packages are installed", default="~/.leaf")
+    USER_PKG_FOLDER = LeafSetting("leaf.user.root", "LEAF_USER_ROOT", description="Folder where leaf packages are installed", default="~/.leaf")
+    SYSTEM_PKG_FOLDERS = LeafSetting(
+        "leaf.system.roots",
+        "LEAF_SYSTEM_ROOTS",
+        description="Folders where system leaf packages are installed",
+        default=os.pathsep.join(("/usr/share/leaf/packages", "~/.local/share/leaf/packages")),
+    )
     CACHE_FOLDER = LeafSetting("leaf.cache", "LEAF_CACHE", description="Leaf cache", default="~/.cache/leaf")
-    RESOURCES_FOLDER = LeafSetting("leaf.resources", "LEAF_RESOURCES", description="Leaf resources folder")
-
     DEBUG_MODE = LeafSetting("leaf.debug", "LEAF_DEBUG", description="Enable traces")
     NON_INTERACTIVE = LeafSetting("leaf.noninteractive", "LEAF_NON_INTERACTIVE", description="Do not ask for confirmations, assume yes")
     DISABLE_LOCKS = LeafSetting("leaf.locks.disable", "LEAF_DISABLE_LOCKS", description="Disable lock files for install operations")
     NOPLUGIN = LeafSetting("leaf.plugins.disable", "LEAF_NOPLUGIN", description="Disable plugins")
     PAGER = LeafSetting("leaf.pager", "LEAF_PAGER", description="Force a pager when a pager is needed")
-
     DOWNLOAD_TIMEOUT = LeafSetting(
         "leaf.download.timeout", "LEAF_TIMEOUT", description="Timeout (in sec) for download operations", default=20, validator=RegexValidator("[0-9]+")
     )
@@ -60,6 +63,7 @@ class LeafConstants:
     CACHE_DELTA = timedelta(days=1)
     CACHE_SIZE_MAX = 5 * 1024 * 1024 * 1024  # 5GB
     GPG_SIG_EXTENSION = ".asc"
+    EXTINFO_EXTENSION = ".info"
     LATEST = "latest"
     DEFAULT_PAGER = pager = ("less", "-R", "-S", "-P", "Leaf -- Press q to exit")
     DEFAULT_SHELL = "bash"
@@ -78,8 +82,6 @@ class LeafFiles:
     CURRENT_PROFILE_LINKNAME = "current"
     # Configuration folders
     ETC_PREFIX = Path("/etc/leaf")
-    USER_RESOURCE_FOLDER = Path(os.path.expanduser("~/.local/share/leaf"))
-    SYSTEM_RESOURCE_FOLDER = Path("/usr/share/leaf")
     # Configuration files
     CONFIG_FILENAME = "config.json"
     CACHE_DOWNLOAD_FOLDERNAME = "files"
@@ -88,23 +90,6 @@ class LeafFiles:
     PLUGINS_DIRNAME = "plugins"
     GPG_DIRNAME = "gpg"
     LOCK_FILENAME = "lock"
-    # Releng
-    EXTINFO_EXTENSION = ".info"
-
-    @staticmethod
-    def find_leaf_resource(name: str = None):
-        folder = None
-        if LeafSettings.RESOURCES_FOLDER.is_set():
-            folder = Path(LeafSettings.RESOURCES_FOLDER.value)
-        elif LeafFiles.USER_RESOURCE_FOLDER.is_dir():
-            folder = LeafFiles.USER_RESOURCE_FOLDER
-        else:
-            folder = LeafFiles.SYSTEM_RESOURCE_FOLDER
-
-        if folder.is_dir():
-            out = folder if name is None else folder / name
-            if out.exists():
-                return out
 
 
 class JsonConstants(object):

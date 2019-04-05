@@ -8,8 +8,10 @@ from tests.testutils import LeafTestCaseWithCli
 
 class TestCliPackageManager(LeafTestCaseWithCli):
     def test_config(self):
-        with self.assertStdout(template_out="config.out", variables={"{TESTS_VOLATILE_FOLDER}": LeafTestCaseWithCli.VOLATILE_FOLDER}):
+        with self.assertStdout(template_out="config.out"):
             self.leaf_exec(("config", "list"), "leaf.root")
+        with self.assertStdout(template_out="config2.out"):
+            self.leaf_exec(("config", "list"), "download")
 
     def test_remote(self):
         self.leaf_exec(("remote", "list"))
@@ -116,9 +118,9 @@ class TestCliPackageManager(LeafTestCaseWithCli):
 
     def test_prereq(self):
         self.leaf_exec(["package", "prereq"], "prereq-true_1.0")
-        self.assertFalse((self.alt_ws_folder / "prereq-true_1.0").is_dir())
-        self.leaf_exec(["package", "prereq"], "--target", self.alt_ws_folder, "prereq-true_1.0")
-        self.assertTrue((self.alt_ws_folder / "prereq-true_1.0").is_dir())
+        self.assertFalse((self.alt_workspace_folder / "prereq-true_1.0").is_dir())
+        self.leaf_exec(["package", "prereq"], "--target", self.alt_workspace_folder, "prereq-true_1.0")
+        self.assertTrue((self.alt_workspace_folder / "prereq-true_1.0").is_dir())
 
     def test_install_unknown_package(self):
         self.leaf_exec(["package", "install"], "unknwonPackage", expected_rc=2)

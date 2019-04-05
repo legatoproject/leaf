@@ -255,16 +255,18 @@ class PackageManager(RemoteManager):
         with self.application_lock.acquire():
             ipmap = self.list_installed_packages()
 
-            iplist_to_remove = DependencyUtils.uninstall(pilist, ipmap)
+            iplist_to_remove = DependencyUtils.uninstall(pilist, ipmap, logger=self.logger)
 
             if len(iplist_to_remove) == 0:
-                self.logger.print_default("No package to remove (to keep dependencies)")
+                self.logger.print_default("No package to remove")
             else:
                 # Confirm
                 text = ", ".join([str(ip.identifier) for ip in iplist_to_remove])
                 self.logger.print_quiet("Packages to uninstall: {packages}".format(packages=text))
                 self.print_with_confirm(raise_on_decline=True)
                 for ip in iplist_to_remove:
+                    if ip.read_only:
+                        raise LeafException("Cannot uninstall system package {ip.identifier}".format(ip=ip))
                     self.logger.print_default("Removing {ip.identifier}".format(ip=ip))
                     self.__execute_steps(ip.identifier, ipmap, StepExecutor.uninstall)
                     self.logger.print_verbose("Remove folder: {ip.folder}".format(ip=ip))

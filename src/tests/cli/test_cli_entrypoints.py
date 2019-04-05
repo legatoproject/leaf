@@ -23,7 +23,7 @@ class TestCliEntrypoints(LeafTestCaseWithCli):
         self.leaf_exec("run", "echo", "hello", "world")
 
         def check_file_creation(*args, rc=0):
-            file = self.ws_folder / "myfile.test"
+            file = self.workspace_folder / "myfile.test"
             self.assertFalse(file.exists())
             args = list(args)
             args.append(file)
@@ -45,7 +45,7 @@ class TestCliEntrypoints(LeafTestCaseWithCli):
     def test_latest(self):
         self.leaf_exec(("package", "install"), "scripts_1.0", "subscripts_latest")
 
-        file = self.ws_folder / "out.txt"
+        file = self.workspace_folder / "out.txt"
 
         def check_version(v):
             with file.open() as fp:
@@ -74,7 +74,7 @@ class TestCliEntrypoints(LeafTestCaseWithCli):
 
         self.leaf_exec("run", "foo", expected_rc=42)
 
-        file = self.ws_folder / "out.txt"
+        file = self.workspace_folder / "out.txt"
         self.leaf_exec("env", "user", "--set", "MY_CUSTOM_VAR2=Hello")
         self.leaf_exec("env", "user", "--set", "MY_CUSTOM_VAR3=$MY_CUSTOM_VAR2 World")
 

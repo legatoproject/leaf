@@ -22,7 +22,7 @@ from leaf.rendering.renderer.profile import ProfileListRenderer
 from leaf.rendering.renderer.remote import RemoteListRenderer
 from leaf.rendering.renderer.settings import SettingsListRenderer
 from leaf.rendering.renderer.status import StatusRenderer
-from tests.testutils import TEST_RESOURCE_FOLDER, LeafTestCase
+from tests.testutils import TEST_REMOTE_PACKAGE_SOURCE, LeafTestCase
 
 
 class AvailablePackage2(AvailablePackage):
@@ -49,7 +49,7 @@ class TestRendering(LeafTestCase):
 
     def __load_manifest(self):
         out = []
-        for folder in TEST_RESOURCE_FOLDER.iterdir():
+        for folder in TEST_REMOTE_PACKAGE_SOURCE.iterdir():
             if folder.is_dir():
                 mffile = folder / LeafFiles.MANIFEST
                 if mffile.is_file():
@@ -60,7 +60,7 @@ class TestRendering(LeafTestCase):
     def test_manifest(self):
         mflist = self.__load_manifest()
         rend = ManifestListRenderer()
-        with self.assertStdout(template_out="manifest.out", variables={"{TEST_RESOURCE_FOLDER}": TEST_RESOURCE_FOLDER}):
+        with self.assertStdout(template_out="manifest.out"):
             self.loggerManager.print_renderer(rend)
             rend.extend(mflist)
             self.loggerManager.print_renderer(rend)

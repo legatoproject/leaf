@@ -1,7 +1,6 @@
 import importlib
 import re
 from collections import OrderedDict
-from enum import Enum
 from os import sys
 from pathlib import Path
 
@@ -26,11 +25,6 @@ class LeafPluginCommand(LeafCommand):
         return self.__installedPackage
 
 
-class PluginScope(Enum):
-    BUILTIN = "builtin"
-    USER = "user"
-
-
 class LeafPluginManager:
 
     __INIT__PY = "__init__.py"
@@ -40,23 +34,16 @@ class LeafPluginManager:
         return re.sub(r"[^a-zA-Z0-9_]", "_", str(o)).lower()
 
     @staticmethod
-    def __get_plugin_module_name(scope: PluginScope, pi: PackageIdentifier, location: str) -> str:
-        return ".".join(map(LeafPluginManager.__sanitize, ("leaf", "plugins", scope.value, pi.name, location)))
+    def __get_plugin_module_name(pi: PackageIdentifier, location: str) -> str:
+        return ".".join(map(LeafPluginManager.__sanitize, ("leaf", "plugins", pi.name, location)))
 
-    def __init__(self):
-        self.__builtin_plugins = {}
-        self.__user_plugins = {}
+    def __init__(self, ipmap: dict):
+        self.__plugins = self.__load_plugins(ipmap)
 
-    def load_user_plugins(self, ipmap: dict):
-        self.__user_plugins = self.__load_plugins(ipmap, PluginScope.USER)
-
-    def load_builtin_plugins(self, ipmap: dict):
-        self.__builtin_plugins = self.__load_plugins(ipmap, PluginScope.BUILTIN)
-
-    def __load_plugins(self, ipmap: dict, scope: PluginScope) -> dict:
+    def __load_plugins(self, ipmap: dict) -> dict:
         out = OrderedDict()
         for ip in ipmap.values():
-            for plugindef in self.__load_plugins_from_installed_package(ip, scope):
+            for plugindef in self.__load_plugins_from_installed_package(ip):
                 if plugindef.location in out:
                     # Plugin already defined, deactivate it
                     print_trace("Disable plugin {pd.location} declared more than once".format(pd=plugindef))
@@ -66,13 +53,13 @@ class LeafPluginManager:
                     out[plugindef.location] = plugindef
         return out
 
-    def __load_plugins_from_installed_package(self, ip: InstalledPackage, scope: PluginScope) -> list:
+    def __load_plugins_from_installed_package(self, ip: InstalledPackage) -> list:
         out = []
         for _, plugindef in ip.plugins.items():
             out.append(plugindef)
             try:
                 # Build the plugin package name
-                module_name = LeafPluginManager.__get_plugin_module_name(scope, ip.identifier, plugindef.location)
+                module_name = LeafPluginManager.__get_plugin_module_name(ip.identifier, plugindef.location)
                 # Load the module
                 modules = self.__load_modules_from_path(plugindef.source_file, module_name)
                 # Search for the class to instanciate
@@ -150,15 +137,9 @@ class LeafPluginManager:
             return True
 
         out = OrderedDict()
-        # Visit builtin plugins
-        if self.__builtin_plugins is not None:
-            for _, plugin in self.__builtin_plugins.items():
+        # Visit plugins
+        if self.__plugins is not None:
+            for _, plugin in self.__plugins.items():
                 if is_valid_plugin(plugin):
                     out[plugin.name] = plugin.command
-        # Visit user plugins
-        if self.__user_plugins is not None:
-            for location, plugin in self.__user_plugins.items():
-                # prevent user plugin overide builtin plugin
-                if location not in self.__builtin_plugins and is_valid_plugin(plugin):
-                    out[plugin.name] = plugin.command
-        return list(out.values())
+        return list(filter(None, out.values()))

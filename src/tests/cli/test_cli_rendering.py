@@ -61,7 +61,7 @@ class TestCliRendering(LeafTestCaseWithCli):
         with self.assertStdout(template_out="config_list.out"):
             self.leaf_exec(("config", "list", "leaf.download"))
         with self.assertStdout(template_out="config_get.out"):
-            self.leaf_exec(("config", "get", "leaf.root", "leaf.cache"))
+            self.leaf_exec(("config", "get", "leaf.user.root", "leaf.cache"))
 
 
 class TestCliRenderingVerbose(TestCliRendering):

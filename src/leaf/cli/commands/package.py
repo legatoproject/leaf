@@ -13,6 +13,7 @@ from pathlib import Path
 
 from leaf.api import PackageManager
 from leaf.cli.base import LeafCommand
+from leaf.cli.cliutils import get_optional_arg
 from leaf.core.error import PackageInstallInterruptedException
 from leaf.core.utils import env_list_to_map, mkdir_tmp_leaf_dir
 from leaf.model.dependencies import DependencyUtils
@@ -36,20 +37,18 @@ class PackageListCommand(LeafCommand):
         pm = PackageManager()
         metafilter = MetaPackageFilter()
 
-        if "show_all_packages" not in vars(args) or not args.show_all_packages:
+        if not get_optional_arg(args, "show_all_packages", False):
             metafilter.only_master_packages()
 
-        if "tags" in vars(args) and args.tags is not None:
-            for t in args.tags:
-                metafilter.with_tag(t)
+        for t in get_optional_arg(args, "tags", []):
+            metafilter.with_tag(t)
 
-        if "keywords" in vars(args) and args.keywords is not None and len(args.keywords) > 0:
-            for kw in args.keywords:
-                metafilter.with_keyword(kw)
+        for kw in get_optional_arg(args, "keywords", []):
+            metafilter.with_keyword(kw)
 
         # Print filtered packages
         rend = ManifestListRenderer(metafilter)
-        mflist = sorted(pm.list_installed_packages().values(), key=IDENTIFIER_GETTER)
+        mflist = pm.list_installed_packages().values()
         rend.extend(filter(metafilter.matches, mflist))
         pm.print_renderer(rend)
 

@@ -287,10 +287,10 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
 
     def test_prereq_root(self):
         motifs = ["prereq-A_1.0", "prereq-B_1.0", "prereq-C_1.0", "prereq-D_1.0", "prereq-true_1.0", "prereq-env_1.0", "prereq-false_1.0"]
-        errors = self.pm.install_prereq(PackageIdentifier.parse_list(motifs), self.alt_ws_folder, raise_on_error=False)
+        errors = self.pm.install_prereq(PackageIdentifier.parse_list(motifs), self.alt_workspace_folder, raise_on_error=False)
         self.assertEqual(1, errors)
         for m in motifs:
-            self.assertEqual("false" not in m, (self.alt_ws_folder / m).is_dir())
+            self.assertEqual("false" not in m, (self.alt_workspace_folder / m).is_dir())
 
     def test_prereq_a(self):
         self.pm.install_packages(PackageIdentifier.parse_list(["prereq-A_1.0"]))
@@ -310,12 +310,12 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
 
     def test_prereq_env(self):
         motifs = ["prereq-env_1.0"]
-        errors = self.pm.install_prereq(PackageIdentifier.parse_list(motifs), self.alt_ws_folder, raise_on_error=False)
+        errors = self.pm.install_prereq(PackageIdentifier.parse_list(motifs), self.alt_workspace_folder, raise_on_error=False)
         self.assertEqual(0, errors)
-        dump = self.alt_ws_folder / "prereq-env_1.0" / "dump.env"
+        dump = self.alt_workspace_folder / "prereq-env_1.0" / "dump.env"
         self.assertTrue(dump.exists())
         env = env_file_to_map(dump)
-        self.assertEqual(env["LEAF_PREREQ_ROOT"], str(self.alt_ws_folder))
+        self.assertEqual(env["LEAF_PREREQ_ROOT"], str(self.alt_workspace_folder))
 
     def test_depends_available(self):
         deps = DependencyUtils.install(PackageIdentifier.parse_list([]), self.pm.list_available_packages(), self.pm.list_installed_packages())
@@ -457,7 +457,7 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
 
     def test_tar_size(self):
         for filename, testfunc in (("compress-tar_1.0.leaf", self.assertGreater), ("compress-xz_1.0.leaf", self.assertLess)):
-            file = LeafTestCaseWithRepo.REPO_FOLDER / filename
+            file = self.repository_folder / filename
             self.assertTrue(file.exists())
             la = LeafArtifact(file)
             testfunc(file.stat().st_size, la.get_total_size())
@@ -477,7 +477,7 @@ class TestApiPackageManagerHttp(TestApiPackageManager):
     def setUpClass(cls):
         TestApiPackageManager.setUpClass()
         print("Using http port {port}".format(port=HTTP_PORT), file=sys.stderr)
-        TestApiPackageManagerHttp.process = Process(target=start_http_server, args=(LeafTestCaseWithRepo.REPO_FOLDER,))
+        TestApiPackageManagerHttp.process = Process(target=start_http_server, args=(LeafTestCaseWithRepo._TEST_FOLDER / "repository",))
         TestApiPackageManagerHttp.process.start()
         # Wait 10 seconds for the http server to start
         sleep(10)

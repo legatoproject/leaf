@@ -8,11 +8,16 @@ Leaf Package Manager
 """
 
 import os
-from argparse import Action, ONE_OR_MORE
+from argparse import ONE_OR_MORE, Action, Namespace
 from builtins import ValueError
 from pathlib import Path
 
 from leaf.model.base import Scope
+
+
+def get_optional_arg(args: Namespace, name: str, default=None):
+    out = vars(args).get(name)
+    return default if out is None else out
 
 
 def string_to_bool(value: str):

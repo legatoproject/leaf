@@ -16,7 +16,7 @@ from tests.testutils import LeafTestCaseWithRepo
 class TestApiWorkspaceManager(LeafTestCaseWithRepo):
     def setUp(self):
         super().setUp()
-        self.wm = WorkspaceManager(self.ws_folder)
+        self.wm = WorkspaceManager(self.workspace_folder)
         self.wm.create_remote("default", self.remote_url1, insecure=True)
         self.wm.create_remote("other", self.remote_url2, insecure=True)
 
@@ -134,7 +134,7 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                 ("LEAF_PLATFORM_SYSTEM", platform.system()),
                 ("LEAF_PLATFORM_MACHINE", platform.machine()),
                 ("LEAF_PLATFORM_RELEASE", platform.release()),
-                ("LEAF_WORKSPACE", str(self.ws_folder)),
+                ("LEAF_WORKSPACE", str(self.workspace_folder)),
                 ("LEAF_PROFILE", "myenv"),
                 ("LEAF_ENV_B", "BAR"),
                 ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
@@ -153,7 +153,7 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                 ("LEAF_PLATFORM_RELEASE", platform.release()),
                 ("scope", "user"),
                 ("HELLO", "world"),
-                ("LEAF_WORKSPACE", str(self.ws_folder)),
+                ("LEAF_WORKSPACE", str(self.workspace_folder)),
                 ("LEAF_PROFILE", "myenv"),
                 ("LEAF_ENV_B", "BAR"),
                 ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
@@ -171,7 +171,7 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                 ("LEAF_PLATFORM_MACHINE", platform.machine()),
                 ("LEAF_PLATFORM_RELEASE", platform.release()),
                 ("scope", "user"),
-                ("LEAF_WORKSPACE", str(self.ws_folder)),
+                ("LEAF_WORKSPACE", str(self.workspace_folder)),
                 ("LEAF_PROFILE", "myenv"),
                 ("LEAF_ENV_B", "BAR"),
                 ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
@@ -189,7 +189,7 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                 ("LEAF_PLATFORM_MACHINE", platform.machine()),
                 ("LEAF_PLATFORM_RELEASE", platform.release()),
                 ("scope", "user"),
-                ("LEAF_WORKSPACE", str(self.ws_folder)),
+                ("LEAF_WORKSPACE", str(self.workspace_folder)),
                 ("scope", "workspace"),
                 ("HELLO", "world"),
                 ("LEAF_PROFILE", "myenv"),
@@ -209,7 +209,7 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                 ("LEAF_PLATFORM_MACHINE", platform.machine()),
                 ("LEAF_PLATFORM_RELEASE", platform.release()),
                 ("scope", "user"),
-                ("LEAF_WORKSPACE", str(self.ws_folder)),
+                ("LEAF_WORKSPACE", str(self.workspace_folder)),
                 ("scope", "workspace"),
                 ("LEAF_PROFILE", "myenv"),
                 ("LEAF_ENV_B", "BAR"),
@@ -229,7 +229,7 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                 ("LEAF_PLATFORM_MACHINE", platform.machine()),
                 ("LEAF_PLATFORM_RELEASE", platform.release()),
                 ("scope", "user"),
-                ("LEAF_WORKSPACE", str(self.ws_folder)),
+                ("LEAF_WORKSPACE", str(self.workspace_folder)),
                 ("scope", "workspace"),
                 ("LEAF_PROFILE", "myenv"),
                 ("scope", "profile"),
@@ -251,7 +251,7 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                 ("LEAF_PLATFORM_MACHINE", platform.machine()),
                 ("LEAF_PLATFORM_RELEASE", platform.release()),
                 ("scope", "user"),
-                ("LEAF_WORKSPACE", str(self.ws_folder)),
+                ("LEAF_WORKSPACE", str(self.workspace_folder)),
                 ("scope", "workspace"),
                 ("LEAF_PROFILE", "myenv"),
                 ("scope", "profile"),

@@ -59,7 +59,7 @@ class RelengManager(LoggerManager):
         return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
     def find_external_info_file(self, artifact: LeafArtifact):
-        return artifact.parent / (artifact.name + LeafFiles.EXTINFO_EXTENSION)
+        return artifact.parent / (artifact.name + LeafConstants.EXTINFO_EXTENSION)
 
     def __build_pkg_node(self, tarfile: Path, manifest: Manifest = None):
         out = OrderedDict()

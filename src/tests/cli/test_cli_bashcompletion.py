@@ -4,10 +4,11 @@
 
 import subprocess
 
+from leaf.core.constants import LeafSettings
 from leaf.model.package import PackageIdentifier
-from tests.testutils import TEST_RESOURCE_FOLDER, LeafTestCaseWithCli
+from tests.testutils import TEST_RESOURCES_FOLDER, LeafTestCaseWithCli, LEAF_SYSTEM_ROOT
 
-COMPLETION_SCRIPT = TEST_RESOURCE_FOLDER / "leaf-completion-test.sh"
+COMPLETION_SCRIPT = TEST_RESOURCES_FOLDER / "leaf-completion-test.sh"
 
 
 def get_completion_list(cmd):
@@ -107,6 +108,8 @@ class TestCliBashCompletion(LeafTestCaseWithCli):
             )
 
     def test_help(self):
+
+        LeafSettings.SYSTEM_PKG_FOLDERS.value = LEAF_SYSTEM_ROOT
         self.assertEqual(
             get_completion_list("help"),
             [

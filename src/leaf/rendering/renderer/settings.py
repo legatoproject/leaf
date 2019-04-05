@@ -50,7 +50,7 @@ class SettingsListRenderer(Renderer):
             return ""
         # Handle long path list
         if split_path and os.pathsep in value and len(value) > 54:
-            value = "{sep}\\\n".format(sep=os.pathsep).join(value.split(os.pathsep))
+            value = "{sep}\\\n ".format(sep=os.pathsep).join(value.split(os.pathsep))
         return '"{0}"'.format(value)
 
     def _tostring_quiet(self):

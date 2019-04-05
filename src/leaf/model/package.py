@@ -313,13 +313,20 @@ class InstalledPackage(Manifest):
     Represent an installed package
     """
 
-    def __init__(self, mffile: Path):
+    def __init__(self, mffile: Path, read_only=False):
         Manifest.__init__(self, jloadfile(mffile))
         self.__folder = mffile.parent
+        self.__read_only = read_only
+        if read_only:
+            self.custom_tags.append("system")
 
     @property
     def folder(self):
         return self.__folder
+
+    @property
+    def read_only(self):
+        return self.__read_only
 
     @property
     def envmap(self):

@@ -11,7 +11,7 @@ import argparse
 from leaf.api import PackageManager
 from leaf.api.remotes import LeafSettings
 from leaf.cli.base import LeafCommand
-from leaf.cli.cliutils import init_common_args
+from leaf.cli.cliutils import get_optional_arg, init_common_args
 from leaf.core.error import ProfileOutOfSyncException
 from leaf.core.utils import env_list_to_map
 from leaf.model.dependencies import DependencyUtils
@@ -27,7 +27,7 @@ class EnvPrintCommand(LeafCommand):
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
         init_common_args(parser, env_scripts=True)
-        parser.add_argument("profiles", nargs=argparse.OPTIONAL, metavar="PROFILE", help="the profile name")
+        parser.add_argument("profile", nargs=argparse.OPTIONAL, metavar="PROFILE", help="the profile name")
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager(check_initialized=False)
@@ -36,16 +36,19 @@ class EnvPrintCommand(LeafCommand):
         if not wm.is_initialized:
             env = Environment.build(wm.build_builtin_environment(), wm.build_user_environment())
         else:
-            # Get profile name, key could not exist if command is default
-            # command
-            name = args.profiles if "profiles" in vars(args) and args.profiles is not None else wm.current_profile_name
+            # Get profile name (optional arg here as self can be the default command)
+            name = get_optional_arg(args, "profile")
+            # Use current profile if not provided
+            if name is None:
+                name = wm.current_profile_name
             profile = wm.get_profile(name)
             if not wm.is_profile_sync(profile):
                 raise ProfileOutOfSyncException(profile)
             env = wm.build_full_environment(profile)
         wm.print_renderer(EnvironmentRenderer(env))
-        if "activate_script" in vars(args):
-            env.generate_scripts(args.activate_script, args.deactivate_script)
+
+        # Generate scripts if needed
+        env.generate_scripts(get_optional_arg(args, "activate_script"), get_optional_arg(args, "deactivate_script"))
 
 
 class EnvBuiltinCommand(LeafCommand):

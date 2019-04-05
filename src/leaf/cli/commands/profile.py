@@ -8,7 +8,7 @@ Leaf Package Manager
 """
 
 from leaf.cli.base import LeafCommand
-from leaf.cli.cliutils import init_common_args
+from leaf.cli.cliutils import get_optional_arg, init_common_args
 from leaf.model.modelutils import find_latest_version, find_manifest_list
 from leaf.model.package import PackageIdentifier
 from leaf.rendering.renderer.profile import ProfileListRenderer
@@ -44,10 +44,12 @@ class ProfileListCommand(AbstractProfileCommand):
         wm = self.get_workspacemanager()
         name = self._find_profile_name(args)
         profiles = []
-        if "profiles" in vars(args) and len(args.profiles) > 0:
-            for name in args.profiles:
-                profiles.append(wm.get_profile(name))
-        else:
+
+        for name in get_optional_arg(args, "profiles", []):
+            profiles.append(wm.get_profile(name))
+
+        # If not profile given, list all profiles
+        if len(profiles) == 0:
             profiles.extend(wm.list_profiles().values())
 
         ipmap = wm.list_installed_packages()

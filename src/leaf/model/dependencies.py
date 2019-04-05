@@ -7,6 +7,7 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 """
 
+from leaf.core.logger import TextLogger
 from leaf.model.environment import Environment
 from leaf.model.modelutils import find_latest_version, find_manifest
 from leaf.model.package import IDENTIFIER_GETTER, PackageIdentifier
@@ -87,13 +88,18 @@ class DependencyUtils:
         return out
 
     @staticmethod
-    def uninstall(pilist: list, ipmap: dict, env: Environment = None):
+    def uninstall(pilist: list, ipmap: dict, env: Environment = None, logger: TextLogger = None):
         """
         Build the list of packages to uninstall.
         Dependencies are preserved (ie dependencies needed by other installed packages are kept)
         Packages are sorted for uninstall order.
         Returns a list of InstalledPackage
         """
+
+        def _log(message):
+            if logger is not None and logger.isverbose():
+                logger.print_verbose(message)
+
         out = []
         # Build the list from installed packages
         DependencyUtils.__build_tree(pilist, ipmap, out, env=env, ignore_unknown=True)
@@ -105,6 +111,11 @@ class DependencyUtils:
         for needed_ip in DependencyUtils.installed(other_pi_list, ipmap, env=None, ignore_unknown=True):
             if needed_ip in out:
                 out.remove(needed_ip)
+        # Remove read only packages
+        ro_packages = list(filter(lambda ip: ip.read_only, out))
+        if len(ro_packages) > 0 and logger is not None and logger.isverbose():
+            logger.print_verbose("System package(s) cannot be uninstalled: " + ", ".join(map(str, ro_packages)))
+        out = [ip for ip in out if ip not in ro_packages]
         return out
 
     @staticmethod

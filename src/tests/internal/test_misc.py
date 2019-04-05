@@ -14,11 +14,10 @@ from leaf.core.utils import check_leaf_min_version
 from leaf.model.modelutils import keep_latest
 from leaf.model.package import InstalledPackage, PackageIdentifier
 from leaf.model.steps import VariableResolver
-from tests.testutils import TEST_RESOURCE_FOLDER, LeafTestCase
+from tests.testutils import TEST_REMOTE_PACKAGE_SOURCE, LeafTestCase
 
 
 class TestMisc(LeafTestCase):
-
     def test_leaf_minver(self):
         self.assertTrue(check_leaf_min_version(None))
         self.assertTrue(check_leaf_min_version("2.0", "2.0"))
@@ -74,29 +73,29 @@ class TestMisc(LeafTestCase):
 
     def test_variable_resolver(self):
 
-        ip1 = InstalledPackage(TEST_RESOURCE_FOLDER / "version_1.0" / LeafFiles.MANIFEST)
-        ip2 = InstalledPackage(TEST_RESOURCE_FOLDER / "version_1.1" / LeafFiles.MANIFEST)
-        ip3 = InstalledPackage(TEST_RESOURCE_FOLDER / "version_2.0" / LeafFiles.MANIFEST)
+        ip1 = InstalledPackage(TEST_REMOTE_PACKAGE_SOURCE / "version_1.0" / LeafFiles.MANIFEST)
+        ip2 = InstalledPackage(TEST_REMOTE_PACKAGE_SOURCE / "version_1.1" / LeafFiles.MANIFEST)
+        ip3 = InstalledPackage(TEST_REMOTE_PACKAGE_SOURCE / "version_2.0" / LeafFiles.MANIFEST)
 
         vr = VariableResolver(ip1, [ip1, ip2, ip3])
 
         self.assertEqual("version", vr.resolve("@{NAME}"))
         self.assertEqual("1.0", vr.resolve("@{VERSION}"))
-        self.assertEqual(str(TEST_RESOURCE_FOLDER / "version_1.0"), vr.resolve("@{DIR}"))
+        self.assertEqual(str(TEST_REMOTE_PACKAGE_SOURCE / "version_1.0"), vr.resolve("@{DIR}"))
 
         self.assertEqual("version", vr.resolve("@{NAME:version_1.0}"))
         self.assertEqual("1.0", vr.resolve("@{VERSION:version_1.0}"))
-        self.assertEqual(str(TEST_RESOURCE_FOLDER / "version_1.0"), vr.resolve("@{DIR:version_1.0}"))
+        self.assertEqual(str(TEST_REMOTE_PACKAGE_SOURCE / "version_1.0"), vr.resolve("@{DIR:version_1.0}"))
 
         self.assertEqual("version", vr.resolve("@{NAME:version_2.0}"))
         self.assertEqual("2.0", vr.resolve("@{VERSION:version_2.0}"))
-        self.assertEqual(str(TEST_RESOURCE_FOLDER / "version_2.0"), vr.resolve("@{DIR:version_2.0}"))
+        self.assertEqual(str(TEST_REMOTE_PACKAGE_SOURCE / "version_2.0"), vr.resolve("@{DIR:version_2.0}"))
 
         self.assertEqual("version", vr.resolve("@{NAME:version_latest}"))
         self.assertEqual("2.0", vr.resolve("@{VERSION:version_latest}"))
-        self.assertEqual(str(TEST_RESOURCE_FOLDER / "version_2.0"), vr.resolve("@{DIR:version_latest}"))
+        self.assertEqual(str(TEST_REMOTE_PACKAGE_SOURCE / "version_2.0"), vr.resolve("@{DIR:version_latest}"))
 
-        self.assertEqual("version 1.1 " + str(TEST_RESOURCE_FOLDER / "version_2.0"), vr.resolve("@{NAME} @{VERSION:version_1.1} @{DIR:version_latest}"))
+        self.assertEqual("version 1.1 " + str(TEST_REMOTE_PACKAGE_SOURCE / "version_2.0"), vr.resolve("@{NAME} @{VERSION:version_1.1} @{DIR:version_latest}"))
 
         with self.assertRaises(LeafException):
             vr.resolve("@{NAME} @{VERSION:version_1.2} @{DIR:version_latest}")

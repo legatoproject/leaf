@@ -111,6 +111,7 @@ class ThemeManager:
         "tag.current": "F_GREEN",
         "tag.installed": "F_GREEN",
         "tag.latest": "F_CYAN",
+        "tag.system": "F_LIGHTRED",
         "remote_disabled": "F_LIGHTBLACK",
         "profile_current": "F_GREEN",
     }
