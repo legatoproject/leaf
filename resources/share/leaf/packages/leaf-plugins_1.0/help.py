@@ -23,7 +23,18 @@ class HelpPlugin(LeafPluginCommand):
 
     def _configure_parser(self, parser):
         parser.add_argument("-l", "--list", dest="list_topics", action="store_true", help="list all available topics")
-        parser.add_argument("topic", nargs=argparse.OPTIONAL, metavar="TOPIC", help="the profile name")
+        parser.add_argument("topic", nargs=argparse.OPTIONAL, metavar="TOPIC", help="the profile name").completer = self.list_help_topics
+
+    def list_help_topics(self, *args, **kwargs):
+        leaf_manpage = self.get_manpage("leaf")
+        manpage_dir = Path(leaf_manpage).parent
+        out = []
+        for manpage in sorted(manpage_dir.iterdir()):
+            if manpage.is_file():
+                m = HelpPlugin.__LEAF_MANPAGE_PATTER.fullmatch(manpage.name)
+                if m is not None:
+                    out.append(m.group(1))
+        return out
 
     def get_manpage(self, page):
         rc, out = subprocess.getstatusoutput("man -w " + page)
@@ -33,13 +44,8 @@ class HelpPlugin(LeafPluginCommand):
     def execute(self, args, uargs):
         if args.list_topics:
             # List all topics
-            leaf_manpage = self.get_manpage("leaf")
-            manpage_dir = Path(leaf_manpage).parent
-            for manpage in sorted(manpage_dir.iterdir()):
-                if manpage.is_file():
-                    m = HelpPlugin.__LEAF_MANPAGE_PATTER.fullmatch(manpage.name)
-                    if m is not None:
-                        print(m.group(1))
+            for topic in self.list_help_topics():
+                print(topic)
         else:
             manpage = "leaf"
             if args.topic is not None:

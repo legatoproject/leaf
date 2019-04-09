@@ -9,15 +9,17 @@ Leaf Package Manager
 
 from leaf.cli.base import LeafCommand
 from leaf.cli.cliutils import get_optional_arg, init_common_args
+from leaf.cli.completion import complete_profiles
 from leaf.model.modelutils import find_latest_version, find_manifest_list
 from leaf.model.package import PackageIdentifier
 from leaf.rendering.renderer.profile import ProfileListRenderer
 
 
 class AbstractProfileCommand(LeafCommand):
-    def __init__(self, name, description, profile_nargs=None):
+    def __init__(self, name, description, profile_nargs=None, profile_completer=None):
         LeafCommand.__init__(self, name, description)
         self.profile_nargs = profile_nargs
+        self.profile_completer = profile_completer
 
     def _find_profile_name(self, args, wm=None):
         if hasattr(args, "profiles"):
@@ -33,12 +35,14 @@ class AbstractProfileCommand(LeafCommand):
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
         if self.profile_nargs is not None:
-            parser.add_argument("profiles", nargs=self.profile_nargs, metavar="PROFILE", help="the profile name")
+            profile_arg = parser.add_argument("profiles", nargs=self.profile_nargs, metavar="PROFILE", help="the profile name")
+            if self.profile_completer is not None:
+                profile_arg.completer = self.profile_completer
 
 
 class ProfileListCommand(AbstractProfileCommand):
     def __init__(self):
-        AbstractProfileCommand.__init__(self, "list", "list profiles", profile_nargs="*")
+        AbstractProfileCommand.__init__(self, "list", "list profiles", profile_nargs="*", profile_completer=complete_profiles)
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager()
@@ -97,7 +101,7 @@ class ProfileRenameCommand(AbstractProfileCommand):
 
 class ProfileDeleteCommand(AbstractProfileCommand):
     def __init__(self):
-        AbstractProfileCommand.__init__(self, "delete", "delete profile(s)", profile_nargs="*")
+        AbstractProfileCommand.__init__(self, "delete", "delete profile(s)", profile_nargs="*", profile_completer=complete_profiles)
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager()
@@ -109,7 +113,7 @@ class ProfileDeleteCommand(AbstractProfileCommand):
 
 class ProfileSwitchCommand(AbstractProfileCommand):
     def __init__(self):
-        AbstractProfileCommand.__init__(self, "switch", "set current profile", profile_nargs=1)
+        AbstractProfileCommand.__init__(self, "switch", "set current profile", profile_nargs=1, profile_completer=complete_profiles)
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager()
@@ -121,7 +125,9 @@ class ProfileSwitchCommand(AbstractProfileCommand):
 
 class ProfileSyncCommand(AbstractProfileCommand):
     def __init__(self):
-        AbstractProfileCommand.__init__(self, "sync", "install packages needed for current or given profile", profile_nargs="?")
+        AbstractProfileCommand.__init__(
+            self, "sync", "install packages needed for current or given profile", profile_nargs="?", profile_completer=complete_profiles
+        )
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager()
@@ -133,7 +139,7 @@ class ProfileSyncCommand(AbstractProfileCommand):
 
 class ProfileConfigCommand(AbstractProfileCommand):
     def __init__(self):
-        AbstractProfileCommand.__init__(self, "config", "configure profile to add and remove packages", profile_nargs="?")
+        AbstractProfileCommand.__init__(self, "config", "configure profile to add and remove packages", profile_nargs="?", profile_completer=complete_profiles)
 
     def _configure_parser(self, parser):
         super()._configure_parser(parser)

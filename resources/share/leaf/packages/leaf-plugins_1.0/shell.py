@@ -11,9 +11,9 @@
 
 import argparse
 import os
-from pathlib import Path
 
 from leaf.cli.plugins import LeafPluginCommand
+from leaf.core.constants import CommonSettings
 from leaf.core.error import LeafException
 
 
@@ -34,10 +34,9 @@ class ShellPlugin(LeafPluginCommand):
         # Was the shell name specified by the user directly?
         if args.shell is not None:
             shell_name = args.shell
-        elif "SHELL" in os.environ:
+        elif CommonSettings.SHELL.is_set():
             # No, so see if the parent shell advertised it's name.
-            shell_path = Path(os.environ["SHELL"])
-            shell_name = shell_path.name
+            shell_name = CommonSettings.SHELL.as_path().name
         else:
             # If nothing else was found, assume Bash.
             shell_name = "bash"

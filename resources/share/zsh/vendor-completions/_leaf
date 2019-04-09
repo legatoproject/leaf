@@ -1,0 +1,7 @@
+#compdef  leaf
+
+autoload bashcompinit
+bashcompinit
+eval "$(register-python-argcomplete3 -s bash  leaf)"
+
+

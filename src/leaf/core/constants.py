@@ -19,6 +19,7 @@ class CommonSettings(StaticSettings):
     WORKSPACE = EnvVar("LEAF_WORKSPACE")
     CONFIG_FOLDER = EnvVar("LEAF_CONFIG", default="~/.config/leaf")
     VERBOSITY = EnvVar("LEAF_VERBOSE", validator=RegexValidator("(default|verbose|quiet)"))
+    SHELL = EnvVar("SHELL")
 
 
 class LeafSettings(CommonSettings):

@@ -10,9 +10,10 @@ Leaf Package Manager
 """
 
 
+from leaf.cli.completion import complete_available_packages
 from leaf.cli.plugins import LeafPluginCommand
-from leaf.model.modelutils import group_package_identifiers_by_name
 from leaf.core.error import InvalidPackageNameException
+from leaf.model.modelutils import group_package_identifiers_by_name
 from leaf.model.package import PackageIdentifier
 
 
@@ -31,7 +32,9 @@ def get_latest_ap(motif, pilist):
 class UpdagePlugin(LeafPluginCommand):
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
-        parser.add_argument("-p", "--add-package", dest="packages", action="append", metavar="PKG_NAME", help="specific packages to update")
+        parser.add_argument(
+            "-p", "--add-package", dest="packages", action="append", metavar="PKG_NAME", help="specific packages to update"
+        ).completer = complete_available_packages
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager()

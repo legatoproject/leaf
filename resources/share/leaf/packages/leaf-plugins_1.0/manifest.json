@@ -17,6 +17,10 @@
             "source": "shell.py",
             "description": "run a sub-shell that tracks the environment for your Leaf workspace"
         },
+        "completion": {
+            "source": "completion.py",
+            "description": "helper to configure auto completion in your shell (bash or zsh)"
+        },
         "version": {
             "source": "version.py",
             "description": "display leaf version"

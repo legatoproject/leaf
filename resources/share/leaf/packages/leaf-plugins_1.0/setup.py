@@ -12,6 +12,7 @@ import os
 import subprocess
 from collections import OrderedDict
 
+from leaf.cli.completion import complete_available_packages
 from leaf.cli.plugins import LeafPluginCommand
 from leaf.core.constants import LeafSettings
 from leaf.core.error import InvalidPackageNameException, LeafException
@@ -23,7 +24,9 @@ from leaf.model.workspace import Profile
 class SetupPlugin(LeafPluginCommand):
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
-        parser.add_argument("-p", "--add-package", dest="packages", action="append", metavar="PKG_NAME", help="add a package to profile")
+        parser.add_argument(
+            "-p", "--add-package", dest="packages", action="append", metavar="PKG_NAME", help="add a package to profile"
+        ).completer = complete_available_packages
         parser.add_argument("--set", dest="env_vars", action="append", metavar="KEY=VALUE", help="add environment variable to profile")
         parser.add_argument("profiles", nargs=argparse.OPTIONAL, metavar="PROFILE", help="the profile name")
 

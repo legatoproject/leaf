@@ -15,6 +15,7 @@ from pathlib import Path
 from leaf.api import PackageManager
 from leaf.cli.base import LeafCommand
 from leaf.cli.cliutils import get_optional_arg
+from leaf.cli.completion import complete_all_packages, complete_available_packages, complete_installed_packages, complete_installed_packages_tags
 from leaf.core.error import PackageInstallInterruptedException
 from leaf.core.utils import env_list_to_map, mkdir_tmp_leaf_dir
 from leaf.model.dependencies import DependencyUtils
@@ -31,8 +32,12 @@ class PackageListCommand(LeafCommand):
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
         parser.add_argument("-a", "--all", dest="show_all_packages", action="store_true", help="display all packages, not only master packages")
-        parser.add_argument("-t", "--tag", dest="tags", metavar="TAG", action="append", help="filter search results matching with given tag")
-        parser.add_argument("keywords", metavar="KEYWORD", nargs=argparse.ZERO_OR_MORE, help="filter with given keywords")
+        parser.add_argument(
+            "-t", "--tag", dest="tags", metavar="TAG", action="append", help="filter search results matching with given tag"
+        ).completer = complete_installed_packages_tags
+        parser.add_argument(
+            "keywords", metavar="KEYWORD", nargs=argparse.ZERO_OR_MORE, help="filter with given keywords"
+        ).completer = complete_installed_packages
 
     def execute(self, args, uargs):
         pm = PackageManager()
@@ -78,7 +83,7 @@ class PackageDepsCommand(LeafCommand):
             "--rdepends", dest="dependency_type", action="store_const", const="rdepends", help="list packages having given package(s) as dependency"
         )
         parser.add_argument("--env", dest="custom_envlist", action="append", metavar="KEY=VALUE", help="add given environment variable")
-        parser.add_argument("packages", metavar="PKG_IDENTIFIER", nargs=argparse.ZERO_OR_MORE, help="package identifier")
+        parser.add_argument("packages", metavar="PKG_IDENTIFIER", nargs=argparse.ZERO_OR_MORE, help="package identifier").completer = complete_all_packages
 
     def execute(self, args, uargs):
         pm = PackageManager()
@@ -124,11 +129,14 @@ class PackageInstallCommand(LeafCommand):
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
         parser.add_argument("-k", "--keep", dest="keep_on_error", action="store_true", help="keep package folder in case of installation error")
-        parser.add_argument("packages", metavar="PKG_IDENTIFIER", nargs=argparse.ONE_OR_MORE, help="identifier of packages to install")
+        parser.add_argument(
+            "packages", metavar="PKG_IDENTIFIER", nargs=argparse.ONE_OR_MORE, help="identifier of packages to install"
+        ).completer = complete_available_packages
 
     def execute(self, args, uargs):
         pm = PackageManager()
 
+        complete_available_packages()
         try:
             items = pm.install_packages(PackageIdentifier.parse_list(args.packages), keep_folder_on_error=args.keep_on_error)
         except Exception as e:
@@ -145,7 +153,7 @@ class PackagePrereqCommand(LeafCommand):
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
         parser.add_argument("--target", dest="tmp_install_folder", type=Path, help="a alternative root folder for required packages installation")
-        parser.add_argument("packages", metavar="PKG_IDENTIFIER", nargs=argparse.ONE_OR_MORE, help="package identifier")
+        parser.add_argument("packages", metavar="PKG_IDENTIFIER", nargs=argparse.ONE_OR_MORE, help="package identifier").completer = complete_installed_packages
 
     def execute(self, args, uargs):
         pm = PackageManager()
@@ -165,7 +173,9 @@ class PackageUninstallCommand(LeafCommand):
 
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
-        parser.add_argument("packages", metavar="PKG_IDENTIFIER", nargs=argparse.ONE_OR_MORE, help="identifier of package to uninstall")
+        parser.add_argument(
+            "packages", metavar="PKG_IDENTIFIER", nargs=argparse.ONE_OR_MORE, help="identifier of package to uninstall"
+        ).completer = complete_installed_packages
 
     def execute(self, args, uargs):
         pm = PackageManager()
@@ -179,7 +189,9 @@ class PackageSyncCommand(LeafCommand):
 
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
-        parser.add_argument("packages", metavar="PKGNAME", nargs=argparse.ONE_OR_MORE, help="name of package to uninstall")
+        parser.add_argument(
+            "packages", metavar="PKGNAME", nargs=argparse.ONE_OR_MORE, help="name of package to uninstall"
+        ).completer = complete_installed_packages
 
     def execute(self, args, uargs):
         pm = PackageManager()
@@ -194,7 +206,9 @@ class PackageUpgradeCommand(LeafCommand):
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
         parser.add_argument("--clean", dest="clean", action="store_true", help="also try to uninstall old versions of upgraded packages")
-        parser.add_argument("packages", metavar="PKGNAME", nargs=argparse.ZERO_OR_MORE, help="name of the packages to upgrade")
+        parser.add_argument(
+            "packages", metavar="PKGNAME", nargs=argparse.ZERO_OR_MORE, help="name of the packages to upgrade"
+        ).completer = complete_installed_packages
 
     def execute(self, args, uargs):
         pm = PackageManager()

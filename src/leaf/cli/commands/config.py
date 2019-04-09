@@ -13,6 +13,7 @@ from collections import OrderedDict
 
 from leaf.cli.base import LeafCommand
 from leaf.cli.cliutils import init_common_args
+from leaf.cli.completion import complete_settings
 from leaf.rendering.renderer.settings import SettingsListRenderer
 
 
@@ -23,7 +24,7 @@ class ConfigListCommand(LeafCommand):
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
         parser.add_argument("-a", "--all", dest="show_all_settings", action="store_true", help="show all settings, even those not set")
-        parser.add_argument("keywords", metavar="KEYWORD", nargs=argparse.OPTIONAL)
+        parser.add_argument("keywords", metavar="KEYWORD", nargs=argparse.OPTIONAL).completer = complete_settings
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager(check_initialized=False)
@@ -55,7 +56,7 @@ class SettingGetCommand(LeafCommand):
 
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
-        parser.add_argument("settings_id", metavar="ID", nargs=argparse.ONE_OR_MORE, help="the setting to get")
+        parser.add_argument("settings_id", metavar="ID", nargs=argparse.ONE_OR_MORE, help="the setting to get").completer = complete_settings
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager(check_initialized=False)
@@ -79,7 +80,7 @@ class SettingSetCommand(LeafCommand):
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
         init_common_args(parser, with_scope=True)
-        parser.add_argument("setting_id", metavar="ID", help="the setting to update")
+        parser.add_argument("setting_id", metavar="ID", help="the setting to update").completer = complete_settings
         parser.add_argument("setting_value", metavar="VALUE", help="the setting value")
 
     def execute(self, args, uargs):
@@ -93,7 +94,7 @@ class SettingResetCommand(LeafCommand):
 
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
-        parser.add_argument("setting_id", metavar="ID", help="the setting to update")
+        parser.add_argument("setting_id", metavar="ID", help="the setting to update").completer = complete_settings
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager(check_initialized=False)

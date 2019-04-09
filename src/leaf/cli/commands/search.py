@@ -11,6 +11,7 @@ import argparse
 
 from leaf.api import PackageManager
 from leaf.cli.base import LeafCommand
+from leaf.cli.completion import complete_available_packages, complete_available_packages_tags
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import IDENTIFIER_GETTER
 from leaf.model.tags import TagUtils
@@ -24,8 +25,10 @@ class SearchCommand(LeafCommand):
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
         parser.add_argument("-a", "--all", dest="only_master_packages", action="store_false", help="display all packages, not only master packages")
-        parser.add_argument("-t", "--tag", dest="tags", action="append", metavar="TAG", help="filter search results matching with given tag")
-        parser.add_argument("keywords", metavar="KEYWORD", nargs=argparse.ZERO_OR_MORE)
+        parser.add_argument(
+            "-t", "--tag", dest="tags", action="append", metavar="TAG", help="filter search results matching with given tag"
+        ).completer = complete_available_packages_tags
+        parser.add_argument("keywords", metavar="KEYWORD", nargs=argparse.ZERO_OR_MORE).completer = complete_available_packages
 
     def execute(self, args, uargs):
         pm = PackageManager()

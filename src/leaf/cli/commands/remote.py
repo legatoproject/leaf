@@ -9,6 +9,7 @@ Leaf Package Manager
 
 from leaf.api import RemoteManager
 from leaf.cli.base import LeafCommand
+from leaf.cli.completion import complete_remotes
 from leaf.core.error import LeafException
 from leaf.rendering.renderer.remote import RemoteListRenderer
 
@@ -50,7 +51,7 @@ class RemoteRemoveCommand(LeafCommand):
 
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
-        parser.add_argument("aliases", metavar="ALIAS", nargs="+", help="the alias(es) of the remote(s) to remove")
+        parser.add_argument("aliases", metavar="ALIAS", nargs="+", help="the alias(es) of the remote(s) to remove").completer = complete_remotes
 
     def execute(self, args, uargs):
         rm = RemoteManager()
@@ -64,7 +65,7 @@ class RemoteEnableCommand(LeafCommand):
 
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
-        parser.add_argument("aliases", metavar="ALIAS", nargs="+", help="the alias(es) of the remote(s) to enable")
+        parser.add_argument("aliases", metavar="ALIAS", nargs="+", help="the alias(es) of the remote(s) to enable").completer = complete_remotes
 
     def execute(self, args, uargs):
         rm = RemoteManager()
@@ -83,7 +84,7 @@ class RemoteDisableCommand(LeafCommand):
 
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
-        parser.add_argument("aliases", metavar="ALIAS", nargs="+", help="the alias(es) of the remote(s) to disable")
+        parser.add_argument("aliases", metavar="ALIAS", nargs="+", help="the alias(es) of the remote(s) to disable").completer = complete_remotes
 
     def execute(self, args, uargs):
         rm = RemoteManager()
