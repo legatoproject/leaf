@@ -18,6 +18,7 @@ import tempfile
 import time
 import urllib
 from collections import OrderedDict
+from functools import total_ordering
 from pathlib import Path
 from shutil import copyfile
 from time import sleep
@@ -33,6 +34,37 @@ from leaf.core.logger import TextLogger, print_trace
 
 _IGNORED_PATTERN = re.compile("^.*_ignored[0-9]*$")
 _VERSION_SEPARATOR = re.compile("[-_.~]")
+
+
+@total_ordering
+class Version:
+    def __init__(self, version: str):
+        self.__version = version
+
+    @property
+    def value(self):
+        return self.__version.strip()
+
+    def __str__(self):
+        return self.value
+
+    def __hash__(self):
+        return hash(self.value)
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            return self.__eq__(Version(other))
+        if not isinstance(other, Version):
+            return NotImplemented
+        return self.value == other.value
+
+    def __lt__(self, other):
+        if isinstance(other, str):
+            return self.__lt__(Version(other))
+        return version_comparator_lt(self.value, other.value)
+
+
+CURRENT_LEAF_VERSION = Version(__version__)
 
 
 def check_leaf_min_version(minversion, currentversion=__version__, exception_message=None):
@@ -52,16 +84,19 @@ def version_string_to_tuple(version):
         except Exception:
             return x
 
-    return tuple(tryint(x) for x in _VERSION_SEPARATOR.split(version))
+    return tuple(tryint(x) for x in _VERSION_SEPARATOR.split(version.strip()))
 
 
 def version_comparator_lt(a: str, b: str):
-    if a == b:
-        return False
+    # Check string given
     if not isinstance(a, str) or not isinstance(b, str):
         raise ValueError()
+    # extract tuples
     a = version_string_to_tuple(a)
     b = version_string_to_tuple(b)
+    # Check equality
+    if a == b:
+        return False
     i = 0
     while True:
         if i >= len(a):

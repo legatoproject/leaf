@@ -99,6 +99,8 @@ class JsonConstants(object):
     Constants for Json grammar
     """
 
+    LEAFMINVERSION = "leafMinVersion"
+
     # Configuration
     CONFIG_REMOTES = "remotes"
     CONFIG_REMOTE_URL = "url"
@@ -120,7 +122,7 @@ class JsonConstants(object):
     INFO_NAME = "name"
     INFO_VERSION = "version"
     INFO_DATE = "date"
-    INFO_LEAF_MINVER = "leafMinVersion"
+    INFO_LEAF_MINVER = LEAFMINVERSION
     INFO_FINALSIZE = "finalSize"
     INFO_DEPENDS = "depends"
     INFO_REQUIRES = "requires"
@@ -155,7 +157,6 @@ class JsonConstants(object):
 
     # Profiles
     WS_PROFILES = "profiles"
-    WS_LEAFMINVERSION = "leafMinVersion"
     WS_ENV = "env"
     WS_REMOTES = "remotes"
     WS_PROFILE_PACKAGES = "packages"
