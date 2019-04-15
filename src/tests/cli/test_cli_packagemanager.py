@@ -1,9 +1,10 @@
 """
 @author: Legato Tooling Team <letools@sierrawireless.com>
 """
+import os
 
 from leaf.core.constants import LeafSettings
-from tests.testutils import LeafTestCaseWithCli
+from tests.testutils import LeafTestCaseWithCli, get_lines
 
 
 class TestCliPackageManager(LeafTestCaseWithCli):
@@ -206,6 +207,25 @@ class TestCliPackageManager(LeafTestCaseWithCli):
             self.leaf_exec(["config", "get"], "leaf.user.root")
             self.leaf_exec(["config"], "--root", self.workspace_folder)
             self.leaf_exec(["config", "get"], "leaf.user.root")
+
+    def test_env_scripts(self):
+        try:
+            in_script = self.volatile_folder / "in.sh"
+            out_script = self.volatile_folder / "out.sh"
+
+            self.leaf_exec(["config", "set"], "leaf.download.retry", "42")
+            self.leaf_exec(["env", "user"], "--set", "LANG=D")
+            self.leaf_exec(["env", "print"], "--activate-script", in_script, "--deactivate-script", out_script)
+            with self.assertStdout("env_scripts.out", variables={"{LANG}": os.environ["LANG"]}):
+                for f in (in_script, out_script):
+                    print(">>>> BEGIN:", f)
+                    for l in get_lines(f):
+                        print(l)
+                    print(">>>> END:", f)
+        finally:
+            # Prevent leaf config leaf.download.retry from appearing in other tests
+            if "LEAF_RETRY" in os.environ:
+                del os.environ["LEAF_RETRY"]
 
 
 class TestCliPackageManagerVerbose(TestCliPackageManager):

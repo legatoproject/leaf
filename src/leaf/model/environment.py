@@ -7,11 +7,11 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 """
 import operator
-import os
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from pathlib import Path
 
+from leaf.core import REFERENCE_ENVIRON
 from leaf.core.error import InvalidSettingException
 from leaf.core.settings import LeafSetting
 
@@ -141,14 +141,18 @@ class Environment:
         if deactivate_file is not None:
             resetmap = OrderedDict()
             for k in self.keys():
-                resetmap[k] = os.environ.get(k)
+                resetmap[k] = REFERENCE_ENVIRON.get(k)
             with deactivate_file.open("w") as fp:
-                for k, v in resetmap.items():
-                    # If the value was not present in env before, reset it
+                # First loop reset
+                for k in sorted(resetmap.keys()):
+                    v = resetmap[k]
+                    if v is not None:
+                        fp.write(Environment.tostring_export(k, v) + "\n")
+                # Second loop, unset
+                for k in sorted(resetmap.keys()):
+                    v = resetmap[k]
                     if v is None:
                         fp.write(Environment.tostring_unset(k) + "\n")
-                    else:
-                        fp.write(Environment.tostring_export(k, v) + "\n")
         if activate_file is not None:
             with activate_file.open("w") as fp:
 

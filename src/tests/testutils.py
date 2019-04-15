@@ -187,7 +187,7 @@ class LeafTestCase(unittest.TestCase):
             if self.verbosity.lower() in LEAF_UT_SKIP.value.lower():
                 self.skipTest("Verbosity {verbosity} is ignored".format(verbosity=self.verbosity))
 
-        # Clean volatile folder
+        # Clean volatile folder just in case
         rmtree_force(self.volatile_folder)
         # Setup leaf via env
         LeafSettings.VERBOSITY.value = self.verbosity
@@ -201,6 +201,8 @@ class LeafTestCase(unittest.TestCase):
         LeafSettings.CONFIG_FOLDER.value = None
         LeafSettings.CACHE_FOLDER.value = None
         LeafSettings.USER_PKG_FOLDER.value = None
+        # Clean volatile folder
+        rmtree_force(self.volatile_folder)
 
     def _get_default_variables(self):
         out = OrderedDict()
