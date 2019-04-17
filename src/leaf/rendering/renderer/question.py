@@ -19,6 +19,7 @@ class QuestionRenderer(Renderer):
     def __init__(self, message):
         Renderer.__init__(self)
         self.message = message
+        self.use_pager_if_needed = False
 
     def _tostring_quiet(self):
         return self.message

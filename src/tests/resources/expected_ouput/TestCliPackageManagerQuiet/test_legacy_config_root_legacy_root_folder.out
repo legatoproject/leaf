@@ -1,0 +1,5 @@
+{TESTS_FOLDER}/volatile/packages
+~/.leaf
+The --root option is deprecated and will soon be removed
+Next time you should use 'leaf config set leaf.user.root "{TESTS_FOLDER}/volatile/workspace"' instead
+{TESTS_FOLDER}/volatile/workspace

@@ -2,6 +2,7 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 """
 
+from leaf.core.constants import LeafSettings
 from tests.testutils import LeafTestCaseWithCli
 
 
@@ -196,6 +197,15 @@ class TestCliPackageManager(LeafTestCaseWithCli):
     def test_free_space_issue(self):
         self.leaf_exec(["package", "install"], "failure-large-ap_1.0", expected_rc=2)
         self.leaf_exec(["package", "install"], "failure-large-extracted_1.0", expected_rc=2)
+
+    def test_legacy_config_root(self):
+        # Test to be removed when legacy *leaf config --root* CLI is removed
+        with self.assertStdout("legacy_root_folder.out"):
+            self.leaf_exec(["config", "get"], "leaf.user.root")
+            LeafSettings.USER_PKG_FOLDER.value = None
+            self.leaf_exec(["config", "get"], "leaf.user.root")
+            self.leaf_exec(["config"], "--root", self.workspace_folder)
+            self.leaf_exec(["config", "get"], "leaf.user.root")
 
 
 class TestCliPackageManagerVerbose(TestCliPackageManager):

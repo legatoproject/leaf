@@ -10,11 +10,40 @@ Leaf Package Manager
 
 import argparse
 from collections import OrderedDict
+from pathlib import Path
 
 from leaf.cli.base import LeafCommand
 from leaf.cli.cliutils import init_common_args
 from leaf.cli.completion import complete_settings
+from leaf.cli.meta import LeafMetaCommand
+from leaf.core.constants import LeafSettings
+from leaf.model.base import Scope
 from leaf.rendering.renderer.settings import SettingsListRenderer
+
+
+class ConfigMetaCommand(LeafMetaCommand):
+    # Code to be removed when "config --root" CLI will be dropped
+
+    def __init__(self, *args, **kwargs):
+        kwargs["accept_default"] = True
+        LeafMetaCommand.__init__(self, *args, **kwargs)
+
+    def _configure_parser(self, parser):
+        super()._configure_parser(parser)
+        parser.add_argument("--root", dest="rootfolder", type=Path, help="the folder where packages are installed")
+        self.__default_handler = parser.get_default("handler")
+        parser.set_defaults(handler=self)
+
+    def execute(self, args, uargs):
+        if args.rootfolder is None:
+            return self.__default_handler.execute(args, uargs)
+
+        wm = self.get_workspacemanager(check_initialized=False)
+        wm.print_hints(
+            "The --root option is deprecated and will soon be removed",
+            "Next time you should use 'leaf config set {id} \"{value}\"' instead".format(id=LeafSettings.USER_PKG_FOLDER.identifier, value=args.rootfolder),
+        )
+        wm.set_setting(LeafSettings.USER_PKG_FOLDER.identifier, args.rootfolder, scope=Scope.USER)
 
 
 class ConfigListCommand(LeafCommand):

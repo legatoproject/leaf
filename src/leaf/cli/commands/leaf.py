@@ -12,7 +12,7 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from leaf import __help_description__, __version__
 from leaf.cli.cliutils import EnvSetterAction
 from leaf.cli.commands.build import BuildIndexSubCommand, BuildManifestSubCommand, BuildPackSubCommand
-from leaf.cli.commands.config import ConfigListCommand, SettingGetCommand, SettingResetCommand, SettingSetCommand
+from leaf.cli.commands.config import ConfigListCommand, ConfigMetaCommand, SettingGetCommand, SettingResetCommand, SettingSetCommand
 from leaf.cli.commands.env import EnvBuiltinCommand, EnvPackageCommand, EnvPrintCommand, EnvProfileCommand, EnvUserCommand, EnvWorkspaceCommand
 from leaf.cli.commands.package import (
     PackageDepsCommand,
@@ -65,7 +65,7 @@ class LeafRootCommand(LeafMetaCommand):
                 # Entry points
                 RunCommand(),
                 # Config&settings
-                LeafMetaCommand(
+                ConfigMetaCommand(
                     "config",
                     "manage leaf configuration",
                     [ConfigListCommand(), SettingGetCommand(), SettingSetCommand(), SettingResetCommand()],

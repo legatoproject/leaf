@@ -17,6 +17,7 @@ from leaf.rendering.renderer.renderer import Renderer
 class HintsRenderer(Renderer):
     def __init__(self):
         Renderer.__init__(self)
+        self.use_pager_if_needed = False
 
     def _colorize_hints(self, hints):
         if not ANSI.enabled:
