@@ -7,7 +7,10 @@ from collections import OrderedDict
 
 import leaf
 from leaf.api import WorkspaceManager
-from leaf.core.error import InvalidProfileNameException, LeafException, NoProfileSelected, ProfileNameAlreadyExistException
+from leaf.core.constants import LeafSettings
+from leaf.core.error import (InvalidProfileNameException, LeafException,
+                             NoProfileSelected,
+                             ProfileNameAlreadyExistException)
 from leaf.model.base import Scope
 from leaf.model.package import IDENTIFIER_GETTER, PackageIdentifier
 from tests.testutils import LeafTestCaseWithRepo
@@ -120,148 +123,153 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
         self.assertEqual("bar", self.wm.current_profile_name)
 
     def test_env(self):
-        self.wm.init_ws()
-        profile = self.wm.create_profile("myenv")
-        profile.add_packages([PackageIdentifier.parse(pis) for pis in ["env-A_1.0", "env-A_1.0"]])
-        self.wm.update_profile(profile)
+        try:
+            LeafSettings.PROFILE_NORELATIVE.value = 1
 
-        self.wm.switch_profile(profile)
-        self.wm.provision_profile(profile)
+            self.wm.init_ws()
+            profile = self.wm.create_profile("myenv")
+            profile.add_packages([PackageIdentifier.parse(pis) for pis in ["env-A_1.0", "env-A_1.0"]])
+            self.wm.update_profile(profile)
 
-        self.assertEqual(
-            [
-                ("LEAF_VERSION", leaf.__version__),
-                ("LEAF_PLATFORM_SYSTEM", platform.system()),
-                ("LEAF_PLATFORM_MACHINE", platform.machine()),
-                ("LEAF_PLATFORM_RELEASE", platform.release()),
-                ("LEAF_WORKSPACE", str(self.workspace_folder)),
-                ("LEAF_PROFILE", "myenv"),
-                ("LEAF_ENV_B", "BAR"),
-                ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
-                ("LEAF_ENV_A", "FOO"),
-                ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
-            ],
-            self.wm.build_full_environment(profile).tolist(),
-        )
+            self.wm.switch_profile(profile)
+            self.wm.provision_profile(profile)
 
-        self.wm.update_user_environment(set_map=OrderedDict((("scope", "user"), ("HELLO", "world"))))
-        self.assertEqual(
-            [
-                ("LEAF_VERSION", leaf.__version__),
-                ("LEAF_PLATFORM_SYSTEM", platform.system()),
-                ("LEAF_PLATFORM_MACHINE", platform.machine()),
-                ("LEAF_PLATFORM_RELEASE", platform.release()),
-                ("scope", "user"),
-                ("HELLO", "world"),
-                ("LEAF_WORKSPACE", str(self.workspace_folder)),
-                ("LEAF_PROFILE", "myenv"),
-                ("LEAF_ENV_B", "BAR"),
-                ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
-                ("LEAF_ENV_A", "FOO"),
-                ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
-            ],
-            self.wm.build_full_environment(profile).tolist(),
-        )
+            self.assertEqual(
+                [
+                    ("LEAF_VERSION", leaf.__version__),
+                    ("LEAF_PLATFORM_SYSTEM", platform.system()),
+                    ("LEAF_PLATFORM_MACHINE", platform.machine()),
+                    ("LEAF_PLATFORM_RELEASE", platform.release()),
+                    ("LEAF_WORKSPACE", str(self.workspace_folder)),
+                    ("LEAF_PROFILE", "myenv"),
+                    ("LEAF_ENV_B", "BAR"),
+                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                    ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                ],
+                self.wm.build_full_environment(profile).tolist(),
+            )
 
-        self.wm.update_user_environment(unset_list=["HELLO"])
-        self.assertEqual(
-            [
-                ("LEAF_VERSION", leaf.__version__),
-                ("LEAF_PLATFORM_SYSTEM", platform.system()),
-                ("LEAF_PLATFORM_MACHINE", platform.machine()),
-                ("LEAF_PLATFORM_RELEASE", platform.release()),
-                ("scope", "user"),
-                ("LEAF_WORKSPACE", str(self.workspace_folder)),
-                ("LEAF_PROFILE", "myenv"),
-                ("LEAF_ENV_B", "BAR"),
-                ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
-                ("LEAF_ENV_A", "FOO"),
-                ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
-            ],
-            self.wm.build_full_environment(profile).tolist(),
-        )
+            self.wm.update_user_environment(set_map=OrderedDict((("scope", "user"), ("HELLO", "world"))))
+            self.assertEqual(
+                [
+                    ("LEAF_VERSION", leaf.__version__),
+                    ("LEAF_PLATFORM_SYSTEM", platform.system()),
+                    ("LEAF_PLATFORM_MACHINE", platform.machine()),
+                    ("LEAF_PLATFORM_RELEASE", platform.release()),
+                    ("scope", "user"),
+                    ("HELLO", "world"),
+                    ("LEAF_WORKSPACE", str(self.workspace_folder)),
+                    ("LEAF_PROFILE", "myenv"),
+                    ("LEAF_ENV_B", "BAR"),
+                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                    ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                ],
+                self.wm.build_full_environment(profile).tolist(),
+            )
 
-        self.wm.update_ws_environment(set_map=OrderedDict((("scope", "workspace"), ("HELLO", "world"))))
-        self.assertEqual(
-            [
-                ("LEAF_VERSION", leaf.__version__),
-                ("LEAF_PLATFORM_SYSTEM", platform.system()),
-                ("LEAF_PLATFORM_MACHINE", platform.machine()),
-                ("LEAF_PLATFORM_RELEASE", platform.release()),
-                ("scope", "user"),
-                ("LEAF_WORKSPACE", str(self.workspace_folder)),
-                ("scope", "workspace"),
-                ("HELLO", "world"),
-                ("LEAF_PROFILE", "myenv"),
-                ("LEAF_ENV_B", "BAR"),
-                ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
-                ("LEAF_ENV_A", "FOO"),
-                ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
-            ],
-            self.wm.build_full_environment(profile).tolist(),
-        )
+            self.wm.update_user_environment(unset_list=["HELLO"])
+            self.assertEqual(
+                [
+                    ("LEAF_VERSION", leaf.__version__),
+                    ("LEAF_PLATFORM_SYSTEM", platform.system()),
+                    ("LEAF_PLATFORM_MACHINE", platform.machine()),
+                    ("LEAF_PLATFORM_RELEASE", platform.release()),
+                    ("scope", "user"),
+                    ("LEAF_WORKSPACE", str(self.workspace_folder)),
+                    ("LEAF_PROFILE", "myenv"),
+                    ("LEAF_ENV_B", "BAR"),
+                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                    ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                ],
+                self.wm.build_full_environment(profile).tolist(),
+            )
 
-        self.wm.update_ws_environment(unset_list=["HELLO"])
-        self.assertEqual(
-            [
-                ("LEAF_VERSION", leaf.__version__),
-                ("LEAF_PLATFORM_SYSTEM", platform.system()),
-                ("LEAF_PLATFORM_MACHINE", platform.machine()),
-                ("LEAF_PLATFORM_RELEASE", platform.release()),
-                ("scope", "user"),
-                ("LEAF_WORKSPACE", str(self.workspace_folder)),
-                ("scope", "workspace"),
-                ("LEAF_PROFILE", "myenv"),
-                ("LEAF_ENV_B", "BAR"),
-                ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
-                ("LEAF_ENV_A", "FOO"),
-                ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
-            ],
-            self.wm.build_full_environment(profile).tolist(),
-        )
+            self.wm.update_ws_environment(set_map=OrderedDict((("scope", "workspace"), ("HELLO", "world"))))
+            self.assertEqual(
+                [
+                    ("LEAF_VERSION", leaf.__version__),
+                    ("LEAF_PLATFORM_SYSTEM", platform.system()),
+                    ("LEAF_PLATFORM_MACHINE", platform.machine()),
+                    ("LEAF_PLATFORM_RELEASE", platform.release()),
+                    ("scope", "user"),
+                    ("LEAF_WORKSPACE", str(self.workspace_folder)),
+                    ("scope", "workspace"),
+                    ("HELLO", "world"),
+                    ("LEAF_PROFILE", "myenv"),
+                    ("LEAF_ENV_B", "BAR"),
+                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                    ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                ],
+                self.wm.build_full_environment(profile).tolist(),
+            )
 
-        profile.update_environment(set_map=OrderedDict((("scope", "profile"), ("HELLO", "world"))))
-        self.wm.update_profile(profile)
-        self.assertEqual(
-            [
-                ("LEAF_VERSION", leaf.__version__),
-                ("LEAF_PLATFORM_SYSTEM", platform.system()),
-                ("LEAF_PLATFORM_MACHINE", platform.machine()),
-                ("LEAF_PLATFORM_RELEASE", platform.release()),
-                ("scope", "user"),
-                ("LEAF_WORKSPACE", str(self.workspace_folder)),
-                ("scope", "workspace"),
-                ("LEAF_PROFILE", "myenv"),
-                ("scope", "profile"),
-                ("HELLO", "world"),
-                ("LEAF_ENV_B", "BAR"),
-                ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
-                ("LEAF_ENV_A", "FOO"),
-                ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
-            ],
-            self.wm.build_full_environment(profile).tolist(),
-        )
+            self.wm.update_ws_environment(unset_list=["HELLO"])
+            self.assertEqual(
+                [
+                    ("LEAF_VERSION", leaf.__version__),
+                    ("LEAF_PLATFORM_SYSTEM", platform.system()),
+                    ("LEAF_PLATFORM_MACHINE", platform.machine()),
+                    ("LEAF_PLATFORM_RELEASE", platform.release()),
+                    ("scope", "user"),
+                    ("LEAF_WORKSPACE", str(self.workspace_folder)),
+                    ("scope", "workspace"),
+                    ("LEAF_PROFILE", "myenv"),
+                    ("LEAF_ENV_B", "BAR"),
+                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                    ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                ],
+                self.wm.build_full_environment(profile).tolist(),
+            )
 
-        profile.update_environment(unset_list=["HELLO"])
-        self.wm.update_profile(profile)
-        self.assertEqual(
-            [
-                ("LEAF_VERSION", leaf.__version__),
-                ("LEAF_PLATFORM_SYSTEM", platform.system()),
-                ("LEAF_PLATFORM_MACHINE", platform.machine()),
-                ("LEAF_PLATFORM_RELEASE", platform.release()),
-                ("scope", "user"),
-                ("LEAF_WORKSPACE", str(self.workspace_folder)),
-                ("scope", "workspace"),
-                ("LEAF_PROFILE", "myenv"),
-                ("scope", "profile"),
-                ("LEAF_ENV_B", "BAR"),
-                ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
-                ("LEAF_ENV_A", "FOO"),
-                ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
-            ],
-            self.wm.build_full_environment(profile).tolist(),
-        )
+            profile.update_environment(set_map=OrderedDict((("scope", "profile"), ("HELLO", "world"))))
+            self.wm.update_profile(profile)
+            self.assertEqual(
+                [
+                    ("LEAF_VERSION", leaf.__version__),
+                    ("LEAF_PLATFORM_SYSTEM", platform.system()),
+                    ("LEAF_PLATFORM_MACHINE", platform.machine()),
+                    ("LEAF_PLATFORM_RELEASE", platform.release()),
+                    ("scope", "user"),
+                    ("LEAF_WORKSPACE", str(self.workspace_folder)),
+                    ("scope", "workspace"),
+                    ("LEAF_PROFILE", "myenv"),
+                    ("scope", "profile"),
+                    ("HELLO", "world"),
+                    ("LEAF_ENV_B", "BAR"),
+                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                    ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                ],
+                self.wm.build_full_environment(profile).tolist(),
+            )
+
+            profile.update_environment(unset_list=["HELLO"])
+            self.wm.update_profile(profile)
+            self.assertEqual(
+                [
+                    ("LEAF_VERSION", leaf.__version__),
+                    ("LEAF_PLATFORM_SYSTEM", platform.system()),
+                    ("LEAF_PLATFORM_MACHINE", platform.machine()),
+                    ("LEAF_PLATFORM_RELEASE", platform.release()),
+                    ("scope", "user"),
+                    ("LEAF_WORKSPACE", str(self.workspace_folder)),
+                    ("scope", "workspace"),
+                    ("LEAF_PROFILE", "myenv"),
+                    ("scope", "profile"),
+                    ("LEAF_ENV_B", "BAR"),
+                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                    ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                ],
+                self.wm.build_full_environment(profile).tolist(),
+            )
+        finally:
+            LeafSettings.PROFILE_NORELATIVE.value = None
 
     def test_package_override(self):
         self.wm.init_ws()

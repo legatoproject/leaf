@@ -300,12 +300,12 @@ class PackageManager(RemoteManager):
         se = StepExecutor(self.logger, ip, vr, env=env)
         se_func(se)
 
-    def build_packages_environment(self, items: list):
+    def build_packages_environment(self, items: list, ipmap=None):
         """
         Get the env vars declared by given packages
         @param items: a list of InstalledPackage or PackageIdentifier
         """
-        ipmap = self.list_installed_packages()
+        ipmap = ipmap or self.list_installed_packages()
         out = Environment()
         for item in items:
             ip = None

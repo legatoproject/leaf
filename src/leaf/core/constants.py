@@ -49,6 +49,9 @@ class LeafSettings(CommonSettings):
     )
     CUSTOM_TAR = LeafSetting("leaf.build.tar", "LEAF_CUSTOM_TAR", description="Use custom tar binary instead of *tar* command when generating artifacts")
     CUSTOM_THEME = LeafSetting("leaf.theme", "LEAF_THEME", description="Custom color theme")
+    PROFILE_NORELATIVE = LeafSetting(
+        "leaf.profile.relative.disable", "LEAF_PROFILE_NORELATIVE", description="Disable relative path for installed package of a profile"
+    )
 
 
 class LeafConstants:

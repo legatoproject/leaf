@@ -1,0 +1,34 @@
+export LEAF_VERSION="{TESTS_LEAF_VERSION}";
+export LEAF_PLATFORM_SYSTEM="{TESTS_PLATFORM_SYSTEM}";
+export LEAF_PLATFORM_MACHINE="{TESTS_PLATFORM_MACHINE}";
+export LEAF_PLATFORM_RELEASE="{TESTS_PLATFORM_RELEASE}";
+export LEAF_WORKSPACE="{TESTS_FOLDER}/volatile/workspace";
+export LEAF_PROFILE="foo";
+export LEAF_ENV_B="BAR";
+export LEAF_PATH_B="$PATH:{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-B";
+export LEAF_ENV_A="FOO";
+export LEAF_PATH_A="$PATH:{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-A:{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-B";
+------------------------
+export LEAF_VERSION="{TESTS_LEAF_VERSION}";
+export LEAF_PLATFORM_SYSTEM="{TESTS_PLATFORM_SYSTEM}";
+export LEAF_PLATFORM_MACHINE="{TESTS_PLATFORM_MACHINE}";
+export LEAF_PLATFORM_RELEASE="{TESTS_PLATFORM_RELEASE}";
+export LEAF_PROFILE_NORELATIVE="1";
+export LEAF_WORKSPACE="{TESTS_FOLDER}/volatile/workspace";
+export LEAF_PROFILE="foo";
+export LEAF_ENV_B="BAR";
+export LEAF_PATH_B="$PATH:{TESTS_FOLDER}/volatile/packages/env-B_1.0";
+export LEAF_ENV_A="FOO";
+export LEAF_PATH_A="$PATH:{TESTS_FOLDER}/volatile/packages/env-A_1.0:{TESTS_FOLDER}/volatile/packages/env-B_1.0";
+------------------------
+export LEAF_VERSION="{TESTS_LEAF_VERSION}";
+export LEAF_PLATFORM_SYSTEM="{TESTS_PLATFORM_SYSTEM}";
+export LEAF_PLATFORM_MACHINE="{TESTS_PLATFORM_MACHINE}";
+export LEAF_PLATFORM_RELEASE="{TESTS_PLATFORM_RELEASE}";
+export LEAF_PROFILE_NORELATIVE="0";
+export LEAF_WORKSPACE="{TESTS_FOLDER}/volatile/workspace";
+export LEAF_PROFILE="foo";
+export LEAF_ENV_B="BAR";
+export LEAF_PATH_B="$PATH:{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-B";
+export LEAF_ENV_A="FOO";
+export LEAF_PATH_A="$PATH:{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-A:{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-B";

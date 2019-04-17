@@ -463,6 +463,20 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         self.assertTrue(sync_file.exists())
         self.assertEqual(["MYVALUE", "MYVALUE", "MYVALUE", "MYVALUE AAA", "MYVALUE BBB", "MYVALUE BBB"], get_lines(sync_file))
 
+    def test_profile_relative_path(self):
+        self.leaf_exec("init")
+        self.leaf_exec(("profile", "create"), "foo")
+        self.leaf_exec(("profile", "config"), "-p", "env-A_1.0")
+        self.leaf_exec(("profile", "sync"))
+        with self.assertStdout("test_profile_relative_path.out"):
+            self.leaf_exec(("env", "print"))
+            print("------------------------")
+            self.leaf_exec(["config", "set"], "leaf.profile.relative.disable", "1")
+            self.leaf_exec(("env", "print"))
+            print("------------------------")
+            self.leaf_exec(["config", "set"], "leaf.profile.relative.disable", "0")
+            self.leaf_exec(("env", "print"))
+
 
 class TestCliWorkspaceManagerVerbose(TestCliWorkspaceManager):
     def __init__(self, *args, **kwargs):

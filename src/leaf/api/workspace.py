@@ -300,19 +300,18 @@ class WorkspaceManager(PackageManager):
     def build_full_environment(self, profile: Profile):
         self.is_profile_sync(profile, raise_if_not_sync=True)
         out = self.build_pf_environment(profile)
-        out.append(self.build_packages_environment(self.get_profile_dependencies(profile)))
+        ipmap = self.list_installed_packages(alt_user_root_folder=None if LeafSettings.PROFILE_NORELATIVE.as_boolean() else profile.folder)
+        out.append(self.build_packages_environment(self.get_profile_dependencies(profile, ipmap=ipmap), ipmap=ipmap))
         return out
 
     def build_pf_environment(self, profile: Profile):
         return Environment.build(self.build_builtin_environment(), self.build_user_environment(), self.build_ws_environment(), profile.build_environment())
 
-    def get_profile_dependencies(self, profile):
+    def get_profile_dependencies(self, profile, ipmap=None):
         """
         Returns all latest packages needed by a profile
         """
-        return DependencyUtils.installed(
-            PackageIdentifier.parse_list(profile.packages), self.list_installed_packages(), only_keep_latest=True, env=self.build_pf_environment(profile)
-        )
+        return DependencyUtils.installed(PackageIdentifier.parse_list(profile.packages), ipmap or self.list_installed_packages(), only_keep_latest=True, env=self.build_pf_environment(profile))
 
     def get_settings_value(self, *settings_id: str) -> dict:
         out = OrderedDict()

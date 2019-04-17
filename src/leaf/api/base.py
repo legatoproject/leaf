@@ -115,7 +115,7 @@ class ConfigurationManager:
                             pass
         return out
 
-    def list_installed_packages(self, only_latest=False) -> dict:
+    def list_installed_packages(self, only_latest=False, alt_user_root_folder: Path = None) -> dict:
         out = {}
         # Scan readonly system folder
         if LeafSettings.SYSTEM_PKG_FOLDERS.as_boolean():
@@ -123,7 +123,7 @@ class ConfigurationManager:
                 out.update(self._list_installed_packages(Path(os.path.expanduser(system_root)), True))
 
         # Scan user root folder
-        out.update(self._list_installed_packages(self.install_folder, False))
+        out.update(self._list_installed_packages(alt_user_root_folder or self.install_folder, False))
 
         # only keep latest if needed
         if only_latest:
