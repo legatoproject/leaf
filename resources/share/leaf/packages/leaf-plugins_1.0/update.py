@@ -43,13 +43,13 @@ class UpdagePlugin(LeafPluginCommand):
         pfname = wm.current_profile_name
         profile = wm.get_profile(pfname)
 
-        profile_packagesmap = profile.packages_map
+        profile_pkg_map = profile.pkg_map
         grouped_packagesmap = group_package_identifiers_by_name(wm.list_installed_packages())
         grouped_packagesmap = group_package_identifiers_by_name(wm.list_available_packages(), pkgmap=grouped_packagesmap)
 
         update_pilist = []
 
-        motiflist = args.packages if args.packages is not None else profile_packagesmap.keys()
+        motiflist = args.packages if args.packages is not None else profile_pkg_map.keys()
         for motif in motiflist:
             pi = None
             if PackageIdentifier.is_valid_identifier(motif):
@@ -68,14 +68,14 @@ class UpdagePlugin(LeafPluginCommand):
 
             if pi is not None and pi not in update_pilist:
                 # Get PI in profile
-                previouspi = profile_packagesmap.get(pi.name)
-                if previouspi is None:
+                previous_pi = PackageIdentifier(pi.name, profile_pkg_map[pi.name]) if pi.name in profile_pkg_map else None
+                if previous_pi is None:
                     # Package not in profile yet, add it
                     if wm.print_with_confirm("Do you want to add package {pi}?".format(pi=pi)):
                         update_pilist.append(pi)
-                elif previouspi != pi:
+                elif previous_pi != pi:
                     # Package already in profile with a different version, update it
-                    if wm.print_with_confirm("Do you want to update package {pi.name} from {oldpi.version} to {pi.version}?".format(pi=pi, oldpi=previouspi)):
+                    if wm.print_with_confirm("Do you want to update package {pi.name} from {oldpi.version} to {pi.version}?".format(pi=pi, oldpi=previous_pi)):
                         update_pilist.append(pi)
                 else:
                     # Package already in profile with same version, do nothing

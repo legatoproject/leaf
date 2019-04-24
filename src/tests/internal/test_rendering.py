@@ -47,6 +47,25 @@ class TestRendering(LeafTestCase):
         LeafTestCase.__init__(self, *args, **kwargs)
         self.loggerManager = LoggerManager()
 
+    def __print_error(self):
+        try:
+            1 / 0  # Ooops !
+        except Exception as cause:
+            ex = self.__create_exception(cause)
+            print("---- Rendered error ----", file=sys.stderr)
+            self.loggerManager.print_exception(ex)
+            print("---- Logger error ----", file=sys.stderr)
+            self.loggerManager.logger.print_error(ex)
+
+    def __create_exception(self, cause=None):
+        if cause is None:
+            cause = Exception("This is a fake cause exception")
+        return LeafException(
+            "Random message for this exception",
+            cause=cause,
+            hints=["this is a first hint with a 'command'", "another one with 'a first command' and 'a second one'"],
+        )
+
     def __load_manifest(self):
         out = []
         for folder in TEST_REMOTE_PACKAGE_SOURCE.iterdir():
@@ -107,10 +126,12 @@ class TestRendering(LeafTestCase):
 
     def test_status(self):
         profile1 = Profile(
-            "profile1", "fake/folder", jloads('{"env": {"Foo1": "Bar1", "Foo2": "Bar2", "Foo3": "Bar3"}, "packages": ["container-A_1.0", "container-B_1.0"]}')
+            "profile1",
+            "fake/folder",
+            jloads('{"env": {"Foo1": "Bar1", "Foo2": "Bar2", "Foo3": "Bar3"}, "packages": {"container-A": "1.0", "container-B": "1.0"}}'),
         )
         profile2 = Profile("profile2", "fake/folder", {})
-        profile3 = Profile("profile3", "fake/folder", jloads('{"packages": ["container-C_1.0"]}'))
+        profile3 = Profile("profile3", "fake/folder", jloads('{"packages": {"container-C": "1.0"}}'))
 
         with self.assertStdout(template_out="status.out"):
             print("####### Test with 2 other profiles, 2 incl, 1 deps #######")
@@ -151,8 +172,8 @@ class TestRendering(LeafTestCase):
 
     def test_profile(self):
 
-        profile1 = Profile("profile1", "fake/folder", jloads('{"env": {"Foo1": "Bar1", "Foo2": "Bar2", "Foo3": "Bar3"}, "packages": ["container-A_1.0"]}'))
-        profile2 = Profile("profile2", "fake/folder", jloads('{"packages": ["container-B_1.0"]}'))
+        profile1 = Profile("profile1", "fake/folder", jloads('{"env": {"Foo1": "Bar1", "Foo2": "Bar2", "Foo3": "Bar3"}, "packages": {"container-A": "1.0"}}'))
+        profile2 = Profile("profile2", "fake/folder", jloads('{"packages": {"container-B": "1.0"}}'))
         profile2.is_current = True
         profile3 = Profile("profile3", "fake/folder", jloads('{"env": {"Foo2": "Bar2", "Foo3": "Bar3"}}'))
         profile4 = Profile("profile4", "fake/folder", {})
@@ -185,15 +206,6 @@ class TestRendering(LeafTestCase):
                 rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.USER], validator=RegexValidator("(HELLO|WORLD)")))
                 self.loggerManager.print_renderer(rend)
 
-    def __create_exception(self, cause=None):
-        if cause is None:
-            cause = Exception("This is a fake cause exception")
-        return LeafException(
-            "Random message for this exception",
-            cause=cause,
-            hints=["this is a first hint with a 'command'", "another one with 'a first command' and 'a second one'"],
-        )
-
     def test_hints(self):
         with self.assertStdout(template_out="hints.out"):
             self.loggerManager.print_hints("This is a hints", "This is another hint with a 'fake command'")
@@ -201,16 +213,6 @@ class TestRendering(LeafTestCase):
     def test_error(self):
         with self.assertStdout(template_out=[], template_err="error.err"):
             self.loggerManager.print_exception(self.__create_exception())
-
-    def __print_error(self):
-        try:
-            1 / 0  # Ooops !
-        except Exception as cause:
-            ex = self.__create_exception(cause)
-            print("---- Rendered error ----", file=sys.stderr)
-            self.loggerManager.print_exception(ex)
-            print("---- Logger error ----", file=sys.stderr)
-            self.loggerManager.logger.print_error(ex)
 
     def test_trace(self):
         with self.assertStdout(template_out=[], template_err="trace.err"):

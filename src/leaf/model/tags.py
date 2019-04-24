@@ -46,5 +46,5 @@ class TagUtils:
         """
         Tag packages in mfList as current if they are in the given profile
         """
-        for mf in filter(lambda mf: str(mf.identfier) in pf.packages, mflist):
+        for mf in filter(lambda mf: mf.identfier in pf.packages, mflist):
             mf.custom_tags.append(TagUtils.CURRENT)

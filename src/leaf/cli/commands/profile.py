@@ -65,7 +65,7 @@ class ProfileListCommand(AbstractProfileCommand):
             if sync:
                 iplist = wm.get_profile_dependencies(profile)
             else:
-                iplist = find_manifest_list(list(map(PackageIdentifier.parse, profile.packages)), ipmap, ignore_unknown=True)
+                iplist = find_manifest_list(profile.packages, ipmap, ignore_unknown=True)
             renderer.append_profile(profile, sync, iplist)
 
         wm.print_renderer(renderer)
@@ -160,7 +160,7 @@ class ProfileConfigCommand(AbstractProfileCommand):
                     pilist.append(find_latest_version(motif, valid_pilist))
             profile.add_packages(pilist)
         if args.pkg_rm_list is not None:
-            valid_pilist = profile.packages_map.values()
+            valid_pilist = profile.packages
             pilist = []
             for motif in args.pkg_rm_list:
                 if PackageIdentifier.is_valid_identifier(motif):

@@ -29,7 +29,6 @@ from leaf.model.base import Scope
 from leaf.model.config import ConfigContextManager, WorkspaceConfiguration
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
-from leaf.model.package import PackageIdentifier
 from leaf.model.settings import ScopeSetting
 from leaf.model.workspace import Profile
 
@@ -137,7 +136,7 @@ class WorkspaceManager(PackageManager):
             pass
         return out
 
-    def get_current_profile(self, name: str) -> Profile:
+    def get_current_profile(self) -> Profile:
         return self.get_profile(self.current_profile_name)
 
     def get_profile(self, name: str) -> Profile:
@@ -263,17 +262,14 @@ class WorkspaceManager(PackageManager):
 
         # Check if all needed packages are installed
         missing_packages = DependencyUtils.install(
-            PackageIdentifier.parse_list(profile.packages),
-            self.list_available_packages(),
-            self.list_installed_packages(),
-            env=self.build_pf_environment(profile),
+            profile.packages, self.list_available_packages(), self.list_installed_packages(), env=self.build_pf_environment(profile)
         )
         if len(missing_packages) == 0:
             self.logger.print_verbose("All packages are already installed")
         else:
             self.logger.print_default("Profile is out of sync")
             try:
-                self.install_packages(PackageIdentifier.parse_list(profile.packages), env=self.build_pf_environment(profile))
+                self.install_packages(profile.packages, env=self.build_pf_environment(profile))
             except Exception as e:
                 raise ProfileProvisioningException(e)
 
@@ -311,7 +307,7 @@ class WorkspaceManager(PackageManager):
         """
         Returns all latest packages needed by a profile
         """
-        return DependencyUtils.installed(PackageIdentifier.parse_list(profile.packages), ipmap or self.list_installed_packages(), only_keep_latest=True, env=self.build_pf_environment(profile))
+        return DependencyUtils.installed(profile.packages, ipmap or self.list_installed_packages(), only_keep_latest=True, env=self.build_pf_environment(profile))
 
     def get_settings_value(self, *settings_id: str) -> dict:
         out = OrderedDict()

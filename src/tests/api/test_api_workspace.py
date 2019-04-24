@@ -62,20 +62,20 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
         profile.update_environment(OrderedDict([("FOO", "BAR"), ("FOO2", "BAR2")]))
         self.wm.update_profile(profile)
 
-        self.assertEqual(["container-A_1.0"], profile.packages)
+        self.assertEqual(PackageIdentifier.parse_list(["container-A_1.0"]), profile.packages)
         self.assertEqual(OrderedDict([("FOO", "BAR"), ("FOO2", "BAR2")]), profile._getenvmap())
 
         profile.add_packages(PackageIdentifier.parse_list(["container-A_2.1"]))
         self.wm.update_profile(profile)
-        self.assertEqual(["container-A_2.1"], profile.packages)
+        self.assertEqual(PackageIdentifier.parse_list(["container-A_2.1"]), profile.packages)
 
         profile.add_packages(PackageIdentifier.parse_list(["env-A_1.0"]))
         self.wm.update_profile(profile)
-        self.assertEqual(["container-A_2.1", "env-A_1.0"], profile.packages)
+        self.assertEqual(PackageIdentifier.parse_list(["container-A_2.1", "env-A_1.0"]), profile.packages)
 
         profile.remove_packages(PackageIdentifier.parse_list(["container-A_2.1"]))
         self.wm.update_profile(profile)
-        self.assertEqual(["env-A_1.0"], profile.packages)
+        self.assertEqual(PackageIdentifier.parse_list(["env-A_1.0"]), profile.packages)
 
         with self.assertRaises(Exception):
             profile.name = "fooooooo"

@@ -2,11 +2,13 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 """
 
+from collections import OrderedDict
+
 from leaf import __version__
 from leaf.core.constants import LeafSettings
 from leaf.core.jsonutils import jloadfile, jwritefile
 from leaf.core.utils import CURRENT_LEAF_VERSION, Version
-from leaf.model.config import ConfigFileWithLayer, UserConfiguration
+from leaf.model.config import ConfigFileWithLayer, UserConfiguration, WorkspaceConfiguration
 from tests.testutils import LeafTestCase
 
 
@@ -76,11 +78,32 @@ class TestApiMigration(LeafTestCase):
 
     def test_update_root_folder(self):
 
-        tmpfile = self.test_folder / "a.json"
-        jwritefile(tmpfile, {"rootfolder": str(self.workspace_folder)})
+        tmpfile = self.test_folder / "user.json"
+        jwritefile(tmpfile, {"leafMinVersion": "1.8", "rootfolder": str(self.workspace_folder)})
+
+        self.force_version("1.8")
+        user_config = UserConfiguration(tmpfile)
+        self.assertTrue("rootfolder" in user_config.json)
+        self.assertEqual(0, len(user_config._getenvmap()))
 
         self.force_version("2.0")
         user_config = UserConfiguration(tmpfile)
         self.assertFalse("rootfolder" in user_config.json)
         self.assertEqual(1, len(user_config._getenvmap()))
         self.assertEqual(str(self.workspace_folder), user_config._getenvmap()[LeafSettings.USER_PKG_FOLDER.key])
+
+    def test_update_packages_map(self):
+
+        tmpfile = self.test_folder / "ws.json"
+        jwritefile(tmpfile, {"leafMinVersion": "1.8", "profiles": {"foo": {"packages": ["test_1.0"]}, "bar": {"packages": {"test": "2.0"}}}})
+
+        self.force_version("1.8")
+        ws_config = WorkspaceConfiguration(tmpfile)
+        self.assertTrue(isinstance(ws_config.json["profiles"]["foo"]["packages"], list))
+
+        self.force_version("2.0")
+        ws_config = WorkspaceConfiguration(tmpfile)
+        self.assertTrue(isinstance(ws_config.json["profiles"]["foo"]["packages"], OrderedDict))
+        self.assertEqual("1.0", ws_config.json["profiles"]["foo"]["packages"]["test"])
+        self.assertTrue(isinstance(ws_config.json["profiles"]["bar"]["packages"], OrderedDict))
+        self.assertEqual("2.0", ws_config.json["profiles"]["bar"]["packages"]["test"])

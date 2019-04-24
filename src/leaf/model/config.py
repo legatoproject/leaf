@@ -16,7 +16,7 @@ from leaf.core.jsonutils import JsonObject, jlayer_diff, jlayer_update, jloadfil
 from leaf.core.logger import print_trace
 from leaf.core.utils import CURRENT_LEAF_VERSION, Version
 from leaf.model.environment import IEnvProvider
-from leaf.model.migration import update_root_folder
+from leaf.model.migration import update_root_folder, update_packages_map
 
 
 class ConfigFileWithLayer(JsonObject):
@@ -109,6 +109,9 @@ class WorkspaceConfiguration(ConfigFileWithLayer, IEnvProvider):
     def __init__(self, *layers):
         ConfigFileWithLayer.__init__(self, *layers)
         IEnvProvider.__init__(self, "workspace")
+
+    def _get_updaters(self) -> dict:
+        return super()._get_updaters() + ((Version("2.0"), update_packages_map),)
 
     def _getenvmap(self):
         if JsonConstants.WS_ENV not in self.json:
