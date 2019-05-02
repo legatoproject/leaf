@@ -112,7 +112,7 @@ class ConfigurationManager:
                             ip = InstalledPackage(mffile, read_only=read_only)
                             out[ip.identifier] = ip
                         except BaseException:
-                            pass
+                            print_trace("Invalid manifest found: {mf}".format(mf=mffile))
         return out
 
     def list_installed_packages(self, only_latest=False, alt_user_root_folder: Path = None) -> dict:
