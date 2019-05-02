@@ -24,10 +24,6 @@
         "version": {
             "source": "version.py",
             "description": "display leaf version"
-        },
-        "help": {
-            "source": "help.py",
-            "description": "help pages for leaf commands"
         }
     }
 }

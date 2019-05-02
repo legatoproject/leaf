@@ -111,32 +111,6 @@ class TestCliBashCompletion(LeafTestCaseWithCli):
                 ["settings.user", "settings.workspace", "settings.workspace-profile", "settings.lowercase", "settings.enum", "settings.foo"],
             )
 
-    def test_help(self):
-
-        LeafSettings.SYSTEM_PKG_FOLDERS.value = LEAF_SYSTEM_ROOT
-        completions = get_completion_list("help", sort=True)
-        for word in (
-            "build",
-            "colors",
-            "config",
-            "env",
-            "feature",
-            "getsrc",
-            "init",
-            "manifest",
-            "package",
-            "profile",
-            "remote",
-            "run",
-            "search",
-            "select",
-            "setup",
-            "shell",
-            "status",
-            "update",
-        ):
-            self.assertTrue(word in completions)
-
     def test_run(self):
         self.leaf_exec(("package", "install"), "scripts_1.0")
 

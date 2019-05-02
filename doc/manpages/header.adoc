@@ -1,4 +1,0 @@
-:man manual: Leaf Manual
-:man source: leaf
-:man version: {VERSION}
-

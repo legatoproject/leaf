@@ -6,14 +6,11 @@ from setuptools import setup
 
 ROOT_FOLDER = Path(__file__).parent
 RESOURCES_FOLDER = ROOT_FOLDER / "resources"
-MANPAGE_FOLDER = RESOURCES_FOLDER / "man" / "man1"
 
 
 def _find_resources():
     if not RESOURCES_FOLDER.exists():
         raise ValueError("Cannot find resources folder")
-    if not MANPAGE_FOLDER.exists():
-        raise ValueError("Manpages have not been generated yet")
 
     resources_map = {}
 

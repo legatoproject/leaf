@@ -2,24 +2,17 @@
 
 # Setup directories
 DIST:=dist
-MAN_OUTPUT_DIR?=resources/man
-MAN_INPUT_DIR?=doc/manpages
 LEAF_TEST_TOX_ARGS?=
 VENV_PYTHON_PATH?=python3
 
 #.SILENT:
-.PHONY: docker-build docker-test clean test sdist manpages
+.PHONY: docker-build docker-test clean test sdist
 
-all: manpages sdist
+all: sdist
 
 clean:
 	rm -rf $(MAN_OUTPUT_DIR) $(DIST)
 	rm -rf .coverage coverage-report/ flake-report/ tests_*.xml build/
-
-manpages:
-	rm -rf $(MAN_OUTPUT_DIR)
-	mkdir -p $(MAN_OUTPUT_DIR)/man1
-	./doc/manpages/mkman.sh $(MAN_INPUT_DIR) $(MAN_OUTPUT_DIR)/man1
 
 docker-image:
 	docker build -t "leaf-test:latest" docker/
@@ -31,7 +24,7 @@ docker-test:
 		-e LEAF_TEST_TOX_ARGS \
 		-e LEAF_TEST_PYTEST_ARGS \
 		leaf-test:latest \
-		sh -c 'cp -R /mnt/leaf /leaf && cd /leaf && git clean -fdX && make clean manpages test'
+		sh -c 'cp -R /mnt/leaf /leaf && cd /leaf && git clean -fdX && make clean test'
 
 venv: requirements.txt
 	virtualenv -p $(VENV_PYTHON_PATH) venv --no-site-packages

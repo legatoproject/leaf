@@ -26,14 +26,7 @@ Install dependencies:
 ```shell
 $ sudo apt-get install --no-install-recommends \
                        python3 python3-all python3-requests python3-argcomplete \
-                       python3-setuptools python3-setuptools-scm python3-pytest \
-                       asciidoc-base docbook docbook-xml xsltproc xmlto
-```
-
-Build the man pages:
-
-```shell
-$ make manpages
+                       python3-setuptools python3-setuptools-scm python3-pytest
 ```
 
 Install *leaf* on your system: using python standard *setup.py*
