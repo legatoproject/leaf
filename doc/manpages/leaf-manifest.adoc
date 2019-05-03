@@ -28,6 +28,7 @@ Example *info* node content:
     "date": "Thu May 24 09:58:43 UTC 2018",
     "master": true,
     "upgrade": false,
+    "finalSize": 1048576,
     "leafMinVersion": "1.0",
     "tags": [
       "mytag"
@@ -97,6 +98,14 @@ used.
 Flags the packages as _upgradable_ (boolean value).
 +
 See *leaf help package* (*upgrade* command section) for more information.
+
+*finalSize*::
+
+Final installed package folder size (in bytes), once extraction is done and install steps are executed.
++
+The installed size is automatically reckoned if this property is not specified.
+Using this property is useful if some extra processing is done in the install steps (see below),
+resulting in a bigger installed size.
 
 *leafMinVersion*::
 

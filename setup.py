@@ -20,7 +20,7 @@ def _find_resources():
     def visit(folder):
         key = str(folder.relative_to(RESOURCES_FOLDER))
         for item in folder.iterdir():
-            if item.is_dir():
+            if item.is_dir() and not str(item).endswith("__pycache__"):
                 visit(item)
             else:
                 if key not in resources_map:
@@ -32,9 +32,9 @@ def _find_resources():
     out = []
     for folder, items in resources_map.items():
         out.append((folder, items))
-        print("    Resources in {}".format(folder))
+        print("    Resources in {0}".format(folder))
         for item in items:
-            print("        {}".format(item))
+            print("        {0}".format(item))
     return out
 
 
