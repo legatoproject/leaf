@@ -82,7 +82,7 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         self.leaf_exec(("profile", "create"), "foo", expected_rc=2)
 
     def test_auto_find_workspace(self):
-        pf_config_file = self.ws_folder / LeafFiles.WS_CONFIG_FILENAME
+        pf_config_file = self.workspace_folder / LeafFiles.WS_CONFIG_FILENAME
         self.assertFalse(pf_config_file.exists())
 
         self.leaf_exec("init")
@@ -91,9 +91,9 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         self.leaf_exec("select", "foo")
 
         self.leaf_exec("status")
-        self.leaf_exec("select", "foo", alt_ws=self.alt_ws_folder, expected_rc=2)
+        self.leaf_exec("select", "foo", alt_ws=self.alt_workspace_folder, expected_rc=2)
 
-        subfolder = self.ws_folder / "foo" / "bar"
+        subfolder = self.workspace_folder / "foo" / "bar"
         subfolder.mkdir(parents=True)
         self.leaf_exec("select", "foo", alt_ws=subfolder, expected_rc=2)
 
@@ -124,7 +124,7 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         self.leaf_exec("status")
         self.leaf_exec(("env", "print"))
         self.check_profile_content("foo", ["container-A", "container-C", "container-D"])
-        data_folder = self.ws_folder / LeafFiles.WS_DATA_FOLDERNAME
+        data_folder = self.workspace_folder / LeafFiles.WS_DATA_FOLDERNAME
         self.assertTrue(data_folder.exists())
         rmtree_force(data_folder)
         self.assertFalse(data_folder.exists())
@@ -161,15 +161,9 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         self.leaf_exec(("profile", "sync"))
         self.leaf_exec(("env", "profile"), "ENV-A")
         self.leaf_exec(("env", "profile"))
-        self.leaf_exec(
-            ("env", "profile"),
-            "--activate-script",
-            str(self.ws_folder / "in.env"),
-            "--deactivate-script",
-            str(self.ws_folder / "out.env"),
-        )
-        self.assertTrue((self.ws_folder / "in.env").exists())
-        self.assertTrue((self.ws_folder / "out.env").exists())
+        self.leaf_exec(("env", "profile"), "--activate-script", str(self.workspace_folder / "in.env"), "--deactivate-script", str(self.workspace_folder / "out.env"))
+        self.assertTrue((self.workspace_folder / "in.env").exists())
+        self.assertTrue((self.workspace_folder / "out.env").exists())
 
     def test_conditional_install_user(self):
         self.leaf_exec("init")
@@ -315,8 +309,8 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
 
         self.leaf_exec(("env", "profile"), "--set FOO=BAR", expected_rc=2)
         self.leaf_exec(("env", "profile"))
-        in_script = self.ws_folder / "in.env"
-        out_script = self.ws_folder / "out.env"
+        in_script = self.workspace_folder / "in.env"
+        out_script = self.workspace_folder / "out.env"
         self.leaf_exec(("env", "print"), "--activate-script", in_script, "--deactivate-script", out_script)
         self.assertTrue(in_script.exists())
         self.assertTrue(out_script.exists())
@@ -395,22 +389,45 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         )
         self.check_profile_content("foo", ["condition", "condition-A", "condition-C", "condition-F"])
 
-    def test_features(self):
-        self.leaf_exec(("feature", "list"))
-        self.leaf_exec(("feature", "query"), "featureWithDups")
-        self.leaf_exec(("feature", "toggle"), "--user", "featureWithDups", "enum1")
-        self.leaf_exec(("feature", "toggle"), "--workspace", "featureWithDups", "enum1", expected_rc=2)
-        self.leaf_exec(("feature", "toggle"), "--profile", "featureWithDups", "enum1", expected_rc=2)
+    def test_settings1(self):
 
-        self.leaf_exec(("init"))
-        self.leaf_exec(("feature", "toggle"), "--user", "featureWithDups", "enum1")
-        self.leaf_exec(("feature", "toggle"), "--workspace", "featureWithDups", "enum1")
-        self.leaf_exec(("feature", "toggle"), "--profile", "featureWithDups", "enum1", expected_rc=2)
+        self.leaf_exec(("config", "list"))
+        self.leaf_exec(("config", "list"), "-a")
 
+        self.leaf_exec(("config", "get"), "settings.lowercase", expected_rc=2)
+        self.leaf_exec(("package", "install"), "settings_1.0")
+        self.leaf_exec(("config", "get"), "settings.lowercase")
+
+        self.leaf_exec(("config", "set"), "--user", "settings.lowercase", "HELLO", expected_rc=2)
+        self.leaf_exec(("config", "set"), "--user", "settings.lowercase", "hello")
+
+        self.leaf_exec(("config", "set"), "--workspace", "settings.lowercase", "hello", expected_rc=2)
+        self.leaf_exec("init")
+        self.leaf_exec(("config", "set"), "--workspace", "settings.lowercase", "hello")
+
+        self.leaf_exec(("config", "set"), "--profile", "settings.lowercase", "hello", expected_rc=2)
+        self.leaf_exec(("profile", "create"), "myprofile")
+        self.leaf_exec(("config", "set"), "--profile", "settings.lowercase", "hello")
+
+    def test_settings2(self):
+
+        self.leaf_exec(("package", "install"), "settings_1.0")
+        self.leaf_exec(("config", "get"), "settings.foo")
+
+        self.leaf_exec("init")
         self.leaf_exec(("profile", "create"), "foo")
-        self.leaf_exec(("feature", "toggle"), "--user", "featureWithDups", "enum1")
-        self.leaf_exec(("feature", "toggle"), "--workspace", "featureWithDups", "enum1")
-        self.leaf_exec(("feature", "toggle"), "--profile", "featureWithDups", "enum1")
+        self.leaf_exec(("profile", "config"), "-p" "condition")
+
+        self.leaf_exec(("profile", "sync"))
+        self.check_installed_packages(["condition_1.0", "condition-B_1.0", "condition-D_1.0", "condition-F_1.0", "condition-H_1.0", "settings_1.0"])
+        self.check_profile_content("foo", ["condition-B", "condition-D", "condition-F", "condition-H", "condition"])
+
+        self.leaf_exec(("config", "set"), "--profile", "settings.foo", "BAR")
+        self.leaf_exec(("profile", "sync"))
+        self.check_installed_packages(
+            ["condition_1.0", "condition-A_1.0", "condition-B_1.0", "condition-C_1.0", "condition-D_1.0", "condition-F_1.0", "condition-H_1.0", "settings_1.0"]
+        )
+        self.check_profile_content("foo", ["condition-A", "condition-C", "condition-F", "condition"])
 
     def test_sync(self):
         sync_file = self.install_folder / "sync_1.0" / "sync.log"
@@ -445,6 +462,20 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         self.leaf_exec(("profile", "sync"))
         self.assertTrue(sync_file.exists())
         self.assertEqual(["MYVALUE", "MYVALUE", "MYVALUE", "MYVALUE AAA", "MYVALUE BBB", "MYVALUE BBB"], get_lines(sync_file))
+
+    def test_profile_relative_path(self):
+        self.leaf_exec("init")
+        self.leaf_exec(("profile", "create"), "foo")
+        self.leaf_exec(("profile", "config"), "-p", "env-A_1.0")
+        self.leaf_exec(("profile", "sync"))
+        with self.assertStdout("test_profile_relative_path.out"):
+            self.leaf_exec(("env", "print"))
+            print("------------------------")
+            self.leaf_exec(["config", "set"], "leaf.profile.relative.disable", "1")
+            self.leaf_exec(("env", "print"))
+            print("------------------------")
+            self.leaf_exec(["config", "set"], "leaf.profile.relative.disable", "0")
+            self.leaf_exec(("env", "print"))
 
 
 class TestCliWorkspaceManagerVerbose(TestCliWorkspaceManager):

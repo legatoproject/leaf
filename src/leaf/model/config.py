@@ -10,11 +10,13 @@ Leaf Package Manager
 from collections import OrderedDict
 from pathlib import Path
 
-from leaf import __version__
-from leaf.core.constants import JsonConstants, LeafFiles
+from leaf.core.constants import JsonConstants
+from leaf.core.error import LeafOutOfDateException
 from leaf.core.jsonutils import JsonObject, jlayer_diff, jlayer_update, jloadfile, jwritefile
-from leaf.core.utils import check_leaf_min_version
+from leaf.core.logger import print_trace
+from leaf.core.utils import CURRENT_LEAF_VERSION, Version
 from leaf.model.environment import IEnvProvider
+from leaf.model.migration import update_root_folder, update_packages_map
 
 
 class ConfigFileWithLayer(JsonObject):
@@ -31,17 +33,46 @@ class ConfigFileWithLayer(JsonObject):
         JsonObject.__init__(self, model)
         self._check_model()
 
+    def _get_updaters(self) -> tuple:
+        return ()
+
     def _check_model(self):
         """
         Method used to check the model and do mandatory migration
         """
-        pass
+        # Check leaf min version
+        if CURRENT_LEAF_VERSION < self.leaf_min_version:
+            raise LeafOutOfDateException("Leaf has to be updated to version {min_ver}".format(min_ver=self.leaf_min_version))
+
+        # perform upgrade if needed
+        if CURRENT_LEAF_VERSION > self.leaf_min_version:
+            # Perform migration
+            for update_version, updater in self._get_updaters():
+                if update_version is None or self.leaf_min_version < update_version:
+                    print_trace("Perform config update: {fnc.__name__} ({update_version})".format(fnc=updater, update_version=update_version))
+                    updater(self)
 
     def write_layer(self, output: Path, previous_layer: Path = None, pp: bool = False):
+        # Update last leaf version field
+        self.leaf_min_version = str(CURRENT_LEAF_VERSION)
+        # Extract layer to write
         data = self.json
         if previous_layer is not None and previous_layer.exists():
             data = jlayer_diff(jloadfile(previous_layer), self.json)
+        # Write layer
         jwritefile(output, data, pp=pp)
+
+    @property
+    def leaf_min_version(self):
+        return Version(self.json.get(JsonConstants.LEAFMINVERSION, "0"))
+
+    @leaf_min_version.setter
+    def leaf_min_version(self, version):
+        if version is None:
+            if JsonConstants.LEAFMINVERSION in self.json:
+                del self.json[JsonConstants.LEAFMINVERSION]
+        else:
+            self.json[JsonConstants.LEAFMINVERSION] = str(version)
 
 
 class UserConfiguration(ConfigFileWithLayer, IEnvProvider):
@@ -54,13 +85,8 @@ class UserConfiguration(ConfigFileWithLayer, IEnvProvider):
         ConfigFileWithLayer.__init__(self, *layers)
         IEnvProvider.__init__(self, "user configuration")
 
-    def _check_model(self):
-        super()._check_model()
-        # Check that all remotes have an URL
-        if JsonConstants.CONFIG_REMOTES in self.json:
-            remotes = self.json[JsonConstants.CONFIG_REMOTES]
-            for alias in [alias for alias, value in remotes.items() if JsonConstants.CONFIG_REMOTE_URL not in value]:
-                del remotes[alias]
+    def _get_updaters(self) -> dict:
+        return super()._get_updaters() + ((Version("2.0"), update_root_folder),)
 
     def _getenvmap(self):
         if JsonConstants.CONFIG_ENV not in self.json:
@@ -73,17 +99,6 @@ class UserConfiguration(ConfigFileWithLayer, IEnvProvider):
             self.json[JsonConstants.CONFIG_REMOTES] = OrderedDict()
         return self.json[JsonConstants.CONFIG_REMOTES]
 
-    @property
-    def install_folder(self) -> Path:
-        if JsonConstants.CONFIG_ROOT in self.json:
-            return Path(self.json[JsonConstants.CONFIG_ROOT])
-        # Default value
-        return LeafFiles.DEFAULT_LEAF_ROOT
-
-    @install_folder.setter
-    def install_folder(self, folder: Path):
-        self.json[JsonConstants.CONFIG_ROOT] = str(folder)
-
 
 class WorkspaceConfiguration(ConfigFileWithLayer, IEnvProvider):
 
@@ -95,9 +110,8 @@ class WorkspaceConfiguration(ConfigFileWithLayer, IEnvProvider):
         ConfigFileWithLayer.__init__(self, *layers)
         IEnvProvider.__init__(self, "workspace")
 
-    def _check_model(self):
-        check_leaf_min_version(self.jsonget(JsonConstants.INFO_LEAF_MINVER), exception_message="Leaf has to be updated to work with this workspace")
-        self.json[JsonConstants.INFO_LEAF_MINVER] = __version__
+    def _get_updaters(self) -> dict:
+        return super()._get_updaters() + ((Version("2.0"), update_packages_map),)
 
     def _getenvmap(self):
         if JsonConstants.WS_ENV not in self.json:
@@ -109,3 +123,19 @@ class WorkspaceConfiguration(ConfigFileWithLayer, IEnvProvider):
         if JsonConstants.WS_PROFILES not in self.json:
             self.json[JsonConstants.WS_PROFILES] = OrderedDict()
         return self.json[JsonConstants.WS_PROFILES]
+
+
+class ConfigContextManager:
+    def __init__(self, read_function: callable, write_function: callable):
+        self.__read = read_function
+        self.__write = write_function
+        self.__config = None
+        pass
+
+    def __enter__(self):
+        self.__config = self.__read()
+        return self.__config
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if not exc_type and not exc_value and not traceback:
+            self.__write(self.__config)

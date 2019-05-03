@@ -10,7 +10,6 @@ from collections import OrderedDict
 from pathlib import Path
 
 from leaf.model.environment import Environment
-from leaf.model.package import PackageIdentifier
 from leaf.model.workspace import Profile
 from leaf.rendering.alignment import HAlign
 from leaf.rendering.renderer.renderer import Renderer
@@ -85,7 +84,7 @@ class ProfileListRenderer(Renderer):
 
             # Included packages
             included_pkgmap = OrderedDict()
-            for pi in map(PackageIdentifier.parse, profile.packages):
+            for pi in profile.packages:
                 included_pkgmap[pi] = None
                 for ip in dependencies_iplist:
                     if ip.identifier == pi:

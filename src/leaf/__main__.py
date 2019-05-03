@@ -13,7 +13,7 @@ from signal import SIGINT, signal
 from leaf.api import ConfigurationManager
 from leaf.cli.commands import LeafRootCommand
 from leaf.cli.plugins import LeafPluginManager
-from leaf.core.constants import LeafFiles, LeafSettings
+from leaf.core.constants import LeafSettings
 from leaf.core.error import UserCancelException
 from leaf.core.utils import check_supported_python_version
 
@@ -37,10 +37,9 @@ def run_leaf(argv, catch_int_sig=True):
     cm = ConfigurationManager()
     cm.init_leaf_settings()
     # Plugin manager
-    pm = LeafPluginManager()
+    pm = None
     if not LeafSettings.NOPLUGIN.as_boolean():
-        pm.load_builtin_plugins(LeafFiles.find_leaf_resource(LeafFiles.PLUGINS_DIRNAME, check_exists=False))
-        pm.load_user_plugins(cm.read_user_configuration().install_folder)
+        pm = LeafPluginManager(cm.list_installed_packages(only_latest=True))
     # Setup the app CLI parser
     parser = LeafRootCommand(pm).setup(None)
     # Try to enable argcomplete library

@@ -22,7 +22,6 @@ from leaf.core.utils import (
     fs_check_free_space,
     fs_compute_total_size,
     get_cached_artifact_name,
-    is_folder_ignored,
     mark_folder_as_ignored,
     mkdir_tmp_leaf_dir,
     mkdirs,
@@ -72,17 +71,6 @@ class PackageManager(RemoteManager):
                 # Update the mtime
                 self.download_cache_folder.touch()
 
-    def get_install_folder(self):
-        out = self.read_user_configuration().install_folder
-        if not out.exists():
-            out.mkdir()
-        return out
-
-    def set_install_folder(self, folder: Path):
-        usrc = self.read_user_configuration()
-        usrc.install_folder = folder
-        self.write_user_configuration(usrc)
-
     def list_available_packages(self, smart_refresh=True) -> dict:
         """
         List all available package
@@ -110,20 +98,6 @@ class PackageManager(RemoteManager):
 
         if len(out) == 0:
             raise NoPackagesInCacheException()
-        return out
-
-    def list_installed_packages(self) -> dict:
-        """
-        Return all installed packages
-        @return: PackageIdentifier/InstalledPackage dict
-        """
-        out = OrderedDict()
-        for folder in self.get_install_folder().iterdir():
-            if folder.is_dir() and not is_folder_ignored(folder):
-                manifest = folder / LeafFiles.MANIFEST
-                if manifest.is_file():
-                    ip = InstalledPackage(manifest)
-                    out[ip.identifier] = ip
         return out
 
     def __download_ap(self, ap: AvailablePackage) -> LeafArtifact:
@@ -257,14 +231,14 @@ class PackageManager(RemoteManager):
                             extracted_totalsize += la.final_size
                         else:
                             extracted_totalsize += la.get_total_size()
-                    fs_check_free_space(self.get_install_folder(), extracted_totalsize)
+                    fs_check_free_space(self.install_folder, extracted_totalsize)
 
                     # Extract la list
                     for la in la_to_install:
                         self.logger.print_default(
                             "[{current}/{total}] Installing {la.identifier}".format(current=(len(out) + 1), total=len(la_to_install), la=la)
                         )
-                        ip = self.__extract_artifact(la, env, self.get_install_folder(), keep_folder_on_error=keep_folder_on_error)
+                        ip = self.__extract_artifact(la, env, self.install_folder, keep_folder_on_error=keep_folder_on_error)
                         out.append(ip)
 
             finally:
@@ -281,16 +255,18 @@ class PackageManager(RemoteManager):
         with self.application_lock.acquire():
             ipmap = self.list_installed_packages()
 
-            iplist_to_remove = DependencyUtils.uninstall(pilist, ipmap)
+            iplist_to_remove = DependencyUtils.uninstall(pilist, ipmap, logger=self.logger)
 
             if len(iplist_to_remove) == 0:
-                self.logger.print_default("No package to remove (to keep dependencies)")
+                self.logger.print_default("No package to remove")
             else:
                 # Confirm
                 text = ", ".join([str(ip.identifier) for ip in iplist_to_remove])
                 self.logger.print_quiet("Packages to uninstall: {packages}".format(packages=text))
                 self.print_with_confirm(raise_on_decline=True)
                 for ip in iplist_to_remove:
+                    if ip.read_only:
+                        raise LeafException("Cannot uninstall system package {ip.identifier}".format(ip=ip))
                     self.logger.print_default("Removing {ip.identifier}".format(ip=ip))
                     self.__execute_steps(ip.identifier, ipmap, StepExecutor.uninstall)
                     self.logger.print_verbose("Remove folder: {ip.folder}".format(ip=ip))
@@ -324,12 +300,12 @@ class PackageManager(RemoteManager):
         se = StepExecutor(self.logger, ip, vr, env=env)
         se_func(se)
 
-    def build_packages_environment(self, items: list):
+    def build_packages_environment(self, items: list, ipmap=None):
         """
         Get the env vars declared by given packages
         @param items: a list of InstalledPackage or PackageIdentifier
         """
-        ipmap = self.list_installed_packages()
+        ipmap = ipmap or self.list_installed_packages()
         out = Environment()
         for item in items:
             ip = None

@@ -8,16 +8,18 @@ Leaf Package Manager
 """
 
 from leaf.cli.base import LeafCommand
-from leaf.cli.cliutils import init_common_args
+from leaf.cli.cliutils import get_optional_arg, init_common_args
+from leaf.cli.completion import complete_profiles
 from leaf.model.modelutils import find_latest_version, find_manifest_list
 from leaf.model.package import PackageIdentifier
 from leaf.rendering.renderer.profile import ProfileListRenderer
 
 
 class AbstractProfileCommand(LeafCommand):
-    def __init__(self, name, description, profile_nargs=None):
+    def __init__(self, name, description, profile_nargs=None, profile_completer=None):
         LeafCommand.__init__(self, name, description)
         self.profile_nargs = profile_nargs
+        self.profile_completer = profile_completer
 
     def _find_profile_name(self, args, wm=None):
         if hasattr(args, "profiles"):
@@ -33,21 +35,25 @@ class AbstractProfileCommand(LeafCommand):
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
         if self.profile_nargs is not None:
-            parser.add_argument("profiles", nargs=self.profile_nargs, metavar="PROFILE", help="the profile name")
+            profile_arg = parser.add_argument("profiles", nargs=self.profile_nargs, metavar="PROFILE", help="the profile name")
+            if self.profile_completer is not None:
+                profile_arg.completer = self.profile_completer
 
 
 class ProfileListCommand(AbstractProfileCommand):
     def __init__(self):
-        AbstractProfileCommand.__init__(self, "list", "list profiles", profile_nargs="*")
+        AbstractProfileCommand.__init__(self, "list", "list profiles", profile_nargs="*", profile_completer=complete_profiles)
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager()
         name = self._find_profile_name(args)
         profiles = []
-        if "profiles" in vars(args) and len(args.profiles) > 0:
-            for name in args.profiles:
-                profiles.append(wm.get_profile(name))
-        else:
+
+        for name in get_optional_arg(args, "profiles", []):
+            profiles.append(wm.get_profile(name))
+
+        # If not profile given, list all profiles
+        if len(profiles) == 0:
             profiles.extend(wm.list_profiles().values())
 
         ipmap = wm.list_installed_packages()
@@ -59,7 +65,7 @@ class ProfileListCommand(AbstractProfileCommand):
             if sync:
                 iplist = wm.get_profile_dependencies(profile)
             else:
-                iplist = find_manifest_list(list(map(PackageIdentifier.parse, profile.packages)), ipmap, ignore_unknown=True)
+                iplist = find_manifest_list(profile.packages, ipmap, ignore_unknown=True)
             renderer.append_profile(profile, sync, iplist)
 
         wm.print_renderer(renderer)
@@ -95,7 +101,7 @@ class ProfileRenameCommand(AbstractProfileCommand):
 
 class ProfileDeleteCommand(AbstractProfileCommand):
     def __init__(self):
-        AbstractProfileCommand.__init__(self, "delete", "delete profile(s)", profile_nargs="*")
+        AbstractProfileCommand.__init__(self, "delete", "delete profile(s)", profile_nargs="*", profile_completer=complete_profiles)
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager()
@@ -107,7 +113,7 @@ class ProfileDeleteCommand(AbstractProfileCommand):
 
 class ProfileSwitchCommand(AbstractProfileCommand):
     def __init__(self):
-        AbstractProfileCommand.__init__(self, "switch", "set current profile", profile_nargs=1)
+        AbstractProfileCommand.__init__(self, "switch", "set current profile", profile_nargs=1, profile_completer=complete_profiles)
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager()
@@ -119,7 +125,9 @@ class ProfileSwitchCommand(AbstractProfileCommand):
 
 class ProfileSyncCommand(AbstractProfileCommand):
     def __init__(self):
-        AbstractProfileCommand.__init__(self, "sync", "install packages needed for current or given profile", profile_nargs="?")
+        AbstractProfileCommand.__init__(
+            self, "sync", "install packages needed for current or given profile", profile_nargs="?", profile_completer=complete_profiles
+        )
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager()
@@ -131,7 +139,7 @@ class ProfileSyncCommand(AbstractProfileCommand):
 
 class ProfileConfigCommand(AbstractProfileCommand):
     def __init__(self):
-        AbstractProfileCommand.__init__(self, "config", "configure profile to add and remove packages", profile_nargs="?")
+        AbstractProfileCommand.__init__(self, "config", "configure profile to add and remove packages", profile_nargs="?", profile_completer=complete_profiles)
 
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
@@ -152,7 +160,7 @@ class ProfileConfigCommand(AbstractProfileCommand):
                     pilist.append(find_latest_version(motif, valid_pilist))
             profile.add_packages(pilist)
         if args.pkg_rm_list is not None:
-            valid_pilist = profile.packages_map.values()
+            valid_pilist = profile.packages
             pilist = []
             for motif in args.pkg_rm_list:
                 if PackageIdentifier.is_valid_identifier(motif):

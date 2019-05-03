@@ -6,10 +6,14 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 """
-import os
+import operator
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from pathlib import Path
+
+from leaf.core import REFERENCE_ENVIRON
+from leaf.core.error import InvalidSettingException
+from leaf.core.settings import LeafSetting
 
 
 class Environment:
@@ -39,70 +43,96 @@ class Environment:
 
     def __init__(self, label: str = None, content: dict or list = None):
         self.__label = label
-        self.__env = []
-        self.__children = []
+        self.__values = []
+        self.__sub_env_list = []
+
+        # Init content
         if isinstance(content, dict):
             for k, v in content.items():
                 self.set_variable(k, v)
         elif isinstance(content, list):
             for k, v in content:
                 self.set_variable(k, v)
+        elif content is not None:
+            raise ValueError()
 
-    @property
-    def env(self):
-        return self.__env
-
-    def append(self, child):
-        if child is not None:
-            if not isinstance(child, Environment):
-                raise ValueError()
-            self.__children.append(child)
+    def append(self, subenv):
+        if isinstance(subenv, Environment):
+            self.__sub_env_list.append(subenv)
+        elif subenv is not None:
+            raise ValueError()
 
     def print_env(self, kv_consumer: callable = None, comment_consumer: callable = None):
-        if len(self.__env) > 0:
+        # Start with sub env
+        for e in self.__sub_env_list:
+            e.print_env(kv_consumer, comment_consumer)
+        # Print self
+        if len(self.__values) > 0:
             if self.__label is not None and comment_consumer is not None:
                 comment_consumer(self.__label)
             if kv_consumer is not None:
-                for k, v in self.env:
+                for k, v in self.__values:
                     kv_consumer(k, v)
-        for e in self.__children:
-            e.print_env(kv_consumer, comment_consumer)
 
     def tolist(self, acc=None):
         if acc is None:
             acc = []
-        acc += self.__env
-        for e in self.__children:
+        # Start by sub environments
+        for e in self.__sub_env_list:
             e.tolist(acc=acc)
+        # Add current values
+        acc += self.__values
         return acc
 
     def keys(self):
-        return set(map(lambda e: e[0], self.tolist()))
+        return set(map(operator.itemgetter(0), self.tolist()))
+
+    def find_setting(self, setting: LeafSetting) -> str:
+        out = self.find_value(setting.key)
+        # Check that the value is valid
+        if out is not None and not setting.is_valid(out):
+            raise InvalidSettingException(setting, out)
+        return out if out is not None else setting.value
 
     def find_value(self, key: str):
         out = None
-        for k, v in self.__env:
-            if k == key:
-                out = str(v)
-        for c in self.__children:
+        # First search value in sub envs
+        for c in self.__sub_env_list:
             out2 = c.find_value(key)
             if out2 is not None:
                 out = out2
+        # Search value in self values
+        for k, v in self.__values:
+            if k == key:
+                out = str(v)
         return out
 
+    def is_set(self, key):
+        # First search value in sub envs
+        for e in self.__sub_env_list:
+            if e.is_set(key):
+                return True
+        # Search value in self values
+        for k, _ in self.__values:
+            if k == key:
+                return True
+        return False
+
     def unset_variable(self, key, reccursive=True):
-        self.__env = list(filter(lambda kv: kv[0] != key, self.__env))
+        self.__values = list(filter(lambda kv: kv[0] != key, self.__values))
         if reccursive:
-            for c in self.__children:
+            for c in self.__sub_env_list:
                 c.unset_variable(key, reccursive=reccursive)
 
     def set_variable(self, key, value, replace=False, prepend=False):
+        if value is None:
+            raise ValueError("{key} cannot be null".format(key=key))
         if replace:
             self.unset_variable(key, reccursive=False)
         if prepend:
-            self.__env.insert(0, (key, value))
+            self.__values.insert(0, (key, value))
         else:
-            self.__env.append((key, value))
+            self.__values.append((key, value))
 
     def generate_scripts(self, activate_file: Path = None, deactivate_file: Path = None):
         """
@@ -111,14 +141,18 @@ class Environment:
         if deactivate_file is not None:
             resetmap = OrderedDict()
             for k in self.keys():
-                resetmap[k] = os.environ.get(k)
+                resetmap[k] = REFERENCE_ENVIRON.get(k)
             with deactivate_file.open("w") as fp:
-                for k, v in resetmap.items():
-                    # If the value was not present in env before, reset it
+                # First loop reset
+                for k in sorted(resetmap.keys()):
+                    v = resetmap[k]
+                    if v is not None:
+                        fp.write(Environment.tostring_export(k, v) + "\n")
+                # Second loop, unset
+                for k in sorted(resetmap.keys()):
+                    v = resetmap[k]
                     if v is None:
                         fp.write(Environment.tostring_unset(k) + "\n")
-                    else:
-                        fp.write(Environment.tostring_export(k, v) + "\n")
         if activate_file is not None:
             with activate_file.open("w") as fp:
 

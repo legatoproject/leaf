@@ -17,10 +17,11 @@ from pathlib import Path
 from tarfile import TarFile
 
 from leaf.core.constants import JsonConstants, LeafFiles
-from leaf.core.error import InvalidPackageNameException, LeafException
+from leaf.core.error import InvalidPackageNameException
 from leaf.core.jsonutils import JsonObject, jload, jloadfile
 from leaf.core.utils import url_resolve, version_comparator_lt, version_string_to_tuple
 from leaf.model.environment import Environment
+from leaf.model.settings import ScopeSetting
 
 IDENTIFIER_GETTER = operator.attrgetter("identifier")
 
@@ -234,13 +235,6 @@ class Manifest(JsonObject):
                 out.append(cpi)
         return out
 
-    @property
-    def features(self) -> list:
-        out = []
-        for name, json in self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_FEATURES], default={}).items():
-            out.append(Feature(name, json))
-        return out
-
     def __str__(self):
         return str(self.identifier)
 
@@ -319,30 +313,45 @@ class InstalledPackage(Manifest):
     Represent an installed package
     """
 
-    def __init__(self, mffile: Path):
+    def __init__(self, mffile: Path, read_only=False):
         Manifest.__init__(self, jloadfile(mffile))
         self.__folder = mffile.parent
+        self.__read_only = read_only
+        if read_only:
+            self.custom_tags.append("system")
 
     @property
     def folder(self):
         return self.__folder
 
     @property
+    def read_only(self):
+        return self.__read_only
+
+    @property
     def envmap(self):
         return self.jsonget(JsonConstants.ENV, default={})
 
     @property
-    def binaries(self) -> list:
+    def binaries(self) -> dict:
         out = OrderedDict()
         for name, json in self.jsonget(JsonConstants.ENTRYPOINTS, default={}).items():
             out[name] = Entrypoint(name, json)
         return out
 
     @property
-    def plugins(self) -> list:
+    def plugins(self) -> dict:
         out = OrderedDict()
         for name, json in self.jsonget(JsonConstants.PLUGINS, default={}).items():
             out[name] = PluginDefinition(name, self, json)
+        return out
+
+    @property
+    def settings(self) -> dict:
+        out = OrderedDict()
+        for identifier, json in self.jsonget(JsonConstants.SETTINGS, default={}).items():
+            sid = "{pkgname}.{id}".format(pkgname=self.name, id=identifier)
+            out[sid] = ScopeSetting.from_json(sid, json)
         return out
 
 
@@ -391,97 +400,6 @@ class PluginDefinition(JsonObject):
     @property
     def classname(self):
         return self.jsonget(JsonConstants.PLUGIN_CLASS)
-
-
-class Feature(JsonObject):
-
-    """
-    Reprensent a leaf feature, ie constants for a given env var
-    """
-
-    def __init__(self, name, json):
-        JsonObject.__init__(self, json)
-        self.__name = name
-        self.__aliases = []
-
-    @property
-    def name(self):
-        return self.__name
-
-    def __str__(self):
-        return "{name}={values}".format(name=self.name, values="|".join(sorted(self.values.keys())))
-
-    def add_alias(self, other):
-        if not isinstance(other, Feature):
-            raise ValueError()
-        if self.name != other.name:
-            raise LeafException("Cannot alias feature with different name")
-        if self != other and other not in self.__aliases:
-            self.__aliases.append(other)
-
-    def get_value(self, enum):
-        self.check()
-        out = []
-
-        def visit(f):
-            if enum in f.values:
-                value = f.values.get(enum)
-                if value not in out:
-                    out.append(value)
-            for alias in f.__aliases:
-                visit(alias)
-
-        visit(self)
-        if len(out) == 0:
-            raise LeafException("Cannot find {enum} in feature {name}".format(enum=enum, name=self.name))
-        if len(out) > 1:
-            raise LeafException("Multiple definition for {enum} in feature {name}".format(enum=enum, name=self.name))
-        return out[0]
-
-    def retrieve_enums_for_value(self, value):
-        self.check()
-        out = []
-
-        def visit(f):
-            for k, v in f.values.items():
-                if v == value and k not in out:
-                    out.append(k)
-            for alias in f.__aliases:
-                visit(alias)
-
-        visit(self)
-        return out
-
-    def check(self):
-        def visit(f, expected_key):
-            if f.key != expected_key:
-                raise LeafException("Invalid feature {name}".format(name=self.name))
-            for alias in f.__aliases:
-                visit(alias, expected_key)
-
-        visit(self, self.key)
-
-    @property
-    def description(self):
-        # Can be None
-        return self.json.get(JsonConstants.INFO_FEATURE_DESCRIPTION)
-
-    @property
-    def key(self):
-        return self.json[JsonConstants.INFO_FEATURE_KEY]
-
-    @property
-    def values(self):
-        return self.json.get(JsonConstants.INFO_FEATURE_VALUES, {})
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, Feature)
-            and self.name == other.name
-            and self.key == other.key
-            and self.description == other.description
-            and self.values == other.values
-        )
 
 
 class Entrypoint(JsonObject):

@@ -106,7 +106,7 @@ def find_manifest_list(pilist, mfmap, ignore_unknown=False):
     return out
 
 
-def group_package_identifiers_by_name(pilist, pkgmap=None, sort=True) -> dict:
+def group_package_identifiers_by_name(pilist, pkgmap=None) -> dict:
     out = pkgmap if pkgmap is not None else {}
     for pi in pilist:
         if not isinstance(pi, PackageIdentifier):
@@ -117,7 +117,14 @@ def group_package_identifiers_by_name(pilist, pkgmap=None, sort=True) -> dict:
             out[pi.name] = current_pilist
         if pi not in current_pilist:
             current_pilist.append(pi)
-    if sort:
-        for pkgname in out:
-            out[pkgname] = sorted(out[pkgname])
+    for pkgname in out:
+        out[pkgname] = sorted(out[pkgname])
     return out
+
+
+def keep_latest(pilist: list) -> list:
+    pkgmap = {}
+    for pi in pilist:
+        if pi.name not in pkgmap or pi > pkgmap[pi.name]:
+            pkgmap[pi.name] = pi
+    return sorted(pkgmap.values())

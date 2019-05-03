@@ -10,6 +10,7 @@ Leaf Package Manager
 import argparse
 
 from leaf.cli.base import LeafCommand
+from leaf.cli.completion import complete_binaries
 from leaf.core.error import LeafException
 from leaf.core.logger import Verbosity
 from leaf.model.dependencies import DependencyUtils
@@ -33,7 +34,7 @@ class RunCommand(LeafCommand):
             "-p", "--package", dest="package", metavar="PKG_IDENTIFIER", type=PackageIdentifier.parse, help="search binary in specified package"
         )
         parser.add_argument("--oneline", action="store_true", help="quiet output when listing available binaries")
-        parser.add_argument("binary", metavar="BINARY_NAME", nargs=argparse.OPTIONAL, help="name of binary to execute")
+        parser.add_argument("binary", metavar="BINARY_NAME", nargs=argparse.OPTIONAL, help="name of binary to execute").completer = complete_binaries
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager(check_initialized=False)

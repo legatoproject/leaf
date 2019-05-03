@@ -1,0 +1,2 @@
+leaf.user.root = "{TESTS_FOLDER}/volatile/packages"
+leaf.cache = "{TESTS_FOLDER}/volatile/cache"

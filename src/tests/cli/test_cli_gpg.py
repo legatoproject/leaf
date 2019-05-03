@@ -26,6 +26,7 @@ class TestGPG(LeafTestCaseWithCli):
         self.cacheFile = self.cache_folder / LeafFiles.CACHE_REMOTES_FILENAME
 
     def tearDown(self):
+        LeafSettings.GPG_KEYSERVER.value = None
         LeafTestCaseWithCli.tearDown(self)
 
     def test_simple(self):

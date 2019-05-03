@@ -14,24 +14,15 @@ from multiprocessing import Process
 from time import sleep
 
 from leaf.api import PackageManager
-from leaf.core.constants import LeafSettings
-from leaf.core.error import (
-    InvalidHashException,
-    InvalidPackageNameException,
-    LeafException,
-    NoEnabledRemoteException,
-    NoRemoteException,
-    NotEnoughSpaceException,
-)
-from leaf.core.settings import Setting
-from leaf.core.utils import is_folder_ignored
+from leaf.core.error import InvalidHashException, InvalidPackageNameException, LeafException, NoEnabledRemoteException, NoRemoteException
+from leaf.core.settings import EnvVar
+from leaf.core.utils import NotEnoughSpaceException, is_folder_ignored
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
-from leaf.model.features import FeatureManager
 from leaf.model.package import AvailablePackage, InstalledPackage, LeafArtifact, PackageIdentifier
 from tests.testutils import ALT_INDEX_CONTENT, LEAF_UT_SKIP, LeafTestCaseWithRepo, env_file_to_map, get_lines
 
-HTTP_PORT = Setting("LEAF_HTTP_PORT", str(random.randint(54000, 54999)))
+HTTP_PORT = EnvVar("LEAF_HTTP_PORT", random.randint(54000, 54999))
 
 # Needed for http server
 sys.path.insert(0, os.path.abspath("../.."))
@@ -43,10 +34,6 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
 
         self.pm = PackageManager()
 
-        # Fix CI timeout
-        LeafSettings.DOWNLOAD_TIMEOUT.value = 30
-
-        self.pm.set_install_folder(self.install_folder)
         with self.assertRaises(NoRemoteException):
             self.pm.list_available_packages()
         self.assertEqual(0, len(self.pm.list_installed_packages()))
@@ -300,10 +287,10 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
 
     def test_prereq_root(self):
         motifs = ["prereq-A_1.0", "prereq-B_1.0", "prereq-C_1.0", "prereq-D_1.0", "prereq-true_1.0", "prereq-env_1.0", "prereq-false_1.0"]
-        errors = self.pm.install_prereq(PackageIdentifier.parse_list(motifs), self.alt_ws_folder, raise_on_error=False)
+        errors = self.pm.install_prereq(PackageIdentifier.parse_list(motifs), self.alt_workspace_folder, raise_on_error=False)
         self.assertEqual(1, errors)
         for m in motifs:
-            self.assertEqual("false" not in m, (self.alt_ws_folder / m).is_dir())
+            self.assertEqual("false" not in m, (self.alt_workspace_folder / m).is_dir())
 
     def test_prereq_a(self):
         self.pm.install_packages(PackageIdentifier.parse_list(["prereq-A_1.0"]))
@@ -323,12 +310,12 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
 
     def test_prereq_env(self):
         motifs = ["prereq-env_1.0"]
-        errors = self.pm.install_prereq(PackageIdentifier.parse_list(motifs), self.alt_ws_folder, raise_on_error=False)
+        errors = self.pm.install_prereq(PackageIdentifier.parse_list(motifs), self.alt_workspace_folder, raise_on_error=False)
         self.assertEqual(0, errors)
-        dump = self.alt_ws_folder / "prereq-env_1.0" / "dump.env"
+        dump = self.alt_workspace_folder / "prereq-env_1.0" / "dump.env"
         self.assertTrue(dump.exists())
         env = env_file_to_map(dump)
-        self.assertEqual(env["LEAF_PREREQ_ROOT"], str(self.alt_ws_folder))
+        self.assertEqual(env["LEAF_PREREQ_ROOT"], str(self.alt_workspace_folder))
 
     def test_depends_available(self):
         deps = DependencyUtils.install(PackageIdentifier.parse_list([]), self.pm.list_available_packages(), self.pm.list_installed_packages())
@@ -402,20 +389,6 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
         deps = [str(mf.identifier) for mf in result]
         self.assertEqual(expected, deps)
 
-    def test_features(self):
-        apmap = self.pm.list_available_packages()
-        pkg = apmap.get(PackageIdentifier.parse("condition_1.0"))
-        self.assertEqual(4, len(pkg.features))
-        fm = FeatureManager()
-        fm.append_features(self.pm.list_installed_packages().values())
-        fm.append_features(self.pm.list_available_packages().values())
-        self.assertEqual(5, len(fm.features))
-        fm.get_feature("myFeatureFoo").check()
-        fm.get_feature("myFeatureHello").check()
-        fm.get_feature("featureWithDups").check()
-        with self.assertRaises(LeafException):
-            fm.get_feature("featureWithMultipleKeys").check()
-
     def test_sync(self):
         self.pm.install_packages(PackageIdentifier.parse_list(["sync_1.0"]))
         self.check_content(self.pm.list_installed_packages(), ["sync_1.0"])
@@ -484,7 +457,7 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
 
     def test_tar_size(self):
         for filename, testfunc in (("compress-tar_1.0.leaf", self.assertGreater), ("compress-xz_1.0.leaf", self.assertLess)):
-            file = LeafTestCaseWithRepo.REPO_FOLDER / filename
+            file = self.repository_folder / filename
             self.assertTrue(file.exists())
             la = LeafArtifact(file)
             testfunc(file.stat().st_size, la.get_total_size())
@@ -504,7 +477,7 @@ class TestApiPackageManagerHttp(TestApiPackageManager):
     def setUpClass(cls):
         TestApiPackageManager.setUpClass()
         print("Using http port {port}".format(port=HTTP_PORT), file=sys.stderr)
-        TestApiPackageManagerHttp.process = Process(target=start_http_server, args=(LeafTestCaseWithRepo.REPO_FOLDER,))
+        TestApiPackageManagerHttp.process = Process(target=start_http_server, args=(LeafTestCaseWithRepo._TEST_FOLDER / "repository",))
         TestApiPackageManagerHttp.process.start()
         # Wait 10 seconds for the http server to start
         sleep(10)

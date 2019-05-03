@@ -40,7 +40,7 @@ venv: requirements.txt
 	touch venv
 
 test:
-	chmod 700 src/tests/gpg/
+	chmod 700 src/tests/resources/gpg/
 	tox $(LEAF_TEST_TOX_ARGS)
 
 sdist:

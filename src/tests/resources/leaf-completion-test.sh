@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -x
+set -x
 
 
 ## Args
@@ -29,14 +29,15 @@ COMP_POINT=${#COMP_LINE}
 
 ## Source completion files
 source /etc/bash_completion
-source $(dirname "$0")/../../../resources/share/bash-completion/completions/leaf
+eval "$(register-python-argcomplete leaf)"
 
 ## Debug
-# echo "[DEBUG]  COMP_LINE=$COMP_LINE"
-# echo "[DEBUG]  COMP_WORDS[${#COMP_WORDS[@]}]=${COMP_WORDS[@]}"
-# echo "[DEBUG]  COMP_WORDS=$COMP_CWORD"
-# echo "[DEBUG]  COMP_POINT=$COMP_POINT"
+#echo "[DEBUG]  COMP_LINE=$COMP_LINE"
+#echo "[DEBUG]  COMP_WORDS[${#COMP_WORDS[@]}]=${COMP_WORDS[@]}"
+#echo "[DEBUG]  COMP_WORDS=$COMP_CWORD"
+#echo "[DEBUG]  COMP_POINT=$COMP_POINT"
 
 ## Execute completion function
-$(complete -p leaf | sed "s/.*-F \\([^ ]*\\) .*/\\1/")
+#$(complete -p leaf | sed "s/.*-F \\([^ ]*\\) .*/\\1/")
+_python_argcomplete leaf
 printf '%s\n' "${COMPREPLY[@]}"

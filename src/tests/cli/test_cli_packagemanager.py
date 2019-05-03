@@ -1,15 +1,18 @@
 """
 @author: Legato Tooling Team <letools@sierrawireless.com>
 """
+import os
 
 from leaf.core.constants import LeafSettings
-from tests.testutils import LeafTestCaseWithCli
+from tests.testutils import LeafTestCaseWithCli, get_lines
 
 
 class TestCliPackageManager(LeafTestCaseWithCli):
     def test_config(self):
-        with self.assertStdout(template_out="config.out", variables={"{TESTS_VOLATILE_FOLDER}": LeafTestCaseWithCli.VOLATILE_FOLDER}):
-            self.leaf_exec("config")
+        with self.assertStdout(template_out="config.out"):
+            self.leaf_exec(("config", "list"), "leaf.root")
+        with self.assertStdout(template_out="config2.out"):
+            self.leaf_exec(("config", "list"), "download")
 
     def test_remote(self):
         self.leaf_exec(("remote", "list"))
@@ -50,14 +53,65 @@ class TestCliPackageManager(LeafTestCaseWithCli):
         self.leaf_exec("search", "--tag", "tag1,tag2" "keyword1", "keyword2")
         self.leaf_exec("search", "--tag", "tag1,tag2" "keyword1,keyword2")
 
-    def test_depends(self):
-        self.leaf_exec(["package", "deps"], "--available", "container-A_1.0")
-        self.leaf_exec(["package", "deps"], "--install", "container-A_1.0")
-        self.leaf_exec(["package", "deps"], "--uninstall", "container-A_1.0")
-        self.leaf_exec(["package", "deps"], "--prereq", "container-A_1.0")
-        self.leaf_exec(["package", "deps"], "--installed", "container-A_1.0", expected_rc=2)
-        self.leaf_exec(["package", "install"], "container-A_1.0")
-        self.leaf_exec(["package", "deps"], "--installed", "container-A_1.0")
+    def test_depends_available(self):
+        self.leaf_exec(["remote", "fetch"])
+
+        with self.assertStdout("a.out"):
+            self.leaf_exec(["package", "deps"], "--available", "condition_1.0")
+
+        with self.assertStdout("b.out"):
+            self.leaf_exec(["package", "deps"], "--available", "condition_1.0", "--env", "HELLO=WORLD")
+
+    def test_depends_install(self):
+        self.leaf_exec(["remote", "fetch"])
+
+        with self.assertStdout("a.out"):
+            self.leaf_exec(["package", "deps"], "--install", "condition_1.0")
+
+        with self.assertStdout("b.out"):
+            self.leaf_exec(["package", "deps"], "--install", "condition_1.0", "--env", "HELLO=WORLD")
+
+        self.leaf_exec(["package", "install"], "condition-A_1.0")
+
+        with self.assertStdout("c.out"):
+            self.leaf_exec(["package", "deps"], "--install", "condition_1.0")
+
+    def test_depends_installed(self):
+        self.leaf_exec(["remote", "fetch"])
+
+        with self.assertStdout("a.out"):
+            self.leaf_exec(["package", "deps"], "--installed", "condition_1.0")
+
+        self.leaf_exec(["package", "install"], "condition_1.0")
+
+        with self.assertStdout("b.out"):
+            self.leaf_exec(["package", "deps"], "--installed", "condition_1.0")
+
+    def test_depends_prereq(self):
+        self.leaf_exec(["remote", "fetch"])
+
+        with self.assertStdout("a.out"):
+            self.leaf_exec(["package", "deps"], "--prereq", "prereq-A_1.0")
+
+    def test_depends_uninstall(self):
+        self.leaf_exec(["remote", "fetch"])
+
+        with self.assertStdout("a.out"):
+            self.leaf_exec(["package", "deps"], "--uninstall", "condition_1.0")
+
+        self.leaf_exec(["package", "install"], "condition_1.0")
+
+        with self.assertStdout("b.out"):
+            self.leaf_exec(["package", "deps"], "--uninstall", "condition_1.0")
+
+    def test_depends_rdepends(self):
+        self.leaf_exec(["remote", "fetch"])
+
+        with self.assertStdout("a.out"):
+            self.leaf_exec(["package", "deps"], "--rdepends", "condition-A_1.0")
+
+        with self.assertStdout("b.out"):
+            self.leaf_exec(["package", "deps"], "--rdepends", "condition-A_1.0", "--env", "HELLO=WORLD")
 
     def test_install(self):
         self.leaf_exec(["package", "install"], "container-A_2.1")
@@ -116,9 +170,9 @@ class TestCliPackageManager(LeafTestCaseWithCli):
 
     def test_prereq(self):
         self.leaf_exec(["package", "prereq"], "prereq-true_1.0")
-        self.assertFalse((self.alt_ws_folder / "prereq-true_1.0").is_dir())
-        self.leaf_exec(["package", "prereq"], "--target", self.alt_ws_folder, "prereq-true_1.0")
-        self.assertTrue((self.alt_ws_folder / "prereq-true_1.0").is_dir())
+        self.assertFalse((self.alt_workspace_folder / "prereq-true_1.0").is_dir())
+        self.leaf_exec(["package", "prereq"], "--target", self.alt_workspace_folder, "prereq-true_1.0")
+        self.assertTrue((self.alt_workspace_folder / "prereq-true_1.0").is_dir())
 
     def test_install_unknown_package(self):
         self.leaf_exec(["package", "install"], "unknwonPackage", expected_rc=2)
@@ -145,16 +199,40 @@ class TestCliPackageManager(LeafTestCaseWithCli):
         self.leaf_exec(["package", "install"], "failure-large-ap_1.0", expected_rc=2)
         self.leaf_exec(["package", "install"], "failure-large-extracted_1.0", expected_rc=2)
 
+    def test_legacy_config_root(self):
+        # Test to be removed when legacy *leaf config --root* CLI is removed
+        with self.assertStdout("legacy_root_folder.out"):
+            self.leaf_exec(["config", "get"], "leaf.user.root")
+            LeafSettings.USER_PKG_FOLDER.value = None
+            self.leaf_exec(["config", "get"], "leaf.user.root")
+            self.leaf_exec(["config"], "--root", self.workspace_folder)
+            self.leaf_exec(["config", "get"], "leaf.user.root")
+
+    def test_env_scripts(self):
+        try:
+            in_script = self.volatile_folder / "in.sh"
+            out_script = self.volatile_folder / "out.sh"
+
+            self.leaf_exec(["config", "set"], "leaf.download.retry", "42")
+            self.leaf_exec(["env", "user"], "--set", "LANG=D")
+            self.leaf_exec(["env", "print"], "--activate-script", in_script, "--deactivate-script", out_script)
+            with self.assertStdout("env_scripts.out", variables={"{LANG}": os.environ["LANG"]}):
+                for f in (in_script, out_script):
+                    print(">>>> BEGIN:", f)
+                    for l in get_lines(f):
+                        print(l)
+                    print(">>>> END:", f)
+        finally:
+            # Prevent leaf config leaf.download.retry from appearing in other tests
+            if "LEAF_RETRY" in os.environ:
+                del os.environ["LEAF_RETRY"]
+
 
 class TestCliPackageManagerVerbose(TestCliPackageManager):
-    @classmethod
-    def setUpClass(cls):
-        TestCliPackageManager.setUpClass()
-        LeafSettings.VERBOSITY.value = "verbose"
+    def __init__(self, *args, **kwargs):
+        TestCliPackageManager.__init__(self, *args, verbosity="verbose", **kwargs)
 
 
 class TestCliPackageManagerQuiet(TestCliPackageManager):
-    @classmethod
-    def setUpClass(cls):
-        TestCliPackageManager.setUpClass()
-        LeafSettings.VERBOSITY.value = "quiet"
+    def __init__(self, *args, **kwargs):
+        TestCliPackageManager.__init__(self, *args, verbosity="quiet", **kwargs)

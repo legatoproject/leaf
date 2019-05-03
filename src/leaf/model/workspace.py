@@ -70,27 +70,27 @@ class Profile(JsonObject, IEnvProvider):
 
     @property
     def packages(self):
-        if JsonConstants.WS_PROFILE_PACKAGES not in self.json:
-            self.json[JsonConstants.WS_PROFILE_PACKAGES] = []
-        return self.json[JsonConstants.WS_PROFILE_PACKAGES]
+        out = []
+        for pkgname, pkgversion in self.pkg_map.items():
+            out.append(PackageIdentifier(pkgname, pkgversion))
+        return out
 
     def add_packages(self, pilist):
-        pkgmap = self.packages_map
+        pkgmap = self.pkg_map
         for pi in pilist:
-            pkgmap[pi.name] = pi
-        self.json[JsonConstants.WS_PROFILE_PACKAGES] = list(map(str, pkgmap.values()))
+            pkgmap[pi.name] = pi.version
 
     def remove_packages(self, pilist):
-        pilist = [pi for pi in self.packages_map.values() if pi not in pilist]
-        self.json[JsonConstants.WS_PROFILE_PACKAGES] = list(map(str, pilist))
+        pkgmap = self.pkg_map
+        for pi in self.packages:
+            if pi in pilist:
+                del pkgmap[pi.name]
 
     @property
-    def packages_map(self):
-        out = OrderedDict()
-        for pi in map(PackageIdentifier.parse, self.packages):
-            if pi.name not in out:
-                out[pi.name] = pi
-        return out
+    def pkg_map(self):
+        if JsonConstants.WS_PROFILE_PACKAGES not in self.json:
+            self.json[JsonConstants.WS_PROFILE_PACKAGES] = OrderedDict()
+        return self.json[JsonConstants.WS_PROFILE_PACKAGES]
 
     def list_linked_packages(self) -> list:
         """

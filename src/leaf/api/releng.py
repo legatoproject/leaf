@@ -59,7 +59,7 @@ class RelengManager(LoggerManager):
         return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
     def find_external_info_file(self, artifact: LeafArtifact):
-        return artifact.parent / (artifact.name + LeafFiles.EXTINFO_EXTENSION)
+        return artifact.parent / (artifact.name + LeafConstants.EXTINFO_EXTENSION)
 
     def __build_pkg_node(self, tarfile: Path, manifest: Manifest = None):
         out = OrderedDict()
@@ -244,7 +244,10 @@ class RelengManager(LoggerManager):
             fp.write(jsonstr)
 
     def __exec_tar(self, output: Path, workdir: Path, extra_args: list = None):
-        command = [LeafSettings.TAR_BINARY.value, "-c"]
+        tar = "tar"
+        if LeafSettings.CUSTOM_TAR.is_set():
+            tar = LeafSettings.CUSTOM_TAR.value
+        command = [tar, "-c"]
         command += ["-f", output]
         command += ["-C", workdir]
 

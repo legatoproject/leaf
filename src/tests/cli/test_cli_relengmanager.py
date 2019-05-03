@@ -9,15 +9,15 @@ import time
 from leaf.core.constants import JsonConstants, LeafFiles
 from leaf.core.jsonutils import jloadfile, jwritefile
 from leaf.core.utils import hash_compute
-from tests.testutils import RESOURCE_FOLDER, LeafTestCaseWithCli, check_mime
+from tests.testutils import TEST_REMOTE_PACKAGE_SOURCE, LeafTestCaseWithCli, check_mime
 
 
 class TestCliRelengManager(LeafTestCaseWithCli):
     def test_package_compression(self):
-        folder = RESOURCE_FOLDER / "install_1.0"
+        folder = TEST_REMOTE_PACKAGE_SOURCE / "install_1.0"
 
         def check_all_compressions(extension, default_mime):
-            output_file = self.ws_folder / ("myPackage" + extension)
+            output_file = self.workspace_folder / ("myPackage" + extension)
             for compression, mime in (("-z", "gzip"), ("-j", "x-bzip2"), ("-J", "x-xz"), ("-a", default_mime)):
                 self.leaf_exec(("build", "pack"), "--output", output_file, "--input", folder, "--", compression, ".")
                 check_mime(output_file, mime)
@@ -30,9 +30,9 @@ class TestCliRelengManager(LeafTestCaseWithCli):
         check_all_compressions(".leaf", "x-tar")
 
     def test_external_hash_file(self):
-        folder = RESOURCE_FOLDER / "install_1.0"
-        output_file = self.ws_folder / "myPackage.leaf"
-        info_file = self.ws_folder / "myPackage.leaf.info"
+        folder = TEST_REMOTE_PACKAGE_SOURCE / "install_1.0"
+        output_file = self.workspace_folder / "myPackage.leaf"
+        info_file = self.workspace_folder / "myPackage.leaf.info"
 
         self.leaf_exec(("build", "pack"), "--no-info", "--output", output_file, "--input", folder)
         self.assertTrue(output_file.exists())
@@ -45,15 +45,15 @@ class TestCliRelengManager(LeafTestCaseWithCli):
         self.leaf_exec(("build", "pack"), "--no-info", "--output", output_file, "--input", folder, expected_rc=2)
 
     def test_manifest_generation(self):
-        mffile = self.ws_folder / LeafFiles.MANIFEST
+        mffile = self.workspace_folder / LeafFiles.MANIFEST
 
-        fragment1 = self.ws_folder / "a.json"
+        fragment1 = self.workspace_folder / "a.json"
         jwritefile(fragment1, {"#{LEAF_TEST_VARIABLE}": "#{LEAF_TEST_VARIABLE}", "a": 1, "info": {"tags": ["tag1"]}})
 
-        fragment2 = self.ws_folder / "b.json"
+        fragment2 = self.workspace_folder / "b.json"
         jwritefile(fragment2, {"a": 2})
 
-        fragment3 = self.ws_folder / "c.json"
+        fragment3 = self.workspace_folder / "c.json"
         jwritefile(fragment3, {"b": True, "info": {"tags": ["tag2"]}})
 
         try:
@@ -61,7 +61,7 @@ class TestCliRelengManager(LeafTestCaseWithCli):
             self.leaf_exec(
                 ("build", "manifest"),
                 "--output",
-                self.ws_folder,
+                self.workspace_folder,
                 "--append",
                 fragment1,
                 "--append",
@@ -129,13 +129,15 @@ class TestCliRelengManager(LeafTestCaseWithCli):
             )
 
     def test_index_generation(self):
-        index = self.ws_folder / "index.json"
+        index = self.workspace_folder / "index.json"
 
         # Build some packages
-        self.leaf_exec(("build", "pack"), "--output", self.ws_folder / "a.leaf", "--input", RESOURCE_FOLDER / "install_1.0")
-        self.leaf_exec(("build", "pack"), "--output", self.ws_folder / "b.leaf", "--input", RESOURCE_FOLDER / "condition_1.0")
+        self.leaf_exec(("build", "pack"), "--output", self.workspace_folder / "a.leaf", "--input", TEST_REMOTE_PACKAGE_SOURCE / "install_1.0")
+        self.leaf_exec(("build", "pack"), "--output", self.workspace_folder / "b.leaf", "--input", TEST_REMOTE_PACKAGE_SOURCE / "condition_1.0")
 
-        self.leaf_exec(("build", "index"), "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", self.ws_folder / "a.leaf")
+        self.leaf_exec(
+            ("build", "index"), "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", self.workspace_folder / "a.leaf"
+        )
         self.assertTrue(index.exists())
         self.assertEqual(1, len(jloadfile(index)[JsonConstants.REMOTE_PACKAGES]))
 
@@ -148,18 +150,18 @@ class TestCliRelengManager(LeafTestCaseWithCli):
             "--description",
             "Description here",
             "--no-info",
-            self.ws_folder / "a.leaf",
-            self.ws_folder / "b.leaf",
+            self.workspace_folder / "a.leaf",
+            self.workspace_folder / "b.leaf",
         )
         self.assertTrue(index.exists())
         self.assertEqual(2, len(jloadfile(index)[JsonConstants.REMOTE_PACKAGES]))
 
     def test_index_generation_with_extra_tags(self):
-        index1 = self.ws_folder / "index1.json"
-        index2 = self.ws_folder / "index2.json"
-        folder = RESOURCE_FOLDER / "container-A_1.0"
-        leaf_file = self.ws_folder / "a.leaf"
-        tags_file = self.ws_folder / "a.leaf.tags"
+        index1 = self.workspace_folder / "index1.json"
+        index2 = self.workspace_folder / "index2.json"
+        folder = TEST_REMOTE_PACKAGE_SOURCE / "container-A_1.0"
+        leaf_file = self.workspace_folder / "a.leaf"
+        tags_file = self.workspace_folder / "a.leaf.tags"
 
         with tags_file.open("w") as fp:
             fp.write("foo\n")
@@ -190,7 +192,7 @@ class TestCliRelengManager(LeafTestCaseWithCli):
     def test_reproductible_build(self):
         # Build some packages
         pis = "install_1.0"
-        folder = RESOURCE_FOLDER / pis
+        folder = TEST_REMOTE_PACKAGE_SOURCE / pis
         manifest = folder / LeafFiles.MANIFEST
         self.assertTrue(manifest.exists())
 
@@ -202,10 +204,10 @@ class TestCliRelengManager(LeafTestCaseWithCli):
             self.leaf_exec(("build", "pack"), "-i", folder, "-o", output, "--no-info", "--", *args)
 
         for extension, arg, mime in (("tar", "-v", "x-tar"), ("bz2", "-j", "x-bzip2"), ("xz", "-J", "x-xz")):
-            output1 = self.ws_folder / "{pis}.{ext}.{item}".format(pis=pis, ext=extension, item=1)
-            output2 = self.ws_folder / "{pis}.{ext}.{item}".format(pis=pis, ext=extension, item=2)
-            output3 = self.ws_folder / "{pis}.{ext}.{item}".format(pis=pis, ext=extension, item=3)
-            output4 = self.ws_folder / "{pis}.{ext}.{item}".format(pis=pis, ext=extension, item=4)
+            output1 = self.workspace_folder / "{pis}.{ext}.{item}".format(pis=pis, ext=extension, item=1)
+            output2 = self.workspace_folder / "{pis}.{ext}.{item}".format(pis=pis, ext=extension, item=2)
+            output3 = self.workspace_folder / "{pis}.{ext}.{item}".format(pis=pis, ext=extension, item=3)
+            output4 = self.workspace_folder / "{pis}.{ext}.{item}".format(pis=pis, ext=extension, item=4)
 
             build_package(output1, (arg, "."))
             touch_manifest()
@@ -226,9 +228,9 @@ class TestCliRelengManager(LeafTestCaseWithCli):
             self.assertEqual(hash_compute(output3), hash_compute(output4))
 
     def test_package_custom_content(self):
-        folder = RESOURCE_FOLDER / "install_1.0"
-        artifact1 = self.ws_folder / "a.leaf"
-        artifact2 = self.ws_folder / "b.leaf"
+        folder = TEST_REMOTE_PACKAGE_SOURCE / "install_1.0"
+        artifact1 = self.workspace_folder / "a.leaf"
+        artifact2 = self.workspace_folder / "b.leaf"
         self.leaf_exec(
             ("build", "pack"),
             "--no-info",
@@ -266,7 +268,7 @@ class TestCliRelengManager(LeafTestCaseWithCli):
         self.assertGreater(artifact1.stat().st_size, artifact2.stat().st_size)
 
         # Error cases
-        self.leaf_exec(("build", "pack"), "--no-info", "--output", self.ws_folder / "error.leaf", "--input", folder, "--", "-v", expected_rc=2)
+        self.leaf_exec(("build", "pack"), "--no-info", "--output", self.workspace_folder / "error.leaf", "--input", folder, "--", "-v", expected_rc=2)
 
 
 class TestCliRelengManagerVerbose(TestCliRelengManager):

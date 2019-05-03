@@ -2,13 +2,17 @@
 @author: Legato Tooling Team <letools@sierrawireless.com>
 """
 
-from leaf.core.constants import LeafFiles
-from tests.testutils import LeafTestCaseWithCli
+from leaf.core.constants import LeafFiles, LeafSettings
+from tests.testutils import LeafTestCaseWithCli, LEAF_SYSTEM_ROOT
 
 
 class TestPluginSetup(LeafTestCaseWithCli):
+    def setUp(self):
+        super().setUp()
+        LeafSettings.SYSTEM_PKG_FOLDERS.value = LEAF_SYSTEM_ROOT
+
     def test_setup_ws_creation(self):
-        ws_config_file = self.ws_folder / LeafFiles.WS_CONFIG_FILENAME
+        ws_config_file = self.workspace_folder / LeafFiles.WS_CONFIG_FILENAME
         self.assertFalse(ws_config_file.is_file())
         self.leaf_exec("setup", "-p", "container-A")
         self.assertTrue(ws_config_file.is_file())

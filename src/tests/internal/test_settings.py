@@ -5,7 +5,7 @@
 import os
 
 from leaf.core.constants import LeafSettings
-from leaf.core.settings import EnumValidator, RegexValidator, Setting, StaticSettings
+from leaf.core.settings import RegexValidator, EnvVar, StaticSettings
 from tests.testutils import LeafTestCase
 
 KEY = "LEAF_TEST_MYSETTING"
@@ -32,15 +32,8 @@ class TestSettings(LeafTestCase):
         self.assertFalse(v("aA"))
         self.assertFalse(v(""))
 
-    def test_enum_validator(self):
-        v = EnumValidator(["None", None, 1, "A", "A"])
-        self.assertTrue(v("A"))
-        self.assertTrue(v("None"))
-        self.assertTrue(v(None))
-        self.assertFalse(v("AA"))
-
-    def test_setting_simple(self):
-        s = Setting(KEY)
+    def test_envvar_simple(self):
+        s = EnvVar(KEY)
         self.assertEqual(None, s.value)
 
         s.value = "1"
@@ -58,11 +51,12 @@ class TestSettings(LeafTestCase):
         os.environ[KEY] = "123"
         self.assertEqual("123", s.value)
 
-    def test_setting_regex(self):
-        s = Setting(KEY, default="MyDefaultValue", validator=RegexValidator("[A-Za-z]+"))
+    def test_envvar_regex(self):
+        s = EnvVar(KEY, default="MyDefaultValue", validator=RegexValidator("[A-Za-z]+"))
 
         self.assertEqual("MyDefaultValue", s.value)
-        self.assertFalse(KEY in os.environ)
+        self.assertEqual("MyDefaultValue", os.getenv(KEY))
+        self.assertTrue(KEY in os.environ)
 
         s.value = "A"
         self.assertEqual("A", s.value)
@@ -89,36 +83,11 @@ class TestSettings(LeafTestCase):
         self.assertEqual("MyDefaultValue", s.value)
 
         with self.assertRaises(ValueError):
-            s = Setting(KEY, default="123", validator=RegexValidator("[A-Za-z]+"))
-
-    def test_setting_enum(self):
-        with self.assertRaises(ValueError):
-            s = Setting(KEY, default="B", validator=EnumValidator(("A", 1)))
-
-        s = Setting(KEY, validator=EnumValidator(("A", "1", 2, None)))
-
-        self.assertEqual(None, s.value)
-
-        s.value = "A"
-        self.assertEqual("A", s.value)
-
-        s.value = 1
-        self.assertEqual("1", s.value)
-
-        s.value = None
-        self.assertEqual(None, s.value)
-
-        s.value = "1"
-        self.assertEqual("1", s.value)
-
-        with self.assertRaises(ValueError):
-            s.value = 2
-        with self.assertRaises(ValueError):
-            s.value = "2"
+            s = EnvVar(KEY, default="123", validator=RegexValidator("[A-Za-z]+"))
 
     def test_boolean(self):
 
-        s = Setting(KEY)
+        s = EnvVar(KEY)
         self.assertFalse(s.as_boolean())
 
         for v, b in (
@@ -146,10 +115,10 @@ class TestSettings(LeafTestCase):
 
     def test_misc(self):
         class SettingsA(StaticSettings):
-            A = Setting(KEY)
+            A = EnvVar(KEY)
 
         class SettingsB(SettingsA):
-            B = Setting(KEY)
+            B = EnvVar(KEY)
 
         SettingsA.A.value = 1
         self.assertEqual("1", SettingsB.A.value)

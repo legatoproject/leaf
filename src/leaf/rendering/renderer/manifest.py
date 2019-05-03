@@ -38,7 +38,6 @@ class ManifestListRenderer(Renderer):
         │ condition_1.0            │             │ latest  │
         │ container-A_1.0          │ Desc1       │ foo     │
         │ container-A_2.0          │             │ foo,bar │
-        │ featured-with-source_1.0 │ Desc2       │ latest  │
         └──────────────────────────┴─────────────┴─────────┘
         """
         count = 7

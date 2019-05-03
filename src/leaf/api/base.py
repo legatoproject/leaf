@@ -7,16 +7,22 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 """
 
+import operator
+import os
 import platform
+from collections import OrderedDict
 from pathlib import Path
 
 from leaf import __version__
 from leaf.core.constants import LeafFiles, LeafSettings
 from leaf.core.error import LeafException, UserCancelException
-from leaf.core.logger import TextLogger
-from leaf.core.utils import mkdirs
-from leaf.model.config import UserConfiguration
+from leaf.core.logger import TextLogger, print_trace
+from leaf.core.utils import is_folder_ignored, mkdirs
+from leaf.model.base import Scope
+from leaf.model.config import ConfigContextManager, UserConfiguration
 from leaf.model.environment import Environment
+from leaf.model.modelutils import keep_latest
+from leaf.model.package import InstalledPackage, ScopeSetting
 from leaf.rendering.renderer.error import HintsRenderer, LeafExceptionRenderer
 from leaf.rendering.renderer.question import QuestionRenderer
 from leaf.rendering.theme import ThemeManager
@@ -25,21 +31,29 @@ from leaf.rendering.theme import ThemeManager
 class ConfigurationManager:
     @property
     def configuration_folder(self):
-        return mkdirs(Path(LeafSettings.CONFIG_FOLDER.value))
+        return mkdirs(LeafSettings.CONFIG_FOLDER.as_path())
 
     @property
     def cache_folder(self):
-        return mkdirs(Path(LeafSettings.CACHE_FOLDER.value))
+        return mkdirs(LeafSettings.CACHE_FOLDER.as_path())
 
     @property
     def configuration_file(self):
         return self.find_configuration_file(LeafFiles.CONFIG_FILENAME)
 
+    @property
+    def install_folder(self):
+        return mkdirs(LeafSettings.USER_PKG_FOLDER.as_path())
+
     def init_leaf_settings(self):
         userenvmap = self.read_user_configuration()._getenvmap()
         for s in LeafSettings.values():
             if s.key in userenvmap:
-                s.value = userenvmap[s.key]
+                try:
+                    user_value = userenvmap[s.key]
+                    s.value = user_value
+                except ValueError:
+                    print_trace("Invalid value in user scope for setting {s.identifier}: {s.key}={value}".format(s=s, value=user_value))
 
     def find_configuration_file(self, filename, check_exists=False):
         """
@@ -63,6 +77,9 @@ class ConfigurationManager:
         """
         usrc.write_layer(self.configuration_file, previous_layer=LeafFiles.ETC_PREFIX / LeafFiles.CONFIG_FILENAME, pp=True)
 
+    def open_user_configuration(self):
+        return ConfigContextManager(self.read_user_configuration, self.write_user_configuration)
+
     def build_builtin_environment(self):
         out = Environment("Leaf built-in variables")
         out.set_variable("LEAF_VERSION", str(__version__))
@@ -75,9 +92,68 @@ class ConfigurationManager:
         return self.read_user_configuration().build_environment()
 
     def update_user_environment(self, set_map=None, unset_list=None):
-        usrc = self.read_user_configuration()
-        usrc.update_environment(set_map, unset_list)
-        self.write_user_configuration(usrc)
+        with self.open_user_configuration() as config:
+            config.update_environment(set_map, unset_list)
+
+    def _list_installed_packages(self, root_folder: Path, read_only: bool) -> dict:
+        """
+        Return all installed packages in given folder
+        @return: PackageIdentifier/InstalledPackage dict
+        """
+        out = {}
+        if root_folder is not None and root_folder.is_dir():
+            for folder in root_folder.iterdir():
+                # iterate over non ignored sub folders
+                if folder.is_dir() and not is_folder_ignored(folder):
+                    # test if a manifest exists
+                    mffile = folder / LeafFiles.MANIFEST
+                    if mffile.is_file():
+                        try:
+                            ip = InstalledPackage(mffile, read_only=read_only)
+                            out[ip.identifier] = ip
+                        except BaseException:
+                            print_trace("Invalid manifest found: {mf}".format(mf=mffile))
+        return out
+
+    def list_installed_packages(self, only_latest=False, alt_user_root_folder: Path = None) -> dict:
+        out = {}
+        # Scan readonly system folder
+        if LeafSettings.SYSTEM_PKG_FOLDERS.as_boolean():
+            for system_root in LeafSettings.SYSTEM_PKG_FOLDERS.value.split(os.pathsep):
+                out.update(self._list_installed_packages(Path(os.path.expanduser(system_root)), True))
+
+        # Scan user root folder
+        out.update(self._list_installed_packages(alt_user_root_folder or self.install_folder, False))
+
+        # only keep latest if needed
+        if only_latest:
+            latest_pi_list = keep_latest(out.keys())
+            out = {pi: ip for pi, ip in out.items() if pi in latest_pi_list}
+
+        # sort dict by package identifier
+        return OrderedDict(sorted(out.items(), key=operator.itemgetter(0)))
+
+    def get_setting(self, setting_id: str) -> ScopeSetting:
+        out = self.get_settings().get(setting_id)
+        if out is None:
+            raise LeafException("Unknown setting setting '{id}'".format(id=setting_id))
+        return out
+
+    def get_settings(self) -> dict:
+        out = OrderedDict()
+
+        # Leaf python settings
+        for s in sorted(LeafSettings.values(), key=lambda s: s.identifier):
+            out[s.identifier] = ScopeSetting(s.identifier, s.key, s.description, [Scope.USER], default=s.default, validator=s.is_valid)
+
+        # Search settings in installed packages
+        for ip in self.list_installed_packages(only_latest=True).values():
+            for sid, setting in ip.settings.items():
+                if sid not in out:
+                    # Prevent setting shadowing
+                    out[sid] = setting
+
+        return out
 
 
 class LoggerManager(ConfigurationManager):
@@ -92,9 +168,9 @@ class LoggerManager(ConfigurationManager):
         return self.__logger
 
     def print_hints(self, *hints):
-        tr = HintsRenderer()
-        tr.extend(hints)
-        self.print_renderer(tr)
+        renderer = HintsRenderer()
+        renderer.extend(hints)
+        self.print_renderer(renderer)
 
     def print_exception(self, ex):
         if isinstance(ex, LeafException):

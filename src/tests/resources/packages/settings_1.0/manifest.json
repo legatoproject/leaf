@@ -1,0 +1,46 @@
+{
+  "info": {
+    "name": "settings",
+    "version": "1.0",
+    "master": true,
+    "depends": []
+  },
+  "settings": {
+    "user": {
+      "key": "LEAF_SETTING_USER",
+      "description": "Example of setting settable in scope user",
+      "scopes": [
+        "user"
+      ]
+    },
+    "workspace": {
+      "key": "LEAF_SETTING_WORKSPACE",
+      "description": "Example of setting settable in scope workspace",
+      "scopes": [
+        "workspace"
+      ]
+    },
+    "workspace-profile": {
+      "key": "LEAF_SETTING_WORKSPACE_PROFILE",
+      "description": "Example of setting settable in scopes workspace and user",
+      "scopes": [
+        "workspace",
+        "profile"
+      ]
+    },
+    "lowercase": {
+      "key": "LEAF_SETTING_LOWERCASE",
+      "description": "Example of lowercase setting",
+      "regex": "[a-z]+"
+    },
+    "enum": {
+      "key": "LEAF_SETTING_ENUM",
+      "description": "Example of enum setting",
+      "regex": "(foo|bar)+"
+    },
+    "foo": {
+      "key": "FOO",
+      "regex": "BAR"
+    }
+  }
+}

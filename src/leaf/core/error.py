@@ -10,6 +10,7 @@ Error management
 from builtins import Exception
 from pathlib import Path
 
+from leaf.core.settings import LeafSetting
 from leaf.rendering.formatutils import sizeof_fmt
 
 HINTS_CMD_DELIMITER = "'"
@@ -171,3 +172,12 @@ class UnknownArgsException(LeafException):
 class NotEnoughSpaceException(LeafException):
     def __init__(self, folder: Path, freespace: int, neededspace: int):
         LeafException.__init__(self, "Not enough space in folder {folder}, missing {size}".format(folder=folder, size=sizeof_fmt(neededspace - freespace)))
+
+
+class InvalidSettingException(LeafException):
+    def __init__(self, setting: LeafSetting, bad_value: str):
+        LeafException.__init__(
+            self,
+            'Invalid value for setting {setting.identifier}: "{value}"'.format(setting=setting, value=bad_value),
+            hints="You can reset the setting with 'leaf config reset {setting.identifier}'".format(setting=setting),
+        )

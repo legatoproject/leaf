@@ -8,6 +8,7 @@ Leaf Package Manager
 """
 
 from leaf.cli.base import LeafCommand
+from leaf.cli.completion import complete_profiles
 
 
 class SelectCommand(LeafCommand):
@@ -16,7 +17,7 @@ class SelectCommand(LeafCommand):
 
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
-        parser.add_argument("profiles", nargs=1, metavar="PROFILE", help="the profile name"),
+        parser.add_argument("profiles", nargs=1, metavar="PROFILE", help="the profile name").completer = complete_profiles
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager()

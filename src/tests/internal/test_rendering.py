@@ -9,18 +9,20 @@ from leaf.api import LoggerManager, PackageManager
 from leaf.core.constants import JsonConstants, LeafFiles, LeafSettings
 from leaf.core.error import LeafException
 from leaf.core.jsonutils import jloadfile, jloads
+from leaf.core.settings import RegexValidator
+from leaf.model.base import Scope
 from leaf.model.environment import Environment
-from leaf.model.package import AvailablePackage, Feature, InstalledPackage, Manifest
+from leaf.model.package import AvailablePackage, InstalledPackage, Manifest, ScopeSetting
 from leaf.model.remote import Remote
 from leaf.model.workspace import Profile
 from leaf.rendering.ansi import ANSI
 from leaf.rendering.renderer.environment import EnvironmentRenderer
-from leaf.rendering.renderer.feature import FeatureListRenderer
 from leaf.rendering.renderer.manifest import ManifestListRenderer
 from leaf.rendering.renderer.profile import ProfileListRenderer
 from leaf.rendering.renderer.remote import RemoteListRenderer
+from leaf.rendering.renderer.settings import SettingsListRenderer
 from leaf.rendering.renderer.status import StatusRenderer
-from tests.testutils import RESOURCE_FOLDER, LeafTestCase
+from tests.testutils import TEST_REMOTE_PACKAGE_SOURCE, LeafTestCase
 
 
 class AvailablePackage2(AvailablePackage):
@@ -45,9 +47,28 @@ class TestRendering(LeafTestCase):
         LeafTestCase.__init__(self, *args, **kwargs)
         self.loggerManager = LoggerManager()
 
+    def __print_error(self):
+        try:
+            1 / 0  # Ooops !
+        except Exception as cause:
+            ex = self.__create_exception(cause)
+            print("---- Rendered error ----", file=sys.stderr)
+            self.loggerManager.print_exception(ex)
+            print("---- Logger error ----", file=sys.stderr)
+            self.loggerManager.logger.print_error(ex)
+
+    def __create_exception(self, cause=None):
+        if cause is None:
+            cause = Exception("This is a fake cause exception")
+        return LeafException(
+            "Random message for this exception",
+            cause=cause,
+            hints=["this is a first hint with a 'command'", "another one with 'a first command' and 'a second one'"],
+        )
+
     def __load_manifest(self):
         out = []
-        for folder in RESOURCE_FOLDER.iterdir():
+        for folder in TEST_REMOTE_PACKAGE_SOURCE.iterdir():
             if folder.is_dir():
                 mffile = folder / LeafFiles.MANIFEST
                 if mffile.is_file():
@@ -58,7 +79,7 @@ class TestRendering(LeafTestCase):
     def test_manifest(self):
         mflist = self.__load_manifest()
         rend = ManifestListRenderer()
-        with self.assertStdout(template_out="manifest.out", variables={"{RESOURCE_FOLDER}": RESOURCE_FOLDER}):
+        with self.assertStdout(template_out="manifest.out"):
             self.loggerManager.print_renderer(rend)
             rend.extend(mflist)
             self.loggerManager.print_renderer(rend)
@@ -105,10 +126,12 @@ class TestRendering(LeafTestCase):
 
     def test_status(self):
         profile1 = Profile(
-            "profile1", "fake/folder", jloads('{"env": {"Foo1": "Bar1", "Foo2": "Bar2", "Foo3": "Bar3"}, "packages": ["container-A_1.0", "container-B_1.0"]}')
+            "profile1",
+            "fake/folder",
+            jloads('{"env": {"Foo1": "Bar1", "Foo2": "Bar2", "Foo3": "Bar3"}, "packages": {"container-A": "1.0", "container-B": "1.0"}}'),
         )
         profile2 = Profile("profile2", "fake/folder", {})
-        profile3 = Profile("profile3", "fake/folder", jloads('{"packages": ["container-C_1.0"]}'))
+        profile3 = Profile("profile3", "fake/folder", jloads('{"packages": {"container-C": "1.0"}}'))
 
         with self.assertStdout(template_out="status.out"):
             print("####### Test with 2 other profiles, 2 incl, 1 deps #######")
@@ -149,8 +172,8 @@ class TestRendering(LeafTestCase):
 
     def test_profile(self):
 
-        profile1 = Profile("profile1", "fake/folder", jloads('{"env": {"Foo1": "Bar1", "Foo2": "Bar2", "Foo3": "Bar3"}, "packages": ["container-A_1.0"]}'))
-        profile2 = Profile("profile2", "fake/folder", jloads('{"packages": ["container-B_1.0"]}'))
+        profile1 = Profile("profile1", "fake/folder", jloads('{"env": {"Foo1": "Bar1", "Foo2": "Bar2", "Foo3": "Bar3"}, "packages": {"container-A": "1.0"}}'))
+        profile2 = Profile("profile2", "fake/folder", jloads('{"packages": {"container-B": "1.0"}}'))
         profile2.is_current = True
         profile3 = Profile("profile3", "fake/folder", jloads('{"env": {"Foo2": "Bar2", "Foo3": "Bar3"}}'))
         profile4 = Profile("profile4", "fake/folder", {})
@@ -165,40 +188,23 @@ class TestRendering(LeafTestCase):
             renderer.append_profile(profile4, False, [])
             self.loggerManager.print_renderer(renderer)
 
-    def test_feature(self):
-        rend = FeatureListRenderer()
-        with self.assertStdout(template_out="feature.out"):
-            self.loggerManager.print_renderer(rend)
-            rend.append(
-                Feature(
-                    "id1",
-                    {
-                        JsonConstants.INFO_FEATURE_KEY: "KEY1",
-                        JsonConstants.INFO_FEATURE_VALUES: {"enum1": "value1"},
-                        JsonConstants.INFO_FEATURE_DESCRIPTION: "message1",
-                    },
-                )
-            )
-            rend.append(
-                Feature(
-                    "id2",
-                    {
-                        JsonConstants.INFO_FEATURE_KEY: "KEY2",
-                        JsonConstants.INFO_FEATURE_VALUES: {"enum2": "value2", "enum3": "value3"},
-                        JsonConstants.INFO_FEATURE_DESCRIPTION: "message2",
-                    },
-                )
-            )
-            self.loggerManager.print_renderer(rend)
+    def test_settings(self):
+        for filter_unset in (True, False):
+            with self.assertStdout(template_out="filter{filter}.out".format(filter=filter_unset)):
+                rend = SettingsListRenderer(Path("/fake/folder"), {"foo.id1": "Hello world"}, filter_unset=filter_unset)
+                self.loggerManager.print_renderer(rend)
 
-    def __create_exception(self, cause=None):
-        if cause is None:
-            cause = Exception("This is a fake cause exception")
-        return LeafException(
-            "Random message for this exception",
-            cause=cause,
-            hints=["this is a first hint with a 'command'", "another one with 'a first command' and 'a second one'"],
-        )
+                rend.append(ScopeSetting("foo.id1", "KEY", None, [Scope.USER]))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.USER]))
+                rend.append(ScopeSetting("foo.id2", "KEY", "some description", [Scope.USER]))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.USER, Scope.WORKSPACE, Scope.PROFILE]))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.USER, Scope.WORKSPACE]))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.USER, Scope.PROFILE]))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.WORKSPACE, Scope.PROFILE]))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.USER], default="Hello"))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.USER], validator=RegexValidator(".*")))
+                rend.append(ScopeSetting("foo.id1", "KEY", "some description", [Scope.USER], validator=RegexValidator("(HELLO|WORLD)")))
+                self.loggerManager.print_renderer(rend)
 
     def test_hints(self):
         with self.assertStdout(template_out="hints.out"):
@@ -207,16 +213,6 @@ class TestRendering(LeafTestCase):
     def test_error(self):
         with self.assertStdout(template_out=[], template_err="error.err"):
             self.loggerManager.print_exception(self.__create_exception())
-
-    def __print_error(self):
-        try:
-            1 / 0  # Ooops !
-        except Exception as cause:
-            ex = self.__create_exception(cause)
-            print("---- Rendered error ----", file=sys.stderr)
-            self.loggerManager.print_exception(ex)
-            print("---- Logger error ----", file=sys.stderr)
-            self.loggerManager.logger.print_error(ex)
 
     def test_trace(self):
         with self.assertStdout(template_out=[], template_err="trace.err"):

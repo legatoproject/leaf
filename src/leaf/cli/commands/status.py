@@ -10,7 +10,6 @@ Leaf Package Manager
 from leaf.cli.base import LeafCommand
 from leaf.core.error import NoProfileSelected
 from leaf.model.modelutils import find_manifest_list
-from leaf.model.package import PackageIdentifier
 from leaf.rendering.renderer.status import StatusRenderer
 
 
@@ -41,7 +40,7 @@ class StatusCommand(LeafCommand):
                             iplist = wm.get_profile_dependencies(profile)
                         else:
                             # If profile is not sync, try to get installed packages for all included packages in profile
-                            iplist = find_manifest_list(list(map(PackageIdentifier.parse, profile.packages)), ipmap, ignore_unknown=True)
+                            iplist = find_manifest_list(profile.packages, ipmap, ignore_unknown=True)
 
                         renderer.append_profile(profile, sync, iplist)
 

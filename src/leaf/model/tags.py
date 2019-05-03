@@ -9,7 +9,7 @@ Leaf Package Manager
 
 from profile import Profile
 
-from leaf.model.modelutils import group_package_identifiers_by_name
+from leaf.model.modelutils import keep_latest
 from leaf.model.package import IDENTIFIER_GETTER
 
 
@@ -28,9 +28,7 @@ class TagUtils:
         """
         Add the 'latest' tag to packages with the latest version
         """
-        latest_pilist = []
-        for pkg_versions in group_package_identifiers_by_name(map(IDENTIFIER_GETTER, mflist)).values():
-            latest_pilist.append(pkg_versions[-1])
+        latest_pilist = keep_latest(map(IDENTIFIER_GETTER, mflist))
         for mf in mflist:
             if mf.identifier in latest_pilist:
                 mf.custom_tags.append(TagUtils.LATEST)
@@ -48,5 +46,5 @@ class TagUtils:
         """
         Tag packages in mfList as current if they are in the given profile
         """
-        for mf in filter(lambda mf: str(mf.identfier) in pf.packages, mflist):
+        for mf in filter(lambda mf: mf.identfier in pf.packages, mflist):
             mf.custom_tags.append(TagUtils.CURRENT)

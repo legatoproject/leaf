@@ -4,14 +4,17 @@
 
 import os
 
-from tests.testutils import PROJECT_ROOT_FOLDER, LeafTestCaseWithCli
+from leaf.core.constants import LeafSettings
+from tests.testutils import LEAF_PROJECT_ROOT_FOLDER, LeafTestCaseWithCli, LEAF_SYSTEM_ROOT
 
 
 class TestPluginHelp(LeafTestCaseWithCli):
     def setUp(self):
-        LeafTestCaseWithCli.setUp(self)
+        super().setUp()
+        LeafSettings.SYSTEM_PKG_FOLDERS.value = LEAF_SYSTEM_ROOT
+
         TestPluginHelp.OLD_MANPATH = os.environ.get("MANPATH")
-        mandir = PROJECT_ROOT_FOLDER / "resources" / "man"
+        mandir = LEAF_PROJECT_ROOT_FOLDER / "resources" / "man"
         self.assertTrue(mandir.is_dir())
         if TestPluginHelp.OLD_MANPATH is None:
             os.environ["MANPATH"] = str(mandir.resolve())
