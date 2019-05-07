@@ -1,0 +1,10 @@
+Test LANG={LANG}
+Test LEAF_VERSION={TESTS_LEAF_VERSION}
+Test MY_CUSTOM_VAR1=My value
+Test MY_CUSTOM_VAR2=Hello
+Test MY_CUSTOM_VAR3=Hello World
+Test MY_EXPORTED_VAR=
+Arguments counts: 3
+  >{file}<
+  > hello world <
+  > {TESTS_LEAF_VERSION} <

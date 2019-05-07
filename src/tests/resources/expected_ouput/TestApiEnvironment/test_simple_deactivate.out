@@ -1,0 +1,5 @@
+# my env
+test -r "/tmp/a.out" && source "/tmp/a.out";
+test -r "/tmp/b.out" && source "/tmp/b.out";
+unset A;
+unset B;

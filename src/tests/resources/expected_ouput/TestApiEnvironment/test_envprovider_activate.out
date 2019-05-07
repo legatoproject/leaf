@@ -1,0 +1,9 @@
+# Exported by My custom env
+export AaaA="A B C";
+test -r "/TMP/A.IN" && source "/TMP/A.IN";
+test -r "/TMP/B.IN" && source "/TMP/B.IN";
+# my env 1
+export A1="a1";
+export B1="b1";
+test -r "/tmp/a1.in" && source "/tmp/a1.in";
+test -r "/tmp/b1.in" && source "/tmp/b1.in";

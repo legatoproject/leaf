@@ -20,7 +20,7 @@ from leaf.core.utils import NotEnoughSpaceException, is_folder_ignored
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
 from leaf.model.package import AvailablePackage, InstalledPackage, LeafArtifact, PackageIdentifier
-from tests.testutils import ALT_INDEX_CONTENT, LEAF_UT_SKIP, LeafTestCaseWithRepo, env_file_to_map, get_lines
+from tests.testutils import ALT_INDEX_CONTENT, LEAF_UT_SKIP, LeafTestCaseWithRepo, env_file_to_map, get_lines, env_tolist
 
 HTTP_PORT = EnvVar("LEAF_HTTP_PORT", random.randint(54000, 54999))
 
@@ -179,22 +179,29 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
         self.check_content(self.pm.list_installed_packages(), ["env-A_1.0", "env-B_1.0"])
 
         env = self.pm.build_packages_environment(PackageIdentifier.parse_list(["env-A_1.0"]))
-        self.assertEqual(2, len(env.tolist()))
+        self.assertEqual(3, len(env_tolist(env)))
         self.assertEqual(
-            [("LEAF_ENV_A", "FOO"), ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder))], env.tolist()
+            [
+                ("LEAF_ENV_A", "FOO"),
+                ("LEAF_ENV_A2", "Hello"),
+                ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
+            ],
+            env_tolist(env),
         )
 
         env = self.pm.build_packages_environment(PackageIdentifier.parse_list(["env-B_1.0", "env-A_1.0"]))
-        self.assertEqual(4, len(env.tolist()))
+        self.assertEqual(5, len(env_tolist(env)))
         self.assertEqual(
             [
                 ("LEAF_ENV_B", "BAR"),
                 ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
                 ("LEAF_ENV_A", "FOO"),
+                ("LEAF_ENV_A2", "Hello"),
                 ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
             ],
-            env.tolist(),
+            env_tolist(env),
         )
+        self.assertFileContentEquals(self.install_folder / "env-A_1.0" / "dump.out", "dump.out")
 
     def test_silent_fail(self):
         with self.assertRaises(Exception):

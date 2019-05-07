@@ -9,6 +9,9 @@
   "env": {
     "MY_CUSTOM_VAR1": "My new value"
   },
+  "env.activate": [
+    "@{DIR}/myenv.in"
+  ],
   "bin": {
     "echo": {
       "path": "echo",

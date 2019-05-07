@@ -4,6 +4,5 @@ scripts_1.0/mytouch: touch something differently
 scripts_1.0/mytouch2: also touch something
 subscripts_1.0/mybin: 
 subscripts_1.0/foo: 
-subscripts_1.0/foo-noshell: 
 subscripts_1.0/touch: touch something
 subscripts_1.0/mytouch: touch something differently

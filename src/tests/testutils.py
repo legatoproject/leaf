@@ -16,6 +16,7 @@ from leaf.core.constants import JsonConstants, LeafFiles, LeafSettings
 from leaf.core.jsonutils import jloadfile, jwritefile
 from leaf.core.settings import EnvVar
 from leaf.core.utils import mkdirs, rmtree_force
+from leaf.model.environment import Environment
 from leaf.model.package import Manifest, PackageIdentifier
 
 LeafSettings.NON_INTERACTIVE.value = 1
@@ -28,7 +29,7 @@ LEAF_UT_CREATE_TEMPLATE = EnvVar("LEAF_UT_CREATE_TEMPLATE")
 LEAF_PROJECT_ROOT_FOLDER = Path(__file__).parent.parent.parent
 
 LEAF_SYSTEM_ROOT = LEAF_PROJECT_ROOT_FOLDER / "resources" / "share" / "leaf" / "packages"
-TEST_RESOURCES_FOLDER = LEAF_PROJECT_ROOT_FOLDER / "src/tests/resources"
+TEST_RESOURCES_FOLDER = LEAF_PROJECT_ROOT_FOLDER / "src" / "tests" / "resources"
 TEST_REMOTE_PACKAGE_SOURCE = TEST_RESOURCES_FOLDER / "packages"
 TEST_LEAF_SYSTEM_ROOT = TEST_RESOURCES_FOLDER / "system_packages"
 TEST_GPG_HOMEDIR = TEST_RESOURCES_FOLDER / "gpg"
@@ -62,72 +63,20 @@ class StringIOWrapper(StringIO):
 
 
 class ContentChecker:
-    def __init__(self, tester, testcase, template_out=None, template_err=(), variables=None):
+    def __init__(self, tester, expected_out=None, expected_err=None, variables=None):
         self.tester = tester
-        self.testcase = testcase
-        self.template_out, self.template_err = template_out, template_err
         self.variables = variables
-        self.sysstdout = sys.stdout
-        self.sysstderr = sys.stderr
-        self.stdout_wrapper = StringIOWrapper(self.sysstdout)
-        self.stderr_wrapper = StringIOWrapper(self.sysstderr)
+        self.expected_out, self.expected_err = expected_out, expected_err
+        self.sysstdout, self.sysstderr = sys.stdout, sys.stderr
+        self.stdout_wrapper, self.stderr_wrapper = StringIOWrapper(self.sysstdout), StringIOWrapper(self.sysstderr)
 
     def __enter__(self):
-        sys.stdout = self.stdout_wrapper
-        sys.stderr = self.stderr_wrapper
+        sys.stdout, sys.stderr = self.stdout_wrapper, self.stderr_wrapper
 
     def __exit__(self, *_):
-        sys.stdout = self.sysstdout
-        sys.stderr = self.sysstderr
-        self.__check_content(self.template_out, self.stdout_wrapper)
-        self.__check_content(self.template_err, self.stderr_wrapper)
-
-    def __check_content(self, template, stream):
-        if template is None:
-            # No check
-            return
-
-        stream_lines = stream.getvalue().splitlines()
-        lines = []
-        if isinstance(template, str):
-            # Template is a file name
-            class_folder = TEST_RESOURCES_FOLDER / "expected_ouput" / self.testcase.__class__.__name__
-            template = self.testcase.id().split(".")[-1] + "_" + template
-            template = class_folder / template
-
-            # Generate template if envar is set
-            if LEAF_UT_CREATE_TEMPLATE.as_boolean():
-                if not class_folder.exists():
-                    class_folder.mkdir()
-                for line in stream_lines:
-                    line = self.__replace_variables(line, True)
-                    lines.append(line)
-                with template.open(mode="w") as f:
-                    f.write("\n".join(lines))
-                return
-
-            # Read template content
-            self.tester.assertTrue(template.exists())
-            with open(str(template)) as fp:
-                for line in fp.read().splitlines():
-                    line = self.__replace_variables(line)
-                    lines.append(line)
-        else:
-            lines = template
-
-        self.tester.assertEqual(lines, stream_lines)
-
-    def __replace_variables(self, line, reverse=False):
-        if self.variables is not None:
-
-            for k in reversed(self.variables.keys()) if reverse else self.variables.keys():
-                v = str(self.variables[k])
-                k = str(k)
-                if reverse:
-                    line = line.replace(v, k)
-                else:
-                    line = line.replace(k, v)
-        return line
+        sys.stdout, sys.stderr = self.sysstdout, self.sysstderr
+        check_content(self.tester, self.expected_out, self.stdout_wrapper.getvalue().splitlines(), self.variables)
+        check_content(self.tester, self.expected_err, self.stderr_wrapper.getvalue().splitlines(), self.variables)
 
 
 class LeafTestCase(unittest.TestCase):
@@ -214,7 +163,20 @@ class LeafTestCase(unittest.TestCase):
         out["{TESTS_FOLDER}"] = self.test_folder
         return out
 
-    def assertStdout(self, template_out=None, template_err=[], variables=None):  # noqa: N802
+    def assertFileContentEquals(self, actual_file: Path, template_name: str, variables: dict = None):  # noqa: N802
+        content_variables = self._get_default_variables()
+        if variables is not None:
+            content_variables.update(variables)
+        check_content(self, self.get_template_file(template_name), get_lines(actual_file), content_variables)
+
+    def get_template_file(self, template_name):
+        # Template is a file name
+        self.assertTrue(isinstance(template_name, str))
+        class_folder = TEST_RESOURCES_FOLDER / "expected_ouput" / self.__class__.__name__
+        template = self.id().split(".")[-1] + "_" + template_name
+        return class_folder / template
+
+    def assertStdout(self, template_out=None, template_err=None, variables: dict = None):  # noqa: N802
         """
         Possibles values for templates :
         - None -> the stream is not checked
@@ -224,7 +186,12 @@ class LeafTestCase(unittest.TestCase):
         content_variables = self._get_default_variables()
         if variables is not None:
             content_variables.update(variables)
-        return ContentChecker(self, testcase=self, template_out=template_out, template_err=template_err, variables=content_variables)
+        return ContentChecker(
+            self,
+            expected_out=self.get_template_file(template_out) if template_out else None,
+            expected_err=self.get_template_file(template_err) if template_err else None,
+            variables=content_variables,
+        )
 
 
 class LeafTestCaseWithRepo(LeafTestCase):
@@ -301,7 +268,7 @@ class LeafTestCaseWithCli(LeafTestCaseWithRepo):
         super().tearDown()
         LeafSettings.SYSTEM_PKG_FOLDERS.value = None
 
-    def simple_exec(self, *command, bin="leaf", expected_rc=0):
+    def simple_exec(self, *command, bin="leaf", expected_rc=0, silent=True):
         cmd = " ".join(command)
         if bin is not None:
             cmd = bin + " " + cmd
@@ -310,6 +277,8 @@ class LeafTestCaseWithCli(LeafTestCaseWithRepo):
         try:
             LeafSettings.VERBOSITY.value = None
             rc, stdout = subprocess.getstatusoutput(cmd)
+            if not silent and stdout:
+                print(stdout)
             if expected_rc is not None:
                 self.assertEqual(expected_rc, rc)
             return stdout
@@ -439,6 +408,42 @@ def check_mime(file, expected_mime):
     mime = subprocess.getoutput("file -bi " + str(file))
     if not mime.startswith("application/" + expected_mime):
         raise ValueError("File {file} has invalid mime type {mime}".format(file=file, mime=mime))
+
+
+def env_tolist(env: Environment):
+    out = []
+    env.activate(kv_consumer=lambda k, v: out.append((k, v)))
+    return out
+
+
+def replace_vars(line: str, variables: dict, reverse: bool = False):
+    if variables:
+        for k in reversed(variables.keys()) if reverse else variables.keys():
+            v = str(variables[k])
+            k = str(k)
+            if reverse:
+                line = line.replace(v, k)
+            else:
+                line = line.replace(k, v)
+    return line
+
+
+def check_content(tester: TestCase, template_file: Path, lines: list, variables: dict):
+    if template_file is None:
+        # No check
+        return
+
+    if LEAF_UT_CREATE_TEMPLATE.as_boolean():
+        # Generate template if envar is set
+        if not template_file.parent.exists():
+            template_file.parent.mkdir()
+        with template_file.open("w") as fp:
+            for line in lines:
+                fp.write(replace_vars(line, variables, reverse=True) + "\n")
+
+    # Check content with actual content
+    template_lines = list(map(lambda l: replace_vars(l, variables, reverse=False), get_lines(template_file)))
+    tester.assertEqual(lines, template_lines)
 
 
 if __name__ == "__main__":

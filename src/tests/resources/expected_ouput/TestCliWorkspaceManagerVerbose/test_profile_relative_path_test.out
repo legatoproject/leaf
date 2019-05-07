@@ -12,7 +12,10 @@ export LEAF_ENV_B="BAR";
 export LEAF_PATH_B="$PATH:{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-B";
 # Exported by package env-A_1.0
 export LEAF_ENV_A="FOO";
+export LEAF_ENV_A2="Hello";
 export LEAF_PATH_A="$PATH:{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-A:{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-B";
+test -r "{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-A/env.in" && source "{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-A/env.in";
+test -r "{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-A/otherenv.in" && source "{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-A/otherenv.in";
 ------------------------
 # Leaf built-in variables
 export LEAF_VERSION="{TESTS_LEAF_VERSION}";
@@ -30,7 +33,10 @@ export LEAF_ENV_B="BAR";
 export LEAF_PATH_B="$PATH:{TESTS_FOLDER}/volatile/packages/env-B_1.0";
 # Exported by package env-A_1.0
 export LEAF_ENV_A="FOO";
+export LEAF_ENV_A2="Hello";
 export LEAF_PATH_A="$PATH:{TESTS_FOLDER}/volatile/packages/env-A_1.0:{TESTS_FOLDER}/volatile/packages/env-B_1.0";
+test -r "{TESTS_FOLDER}/volatile/packages/env-A_1.0/env.in" && source "{TESTS_FOLDER}/volatile/packages/env-A_1.0/env.in";
+test -r "{TESTS_FOLDER}/volatile/packages/env-A_1.0/otherenv.in" && source "{TESTS_FOLDER}/volatile/packages/env-A_1.0/otherenv.in";
 ------------------------
 # Leaf built-in variables
 export LEAF_VERSION="{TESTS_LEAF_VERSION}";
@@ -48,4 +54,7 @@ export LEAF_ENV_B="BAR";
 export LEAF_PATH_B="$PATH:{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-B";
 # Exported by package env-A_1.0
 export LEAF_ENV_A="FOO";
+export LEAF_ENV_A2="Hello";
 export LEAF_PATH_A="$PATH:{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-A:{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-B";
+test -r "{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-A/env.in" && source "{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-A/env.in";
+test -r "{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-A/otherenv.in" && source "{TESTS_FOLDER}/volatile/workspace/leaf-data/foo/env-A/otherenv.in";

@@ -1,0 +1,18 @@
+# my env 2
+test -r "/tmp/a2.out" && source "/tmp/a2.out";
+test -r "/tmp/b2.out" && source "/tmp/b2.out";
+unset A2;
+unset B2;
+# my env 4
+unset A4;
+unset B4;
+# my env 5
+test -r "/tmp/a5.out" && source "/tmp/a5.out";
+test -r "/tmp/b5.out" && source "/tmp/b5.out";
+unset A5;
+unset B5;
+# my env 1
+test -r "/tmp/a1.out" && source "/tmp/a1.out";
+test -r "/tmp/b1.out" && source "/tmp/b1.out";
+unset A1;
+unset B1;

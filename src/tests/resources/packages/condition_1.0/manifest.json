@@ -12,37 +12,6 @@
       "condition-F_1.0(HELLO!~WoRlD)",
       "condition-G_1.0(FOO=BAR)(FOO2=BAR2)(HELLO~WoRlD)",
       "condition-H_1.0(FOO!=BAR)(FOO2!=BAR2)(HELLO!~WoRlD)"
-    ],
-    "features": {
-      "myFeatureFoo": {
-        "description": "Some description here",
-        "key": "FOO",
-        "values": {
-          "bar": "BAR",
-          "notbar": "OTHER_VALUE"
-        }
-      },
-      "myFeatureHello": {
-        "description": "Some description here",
-        "key": "HELLO",
-        "values": {
-          "default": null,
-          "world": "WoRlD"
-        }
-      },
-      "featureWithDups": {
-        "key": "featureWithDups",
-        "values": {
-          "enum1": "VALUE1",
-          "enum2": "VALUE2"
-        }
-      },
-      "featureWithMultipleKeys": {
-        "key": "featureWithMultipleKeys",
-        "values": {
-          "enum1": "VALUE1"
-        }
-      }
-    }
+    ]
   }
 }

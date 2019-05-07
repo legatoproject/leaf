@@ -11,17 +11,28 @@ from leaf.api import ConfigurationManager, PackageManager, RemoteManager, Worksp
 from leaf.model.tags import TagUtils
 
 
+def env_keys(env):
+    out = []
+
+    def visitor(k, v):
+        if k not in out:
+            out.append(k)
+
+    env.activate(kv_consumer=visitor)
+    return out
+
+
 def complete_environment_variable(*args, **kwargs):
     if kwargs["parser"].prog == "leaf env user":
-        return ConfigurationManager().read_user_configuration().build_environment().keys()
+        return env_keys(ConfigurationManager().read_user_configuration().build_environment())
     elif kwargs["parser"].prog == "leaf env workspace":
         wm = WorkspaceManager(WorkspaceManager.find_root())
         if wm.is_initialized:
-            return wm.read_ws_configuration().build_environment().keys()
+            return env_keys(wm.read_ws_configuration().build_environment())
     elif kwargs["parser"].prog == "leaf env profile":
         wm = WorkspaceManager(WorkspaceManager.find_root())
         if wm.is_initialized:
-            return wm.get_current_profile().build_environment().keys()
+            return env_keys(wm.get_current_profile().build_environment())
 
 
 def complete_all_packages(*args, **kwargs):

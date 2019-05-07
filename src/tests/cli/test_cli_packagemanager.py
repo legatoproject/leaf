@@ -4,7 +4,7 @@
 import os
 
 from leaf.core.constants import LeafSettings
-from tests.testutils import LeafTestCaseWithCli, get_lines
+from tests.testutils import LeafTestCaseWithCli
 
 
 class TestCliPackageManager(LeafTestCaseWithCli):
@@ -201,7 +201,7 @@ class TestCliPackageManager(LeafTestCaseWithCli):
 
     def test_legacy_config_root(self):
         # Test to be removed when legacy *leaf config --root* CLI is removed
-        with self.assertStdout("legacy_root_folder.out"):
+        with self.assertStdout("test.out"):
             self.leaf_exec(["config", "get"], "leaf.user.root")
             LeafSettings.USER_PKG_FOLDER.value = None
             self.leaf_exec(["config", "get"], "leaf.user.root")
@@ -216,12 +216,9 @@ class TestCliPackageManager(LeafTestCaseWithCli):
             self.leaf_exec(["config", "set"], "leaf.download.retry", "42")
             self.leaf_exec(["env", "user"], "--set", "LANG=D")
             self.leaf_exec(["env", "print"], "--activate-script", in_script, "--deactivate-script", out_script)
-            with self.assertStdout("env_scripts.out", variables={"{LANG}": os.environ["LANG"]}):
-                for f in (in_script, out_script):
-                    print(">>>> BEGIN:", f)
-                    for l in get_lines(f):
-                        print(l)
-                    print(">>>> END:", f)
+
+            self.assertFileContentEquals(in_script, "env.in", variables={"{LANG}": os.environ["LANG"]})
+            self.assertFileContentEquals(out_script, "env.out", variables={"{LANG}": os.environ["LANG"]})
         finally:
             # Prevent leaf config leaf.download.retry from appearing in other tests
             if "LEAF_RETRY" in os.environ:

@@ -4,7 +4,6 @@
 
 import os
 
-from leaf import __version__
 from tests.testutils import LeafTestCaseWithCli
 
 
@@ -78,55 +77,16 @@ class TestCliEntrypoints(LeafTestCaseWithCli):
         self.leaf_exec("env", "user", "--set", "MY_CUSTOM_VAR2=Hello")
         self.leaf_exec("env", "user", "--set", "MY_CUSTOM_VAR3=$MY_CUSTOM_VAR2 World")
 
-        variables = {"LEAF_VERSION": __version__, "LANG": os.getenv("LANG"), "file": str(file)}
-
-        def check_file_content(lines):
-            with file.open() as fp:
-                self.assertListEqual(list(map(lambda l: l.format(**variables) + "\n", lines)), fp.readlines())
-
-        fooshell = [
-            "Test LANG={LANG}",
-            "Test LEAF_VERSION={LEAF_VERSION}",
-            "Test MY_CUSTOM_VAR1=My value",
-            "Test MY_CUSTOM_VAR2=Hello",
-            "Test MY_CUSTOM_VAR3=Hello World",
-            "Arguments counts: 3",
-            "  >{file}<",
-            "  > hello world <",
-            "  > {LEAF_VERSION} <",
-        ]
-        foonoshell = [
-            "Test LANG={LANG}",
-            "Test LEAF_VERSION={LEAF_VERSION}",
-            "Test MY_CUSTOM_VAR1=My value",
-            "Test MY_CUSTOM_VAR2=Hello",
-            "Test MY_CUSTOM_VAR3=$MY_CUSTOM_VAR2 World",
-            "Arguments counts: 3",
-            "  >{file}<",
-            "  > hello world <",
-            "  > $LEAF_VERSION <",
-        ]
-        fooshell2 = [
-            "Test LANG={LANG}",
-            "Test LEAF_VERSION={LEAF_VERSION}",
-            "Test MY_CUSTOM_VAR1=My new value",
-            "Test MY_CUSTOM_VAR2=Hello",
-            "Test MY_CUSTOM_VAR3=Hello World",
-            "Arguments counts: 3",
-            "  >{file}<",
-            "  > hello world <",
-            "  > {LEAF_VERSION} <",
-        ]
+        variables = {"{LANG}": os.getenv("LANG"), "{file}": file}
 
         tests = {
-            ("foo", file, " hello world ", " $LEAF_VERSION "): fooshell,
-            ("foo", "-p", "scripts_1.0", file, " hello world ", " $LEAF_VERSION "): fooshell2,
-            ("foo-noshell", file, " hello world ", " $LEAF_VERSION "): foonoshell,
+            ("foo", file, " hello world ", " $LEAF_VERSION "): "fooshell.file",
+            ("foo", "-p", "scripts_1.0", file, " hello world ", " $LEAF_VERSION "): "fooshell2.file",
         }
-        for command, content in tests.items():
+        for command, template_name in tests.items():
             if file.exists():
                 file.unlink()
             self.assertFalse(file.exists())
             self.leaf_exec("run", *command)
             self.assertTrue(file.exists())
-            check_file_content(content)
+            self.assertFileContentEquals(file, template_name, variables=variables)

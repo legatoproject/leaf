@@ -1,29 +1,32 @@
 #!/usr/bin/env python3
 
+from collections import OrderedDict
 from pathlib import Path
-from setuptools import setup
 
+from setuptools import setup
 
 ROOT_FOLDER = Path(__file__).parent
 RESOURCES_FOLDER = ROOT_FOLDER / "resources"
+IGNORED_RESOURCES = ("__pycache__",)
 
 
 def _find_resources():
     if not RESOURCES_FOLDER.exists():
         raise ValueError("Cannot find resources folder")
 
-    resources_map = {}
+    resources_map = OrderedDict()
 
     def visit(folder):
         key = str(folder.relative_to(RESOURCES_FOLDER))
         for item in folder.iterdir():
-            if item.is_dir() and not str(item).endswith("__pycache__"):
+            if item.name in IGNORED_RESOURCES:
+                continue
+            elif item.is_dir():
                 visit(item)
             else:
                 if key not in resources_map:
                     resources_map[key] = []
-                value = str(item.relative_to(ROOT_FOLDER))
-                resources_map[key].append(value)
+                resources_map[key].append(str(item.relative_to(ROOT_FOLDER)))
 
     visit(RESOURCES_FOLDER)
     out = []

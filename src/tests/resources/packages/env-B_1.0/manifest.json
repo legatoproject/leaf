@@ -6,5 +6,13 @@
   "env": {
     "LEAF_ENV_B": "BAR",
     "LEAF_PATH_B": "$PATH:@{DIR}"
-  }
+  },
+  "env-activate": [
+    "@{DIR}/env.in",
+    "@{DIR}/otherenv.in"
+  ],
+  "env-deactivate": [
+    "@{DIR}/env.out",
+    "@{DIR}/otherenv.out"
+  ]
 }

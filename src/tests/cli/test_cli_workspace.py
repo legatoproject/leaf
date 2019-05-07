@@ -315,19 +315,19 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         self.assertTrue(in_script.exists())
         self.assertTrue(out_script.exists())
 
-        with open(str(in_script)) as fp:
+        with in_script.open() as fp:
             foo_count = 0
             for line in fp.read().splitlines():
                 if line == 'export FOO="bar";':
                     foo_count += 1
             self.assertEqual(3, foo_count)
 
-        with open(str(out_script)) as fp:
+        with out_script.open() as fp:
             foo_count = 0
             for line in fp.read().splitlines():
                 if line == "unset FOO;":
                     foo_count += 1
-            self.assertEqual(1, foo_count)
+            self.assertEqual(3, foo_count)
 
     def test_install_from_workspace(self):
         self.leaf_exec("init")
@@ -347,7 +347,6 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
             "LEAF_VERSION",
         ]:
             self.assertTrue(key in keys, msg=key)
-        print(keys)
 
     def test_package_override(self):
         self.leaf_exec("init")
@@ -468,7 +467,7 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
         self.leaf_exec(("profile", "create"), "foo")
         self.leaf_exec(("profile", "config"), "-p", "env-A_1.0")
         self.leaf_exec(("profile", "sync"))
-        with self.assertStdout("test_profile_relative_path.out"):
+        with self.assertStdout("test.out"):
             self.leaf_exec(("env", "print"))
             print("------------------------")
             self.leaf_exec(["config", "set"], "leaf.profile.relative.disable", "1")

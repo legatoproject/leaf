@@ -8,12 +8,10 @@ from collections import OrderedDict
 import leaf
 from leaf.api import WorkspaceManager
 from leaf.core.constants import LeafSettings
-from leaf.core.error import (InvalidProfileNameException, LeafException,
-                             NoProfileSelected,
-                             ProfileNameAlreadyExistException)
+from leaf.core.error import InvalidProfileNameException, LeafException, NoProfileSelected, ProfileNameAlreadyExistException
 from leaf.model.base import Scope
 from leaf.model.package import IDENTIFIER_GETTER, PackageIdentifier
-from tests.testutils import LeafTestCaseWithRepo
+from tests.testutils import LeafTestCaseWithRepo, env_tolist
 
 
 class TestApiWorkspaceManager(LeafTestCaseWithRepo):
@@ -145,9 +143,10 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                     ("LEAF_ENV_B", "BAR"),
                     ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
                     ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_ENV_A2", "Hello"),
                     ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                 ],
-                self.wm.build_full_environment(profile).tolist(),
+                env_tolist(self.wm.build_full_environment(profile)),
             )
 
             self.wm.update_user_environment(set_map=OrderedDict((("scope", "user"), ("HELLO", "world"))))
@@ -164,9 +163,10 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                     ("LEAF_ENV_B", "BAR"),
                     ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
                     ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_ENV_A2", "Hello"),
                     ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                 ],
-                self.wm.build_full_environment(profile).tolist(),
+                env_tolist(self.wm.build_full_environment(profile)),
             )
 
             self.wm.update_user_environment(unset_list=["HELLO"])
@@ -182,9 +182,10 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                     ("LEAF_ENV_B", "BAR"),
                     ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
                     ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_ENV_A2", "Hello"),
                     ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                 ],
-                self.wm.build_full_environment(profile).tolist(),
+                env_tolist(self.wm.build_full_environment(profile)),
             )
 
             self.wm.update_ws_environment(set_map=OrderedDict((("scope", "workspace"), ("HELLO", "world"))))
@@ -202,9 +203,10 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                     ("LEAF_ENV_B", "BAR"),
                     ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
                     ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_ENV_A2", "Hello"),
                     ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                 ],
-                self.wm.build_full_environment(profile).tolist(),
+                env_tolist(self.wm.build_full_environment(profile)),
             )
 
             self.wm.update_ws_environment(unset_list=["HELLO"])
@@ -221,9 +223,10 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                     ("LEAF_ENV_B", "BAR"),
                     ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
                     ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_ENV_A2", "Hello"),
                     ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                 ],
-                self.wm.build_full_environment(profile).tolist(),
+                env_tolist(self.wm.build_full_environment(profile)),
             )
 
             profile.update_environment(set_map=OrderedDict((("scope", "profile"), ("HELLO", "world"))))
@@ -243,9 +246,10 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                     ("LEAF_ENV_B", "BAR"),
                     ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
                     ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_ENV_A2", "Hello"),
                     ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                 ],
-                self.wm.build_full_environment(profile).tolist(),
+                env_tolist(self.wm.build_full_environment(profile)),
             )
 
             profile.update_environment(unset_list=["HELLO"])
@@ -264,9 +268,10 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                     ("LEAF_ENV_B", "BAR"),
                     ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
                     ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_ENV_A2", "Hello"),
                     ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                 ],
-                self.wm.build_full_environment(profile).tolist(),
+                env_tolist(self.wm.build_full_environment(profile)),
             )
         finally:
             LeafSettings.PROFILE_NORELATIVE.value = None

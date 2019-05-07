@@ -1,0 +1,4 @@
+LEAF_PROFILE = ENV-A
+LEAF_ENV_A = FOO
+LEAF_ENV_A2 = Hello World
+MY_EXTRA_VAR1 = Hello

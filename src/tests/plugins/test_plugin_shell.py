@@ -18,10 +18,10 @@ class TestPluginShell(LeafTestCaseWithCli):
         try:
             os.chdir(str(self.workspace_folder))
             self.simple_exec("setup", "-p", "env-A")
-
             self.simple_exec("shell", "-c", "true")
-            self.simple_exec("shell", "-n", "bash", "-c", "test \\$LEAF_PROFILE = 'ENV-A'")
-            self.simple_exec("shell", "-c", "test \\$LEAF_PROFILE = 'ENV-A'")
-            self.simple_exec("shell", "-n", "zsh", "-c", "test \\$LEAF_PROFILE = 'ENV-A'")
+            with self.assertStdout("shell.out"):
+                for v in ("LEAF_PROFILE", "LEAF_ENV_A", "LEAF_ENV_A2", "MY_EXTRA_VAR1"):
+                    self.simple_exec("shell", "-c", "echo {0} = \\${0}".format(v), silent=False)
+
         finally:
             os.chdir(str(pwd))

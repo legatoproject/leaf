@@ -1,0 +1,18 @@
+# my env 2
+export A2="a2";
+export B2="b2";
+test -r "/tmp/a2.in" && source "/tmp/a2.in";
+test -r "/tmp/b2.in" && source "/tmp/b2.in";
+# my env 4
+export A4="a4";
+export B4="b4";
+test -r "/tmp/a4.in" && source "/tmp/a4.in";
+test -r "/tmp/b4.in" && source "/tmp/b4.in";
+# my env 5
+export A5="a5";
+export B5="b5";
+# my env 1
+export A1="a1";
+export B1="b1";
+test -r "/tmp/a1.in" && source "/tmp/a1.in";
+test -r "/tmp/b1.in" && source "/tmp/b1.in";

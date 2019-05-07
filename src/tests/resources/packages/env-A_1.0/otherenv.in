@@ -1,0 +1,2 @@
+export MY_EXTRA_VAR2="Hello"
+export LEAF_ENV_A2="Hello World"

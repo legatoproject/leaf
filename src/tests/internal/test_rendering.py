@@ -211,11 +211,11 @@ class TestRendering(LeafTestCase):
             self.loggerManager.print_hints("This is a hints", "This is another hint with a 'fake command'")
 
     def test_error(self):
-        with self.assertStdout(template_out=[], template_err="error.err"):
+        with self.assertStdout(template_out="empty.out", template_err="error.err"):
             self.loggerManager.print_exception(self.__create_exception())
 
     def test_trace(self):
-        with self.assertStdout(template_out=[], template_err="trace.err"):
+        with self.assertStdout(template_out="empty.out", template_err="trace.err"):
             LeafSettings.DEBUG_MODE.value = None
             print("--------- Production mode ---------", file=sys.stderr)
             self.__print_error()

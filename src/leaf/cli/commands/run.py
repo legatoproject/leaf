@@ -95,8 +95,8 @@ class RunCommand(LeafCommand):
 
             if env is None:
                 env = Environment.build(wm.build_builtin_environment(), wm.build_user_environment())
-                env.append(wm.build_packages_environment(DependencyUtils.installed([candidate_ip.identifier], ipmap, env=env)))
+                env.append(wm.build_packages_environment(DependencyUtils.installed([candidate_ip.identifier], ipmap=ipmap, env=env)))
 
             ep = candidate_ip.binaries[args.binary]
             vr = VariableResolver(candidate_ip, ipmap.values())
-            return execute_command(vr.resolve(ep.command), *uargs, print_stdout=True, env=env, shell=ep.shell)
+            return execute_command(vr.resolve(ep.command), *uargs, print_stdout=True, env=env)

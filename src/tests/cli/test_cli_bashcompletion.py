@@ -115,9 +115,9 @@ class TestCliBashCompletion(LeafTestCaseWithCli):
         self.leaf_exec(("package", "install"), "scripts_1.0")
 
         completions = get_completion_list("run")
-        for word in ["echo", "env", "mytouch", "mytouch2", "mybin", "foo", "foo-noshell", "touch", "mytouch"]:
+        for word in ["echo", "env", "mytouch", "mytouch2", "mybin", "foo", "touch", "mytouch"]:
             self.assertTrue(word in completions)
-        self.assertEqual(get_completion_list("run fo...", sort=True), ["foo", "foo-noshell"])
+        self.assertEqual(get_completion_list("run fo...", sort=True), ["foo"])
 
     def test_argcomplete(self):
         self.assertEqual(get_completion_list("p..."), ["profile", "package"])

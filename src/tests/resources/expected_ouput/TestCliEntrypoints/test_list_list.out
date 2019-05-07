@@ -1,16 +1,15 @@
-┌──────────────────────────────────────────────────────────┐
-│     List of declared binaries in installed packages      │
-├────────────────┬─────────────────────────────────────────┤
-│    Package     │                 Binaries                │
-╞════════════════╪═════════════════════════════════════════╡
-│ scripts_1.0    │ echo        print something             │
-│                │ env         display env                 │
-│                │ mytouch     touch something differently │
-│                │ mytouch2    also touch something        │
-├────────────────┼─────────────────────────────────────────┤
-│ subscripts_1.0 │ mybin                                   │
-│                │ foo                                     │
-│                │ foo-noshell                             │
-│                │ touch       touch something             │
-│                │ mytouch     touch something differently │
-└────────────────┴─────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────┐
+│    List of declared binaries in installed packages    │
+├────────────────┬──────────────────────────────────────┤
+│    Package     │               Binaries               │
+╞════════════════╪══════════════════════════════════════╡
+│ scripts_1.0    │ echo     print something             │
+│                │ env      display env                 │
+│                │ mytouch  touch something differently │
+│                │ mytouch2 also touch something        │
+├────────────────┼──────────────────────────────────────┤
+│ subscripts_1.0 │ mybin                                │
+│                │ foo                                  │
+│                │ touch    touch something             │
+│                │ mytouch  touch something differently │
+└────────────────┴──────────────────────────────────────┘

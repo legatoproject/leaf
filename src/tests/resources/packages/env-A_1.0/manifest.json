@@ -6,8 +6,25 @@
       "env-B_1.0"
     ]
   },
+  "install": [
+    {
+      "command": [
+        "@{DIR}/dump.sh"
+      ],
+      "verbose": true
+    }
+  ],
   "env": {
     "LEAF_ENV_A": "FOO",
+    "LEAF_ENV_A2": "Hello",
     "LEAF_PATH_A": "$PATH:@{DIR}:@{DIR:env-B_1.0}"
-  }
+  },
+  "env.activate": [
+    "@{DIR}/env.in",
+    "@{DIR}/otherenv.in"
+  ],
+  "env.deactivate": [
+    "@{DIR}/env.out",
+    "@{DIR}/otherenv.out"
+  ]
 }

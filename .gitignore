@@ -15,7 +15,6 @@ __pycache__
 /.eggs/
 
 # Generated files
-/resources/man/
 /.coverage
 /coverage-report/
 /flake-report/

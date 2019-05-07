@@ -1,18 +1,17 @@
-import os
 import subprocess
 from builtins import sorted
 
-from leaf.core.constants import LeafConstants
+from leaf.core.constants import LeafConstants, LeafSettings
 from leaf.core.error import InvalidPackageNameException
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
 
 
-def execute_command(*args, cwd=None, env=None, shell=True, print_stdout=False):
+def execute_command(*args, cwd=None, env=None, print_stdout=False):
     """
     Execute a process and returns the return code.
-    If 'shell' is set (true means bash, else set the string value), then the command is run in a $SHELL -c
-    and the env is set via multiple export commands to preserve variable overriding
+    The command is run in a leaf default shell (see settings) $SHELL -c
+    and the env is set via multiple export/source commands to preserve variable overriding
     """
 
     # Builds args
@@ -25,33 +24,20 @@ def execute_command(*args, cwd=None, env=None, shell=True, print_stdout=False):
 
     # Build the command line
     command = None
-    if isinstance(shell, str) or shell is True:
-        # In shell mode, env is evaluated in the command line
-        shell_command = ""
-        if isinstance(env, dict):
-            for k, v in env.items():
-                shell_command += 'export {key}="{value}";'.format(key=k, value=v)
-        elif isinstance(env, Environment):
-            for k, v in env.tolist():
-                shell_command += 'export {key}="{value}";'.format(key=k, value=v)
-        for arg in args:
-            shell_command += ' "{arg}"'.format(arg=arg)
-        if not isinstance(shell, str):
-            shell = LeafConstants.DEFAULT_SHELL
-        command = [shell, "-c", shell_command]
-    else:
-        # invoke process directly
-        if isinstance(env, dict):
-            customenv = dict(os.environ)
-            for k, v in env.items():
-                customenv[k] = str(v)
-            kwargs["env"] = customenv
-        elif isinstance(env, Environment):
-            customenv = dict(os.environ)
-            for k, v in env.tolist():
-                customenv[k] = str(v)
-            kwargs["env"] = customenv
-        command = args
+    # In shell mode, env is evaluated in the command line
+    shell_commands = []
+    if isinstance(env, dict):
+        for k, v in env.items():
+            shell_commands.append(Environment.tostring_export(k, v))
+    elif isinstance(env, Environment):
+        env.activate(
+            kv_consumer=lambda k, v: shell_commands.append(Environment.tostring_export(k, v)),
+            file_consumer=lambda f: shell_commands.append(Environment.tostring_file(f)),
+        )
+    shell_command = " ".join(shell_commands)
+    for arg in args:
+        shell_command += ' "{arg}"'.format(arg=arg)
+    command = [LeafSettings.DEFAULT_SHELL.value, "-c", shell_command]
 
     # Execute the command
     return subprocess.call(command, **kwargs)

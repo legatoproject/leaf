@@ -6,7 +6,6 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 """
-import operator
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from pathlib import Path
@@ -23,11 +22,17 @@ class Environment:
 
     @staticmethod
     def tostring_export(key: str, value: str):
+        if value is None:
+            return Environment.tostring_unset(key)
         return 'export {key}="{value}";'.format(key=key, value=value)
 
     @staticmethod
     def tostring_unset(key: str):
         return "unset {key};".format(key=key)
+
+    @staticmethod
+    def tostring_file(file: str or Path):
+        return 'test -r "{0}" && source "{0}";'.format(file)
 
     @staticmethod
     def build(*environments):
@@ -41,11 +46,12 @@ class Environment:
                 raise ValueError()
         return out
 
-    def __init__(self, label: str = None, content: dict or list = None):
+    def __init__(self, label: str = None, content: dict or list = None, in_files: list = None, out_files: list = None):
         self.__label = label
         self.__values = []
+        self.__in_files = in_files
+        self.__out_files = out_files
         self.__sub_env_list = []
-
         # Init content
         if isinstance(content, dict):
             for k, v in content.items():
@@ -62,30 +68,47 @@ class Environment:
         elif subenv is not None:
             raise ValueError()
 
+    def activate(self, comment_consumer: callable = None, kv_consumer: callable = None, file_consumer: callable = None):
+        # Start with sub env
+        for e in self.__sub_env_list:
+            e.activate(comment_consumer=comment_consumer, kv_consumer=kv_consumer, file_consumer=file_consumer)
+        # Activate self
+        if len(self.__values) > 0 or len(self.__values) > 0 or len(self.__values) > 0:
+            if self.__label and comment_consumer:
+                comment_consumer(self.__label)
+            if kv_consumer:
+                for k, v in self.__values:
+                    kv_consumer(k, v)
+            if file_consumer and self.__in_files:
+                for f in self.__in_files:
+                    file_consumer(f)
+
+    def deactivate(self, comment_consumer: callable = None, kv_consumer: callable = None, file_consumer: callable = None):
+        # Start with sub env
+        for e in self.__sub_env_list:
+            e.deactivate(comment_consumer=comment_consumer, kv_consumer=kv_consumer, file_consumer=file_consumer)
+        # Deactivate self
+        if len(self.__values) > 0 or len(self.__values) > 0 or len(self.__values) > 0:
+            if self.__label and comment_consumer:
+                comment_consumer(self.__label)
+            if file_consumer and self.__out_files:
+                for f in self.__out_files:
+                    file_consumer(f)
+            if kv_consumer:
+                for k, _ in self.__values:
+                    kv_consumer(k, REFERENCE_ENVIRON.get(k))
+
     def print_env(self, kv_consumer: callable = None, comment_consumer: callable = None):
         # Start with sub env
         for e in self.__sub_env_list:
             e.print_env(kv_consumer, comment_consumer)
         # Print self
-        if len(self.__values) > 0:
+        if len(self.__values) > 0 or len(self.__values) > 0 or len(self.__values) > 0:
             if self.__label is not None and comment_consumer is not None:
                 comment_consumer(self.__label)
             if kv_consumer is not None:
                 for k, v in self.__values:
                     kv_consumer(k, v)
-
-    def tolist(self, acc=None):
-        if acc is None:
-            acc = []
-        # Start by sub environments
-        for e in self.__sub_env_list:
-            e.tolist(acc=acc)
-        # Add current values
-        acc += self.__values
-        return acc
-
-    def keys(self):
-        return set(map(operator.itemgetter(0), self.tolist()))
 
     def find_setting(self, setting: LeafSetting) -> str:
         out = self.find_value(setting.key)
@@ -95,17 +118,13 @@ class Environment:
         return out if out is not None else setting.value
 
     def find_value(self, key: str):
-        out = None
-        # First search value in sub envs
-        for c in self.__sub_env_list:
-            out2 = c.find_value(key)
-            if out2 is not None:
-                out = out2
-        # Search value in self values
-        for k, v in self.__values:
+        def visitor(k, v):
             if k == key:
-                out = str(v)
-        return out
+                values.append(v)
+
+        values = []
+        self.activate(kv_consumer=visitor)
+        return values[-1] if len(values) > 0 else None
 
     def is_set(self, key):
         # First search value in sub envs
@@ -138,31 +157,20 @@ class Environment:
         """
         Generates environment script to activate and desactivate a profile
         """
-        if deactivate_file is not None:
-            resetmap = OrderedDict()
-            for k in self.keys():
-                resetmap[k] = REFERENCE_ENVIRON.get(k)
-            with deactivate_file.open("w") as fp:
-                # First loop reset
-                for k in sorted(resetmap.keys()):
-                    v = resetmap[k]
-                    if v is not None:
-                        fp.write(Environment.tostring_export(k, v) + "\n")
-                # Second loop, unset
-                for k in sorted(resetmap.keys()):
-                    v = resetmap[k]
-                    if v is None:
-                        fp.write(Environment.tostring_unset(k) + "\n")
         if activate_file is not None:
             with activate_file.open("w") as fp:
-
-                def comment_consumer(c):
-                    fp.write(Environment.tostring_comment(c) + "\n")
-
-                def kv_consumer(k, v):
-                    fp.write(Environment.tostring_export(k, v) + "\n")
-
-                self.print_env(kv_consumer=kv_consumer, comment_consumer=comment_consumer)
+                self.activate(
+                    comment_consumer=lambda c: fp.write(Environment.tostring_comment(c) + "\n"),
+                    kv_consumer=lambda k, v: fp.write(Environment.tostring_export(k, v) + "\n"),
+                    file_consumer=lambda f: fp.write(Environment.tostring_file(f) + "\n"),
+                )
+        if deactivate_file is not None:
+            with deactivate_file.open("w") as fp:
+                self.deactivate(
+                    comment_consumer=lambda c: fp.write(Environment.tostring_comment(c) + "\n"),
+                    kv_consumer=lambda k, v: fp.write(Environment.tostring_export(k, v) + "\n"),
+                    file_consumer=lambda f: fp.write(Environment.tostring_file(f) + "\n"),
+                )
 
 
 class IEnvProvider(ABC):
@@ -173,8 +181,23 @@ class IEnvProvider(ABC):
     def _getenvmap(self) -> dict:
         pass
 
-    def build_environment(self) -> Environment:
-        return Environment("Exported by {name}".format(name=self.__label), self._getenvmap())
+    def _getenvinfiles(self) -> list:
+        return []
+
+    def _getenvoutfiles(self) -> list:
+        return []
+
+    def build_environment(self, vr: callable = None) -> Environment:
+        content = OrderedDict()
+        for k, v in self._getenvmap().items():
+            content[k] = vr(v) if vr else v
+        in_files = []
+        for f in self._getenvinfiles():
+            in_files.append(vr(f) if vr else f)
+        out_files = []
+        for f in self._getenvoutfiles():
+            out_files.append(vr(f) if vr else f)
+        return Environment(label="Exported by {name}".format(name=self.__label), content=content, in_files=in_files, out_files=out_files)
 
     def update_environment(self, set_map: dict = None, unset_list: list = None):
         envmap = self._getenvmap()

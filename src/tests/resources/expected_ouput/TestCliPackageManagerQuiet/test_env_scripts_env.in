@@ -1,4 +1,3 @@
->>>> BEGIN: {TESTS_FOLDER}/volatile/in.sh
 # Leaf built-in variables
 export LEAF_VERSION="{TESTS_LEAF_VERSION}";
 export LEAF_PLATFORM_SYSTEM="{TESTS_PLATFORM_SYSTEM}";
@@ -7,12 +6,3 @@ export LEAF_PLATFORM_RELEASE="{TESTS_PLATFORM_RELEASE}";
 # Exported by user configuration
 export LEAF_RETRY="42";
 export LANG="D";
->>>> END: {TESTS_FOLDER}/volatile/in.sh
->>>> BEGIN: {TESTS_FOLDER}/volatile/out.sh
-export LANG="{LANG}";
-unset LEAF_PLATFORM_MACHINE;
-unset LEAF_PLATFORM_RELEASE;
-unset LEAF_PLATFORM_SYSTEM;
-unset LEAF_RETRY;
-unset LEAF_VERSION;
->>>> END: {TESTS_FOLDER}/volatile/out.sh

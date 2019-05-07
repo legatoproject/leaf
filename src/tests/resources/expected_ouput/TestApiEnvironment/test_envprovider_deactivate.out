@@ -1,0 +1,9 @@
+# Exported by My custom env
+test -r "/TMP/A.OUT" && source "/TMP/A.OUT";
+test -r "/TMP/B.OUT" && source "/TMP/B.OUT";
+unset AaaA;
+# my env 1
+test -r "/tmp/a1.out" && source "/tmp/a1.out";
+test -r "/tmp/b1.out" && source "/tmp/b1.out";
+unset A1;
+unset B1;

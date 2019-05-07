@@ -19,8 +19,9 @@ from tarfile import TarFile
 from leaf.core.constants import JsonConstants, LeafFiles
 from leaf.core.error import InvalidPackageNameException
 from leaf.core.jsonutils import JsonObject, jload, jloadfile
-from leaf.core.utils import url_resolve, version_comparator_lt, version_string_to_tuple
-from leaf.model.environment import Environment
+from leaf.core.utils import (url_resolve, version_comparator_lt,
+                             version_string_to_tuple)
+from leaf.model.environment import Environment, IEnvProvider
 from leaf.model.settings import ScopeSetting
 
 IDENTIFIER_GETTER = operator.attrgetter("identifier")
@@ -307,7 +308,7 @@ class AvailablePackage(Manifest):
         return self.__remotes
 
 
-class InstalledPackage(Manifest):
+class InstalledPackage(Manifest, IEnvProvider):
 
     """
     Represent an installed package
@@ -315,6 +316,7 @@ class InstalledPackage(Manifest):
 
     def __init__(self, mffile: Path, read_only=False):
         Manifest.__init__(self, jloadfile(mffile))
+        IEnvProvider.__init__(self, "package {pi}".format(pi=self.identifier))
         self.__folder = mffile.parent
         self.__read_only = read_only
         if read_only:
@@ -327,10 +329,6 @@ class InstalledPackage(Manifest):
     @property
     def read_only(self):
         return self.__read_only
-
-    @property
-    def envmap(self):
-        return self.jsonget(JsonConstants.ENV, default={})
 
     @property
     def binaries(self) -> dict:
@@ -353,6 +351,15 @@ class InstalledPackage(Manifest):
             sid = "{pkgname}.{id}".format(pkgname=self.name, id=identifier)
             out[sid] = ScopeSetting.from_json(sid, json)
         return out
+
+    def _getenvmap(self) -> dict:
+        return self.jsonget(JsonConstants.ENV, default={})
+
+    def _getenvinfiles(self) -> list:
+        return self.jsonget(JsonConstants.ENVIN, default=[])
+
+    def _getenvoutfiles(self) -> list:
+        return self.jsonget(JsonConstants.ENVOUT, default=[])
 
 
 class PluginDefinition(JsonObject):
@@ -418,7 +425,3 @@ class Entrypoint(JsonObject):
     @property
     def description(self):
         return self.jsonget(JsonConstants.ENTRYPOINT_DESCRIPTION)
-
-    @property
-    def shell(self):
-        return self.jsonget(JsonConstants.ENTRYPOINT_SHELL, default=True)

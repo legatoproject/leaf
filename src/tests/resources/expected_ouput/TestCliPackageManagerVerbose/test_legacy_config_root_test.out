@@ -1,6 +1,6 @@
-leaf.user.root={TESTS_FOLDER}/volatile/packages
-leaf.user.root=~/.leaf
+leaf.user.root = "{TESTS_FOLDER}/volatile/packages"
+leaf.user.root = "~/.leaf"
 HINTS:
 The --root option is deprecated and will soon be removed
 Next time you should use 'leaf config set leaf.user.root "{TESTS_FOLDER}/volatile/workspace"' instead
-leaf.user.root={TESTS_FOLDER}/volatile/workspace
+leaf.user.root = "{TESTS_FOLDER}/volatile/workspace"

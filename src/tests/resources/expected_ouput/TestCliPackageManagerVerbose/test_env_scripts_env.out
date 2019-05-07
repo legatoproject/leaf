@@ -1,0 +1,8 @@
+# Leaf built-in variables
+unset LEAF_VERSION;
+unset LEAF_PLATFORM_SYSTEM;
+unset LEAF_PLATFORM_MACHINE;
+unset LEAF_PLATFORM_RELEASE;
+# Exported by user configuration
+unset LEAF_RETRY;
+export LANG="{LANG}";

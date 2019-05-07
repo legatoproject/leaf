@@ -321,9 +321,6 @@ class PackageManager(RemoteManager):
                     raise InvalidPackageNameException(item)
             else:
                 raise InvalidPackageNameException(item)
-            ipenv = Environment("Exported by package {ip.identifier}".format(ip=ip))
-            out.append(ipenv)
             vr = VariableResolver(ip, ipmap.values())
-            for key, value in ip.envmap.items():
-                ipenv.set_variable(key, vr.resolve(value))
+            out.append(ip.build_environment(vr=vr.resolve))
         return out

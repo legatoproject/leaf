@@ -1,0 +1,5 @@
+# my env
+export A="a";
+export B="b";
+test -r "/tmp/a.in" && source "/tmp/a.in";
+test -r "/tmp/b.in" && source "/tmp/b.in";

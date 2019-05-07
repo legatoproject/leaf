@@ -52,6 +52,9 @@ class LeafSettings(CommonSettings):
     PROFILE_NORELATIVE = LeafSetting(
         "leaf.profile.relative.disable", "LEAF_PROFILE_NORELATIVE", description="Disable relative path for installed package of a profile"
     )
+    DEFAULT_SHELL = LeafSetting(
+        "leaf.shell.default", "LEAF_SHELL_DEFAULT", description="Shell used when leaf needs an internal shell to run commands", default="bash"
+    )
 
 
 class LeafConstants:
@@ -70,7 +73,6 @@ class LeafConstants:
     EXTINFO_EXTENSION = ".info"
     LATEST = "latest"
     DEFAULT_PAGER = pager = ("less", "-R", "-S", "-P", "Leaf -- Press q to exit")
-    DEFAULT_SHELL = "bash"
 
 
 class LeafFiles:
@@ -141,12 +143,12 @@ class JsonConstants(object):
     STEP_EXEC_ENV = "env"
     STEP_EXEC_COMMAND = "command"
     STEP_EXEC_VERBOSE = "verbose"
-    STEP_EXEC_SHELL = "shell"
     ENV = "env"
+    ENVIN = "env.activate"
+    ENVOUT = "env.deactivate"
     ENTRYPOINTS = "bin"
     ENTRYPOINT_PATH = "path"
     ENTRYPOINT_DESCRIPTION = "description"
-    ENTRYPOINT_SHELL = "shell"
     PLUGINS = "plugins"
     PLUGIN_PREFIX = "location"
     PLUGIN_DESCRIPTION = "description"

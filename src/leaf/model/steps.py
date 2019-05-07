@@ -90,9 +90,8 @@ class StepExecutor:
         env.append(Environment(content=step.get(JsonConstants.STEP_EXEC_ENV)))
 
         verbose = step.get(JsonConstants.STEP_EXEC_VERBOSE, False)
-        shell = step.get(JsonConstants.STEP_EXEC_SHELL, True)
 
-        rc = execute_command(*command, cwd=self.__target_folder, env=env, print_stdout=verbose or self.__logger.isverbose(), shell=shell)
+        rc = execute_command(*command, cwd=self.__target_folder, env=env, print_stdout=verbose or self.__logger.isverbose())
         if rc != 0:
             self.__logger.print_verbose("Command '{command}' exited with {rc}".format(command=command_text, rc=rc))
             if step.get(JsonConstants.STEP_IGNORE_FAIL, False):

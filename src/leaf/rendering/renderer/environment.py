@@ -23,27 +23,20 @@ class EnvironmentRenderer(Renderer):
         self.use_pager_if_needed = False
 
     def _tostring_quiet(self):
-        self.out = []
-
-        def kv_consumer(k, v):
-            self.out.append(Environment.tostring_export(k, v))
-
-        self[0].print_env(kv_consumer=kv_consumer)
-
-        return "\n".join(self.out)
+        out = []
+        self[0].activate(
+            kv_consumer=lambda k, v: out.append(Environment.tostring_export(k, v)), file_consumer=lambda f: out.append(Environment.tostring_file(f))
+        )
+        return "\n".join(out)
 
     def _tostring_default(self):
-        self.out = []
-
-        def comment_consumer(c):
-            self.out.append(Environment.tostring_comment(c))
-
-        def kv_consumer(k, v):
-            self.out.append(Environment.tostring_export(k, v))
-
-        self[0].print_env(kv_consumer=kv_consumer, comment_consumer=comment_consumer)
-
-        return "\n".join(self.out)
+        out = []
+        self[0].activate(
+            comment_consumer=lambda c: out.append(Environment.tostring_comment(c)),
+            kv_consumer=lambda k, v: out.append(Environment.tostring_export(k, v)),
+            file_consumer=lambda f: out.append(Environment.tostring_file(f)),
+        )
+        return "\n".join(out)
 
     def _tostring_verbose(self):
         return self._tostring_default()
