@@ -1,0 +1,7 @@
+{
+    "info": {
+        "name": "failure-minver",
+        "version": "1.0",
+        "leafMinVersion": "99.99"
+    }
+}

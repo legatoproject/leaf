@@ -20,7 +20,8 @@ from leaf.api.base import LoggerManager
 from leaf.core.constants import JsonConstants, LeafConstants, LeafFiles, LeafSettings
 from leaf.core.error import BadRemoteUrlException, LeafException, LeafOutOfDateException, NoEnabledRemoteException, NoRemoteException
 from leaf.core.jsonutils import jloadfile, jloads, jwritefile
-from leaf.core.utils import check_leaf_min_version, download_data, version_comparator_lt
+from leaf.core.utils import download_data
+from leaf.model.modelutils import check_leaf_min_version
 from leaf.model.remote import Remote
 
 
@@ -186,12 +187,8 @@ class RemoteManager(GPGManager):
 
     def __check_remote_content(self, remote):
         # Check leaf min version for all packages
-        expected_minver = None
-        for ap in remote.available_packages:
-            if ap.leaf_min_version is not None:
-                if expected_minver is None or version_comparator_lt(expected_minver, ap.leaf_min_version):
-                    expected_minver = ap.leaf_min_version
-        check_leaf_min_version(
-            expected_minver,
-            exception_message="You need to upgrade leaf v{version} to use packages from {remote.alias}".format(version=expected_minver, remote=remote),
-        )
+        expected_minver = check_leaf_min_version(remote.available_packages)
+        if expected_minver is not None and not self.logger.isquiet():
+            self.print_hints(
+                "You need to upgrade leaf to v{version} to use some packages from remote {remote.alias}".format(version=expected_minver, remote=remote)
+            )

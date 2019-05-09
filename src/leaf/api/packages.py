@@ -15,7 +15,7 @@ from tarfile import TarFile
 
 from leaf.api.remotes import RemoteManager
 from leaf.core.constants import LeafConstants, LeafFiles
-from leaf.core.error import InvalidPackageNameException, LeafException, NoPackagesInCacheException
+from leaf.core.error import InvalidPackageNameException, LeafException, LeafOutOfDateException, NoPackagesInCacheException
 from leaf.core.lock import LockFile
 from leaf.core.utils import (
     download_and_check_file,
@@ -29,7 +29,7 @@ from leaf.core.utils import (
 )
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
-from leaf.model.modelutils import find_manifest, is_latest_package
+from leaf.model.modelutils import check_leaf_min_version, find_manifest, is_latest_package
 from leaf.model.package import AvailablePackage, InstalledPackage, LeafArtifact, PackageIdentifier
 from leaf.model.steps import StepExecutor, VariableResolver
 from leaf.rendering.formatutils import sizeof_fmt
@@ -109,7 +109,9 @@ class PackageManager(RemoteManager):
         cachedfile = download_and_check_file(ap.url, self.__download_cache_folder, self.logger, filename=filename, hashstr=ap.hashsum)
         return LeafArtifact(cachedfile)
 
-    def __extract_artifact(self, la: LeafArtifact, env: Environment, install_folder: Path, keep_folder_on_error: bool = False) -> InstalledPackage:
+    def __extract_artifact(
+        self, la: LeafArtifact, env: Environment, install_folder: Path, ipmap: dict = None, keep_folder_on_error: bool = False
+    ) -> InstalledPackage:
         """
         Install a leaf artifact
         @return InstalledPackage
@@ -118,12 +120,18 @@ class PackageManager(RemoteManager):
         if target_folder.is_dir():
             raise LeafException("Folder already exists: {folder}".format(folder=target_folder))
 
-        # Create folder
-        target_folder.mkdir(parents=True)
-
-        ipmap = self.list_installed_packages()
+        # Check already installed
+        ipmap = ipmap or self.list_installed_packages()
         if la.identifier in ipmap:
             raise LeafException("Package is already installed: {la.identifier}".format(la=la))
+
+        # Check leaf min version
+        min_version = check_leaf_min_version([la])
+        if min_version:
+            raise LeafOutOfDateException("You need to upgrade leaf to v{version} to install {la.identifier}".format(version=min_version, la=la))
+
+        # Create folder
+        target_folder.mkdir(parents=True)
 
         try:
             # Extract content
@@ -192,6 +200,15 @@ class PackageManager(RemoteManager):
             try:
                 ap_to_install = DependencyUtils.install(pilist, apmap, ipmap, env=env)
 
+                # Check leaf min version
+                min_version = check_leaf_min_version(ap_to_install)
+                if min_version:
+                    raise LeafOutOfDateException(
+                        "You need to upgrade leaf to v{version} to install {text}".format(
+                            version=min_version, text=", ".join([str(ap.identifier) for ap in ap_to_install])
+                        )
+                    )
+
                 # Check nothing to do
                 if len(ap_to_install) == 0:
                     self.logger.print_default("All packages are installed")
@@ -238,7 +255,7 @@ class PackageManager(RemoteManager):
                         self.logger.print_default(
                             "[{current}/{total}] Installing {la.identifier}".format(current=(len(out) + 1), total=len(la_to_install), la=la)
                         )
-                        ip = self.__extract_artifact(la, env, self.install_folder, keep_folder_on_error=keep_folder_on_error)
+                        ip = self.__extract_artifact(la, env, self.install_folder, ipmap=ipmap, keep_folder_on_error=keep_folder_on_error)
                         out.append(ip)
 
             finally:

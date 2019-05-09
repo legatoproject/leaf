@@ -27,6 +27,7 @@ failure-badhash_1.0
 failure-depends-leaf_1.0
 failure-large-ap_1.0
 failure-large-extracted_1.0
+failure-minver_1.0
 failure-postinstall-exec-silent_1.0
 failure-postinstall-exec_1.0
 install_1.0
@@ -85,6 +86,7 @@ failure-badhash_1.0
 failure-depends-leaf_1.0
 failure-large-ap_1.0
 failure-large-extracted_1.0
+failure-minver_1.0
 failure-postinstall-exec-silent_1.0
 failure-postinstall-exec_1.0
 install_1.0

@@ -11,7 +11,7 @@ from leaf.core.constants import LeafFiles
 from leaf.core.error import LeafException
 from leaf.core.jsonutils import JsonObject, jloadfile, jwritefile
 from leaf.core.lock import LockFile
-from leaf.core.utils import CURRENT_LEAF_VERSION, Version, check_leaf_min_version, version_comparator_lt
+from leaf.core.utils import CURRENT_LEAF_VERSION, Version, version_comparator_lt
 from leaf.model.modelutils import keep_latest
 from leaf.model.package import InstalledPackage, PackageIdentifier
 from leaf.model.steps import VariableResolver
@@ -19,12 +19,6 @@ from tests.testutils import TEST_REMOTE_PACKAGE_SOURCE, LeafTestCase
 
 
 class TestMisc(LeafTestCase):
-    def test_leaf_minver(self):
-        self.assertTrue(check_leaf_min_version(None))
-        self.assertTrue(check_leaf_min_version("2.0", "2.0"))
-        self.assertFalse(check_leaf_min_version("2.1", "2.0"))
-        with self.assertRaises(LeafException):
-            self.assertFalse(check_leaf_min_version("2.1", "2.0", exception_message="foo"))
 
     def test_json(self):
         jo = JsonObject({})

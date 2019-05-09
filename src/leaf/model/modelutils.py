@@ -2,9 +2,21 @@ import subprocess
 from builtins import sorted
 
 from leaf.core.constants import LeafConstants, LeafSettings
+from leaf.core.utils import CURRENT_LEAF_VERSION
 from leaf.core.error import InvalidPackageNameException
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
+
+
+def check_leaf_min_version(mflist: list):
+    out = None
+    for mf in mflist:
+        mf_min_version = mf.leaf_min_version
+        if mf_min_version is not None and mf_min_version > CURRENT_LEAF_VERSION:
+            # package not supported
+            if out is None or mf_min_version > out:
+                out = mf_min_version
+    return out
 
 
 def execute_command(*args, cwd=None, env=None, print_stdout=False):

@@ -19,8 +19,7 @@ from tarfile import TarFile
 from leaf.core.constants import JsonConstants, LeafFiles
 from leaf.core.error import InvalidPackageNameException
 from leaf.core.jsonutils import JsonObject, jload, jloadfile
-from leaf.core.utils import (url_resolve, version_comparator_lt,
-                             version_string_to_tuple)
+from leaf.core.utils import url_resolve, version_comparator_lt, version_string_to_tuple, Version
 from leaf.model.environment import Environment, IEnvProvider
 from leaf.model.settings import ScopeSetting
 
@@ -214,7 +213,9 @@ class Manifest(JsonObject):
 
     @property
     def leaf_min_version(self):
-        return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_LEAF_MINVER])
+        out = self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_LEAF_MINVER])
+        if out:
+            return Version(out)
 
     @property
     def tags(self):

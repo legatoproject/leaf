@@ -29,7 +29,7 @@ import requests
 
 from leaf import __version__
 from leaf.core.constants import LeafConstants, LeafSettings
-from leaf.core.error import InvalidHashException, LeafException, LeafOutOfDateException, NotEnoughSpaceException
+from leaf.core.error import InvalidHashException, LeafException, NotEnoughSpaceException
 from leaf.core.logger import TextLogger, print_trace
 
 _IGNORED_PATTERN = re.compile("^.*_ignored[0-9]*$")
@@ -65,16 +65,6 @@ class Version:
 
 
 CURRENT_LEAF_VERSION = Version(__version__)
-
-
-def check_leaf_min_version(minversion, currentversion=__version__, exception_message=None):
-    # Handle dev version
-    if minversion is not None:
-        if version_comparator_lt(currentversion, minversion):
-            if exception_message is not None:
-                raise LeafOutOfDateException(exception_message)
-            return False
-    return True
 
 
 def version_string_to_tuple(version):

@@ -14,13 +14,21 @@ from multiprocessing import Process
 from time import sleep
 
 from leaf.api import PackageManager
-from leaf.core.error import InvalidHashException, InvalidPackageNameException, LeafException, NoEnabledRemoteException, NoRemoteException
+from leaf.core.error import (
+    InvalidHashException,
+    InvalidPackageNameException,
+    LeafException,
+    LeafOutOfDateException,
+    NoEnabledRemoteException,
+    NoRemoteException,
+)
 from leaf.core.settings import EnvVar
 from leaf.core.utils import NotEnoughSpaceException, is_folder_ignored
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
 from leaf.model.package import AvailablePackage, InstalledPackage, LeafArtifact, PackageIdentifier
 from tests.testutils import ALT_INDEX_CONTENT, LEAF_UT_SKIP, LeafTestCaseWithRepo, env_file_to_map, get_lines, env_tolist
+
 
 HTTP_PORT = EnvVar("LEAF_HTTP_PORT", random.randint(54000, 54999))
 
@@ -214,6 +222,10 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
     def test_cannot_install_badhash(self):
         with self.assertRaises(InvalidHashException):
             self.pm.install_packages(PackageIdentifier.parse_list(["failure-badhash_1.0"]))
+
+    def test_outdated_leaf_version(self):
+        with self.assertRaises(LeafOutOfDateException):
+            self.pm.install_packages(PackageIdentifier.parse_list(["failure-minver_1.0"]))
 
     def test_outdated_cache_file(self):
         def get_mtime():
