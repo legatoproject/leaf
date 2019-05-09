@@ -19,13 +19,28 @@ def check_leaf_min_version(mflist: list):
     return out
 
 
+def build_shell_command(*args, env=None):
+    # In shell mode, env is evaluated in the command line
+    exports = []
+    if isinstance(env, dict):
+        for k, v in env.items():
+            exports.append(Environment.tostring_export(k, v))
+    elif isinstance(env, Environment):
+        env.activate(
+            kv_consumer=lambda k, v: exports.append(Environment.tostring_export(k, v)), file_consumer=lambda f: exports.append(Environment.tostring_file(f))
+        )
+    shell_command = "".join(exports)
+    for a in args:
+        shell_command += ' "{0}"'.format(a)
+    return [LeafSettings.DEFAULT_SHELL.value, "-c", shell_command]
+
+
 def execute_command(*args, cwd=None, env=None, print_stdout=False):
     """
     Execute a process and returns the return code.
     The command is run in a leaf default shell (see settings) $SHELL -c
     and the env is set via multiple export/source commands to preserve variable overriding
     """
-
     # Builds args
     kwargs = {"stdout": subprocess.DEVNULL, "stderr": subprocess.STDOUT}
     if print_stdout:
@@ -33,26 +48,8 @@ def execute_command(*args, cwd=None, env=None, print_stdout=False):
         kwargs["stderr"] = None
     if cwd is not None:
         kwargs["cwd"] = str(cwd)
-
-    # Build the command line
-    command = None
-    # In shell mode, env is evaluated in the command line
-    shell_commands = []
-    if isinstance(env, dict):
-        for k, v in env.items():
-            shell_commands.append(Environment.tostring_export(k, v))
-    elif isinstance(env, Environment):
-        env.activate(
-            kv_consumer=lambda k, v: shell_commands.append(Environment.tostring_export(k, v)),
-            file_consumer=lambda f: shell_commands.append(Environment.tostring_file(f)),
-        )
-    shell_command = " ".join(shell_commands)
-    for arg in args:
-        shell_command += ' "{arg}"'.format(arg=arg)
-    command = [LeafSettings.DEFAULT_SHELL.value, "-c", shell_command]
-
     # Execute the command
-    return subprocess.call(command, **kwargs)
+    return subprocess.call(build_shell_command(*args, env=env), **kwargs)
 
 
 def is_latest_package(pi):
