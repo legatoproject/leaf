@@ -476,6 +476,27 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
             self.leaf_exec(["config", "set"], "leaf.profile.relative.disable", "0")
             self.leaf_exec(("env", "print"))
 
+        self.leaf_exec(("profile", "create"), "foo2")
+        self.leaf_exec(("env", "profile"), "--set", "FOO=BAR")
+        self.leaf_exec(("profile", "config"), "-p", "condition_1.0")
+        self.leaf_exec(("profile", "sync"))
+        with self.assertStdout("test2.out"):
+            print("------------------------")
+            self.leaf_exec(["config", "set"], "leaf.profile.relative.disable", "1")
+            self.leaf_exec(("env", "print"))
+            print("------------------------")
+            self.leaf_exec(["config", "set"], "leaf.profile.relative.disable", "0")
+            self.leaf_exec(("env", "print"))
+        self.leaf_exec(("profile", "config"), "-p", "condition-A_2.0")
+        self.leaf_exec(("profile", "sync"))
+        with self.assertStdout("test3.out"):
+            print("------------------------")
+            self.leaf_exec(["config", "set"], "leaf.profile.relative.disable", "1")
+            self.leaf_exec(("env", "print"))
+            print("------------------------")
+            self.leaf_exec(["config", "set"], "leaf.profile.relative.disable", "0")
+            self.leaf_exec(("env", "print"))
+
 
 class TestCliWorkspaceManagerVerbose(TestCliWorkspaceManager):
     def __init__(self, *args, **kwargs):

@@ -2,5 +2,8 @@
   "info": {
     "name": "condition-A",
     "version": "2.0"
+  },
+  "env": {
+    "MY_SPECIAL_VAR": "@{DIR}/2.0"
   }
 }
