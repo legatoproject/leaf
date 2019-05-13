@@ -115,8 +115,11 @@ class RelengManager(LoggerManager):
         """
         Create an index.json referencing all given artifacts
         """
-
         # Create the "info" node
+        if not index_file.exists():
+            index_file.touch()
+        index_file = index_file.resolve()
+
         info_node = OrderedDict()
         if name is not None:
             info_node[JsonConstants.REMOTE_NAME] = name
@@ -124,9 +127,8 @@ class RelengManager(LoggerManager):
             info_node[JsonConstants.REMOTE_DESCRIPTION] = description
         info_node[JsonConstants.REMOTE_DATE] = self.__get_date_now()
 
-        # Iterate over all artifacts
         packages_map = OrderedDict()
-        for artifact in artifacts:
+        for artifact in map(Path.resolve, artifacts):
             artifact_node = None
 
             if use_external_info:
@@ -154,15 +156,18 @@ class RelengManager(LoggerManager):
                 # Read extra tags
                 extratags_file = artifact.parent / (artifact.name + ".tags")
                 if use_extra_tags and extratags_file.exists():
-                    with extratags_file.open("r") as fp:
+                    with extratags_file.open() as fp:
                         for tag in filter(None, map(str.strip, fp.read().splitlines())):
                             if tag not in ap.tags:
                                 self.logger.print_default("Add extra tag {tag}".format(tag=tag))
                                 ap.tags.append(tag)
 
                 self.logger.print_default("Add package {pi}".format(pi=pi))
-                relative_path = Path(artifact).relative_to(index_file.parent)
-                artifact_node[JsonConstants.REMOTE_PACKAGE_FILE] = str(relative_path)
+                try:
+                    relative_path = artifact.relative_to(index_file.parent)
+                    artifact_node[JsonConstants.REMOTE_PACKAGE_FILE] = str(relative_path)
+                except ValueError:
+                    raise LeafException("Artifact {a} must be relative to {i.parent}".format(a=artifact, i=index_file))
                 packages_map[pi] = artifact_node
 
         # Create the json structure

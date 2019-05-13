@@ -73,6 +73,7 @@ class BuildIndexSubCommand(LeafCommand):
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
         parser.add_argument("-o", "--output", required=True, metavar="FILE", type=Path, dest="output_file", help="the new json index file")
+        parser.add_argument("-i", "--input", metavar="FILE", action="append", type=Path, dest="input_files", help="file containing list of artifacts path")
         parser.add_argument("--name", metavar="NAME", dest="index_name", help="name of the repository")
         parser.add_argument("--description", metavar="STRING", dest="index_description", help="description of the repository")
         parser.add_argument(
@@ -84,9 +85,17 @@ class BuildIndexSubCommand(LeafCommand):
 
     def execute(self, args, uargs):
         rm = RelengManager()
+        artifacts = []
+        artifacts += args.artifacts
+        if args.input_files:
+            for input_file in args.input_files:
+                rm.logger.print_default("Using artifacts from {0}".format(input_file))
+                with input_file.open() as fp:
+                    for line in filter(lambda l: l and not l.startswith("#"), map(str.strip, fp.read().splitlines())):
+                        artifacts.append(Path(line))
         rm.generate_index(
             args.output_file,
-            args.artifacts,
+            artifacts,
             name=args.index_name,
             description=args.index_description,
             use_external_info=args.use_external_info,

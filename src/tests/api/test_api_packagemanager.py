@@ -155,7 +155,7 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
         self.assertTrue((folder / "targetFileFromEnv").is_file())
         self.assertTrue((folder / "dump.env").is_file())
         self.assertTrue((folder / "folder2").is_dir())
-        with open(str(folder / "targetFileFromEnv"), "r") as fp:
+        with (folder / "targetFileFromEnv").open() as fp:
             content = fp.read().splitlines()
             self.assertEqual(1, len(content))
             self.assertEqual(str(folder), content[0])

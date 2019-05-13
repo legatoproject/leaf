@@ -371,12 +371,12 @@ def generate_repository(source_folder, output_folder):
     if len(artifacts_list1) == 0 or len(artifacts_list2) == 0:
         raise ValueError("Empty index!")
 
-    with open(str(output_folder / "multitags_1.0.leaf.tags"), "w") as fp:
+    with (output_folder / "multitags_1.0.leaf.tags").open("w") as fp:
         fp.write("volatileTag1\n")
         fp.write("volatileTag2")
     rm.generate_index(output_folder / "index.json", artifacts_list1, name="First repository", description="First repository description", prettyprint=True)
 
-    with open(str(output_folder / "multitags_1.0.leaf.tags"), "w") as fp:
+    with (output_folder / "multitags_1.0.leaf.tags").open("w") as fp:
         fp.write("volatileTag3\n")
         fp.write("volatileTag4")
     rm.generate_index(output_folder / "index2.json", artifacts_list2, name="Second repository", description="Second repository description", prettyprint=True)

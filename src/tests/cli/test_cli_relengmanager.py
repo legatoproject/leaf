@@ -106,7 +106,7 @@ class TestCliRelengManager(LeafTestCaseWithCli):
             del os.environ["LEAF_TEST_VARIABLE"]
 
         self.assertTrue(mffile.exists())
-        with open(str(mffile), "r") as fp:
+        with mffile.open() as fp:
             self.assertEqual(
                 {
                     "hello": "hello",
@@ -154,6 +154,35 @@ class TestCliRelengManager(LeafTestCaseWithCli):
             self.workspace_folder / "b.leaf",
         )
         self.assertTrue(index.exists())
+        self.assertEqual(2, len(jloadfile(index)[JsonConstants.REMOTE_PACKAGES]))
+
+    def test_index_generation_with_input_file(self):
+        index = self.workspace_folder / "index.json"
+        input_file = self.workspace_folder / "input.list"
+
+        # Build some packages
+        self.leaf_exec(("build", "pack"), "--output", self.workspace_folder / "a.leaf", "--input", TEST_REMOTE_PACKAGE_SOURCE / "install_1.0")
+        self.leaf_exec(("build", "pack"), "--output", self.workspace_folder / "b.leaf", "--input", TEST_REMOTE_PACKAGE_SOURCE / "condition_1.0")
+
+        with input_file.open("w") as fp:
+            fp.write("# This is a comment \n")
+        self.leaf_exec(("build", "index"), "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", "--input", input_file)
+        self.assertTrue(index.exists())
+        self.assertEqual(0, len(jloadfile(index)[JsonConstants.REMOTE_PACKAGES]))
+
+        with input_file.open("a") as fp:
+            fp.write("{0}\n".format(self.workspace_folder / "a.leaf"))
+        self.leaf_exec(("build", "index"), "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", "--input", input_file)
+        self.assertEqual(1, len(jloadfile(index)[JsonConstants.REMOTE_PACKAGES]))
+
+        with input_file.open("a") as fp:
+            fp.write(" ##  {0}  \n".format(self.workspace_folder / "b.leaf"))
+        self.leaf_exec(("build", "index"), "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", "--input", input_file)
+        self.assertEqual(1, len(jloadfile(index)[JsonConstants.REMOTE_PACKAGES]))
+
+        with input_file.open("a") as fp:
+            fp.write("  {0}  \n".format(self.workspace_folder / "b.leaf"))
+        self.leaf_exec(("build", "index"), "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", "--input", input_file)
         self.assertEqual(2, len(jloadfile(index)[JsonConstants.REMOTE_PACKAGES]))
 
     def test_index_generation_with_extra_tags(self):

@@ -71,7 +71,7 @@ class TestApiRelengManager(LeafTestCaseWithRepo):
             },
         )
         self.assertTrue(mffile.exists())
-        with open(str(mffile), "r") as fp:
+        with mffile.open() as fp:
             self.assertEqual(
                 {
                     JsonConstants.INFO: {
@@ -112,7 +112,7 @@ class TestApiRelengManager(LeafTestCaseWithRepo):
             },
         )
         self.assertTrue(mffile.exists())
-        with open(str(mffile), "r") as fp:
+        with mffile.open() as fp:
             self.assertEqual(
                 {
                     JsonConstants.INFO: {
@@ -147,7 +147,7 @@ class TestApiRelengManager(LeafTestCaseWithRepo):
                 resolve_envvars=resolve_env,
             )
             self.assertTrue(mffile.exists())
-            with open(str(mffile), "r") as fp:
+            with mffile.open() as fp:
                 motif = "hello hello" if resolve_env else "#{LEAF_TEST_VARIABLE} #{LEAF_TEST_VARIABLE}"
                 self.assertEqual(
                     {
