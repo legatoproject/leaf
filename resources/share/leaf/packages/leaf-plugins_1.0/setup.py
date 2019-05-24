@@ -31,7 +31,7 @@ class SetupPlugin(LeafPluginCommand):
         parser.add_argument("profiles", nargs=argparse.OPTIONAL, metavar="PROFILE", help="the profile name")
 
     def execute(self, args, uargs):
-        wm = self.get_workspacemanager(check_parents=False, check_initialized=False)
+        wm = self.get_workspacemanager(check_parents=True, check_initialized=False)
         cmd_generator = LeafCommandGenerator()
         cmd_generator.init_common_args(args)
 
