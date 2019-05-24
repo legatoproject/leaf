@@ -11,6 +11,7 @@ import operator
 import os
 import platform
 from collections import OrderedDict
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from leaf import __version__
@@ -44,6 +45,10 @@ class ConfigurationManager:
     @property
     def install_folder(self):
         return mkdirs(LeafSettings.USER_PKG_FOLDER.as_path())
+
+    def is_file_outdated(self, file: Path):
+        ndays = LeafSettings.SMART_REFRESH_DELTA.as_int()
+        return ndays > 0 and datetime.fromtimestamp(file.stat().st_mtime) < datetime.now() - timedelta(days=ndays)
 
     def init_leaf_settings(self):
         userenvmap = self.read_user_configuration()._getenvmap()

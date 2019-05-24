@@ -17,9 +17,11 @@ from pathlib import Path
 from tarfile import TarFile
 
 from leaf.core.constants import JsonConstants, LeafFiles
+from leaf.core.download import url_resolve
 from leaf.core.error import InvalidPackageNameException
 from leaf.core.jsonutils import JsonObject, jload, jloadfile
-from leaf.core.utils import url_resolve, version_comparator_lt, version_string_to_tuple, Version
+from leaf.core.utils import (Version, version_comparator_lt,
+                             version_string_to_tuple)
 from leaf.model.environment import Environment, IEnvProvider
 from leaf.model.settings import ScopeSetting
 

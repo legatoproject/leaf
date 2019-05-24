@@ -16,21 +16,14 @@ import string
 import sys
 import tempfile
 import time
-import urllib
 from collections import OrderedDict
 from functools import total_ordering
 from pathlib import Path
-from shutil import copyfile
-from time import sleep
-from urllib.parse import urlparse, urlunparse
-from urllib.request import urlretrieve
 
-import requests
 
 from leaf import __version__
-from leaf.core.constants import LeafConstants, LeafSettings
+from leaf.core.constants import LeafConstants
 from leaf.core.error import InvalidHashException, LeafException, NotEnoughSpaceException
-from leaf.core.logger import TextLogger, print_trace
 
 _IGNORED_PATTERN = re.compile("^.*_ignored[0-9]*$")
 _VERSION_SEPARATOR = re.compile("[-_.~]")
@@ -113,16 +106,6 @@ def check_supported_python_version():
         sys.exit(1)
 
 
-def url_resolve(url: str, subpath: str):
-    """
-    Resolves a relative URL
-    """
-    url = urlparse(url)
-    newpath = Path(url.path).parent / subpath
-    url = url._replace(path=str(newpath))
-    return urlunparse(url)
-
-
 def get_cached_artifact_name(filename: str, hashstr: str):
     """
     Compute a unique name for files in cache
@@ -153,135 +136,6 @@ def mark_folder_as_ignored(folder: Path):
     out = folder.parent / newname
     folder.rename(out)
     return out
-
-
-def download_data(url, outputfile=None):
-    """
-    Download data and write it to outputFile
-    or return the data if outputFile is None
-    """
-    parsedurl = urlparse(url)
-    if parsedurl.scheme == "":
-        with open(parsedurl.path, "rb") as fp:
-            if outputfile is None:
-                return fp.read()
-            with outputfile.open("wb") as fp:
-                fp.write(fp.read())
-    else:
-        with urllib.request.urlopen(url, timeout=LeafSettings.DOWNLOAD_TIMEOUT.as_int()) as stream:
-            if outputfile is None:
-                return stream.read()
-            with outputfile.open("wb") as fp:
-                fp.write(stream.read())
-
-
-def download_file_with_resume(url: str, output: Path, logger: TextLogger, message: str, timeout: int = None, resume: bool = None, buffer_size: int = 262144):
-    # Handle default values
-    if timeout is None:
-        timeout = LeafSettings.DOWNLOAD_TIMEOUT.as_int()
-    if resume is None:
-        resume = not LeafSettings.DOWNLOAD_NORESUME.as_boolean()
-
-    headers = {}
-    size_current = 0
-    open_mode = "wb"
-
-    if resume and output.exists():
-        size_current = output.stat().st_size
-        headers = {"Range": "bytes={0}-".format(size_current)}
-        open_mode = "ab"
-
-    with output.open(open_mode) as fp:
-        req = requests.get(url, stream=True, headers=headers, timeout=timeout)
-        # Get total size on first request
-        size_total = int(req.headers.get("content-length", -1)) + size_current
-
-        # Read remote data and write to output file
-        for data in req.iter_content(buffer_size):
-            size_current += fp.write(data)
-            display_progress(logger, message, size_current, size_total)
-
-        # Rare case when no exception raised and download is not finished
-        if 0 < size_current < size_total:
-            raise ValueError("Incomplete download")
-
-        return size_current
-
-
-def download_file_with_retry(url: str, output: Path, logger: TextLogger, message: str, retry: int = None, **kwargs):
-    # Handle default values
-    if retry is None:
-        retry = LeafSettings.DOWNLOAD_RETRY.as_int()
-
-    iteration = 0
-    while True:
-        try:
-            return download_file_with_resume(url, output, logger, message, **kwargs)
-        except (ValueError, requests.RequestException, requests.ConnectionError, requests.HTTPError, requests.Timeout) as e:
-            iteration += 1
-            # Check retry
-            if iteration > retry:
-                raise e
-            # Log the retry attempt
-            logger.print_default("\nError while downloading, retry {0}/{1}".format(iteration, retry))
-            print_trace()
-            # Prevent imediate retry
-            sleep(1)
-
-
-def download_and_check_file(url: str, folder: Path, logger: TextLogger, filename: str = None, hashstr: str = None):
-    """
-    Download an artifact and check its hash if given
-    """
-    parsedurl = urlparse(url)
-    if filename is None:
-        filename = Path(parsedurl.path).name
-    if not folder.exists():
-        folder.mkdir(parents=True)
-    targetfile = folder / filename
-    if targetfile.exists():
-        if hashstr is None:
-            logger.print_verbose("File exists but cannot be verified, {file.name} will be re-downloaded".format(file=targetfile))
-            os.remove(str(targetfile))
-        elif not hash_check(targetfile, hashstr, raise_exception=False):
-            logger.print_verbose("File exists but hash differs, {file.name} will be re-downloaded".format(file=targetfile))
-            os.remove(str(targetfile))
-        else:
-            logger.print_verbose("File {file.name} is already in cache".format(file=targetfile))
-
-    if not targetfile.exists():
-        try:
-            message = "Getting {file.name}".format(file=targetfile)
-            if parsedurl.scheme == "":
-                # file mode, simple file copy
-                message = "Copying {file.name}".format(file=targetfile)
-                display_progress(logger, message, 0, 1)
-                copyfile(parsedurl.path, str(targetfile))
-            elif parsedurl.scheme.startswith("http"):
-                # http/https mode, get file length before
-                message = "Downloading {file.name}".format(file=targetfile)
-                display_progress(logger, message, 0, 1)
-                download_file_with_retry(url, targetfile, logger, message)
-            else:
-                # other scheme, use urllib
-                display_progress(logger, message, 0, 1)
-                urlretrieve(url, str(targetfile))
-            display_progress(logger, message, 1, 1)
-        finally:
-            # End line since all progress message are on the same line
-            logger.print_default("")
-        if hashstr is not None:
-            hash_check(targetfile, hashstr, raise_exception=True)
-    return targetfile
-
-
-def display_progress(logger: TextLogger, message: str, worked: int, total: int, end: str = "", try_percent=True):
-    kwargs = {"message": message, "worked": worked, "total": total, "progress": "??"}
-    if try_percent and 0 <= worked <= total and total > 0:
-        kwargs["progress"] = "{0:.0%}".format(worked / total)
-    else:
-        kwargs["progress"] = "{0}/{1}".format(worked, total)
-    logger.print_default("\r[{progress}] {message} ".format(**kwargs), end=end, flush=True)
 
 
 def env_list_to_map(kv_list: list):

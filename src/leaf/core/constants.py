@@ -8,7 +8,6 @@ Leaf Package Manager
 """
 
 import os
-from datetime import timedelta
 from pathlib import Path
 
 from leaf.core.settings import EnvVar, LeafSetting, RegexValidator, StaticSettings
@@ -55,6 +54,13 @@ class LeafSettings(CommonSettings):
     DEFAULT_SHELL = LeafSetting(
         "leaf.shell.default", "LEAF_SHELL_DEFAULT", description="Shell used when leaf needs an internal shell to run commands", default="bash"
     )
+    SMART_REFRESH_DELTA = LeafSetting(
+        "leaf.remote.smartrefresh",
+        "LEAF_REMOTE_SMARTREFRESH",
+        description="Delta time (in days) before remotes are automatically fetched",
+        default=1,
+        validator=RegexValidator("[0-9]+"),
+    )
 
 
 class LeafConstants:
@@ -67,7 +73,6 @@ class LeafConstants:
     MIN_PYTHON_VERSION = (3, 4)
     COLORAMA_MIN_VERSION = "0.3.3"
     DEFAULT_PROFILE = "default"
-    CACHE_DELTA = timedelta(days=1)
     CACHE_SIZE_MAX = 5 * 1024 * 1024 * 1024  # 5GB
     GPG_SIG_EXTENSION = ".asc"
     EXTINFO_EXTENSION = ".info"
@@ -91,7 +96,7 @@ class LeafFiles:
     # Configuration files
     CONFIG_FILENAME = "config.json"
     CACHE_DOWNLOAD_FOLDERNAME = "files"
-    CACHE_REMOTES_FILENAME = "remotes.json"
+    CACHE_REMOTES_FOLDERNAME = "remotes"
     THEMES_FILENAME = "themes.ini"
     PLUGINS_DIRNAME = "plugins"
     GPG_DIRNAME = "gpg"

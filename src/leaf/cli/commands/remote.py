@@ -103,5 +103,4 @@ class RemoteFetchCommand(LeafCommand):
 
     def execute(self, args, uargs):
         rm = RemoteManager()
-
-        rm.fetch_remotes(smart_refresh=False)
+        rm.fetch_remotes(force_refresh=True)

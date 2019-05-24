@@ -80,11 +80,11 @@ class NoPackagesInCacheException(LeafException):
         LeafException.__init__(self, "No package in cache", hints="try 'leaf remote fetch' to trigger packages information refresh")
 
 
-class BadRemoteUrlException(LeafException):
+class RemoteFetchException(LeafException):
     def __init__(self, remote, cause=None):
         LeafException.__init__(
             self,
-            "Can't reach remote {0}".format(remote.alias),
+            "Can't fetch remote {0}".format(remote.alias),
             cause=cause,
             hints=[
                 "please check your network connection,",

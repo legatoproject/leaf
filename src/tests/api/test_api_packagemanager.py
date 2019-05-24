@@ -228,48 +228,50 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
             self.pm.install_packages(PackageIdentifier.parse_list(["failure-minver_1.0"]))
 
     def test_outdated_cache_file(self):
+        remote_cache_file = self.pm.cache_folder / "remotes" / "default.json"
+
         def get_mtime():
-            return self.pm.remote_cache_file.stat().st_mtime
+            return remote_cache_file.stat().st_mtime
 
         # Initial refresh
-        self.pm.fetch_remotes(smart_refresh=True)
+        self.pm.fetch_remotes(force_refresh=False)
         previous_mtime = get_mtime()
 
         # Second refresh, same day, file should not be updated
         time.sleep(1)
-        self.pm.fetch_remotes(smart_refresh=True)
+        self.pm.fetch_remotes(force_refresh=False)
         self.assertEqual(previous_mtime, get_mtime())
-        os.remove(str(self.pm.remote_cache_file))
-        self.assertFalse(self.pm.remote_cache_file.exists())
+        os.remove(str(remote_cache_file))
+        self.assertFalse(remote_cache_file.exists())
 
         # File has been deleted
         time.sleep(1)
-        self.pm.fetch_remotes(smart_refresh=True)
+        self.pm.fetch_remotes(force_refresh=False)
         self.assertNotEqual(previous_mtime, get_mtime())
         previous_mtime = get_mtime()
 
         # Initial refresh
         time.sleep(1)
-        self.pm.fetch_remotes(smart_refresh=True)
+        self.pm.fetch_remotes(force_refresh=False)
         self.assertEqual(previous_mtime, get_mtime())
 
         # New refresh, 23h ago, file should not be updated
         time.sleep(1)
         today = datetime.now()
         almostyesterday = today - timedelta(hours=23)
-        os.utime(str(self.pm.remote_cache_file), (int(almostyesterday.timestamp()), int(almostyesterday.timestamp())))
+        os.utime(str(remote_cache_file), (int(almostyesterday.timestamp()), int(almostyesterday.timestamp())))
         self.assertNotEqual(previous_mtime, get_mtime())
         previous_mtime = get_mtime()
-        self.pm.fetch_remotes(smart_refresh=True)
+        self.pm.fetch_remotes(force_refresh=False)
         self.assertEqual(previous_mtime, get_mtime())
 
         # New refresh, 24h ago, file should be updated
         time.sleep(1)
         yesterday = today - timedelta(hours=24)
-        os.utime(str(self.pm.remote_cache_file), (int(yesterday.timestamp()), int(yesterday.timestamp())))
+        os.utime(str(remote_cache_file), (int(yesterday.timestamp()), int(yesterday.timestamp())))
         self.assertNotEqual(previous_mtime, get_mtime())
         previous_mtime = get_mtime()
-        self.pm.fetch_remotes(smart_refresh=True)
+        self.pm.fetch_remotes(force_refresh=False)
         self.assertNotEqual(previous_mtime, get_mtime())
 
     def test_conditional_install(self):

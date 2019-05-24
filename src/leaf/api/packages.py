@@ -9,16 +9,15 @@ Leaf Package Manager
 
 from builtins import Exception
 from collections import OrderedDict
-from datetime import datetime
 from pathlib import Path
 from tarfile import TarFile
 
 from leaf.api.remotes import RemoteManager
 from leaf.core.constants import LeafConstants, LeafFiles
+from leaf.core.download import download_and_verify_file
 from leaf.core.error import InvalidPackageNameException, LeafException, LeafOutOfDateException, NoPackagesInCacheException
 from leaf.core.lock import LockFile
 from leaf.core.utils import (
-    download_and_check_file,
     fs_check_free_space,
     fs_compute_total_size,
     get_cached_artifact_name,
@@ -60,8 +59,7 @@ class PackageManager(RemoteManager):
 
     def __check_cache_folder_size(self):
         # Check if it has been checked recently
-        artifact_date = datetime.fromtimestamp(self.download_cache_folder.stat().st_mtime)
-        if artifact_date < datetime.now() - LeafConstants.CACHE_DELTA:
+        if self.is_file_outdated(self.download_cache_folder):
             # Compute the folder total size
             totalsize = fs_compute_total_size(self.download_cache_folder)
             if totalsize > LeafConstants.CACHE_SIZE_MAX:
@@ -71,12 +69,12 @@ class PackageManager(RemoteManager):
                 # Update the mtime
                 self.download_cache_folder.touch()
 
-    def list_available_packages(self, smart_refresh=True) -> dict:
+    def list_available_packages(self, force_refresh=False) -> dict:
         """
         List all available package
         """
         out = OrderedDict()
-        self.fetch_remotes(smart_refresh=smart_refresh)
+        self.fetch_remotes(force_refresh=force_refresh)
 
         for remote in self.list_remotes(only_enabled=True).values():
             if remote.is_fetched:
@@ -105,8 +103,8 @@ class PackageManager(RemoteManager):
         Download given available package and returns the files in cache folder
         @return LeafArtifact
         """
-        filename = get_cached_artifact_name(ap.filename, ap.hashsum)
-        cachedfile = download_and_check_file(ap.url, self.__download_cache_folder, self.logger, filename=filename, hashstr=ap.hashsum)
+        cachedfile = self.__download_cache_folder / get_cached_artifact_name(ap.filename, ap.hashsum)
+        download_and_verify_file(ap.url, cachedfile, logger=self.logger, hashstr=ap.hashsum)
         return LeafArtifact(cachedfile)
 
     def __extract_artifact(
