@@ -198,6 +198,10 @@ class Manifest(JsonObject):
         return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_DESCRIPTION])
 
     @property
+    def documentation(self):
+        return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_DOCUMENTATION])
+
+    @property
     def master(self):
         return self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_MASTER], default=False)
 

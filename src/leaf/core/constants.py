@@ -138,6 +138,7 @@ class JsonConstants(object):
     INFO_REQUIRES = "requires"
     INFO_MASTER = "master"
     INFO_DESCRIPTION = "description"
+    INFO_DOCUMENTATION = "documentation"
     INFO_TAGS = "tags"
     INFO_AUTOUPGRADE = "upgrade"
     INSTALL = "install"

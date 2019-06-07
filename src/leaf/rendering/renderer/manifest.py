@@ -122,6 +122,11 @@ class ManifestListRenderer(Renderer):
             labels.append("Description:")
             values.append(element.description)
 
+        # Documentation
+        if element.documentation is not None:
+            labels.append("Documentation:")
+            values.append(element.documentation)
+
         # Tags
         tag_count = len(element.all_tags)
         if tag_count > 0:
