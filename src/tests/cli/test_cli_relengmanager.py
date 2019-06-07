@@ -136,13 +136,23 @@ class TestCliRelengManager(LeafTestCaseWithCli):
         self.leaf_exec(("build", "pack"), "--output", self.workspace_folder / "b.leaf", "--input", TEST_REMOTE_PACKAGE_SOURCE / "condition_1.0")
 
         self.leaf_exec(
-            ("build", "index"), "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", self.workspace_folder / "a.leaf"
+            ("build", "index"),
+            "--resolve",
+            "--output",
+            index,
+            "--name",
+            "Name",
+            "--description",
+            "Description here",
+            "--prettyprint",
+            self.workspace_folder / "a.leaf",
         )
         self.assertTrue(index.exists())
         self.assertEqual(1, len(jloadfile(index)[JsonConstants.REMOTE_PACKAGES]))
 
         self.leaf_exec(
             ("build", "index"),
+            "--resolve",
             "--output",
             index,
             "--name",
@@ -166,24 +176,47 @@ class TestCliRelengManager(LeafTestCaseWithCli):
 
         with input_file.open("w") as fp:
             fp.write("# This is a comment \n")
-        self.leaf_exec(("build", "index"), "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", "--input", input_file)
+        self.leaf_exec(
+            ("build", "index"), "--resolve", "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", "--input", input_file
+        )
         self.assertTrue(index.exists())
         self.assertEqual(0, len(jloadfile(index)[JsonConstants.REMOTE_PACKAGES]))
 
         with input_file.open("a") as fp:
             fp.write("{0}\n".format(self.workspace_folder / "a.leaf"))
-        self.leaf_exec(("build", "index"), "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", "--input", input_file)
+        self.leaf_exec(
+            ("build", "index"), "--resolve", "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", "--input", input_file
+        )
         self.assertEqual(1, len(jloadfile(index)[JsonConstants.REMOTE_PACKAGES]))
 
         with input_file.open("a") as fp:
             fp.write(" ##  {0}  \n".format(self.workspace_folder / "b.leaf"))
-        self.leaf_exec(("build", "index"), "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", "--input", input_file)
+        self.leaf_exec(
+            ("build", "index"), "--resolve", "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", "--input", input_file
+        )
         self.assertEqual(1, len(jloadfile(index)[JsonConstants.REMOTE_PACKAGES]))
 
         with input_file.open("a") as fp:
             fp.write("  {0}  \n".format(self.workspace_folder / "b.leaf"))
-        self.leaf_exec(("build", "index"), "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", "--input", input_file)
+        self.leaf_exec(
+            ("build", "index"), "--resolve", "--output", index, "--name", "Name", "--description", "Description here", "--prettyprint", "--input", input_file
+        )
         self.assertEqual(2, len(jloadfile(index)[JsonConstants.REMOTE_PACKAGES]))
+
+    def test_index_generation_with_non_relative_file(self):
+        index = self.workspace_folder / "index.json"
+        index2 = self.workspace_folder.parent / "index.json"
+
+        aleaf = self.workspace_folder / "a.leaf"
+        bleaf = self.workspace_folder.parent / "b.leaf"
+        # Build some packages
+        self.leaf_exec(("build", "pack"), "--output", aleaf, "--input", TEST_REMOTE_PACKAGE_SOURCE / "install_1.0")
+        self.leaf_exec(("build", "pack"), "--output", bleaf, "--input", TEST_REMOTE_PACKAGE_SOURCE / "condition_1.0")
+
+        self.leaf_exec(("build", "index"), "--output", index, aleaf, bleaf, expected_rc=2)
+        self.leaf_exec(("build", "index"), "--resolve", "--output", index, aleaf, bleaf, expected_rc=2)
+        self.leaf_exec(("build", "index"), "--output", index2, aleaf, bleaf)
+        self.leaf_exec(("build", "index"), "--resolve", "--output", index2, aleaf, bleaf)
 
     def test_index_generation_with_extra_tags(self):
         index1 = self.workspace_folder / "index1.json"
@@ -207,9 +240,9 @@ class TestCliRelengManager(LeafTestCaseWithCli):
         # Build some packages
         self.leaf_exec(("build", "pack"), "--output", leaf_file, "--input", folder)
 
-        self.leaf_exec(("build", "index"), "--output", index1, "--prettyprint", leaf_file)
+        self.leaf_exec(("build", "index"), "--resolve", "--output", index1, "--prettyprint", leaf_file)
         self.assertTrue(index1.exists())
-        self.leaf_exec(("build", "index"), "--output", index2, "--no-extra-tags", "--prettyprint", leaf_file)
+        self.leaf_exec(("build", "index"), "--resolve", "--output", index2, "--no-extra-tags", "--prettyprint", leaf_file)
         self.assertTrue(index2.exists())
 
         self.assertEqual(1, len(jloadfile(index1)[JsonConstants.REMOTE_PACKAGES]))

@@ -81,6 +81,9 @@ class BuildIndexSubCommand(LeafCommand):
         )
         parser.add_argument("--no-extra-tags", action="store_false", dest="use_extra_tags", help='do not use extra tags in "*.tags" files')
         parser.add_argument("--prettyprint", action="store_true", dest="prettyprint", help="pretty print json")
+        parser.add_argument(
+            "--resolve", action="store_true", dest="resolve", help="Resolves artifacts path to ensure they are relative to index (NB: symlinks are resolved)"
+        )
         parser.add_argument("artifacts", type=Path, nargs=argparse.REMAINDER, help="leaf artifacts")
 
     def execute(self, args, uargs):
@@ -101,6 +104,7 @@ class BuildIndexSubCommand(LeafCommand):
             use_external_info=args.use_external_info,
             use_extra_tags=args.use_extra_tags,
             prettyprint=args.prettyprint,
+            resolve=args.resolve,
         )
 
 

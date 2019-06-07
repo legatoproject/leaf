@@ -111,6 +111,7 @@ class RelengManager(LoggerManager):
         use_external_info: bool = True,
         use_extra_tags: bool = True,
         prettyprint: bool = False,
+        resolve: bool = True,
     ):
         """
         Create an index.json referencing all given artifacts
@@ -118,7 +119,8 @@ class RelengManager(LoggerManager):
         # Create the "info" node
         if not index_file.exists():
             index_file.touch()
-        index_file = index_file.resolve()
+        if resolve:
+            index_file = index_file.resolve()
 
         info_node = OrderedDict()
         if name is not None:
@@ -128,7 +130,10 @@ class RelengManager(LoggerManager):
         info_node[JsonConstants.REMOTE_DATE] = self.__get_date_now()
 
         packages_map = OrderedDict()
-        for artifact in map(Path.resolve, artifacts):
+        # Resolve artifacts if needed
+        if resolve:
+            artifacts = [a.resolve() for a in artifacts]
+        for artifact in artifacts:
             artifact_node = None
 
             if use_external_info:
@@ -164,6 +169,7 @@ class RelengManager(LoggerManager):
 
                 self.logger.print_default("Add package {pi}".format(pi=pi))
                 try:
+
                     relative_path = artifact.relative_to(index_file.parent)
                     artifact_node[JsonConstants.REMOTE_PACKAGE_FILE] = str(relative_path)
                 except ValueError:
