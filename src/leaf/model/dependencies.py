@@ -8,6 +8,7 @@ Leaf Package Manager
 """
 
 from collections import OrderedDict
+from functools import reduce
 
 from leaf.core.logger import TextLogger
 from leaf.model.environment import Environment
@@ -133,15 +134,21 @@ class DependencyUtils:
         Packages are sorted in alpha order.
         Returns a list of AvailablePackages
         """
+        # All available packages
+        mfmap = reduce(lambda a, b: a.update(b) or a, [apmap or {}, ipmap or {}], {})
+
+        # Get the list of prereq
+        prereq_pilist = []
+        for pi in pilist:
+            mf = find_manifest(pi, mfmap)
+            for pis in mf.requires_packages:
+                prereq_pi = PackageIdentifier.parse(pis)
+                if prereq_pi not in prereq_pilist:
+                    prereq_pilist.append(prereq_pi)
+
+        # Compute prereq dependencies
         out = []
-        # First get the install tree
-        aplist = DependencyUtils.install(pilist, apmap, ipmap, env=env)
-        # Get all prereq PI and find corresponding AP
-        for ap in aplist:
-            for pi in map(PackageIdentifier.parse, ap.requires_packages):
-                out.append(find_manifest(pi, apmap))
-        # sort alphabetically and ensure no dupplicates
-        out = list(sorted(set(out), key=IDENTIFIER_GETTER))
+        DependencyUtils.__build_tree(prereq_pilist, mfmap, out, env=env)
         return out
 
     @staticmethod

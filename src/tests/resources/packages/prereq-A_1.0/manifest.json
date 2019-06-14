@@ -1,10 +1,28 @@
 {
-  "info": {
-    "name": "prereq-A",
-    "version": "1.0",
-    "requires": [
-      "prereq-true_1.0"
+    "info": {
+        "name": "prereq-A",
+        "version": "1.0",
+        "requires": [],
+        "depends": []
+    },
+    "install": [
+        {
+            "verbose": true,
+            "command": [
+                "sh",
+                "-c",
+                "date | tee -a @{DIR}/install.log"
+            ]
+        }
     ],
-    "depends": []
-  }
+    "sync": [
+        {
+            "verbose": true,
+            "command": [
+                "sh",
+                "-c",
+                "date | tee -a @{DIR}/sync.log"
+            ]
+        }
+    ]
 }

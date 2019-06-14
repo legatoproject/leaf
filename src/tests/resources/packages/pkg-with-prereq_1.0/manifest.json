@@ -1,13 +1,11 @@
 {
   "info": {
-    "name": "prereq-C",
+    "name": "pkg-with-prereq",
     "version": "1.0",
+    "master": true,
     "requires": [
       "prereq-A_1.0",
       "prereq-B_1.0"
-    ],
-    "depends": [
-      "prereq-true_1.0"
     ]
   }
 }

@@ -181,3 +181,8 @@ class InvalidSettingException(LeafException):
             'Invalid value for setting {setting.identifier}: "{value}"'.format(setting=setting, value=bad_value),
             hints="You can reset the setting with 'leaf config reset {setting.identifier}'".format(setting=setting),
         )
+
+
+class PrereqException(LeafException):
+    def __init__(self, ex: BaseException):
+        LeafException.__init__(self, "Error while installing required packages ({exception})".format(exception=ex), cause=ex)

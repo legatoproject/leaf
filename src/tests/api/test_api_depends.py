@@ -143,17 +143,21 @@ class TestApiDepends(LeafTestCase):
         )
 
     def test_prereq(self):
-        self.assertEqual(APMAP[PackageIdentifier.parse("prereq-A_1.0")].requires_packages, ["prereq-true_1.0"])
-        self.assertEqual(APMAP[PackageIdentifier.parse("prereq-C_1.0")].requires_packages, ["prereq-A_1.0", "prereq-B_1.0"])
-        self.assertEqual(APMAP[PackageIdentifier.parse("prereq-D_1.0")].requires_packages, ["prereq-true_1.0", "prereq-false_1.0"])
+        prereqs = DependencyUtils.prereq(PackageIdentifier.parse_list(["pkg-with-prereq_1.0"]), APMAP, {})
+        self.assertEqual(list(map(str, prereqs)), ["prereq-A_1.0", "prereq-B_1.0"])
+        for p in prereqs:
+            self.assertTrue(isinstance(p, AvailablePackage))
 
-    def test_prereq_order(self):
-        pi = "prereq-D_1.0"
+        prereqs = DependencyUtils.prereq(PackageIdentifier.parse_list(["pkg-with-prereq_1.0"]), APMAP, IPMAP)
+        self.assertEqual(list(map(str, prereqs)), ["prereq-A_1.0", "prereq-B_1.0"])
+        for p in prereqs:
+            self.assertTrue(isinstance(p, InstalledPackage))
 
-        prereqs = APMAP[PackageIdentifier.parse(pi)].requires_packages
-        self.assertEqual(["prereq-true_1.0", "prereq-false_1.0"], prereqs)
-        prereqs = DependencyUtils.prereq(PackageIdentifier.parse_list([pi]), APMAP, {})
-        self.assertEqual(["prereq-false_1.0", "prereq-true_1.0"], list(map(str, map(IDENTIFIER_GETTER, prereqs))))
+        prereqs = DependencyUtils.prereq(PackageIdentifier.parse_list(["pkg-with-prereq_2.0"]), APMAP, {})
+        self.assertEqual(list(map(str, prereqs)), ["prereq-A_1.0", "prereq-B_2.0"])
+
+        prereqs = DependencyUtils.prereq(PackageIdentifier.parse_list(["pkg-with-prereq_0.1"]), APMAP, {})
+        self.assertEqual(list(map(str, prereqs)), ["prereq-A_0.1-fail"])
 
     def test_latest_strategy(self):
         deps = DependencyUtils.installed(PackageIdentifier.parse_list(["container-A_1.0", "container-A_2.0"]), IPMAP)

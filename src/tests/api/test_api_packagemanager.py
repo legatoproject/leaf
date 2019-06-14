@@ -17,18 +17,17 @@ from leaf.api import PackageManager
 from leaf.core.error import (
     InvalidHashException,
     InvalidPackageNameException,
-    LeafException,
     LeafOutOfDateException,
     NoEnabledRemoteException,
     NoRemoteException,
+    PrereqException,
 )
 from leaf.core.settings import EnvVar
 from leaf.core.utils import NotEnoughSpaceException, is_folder_ignored
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
 from leaf.model.package import AvailablePackage, InstalledPackage, LeafArtifact, PackageIdentifier
-from tests.testutils import ALT_INDEX_CONTENT, LEAF_UT_SKIP, LeafTestCaseWithRepo, env_file_to_map, get_lines, env_tolist
-
+from tests.testutils import ALT_INDEX_CONTENT, LEAF_UT_SKIP, LeafTestCaseWithRepo, env_tolist, get_lines
 
 HTTP_PORT = EnvVar("LEAF_HTTP_PORT", random.randint(54000, 54999))
 
@@ -306,37 +305,51 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
         self.pm.uninstall_packages(PackageIdentifier.parse_list(["condition_1.0"]))
         self.check_content(self.pm.list_installed_packages(), [])
 
-    def test_prereq_root(self):
-        motifs = ["prereq-A_1.0", "prereq-B_1.0", "prereq-C_1.0", "prereq-D_1.0", "prereq-true_1.0", "prereq-env_1.0", "prereq-false_1.0"]
-        errors = self.pm.install_prereq(PackageIdentifier.parse_list(motifs), self.alt_workspace_folder, raise_on_error=False)
-        self.assertEqual(1, errors)
-        for m in motifs:
-            self.assertEqual("false" not in m, (self.alt_workspace_folder / m).is_dir())
+    def test_prereq_failure(self):
+        with self.assertRaises(PrereqException):
+            self.pm.install_packages(PackageIdentifier.parse_list(["pkg-with-prereq_0.1"]))
 
-    def test_prereq_a(self):
-        self.pm.install_packages(PackageIdentifier.parse_list(["prereq-A_1.0"]))
-        self.check_content(self.pm.list_installed_packages(), ["prereq-A_1.0"])
+        self.check_content(self.pm.list_installed_packages(), ["prereq-A_0.1-fail"])
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-A_0.1-fail" / "install.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-A_0.1-fail" / "sync.log")))
 
-    def test_prereq_b(self):
-        self.pm.install_packages(PackageIdentifier.parse_list(["prereq-B_1.0"]))
-        self.check_content(self.pm.list_installed_packages(), ["prereq-A_1.0", "prereq-B_1.0"])
+        with self.assertRaises(PrereqException):
+            self.pm.install_packages(PackageIdentifier.parse_list(["pkg-with-prereq_0.1"]))
 
-    def test_prereq_c(self):
-        self.pm.install_packages(PackageIdentifier.parse_list(["prereq-C_1.0"]))
-        self.check_content(self.pm.list_installed_packages(), ["prereq-C_1.0", "prereq-true_1.0"])
+        self.check_content(self.pm.list_installed_packages(), ["prereq-A_0.1-fail"])
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-A_0.1-fail" / "install.log")))
+        self.assertEqual(2, len(get_lines(self.install_folder / "prereq-A_0.1-fail" / "sync.log")))
 
-    def test_prereq_d(self):
-        with self.assertRaises(LeafException):
-            self.pm.install_packages(PackageIdentifier.parse_list(["prereq-D_1.0"]))
+    def test_prereq(self):
+        self.pm.install_packages(PackageIdentifier.parse_list(["pkg-with-prereq_1.0"]))
 
-    def test_prereq_env(self):
-        motifs = ["prereq-env_1.0"]
-        errors = self.pm.install_prereq(PackageIdentifier.parse_list(motifs), self.alt_workspace_folder, raise_on_error=False)
-        self.assertEqual(0, errors)
-        dump = self.alt_workspace_folder / "prereq-env_1.0" / "dump.env"
-        self.assertTrue(dump.exists())
-        env = env_file_to_map(dump)
-        self.assertEqual(env["LEAF_PREREQ_ROOT"], str(self.alt_workspace_folder))
+        self.check_content(self.pm.list_installed_packages(), ["pkg-with-prereq_1.0", "prereq-A_1.0", "prereq-B_1.0"])
+
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-A_1.0" / "install.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-A_1.0" / "sync.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_1.0" / "install.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_1.0" / "sync.log")))
+
+        self.pm.install_packages(PackageIdentifier.parse_list(["pkg-with-prereq_2.0"]))
+
+        self.check_content(self.pm.list_installed_packages(), ["pkg-with-prereq_2.0", "pkg-with-prereq_1.0", "prereq-A_1.0", "prereq-B_1.0", "prereq-B_2.0"])
+
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-A_1.0" / "install.log")))
+        self.assertEqual(2, len(get_lines(self.install_folder / "prereq-A_1.0" / "sync.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_1.0" / "install.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_1.0" / "sync.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_2.0" / "install.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_2.0" / "sync.log")))
+
+        self.pm.uninstall_packages(PackageIdentifier.parse_list(["pkg-with-prereq_2.0"]))
+        self.pm.install_packages(PackageIdentifier.parse_list(["pkg-with-prereq_2.0"]))
+
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-A_1.0" / "install.log")))
+        self.assertEqual(3, len(get_lines(self.install_folder / "prereq-A_1.0" / "sync.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_1.0" / "install.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_1.0" / "sync.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_2.0" / "install.log")))
+        self.assertEqual(2, len(get_lines(self.install_folder / "prereq-B_2.0" / "sync.log")))
 
     def test_depends_available(self):
         deps = DependencyUtils.install(PackageIdentifier.parse_list([]), self.pm.list_available_packages(), self.pm.list_installed_packages())
@@ -400,13 +413,24 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
         self.__assert_deps(deps, ["container-A_1.0", "container-C_1.0", "container-B_1.0", "container-E_1.0"], InstalledPackage)
 
     def test_depends_prereq(self):
-        deps = DependencyUtils.prereq(PackageIdentifier.parse_list(["prereq-D_1.0"]), self.pm.list_available_packages(), self.pm.list_installed_packages())
-        self.__assert_deps(deps, ["prereq-false_1.0", "prereq-true_1.0"], AvailablePackage)
+        deps = DependencyUtils.prereq(
+            PackageIdentifier.parse_list(["pkg-with-prereq_2.0"]), self.pm.list_available_packages(), self.pm.list_installed_packages()
+        )
+        self.__assert_deps(deps, ["prereq-A_1.0", "prereq-B_2.0"], AvailablePackage)
+
+        self.pm.install_packages(PackageIdentifier.parse_list(["pkg-with-prereq_1.0"]))
+        deps = DependencyUtils.prereq(
+            PackageIdentifier.parse_list(["pkg-with-prereq_2.0"]), self.pm.list_available_packages(), self.pm.list_installed_packages()
+        )
+        self.__assert_deps(deps, ["prereq-A_1.0", "prereq-B_2.0"], None)
+        self.assertIsInstance(deps[0], InstalledPackage)
+        self.assertIsInstance(deps[1], AvailablePackage)
 
     def __assert_deps(self, result, expected, itemtype):
-        for item in result:
-            self.assertEqual(itemtype, type(item))
-            self.assertTrue(isinstance(item, itemtype))
+        if itemtype is not None:
+            for item in result:
+                self.assertEqual(itemtype, type(item))
+                self.assertTrue(isinstance(item, itemtype))
         deps = [str(mf.identifier) for mf in result]
         self.assertEqual(expected, deps)
 

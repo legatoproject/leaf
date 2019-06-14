@@ -14,7 +14,6 @@ import re
 import shutil
 import string
 import sys
-import tempfile
 import time
 from collections import OrderedDict
 from functools import total_ordering
@@ -196,10 +195,6 @@ def mkdirs(folder: Path):
     if not folder.exists():
         os.makedirs(str(folder), exist_ok=True)
     return folder
-
-
-def mkdir_tmp_leaf_dir():
-    return Path(tempfile.mkdtemp(prefix="leaf-alt-root_"))
 
 
 def chmod_write(item: Path):

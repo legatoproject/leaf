@@ -1,7 +1,7 @@
 {
     "info": {
-        "name": "prereq-B",
-        "version": "1.0",
+        "name": "prereq-A",
+        "version": "0.1-fail",
         "requires": [],
         "depends": []
     },
@@ -22,6 +22,11 @@
                 "sh",
                 "-c",
                 "date | tee -a @{DIR}/sync.log"
+            ]
+        },
+        {
+            "command": [
+                "false"
             ]
         }
     ]

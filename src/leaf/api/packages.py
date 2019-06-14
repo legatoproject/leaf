@@ -7,29 +7,19 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 """
 
-from builtins import Exception
 from collections import OrderedDict
-from pathlib import Path
 from tarfile import TarFile
 
 from leaf.api.remotes import RemoteManager
 from leaf.core.constants import LeafConstants, LeafFiles
 from leaf.core.download import download_and_verify_file
-from leaf.core.error import InvalidPackageNameException, LeafException, LeafOutOfDateException, NoPackagesInCacheException
 from leaf.core.lock import LockFile
-from leaf.core.utils import (
-    fs_check_free_space,
-    fs_compute_total_size,
-    get_cached_artifact_name,
-    mark_folder_as_ignored,
-    mkdir_tmp_leaf_dir,
-    mkdirs,
-    rmtree_force,
-)
+from leaf.core.utils import fs_check_free_space, fs_compute_total_size, get_cached_artifact_name, mark_folder_as_ignored, mkdirs, rmtree_force
+from leaf.core.error import InvalidPackageNameException, LeafException, LeafOutOfDateException, NoPackagesInCacheException, PrereqException
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
 from leaf.model.modelutils import check_leaf_min_version, find_manifest, is_latest_package
-from leaf.model.package import AvailablePackage, InstalledPackage, LeafArtifact, PackageIdentifier
+from leaf.model.package import IDENTIFIER_GETTER, AvailablePackage, InstalledPackage, LeafArtifact, PackageIdentifier
 from leaf.model.steps import StepExecutor, VariableResolver
 from leaf.rendering.formatutils import sizeof_fmt
 
@@ -107,21 +97,17 @@ class PackageManager(RemoteManager):
         download_and_verify_file(ap.url, cachedfile, logger=self.logger, hashstr=ap.hashsum)
         return LeafArtifact(cachedfile)
 
-    def __extract_artifact(
-        self, la: LeafArtifact, env: Environment, install_folder: Path, ipmap: dict = None, keep_folder_on_error: bool = False
-    ) -> InstalledPackage:
+    def __extract_artifact(self, la: LeafArtifact, env: Environment, ipmap: dict, keep_folder_on_error: bool = False) -> InstalledPackage:
         """
         Install a leaf artifact
         @return InstalledPackage
         """
-        target_folder = install_folder / str(la.identifier)
-        if target_folder.is_dir():
-            raise LeafException("Folder already exists: {folder}".format(folder=target_folder))
-
-        # Check already installed
-        ipmap = ipmap or self.list_installed_packages()
         if la.identifier in ipmap:
             raise LeafException("Package is already installed: {la.identifier}".format(la=la))
+
+        target_folder = self.install_folder / str(la.identifier)
+        if target_folder.is_dir():
+            raise LeafException("Folder already exists: {folder}".format(folder=target_folder))
 
         # Check leaf min version
         min_version = check_leaf_min_version([la])
@@ -143,7 +129,7 @@ class PackageManager(RemoteManager):
             # Touch folder to trigger FS event
             target_folder.touch(exist_ok=True)
             return out
-        except Exception as e:
+        except BaseException as e:
             self.logger.print_error("Error during installation:", e)
             if keep_folder_on_error:
                 target_folder = mark_folder_as_ignored(target_folder)
@@ -153,34 +139,28 @@ class PackageManager(RemoteManager):
                 rmtree_force(target_folder)
             raise e
 
-    def install_prereq(self, pilist: list, tmp_install_folder: Path, apmap: dict = None, env: Environment = None, raise_on_error: bool = True):
+    def __install_prereq(self, mflist: list, ipmap: dict, env: Environment = None, keep_folder_on_error: bool = False):
         """
-        Install given prereg available package in alternative root folder
-        @return: error count
+        Install given prereg packages and sync them after
         """
-        if apmap is None:
-            apmap = self.list_available_packages()
-
-        # Get packages to install
-        aplist = [find_manifest(pi, apmap) for pi in pilist]
-
-        errors = 0
-        if len(aplist) > 0:
-            self.logger.print_verbose("Installing {count} pre-required package(s) in {folder}".format(count=len(aplist), folder=tmp_install_folder))
-            if env is None:
-                env = Environment.build(self.build_builtin_environment(), self.build_user_environment())
-            env.append(Environment("Prereq", {"LEAF_PREREQ_ROOT": tmp_install_folder}))
-            for prereqap in aplist:
-                try:
-                    prereqla = self.__download_ap(prereqap)
-                    prereqip = self.__extract_artifact(prereqla, env, tmp_install_folder, keep_folder_on_error=True)
-                    self.logger.print_verbose("Prereq package {ip.identifier} is OK".format(ip=prereqip))
-                except Exception as e:
-                    if raise_on_error:
-                        raise e
-                    self.logger.print_verbose("Prereq package {ap.identifier} has error: {error}".format(ap=prereqap, error=e))
-                    errors += 1
-        return errors
+        # First, install missing prereq packages
+        ip_to_sync = []
+        for mf in mflist:
+            if isinstance(mf, InstalledPackage):
+                self.logger.print_verbose("Prereq package {ip.identifier} is already installed".format(ip=mf))
+                ip_to_sync.append(mf)
+            elif isinstance(mf, AvailablePackage):
+                # Install package
+                self.logger.print_verbose("Prereq package {ap.identifier} is being installed".format(ap=mf))
+                prereqla = self.__download_ap(mf)
+                prereqip = self.__extract_artifact(prereqla, env, ipmap, keep_folder_on_error=keep_folder_on_error)
+                ip_to_sync.append(prereqip)
+            else:
+                raise ValueError()
+        # Then, sync package sorted alphabetically
+        for ip in sorted(ip_to_sync, key=IDENTIFIER_GETTER):
+            # Sync package
+            self.__execute_steps(ip.identifier, ipmap, StepExecutor.sync, env=env)
 
     def install_packages(self, pilist: list, env: Environment = None, keep_folder_on_error: bool = False):
         """
@@ -188,7 +168,6 @@ class PackageManager(RemoteManager):
         @return: InstalledPackage list
         """
         with self.application_lock.acquire():
-            prereq_install_folder = None
             ipmap = self.list_installed_packages()
             apmap = self.list_available_packages()
             out = []
@@ -197,71 +176,64 @@ class PackageManager(RemoteManager):
             if env is None:
                 env = Environment.build(self.build_builtin_environment(), self.build_user_environment())
 
-            try:
-                ap_to_install = DependencyUtils.install(pilist, apmap, ipmap, env=env)
+            ap_to_install = DependencyUtils.install(pilist, apmap, ipmap, env=env)
 
-                # Check leaf min version
-                min_version = check_leaf_min_version(ap_to_install)
-                if min_version:
-                    raise LeafOutOfDateException(
-                        "You need to upgrade leaf to v{version} to install {text}".format(
-                            version=min_version, text=", ".join([str(ap.identifier) for ap in ap_to_install])
-                        )
+            # Check leaf min version
+            min_version = check_leaf_min_version(ap_to_install)
+            if min_version:
+                raise LeafOutOfDateException(
+                    "You need to upgrade leaf to v{version} to install {text}".format(
+                        version=min_version, text=", ".join([str(ap.identifier) for ap in ap_to_install])
                     )
+                )
 
-                # Check nothing to do
-                if len(ap_to_install) == 0:
-                    self.logger.print_default("All packages are installed")
-                else:
-                    # Check available size
-                    download_totalsize = 0
-                    for ap in ap_to_install:
-                        if ap.size is not None:
-                            download_totalsize += ap.size
-                    fs_check_free_space(self.download_cache_folder, download_totalsize)
+            # Check nothing to do
+            if len(ap_to_install) == 0:
+                self.logger.print_default("All packages are installed")
+            else:
+                # Check available size
+                download_totalsize = 0
+                for ap in ap_to_install:
+                    if ap.size is not None:
+                        download_totalsize += ap.size
+                fs_check_free_space(self.download_cache_folder, download_totalsize)
 
-                    # Confirm
-                    text = ", ".join([str(ap.identifier) for ap in ap_to_install])
-                    self.logger.print_quiet("Packages to install: {packages}".format(packages=text))
-                    if download_totalsize > 0:
-                        self.logger.print_default("Total size:", sizeof_fmt(download_totalsize))
-                    self.print_with_confirm(raise_on_decline=True)
+                # Confirm
+                text = ", ".join([str(ap.identifier) for ap in ap_to_install])
+                self.logger.print_quiet("Packages to install: {packages}".format(packages=text))
+                if download_totalsize > 0:
+                    self.logger.print_default("Total size:", sizeof_fmt(download_totalsize))
+                self.print_with_confirm(raise_on_decline=True)
 
-                    # Install prereq
-                    prereq_to_install = DependencyUtils.prereq(pilist, apmap, ipmap, env=env)
+                # Install prereq
+                prereq_to_install = DependencyUtils.prereq(pilist, apmap, ipmap, env=env)
 
-                    if len(prereq_to_install) > 0:
-                        self.logger.print_default("Check required packages")
-                        prereq_install_folder = mkdir_tmp_leaf_dir()
-                        self.install_prereq([p.identifier for p in prereq_to_install], prereq_install_folder, apmap=apmap, env=env)
+                if len(prereq_to_install) > 0:
+                    try:
+                        self.__install_prereq(prereq_to_install, ipmap, env=env, keep_folder_on_error=keep_folder_on_error)
+                    except BaseException as e:
+                        raise PrereqException(e)
 
-                    # Download ap list
-                    self.logger.print_default("Downloading {size} package(s)".format(size=len(ap_to_install)))
-                    la_to_install = []
-                    for ap in ap_to_install:
-                        la_to_install.append(self.__download_ap(ap))
+                # Download ap list
+                self.logger.print_default("Downloading {size} package(s)".format(size=len(ap_to_install)))
+                la_to_install = []
+                for ap in ap_to_install:
+                    la_to_install.append(self.__download_ap(ap))
 
-                    # Check the extracted size
-                    extracted_totalsize = 0
-                    for la in la_to_install:
-                        if la.final_size is not None:
-                            extracted_totalsize += la.final_size
-                        else:
-                            extracted_totalsize += la.get_total_size()
-                    fs_check_free_space(self.install_folder, extracted_totalsize)
+                # Check the extracted size
+                extracted_totalsize = 0
+                for la in la_to_install:
+                    if la.final_size is not None:
+                        extracted_totalsize += la.final_size
+                    else:
+                        extracted_totalsize += la.get_total_size()
+                fs_check_free_space(self.install_folder, extracted_totalsize)
 
-                    # Extract la list
-                    for la in la_to_install:
-                        self.logger.print_default(
-                            "[{current}/{total}] Installing {la.identifier}".format(current=(len(out) + 1), total=len(la_to_install), la=la)
-                        )
-                        ip = self.__extract_artifact(la, env, self.install_folder, ipmap=ipmap, keep_folder_on_error=keep_folder_on_error)
-                        out.append(ip)
-
-            finally:
-                if not keep_folder_on_error and prereq_install_folder is not None:
-                    self.logger.print_verbose("Remove prereq root folder {folder}".format(folder=prereq_install_folder))
-                    rmtree_force(prereq_install_folder)
+                # Extract la list
+                for la in la_to_install:
+                    self.logger.print_default("[{current}/{total}] Installing {la.identifier}".format(current=(len(out) + 1), total=len(la_to_install), la=la))
+                    ip = self.__extract_artifact(la, env, ipmap, keep_folder_on_error=keep_folder_on_error)
+                    out.append(ip)
 
             return out
 

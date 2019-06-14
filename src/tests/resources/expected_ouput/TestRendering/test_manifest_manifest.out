@@ -40,16 +40,16 @@
 │ failure-postinstall-exec_1.0        │                       │                       │
 │ install_1.0                         │ this is a description │                       │
 │ multitags_1.0                       │                       │ staticTag1,staticTag2 │
+│ pkg-with-prereq_0.1                 │                       │                       │
+│ pkg-with-prereq_1.0                 │                       │                       │
+│ pkg-with-prereq_2.0                 │                       │                       │
 │ pluginA_1.0                         │                       │                       │
 │ pluginA_1.1                         │                       │                       │
 │ pluginB_1.0                         │                       │                       │
+│ prereq-A_0.1-fail                   │                       │                       │
 │ prereq-A_1.0                        │                       │                       │
 │ prereq-B_1.0                        │                       │                       │
-│ prereq-C_1.0                        │                       │                       │
-│ prereq-D_1.0                        │                       │                       │
-│ prereq-env_1.0                      │                       │                       │
-│ prereq-false_1.0                    │                       │                       │
-│ prereq-true_1.0                     │                       │                       │
+│ prereq-B_2.0                        │                       │                       │
 │ scripts_1.0                         │                       │                       │
 │ settings_1.0                        │                       │                       │
 │ subscripts_1.0                      │                       │                       │
@@ -99,16 +99,16 @@
 │ failure-postinstall-exec_1.0        │                       │                       │
 │ install_1.0                         │ this is a description │                       │
 │ multitags_1.0                       │                       │ staticTag1,staticTag2 │
+│ pkg-with-prereq_0.1                 │                       │                       │
+│ pkg-with-prereq_1.0                 │                       │                       │
+│ pkg-with-prereq_2.0                 │                       │                       │
 │ pluginA_1.0                         │                       │                       │
 │ pluginA_1.1                         │                       │                       │
 │ pluginB_1.0                         │                       │                       │
+│ prereq-A_0.1-fail                   │                       │                       │
 │ prereq-A_1.0                        │                       │                       │
 │ prereq-B_1.0                        │                       │                       │
-│ prereq-C_1.0                        │                       │                       │
-│ prereq-D_1.0                        │                       │                       │
-│ prereq-env_1.0                      │                       │                       │
-│ prereq-false_1.0                    │                       │                       │
-│ prereq-true_1.0                     │                       │                       │
+│ prereq-B_2.0                        │                       │                       │
 │ scripts_1.0                         │                       │                       │
 │ settings_1.0                        │                       │                       │
 │ subscripts_1.0                      │                       │                       │

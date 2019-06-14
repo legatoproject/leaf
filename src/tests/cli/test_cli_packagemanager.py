@@ -4,7 +4,7 @@
 import os
 
 from leaf.core.constants import LeafSettings
-from tests.testutils import LeafTestCaseWithCli
+from tests.testutils import LeafTestCaseWithCli, get_lines
 
 
 class TestCliPackageManager(LeafTestCaseWithCli):
@@ -169,10 +169,18 @@ class TestCliPackageManager(LeafTestCaseWithCli):
         self.leaf_exec(["package", "uninstall"], "install_1.0")
 
     def test_prereq(self):
-        self.leaf_exec(["package", "prereq"], "prereq-true_1.0")
-        self.assertFalse((self.alt_workspace_folder / "prereq-true_1.0").is_dir())
-        self.leaf_exec(["package", "prereq"], "--target", self.alt_workspace_folder, "prereq-true_1.0")
-        self.assertTrue((self.alt_workspace_folder / "prereq-true_1.0").is_dir())
+        self.leaf_exec(["package", "install"], "pkg-with-prereq_0.1", expected_rc=2)
+        self.leaf_exec(["package", "install"], "pkg-with-prereq_1.0")
+        self.leaf_exec(["package", "install"], "pkg-with-prereq_2.0")
+
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-A_0.1-fail" / "install.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-A_0.1-fail" / "sync.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-A_1.0" / "install.log")))
+        self.assertEqual(2, len(get_lines(self.install_folder / "prereq-A_1.0" / "sync.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_1.0" / "install.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_1.0" / "sync.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_2.0" / "install.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_2.0" / "sync.log")))
 
     def test_install_unknown_package(self):
         self.leaf_exec(["package", "install"], "unknwonPackage", expected_rc=2)

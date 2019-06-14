@@ -1,9 +1,11 @@
 {
     "info": {
         "name": "prereq-B",
-        "version": "1.0",
+        "version": "2.0",
         "requires": [],
-        "depends": []
+        "depends": [
+            "prereq-A_1.0"
+        ]
     },
     "install": [
         {

@@ -1,0 +1,10 @@
+{
+  "info": {
+    "name": "pkg-with-prereq",
+    "version": "0.1",
+    "master": true,
+    "requires": [
+      "prereq-A_0.1-fail"
+    ]
+  }
+}

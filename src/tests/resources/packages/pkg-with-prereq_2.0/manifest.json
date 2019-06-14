@@ -1,0 +1,10 @@
+{
+  "info": {
+    "name": "pkg-with-prereq",
+    "version": "2.0",
+    "master": true,
+    "requires": [
+      "prereq-B_latest"
+    ]
+  }
+}

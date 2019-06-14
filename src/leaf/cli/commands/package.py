@@ -10,14 +10,13 @@ Leaf Package Manager
 import argparse
 from builtins import ValueError
 from collections import OrderedDict
-from pathlib import Path
 
 from leaf.api import PackageManager
 from leaf.cli.base import LeafCommand
 from leaf.cli.cliutils import get_optional_arg
 from leaf.cli.completion import complete_all_packages, complete_available_packages, complete_installed_packages, complete_installed_packages_tags
 from leaf.core.error import PackageInstallInterruptedException
-from leaf.core.utils import env_list_to_map, mkdir_tmp_leaf_dir
+from leaf.core.utils import env_list_to_map
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
 from leaf.model.filtering import MetaPackageFilter
@@ -144,27 +143,6 @@ class PackageInstallCommand(LeafCommand):
 
         if len(items) > 0:
             pm.logger.print_quiet("Packages installed:", " ".join([str(p.identifier) for p in items]))
-
-
-class PackagePrereqCommand(LeafCommand):
-    def __init__(self):
-        LeafCommand.__init__(self, "prereq", "check prereq packages")
-
-    def _configure_parser(self, parser):
-        super()._configure_parser(parser)
-        parser.add_argument("--target", dest="tmp_install_folder", type=Path, help="a alternative root folder for required packages installation")
-        parser.add_argument("packages", metavar="PKG_IDENTIFIER", nargs=argparse.ONE_OR_MORE, help="package identifier").completer = complete_installed_packages
-
-    def execute(self, args, uargs):
-        pm = PackageManager()
-
-        tmp_install_folder = args.tmp_install_folder
-        if tmp_install_folder is None:
-            tmp_install_folder = mkdir_tmp_leaf_dir()
-        pm.logger.print_quiet("Prereq root folder: {folder}".format(folder=tmp_install_folder))
-        errors = pm.install_prereq(PackageIdentifier.parse_list(args.packages), tmp_install_folder, raise_on_error=False)
-        pm.logger.print_quiet("Prereq installed with {count} error(s)".format(count=errors))
-        return errors
 
 
 class PackageUninstallCommand(LeafCommand):
