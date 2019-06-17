@@ -46,7 +46,7 @@ setup(
     setup_requires=["setuptools_scm"],
     package_dir={"": "src"},
     packages=["leaf", "leaf.core", "leaf.model", "leaf.rendering", "leaf.rendering.renderer", "leaf.api", "leaf.cli", "leaf.cli.commands"],
-    entry_points={"console_scripts": ["leaf = leaf.__main__:main"]},
+    entry_points={"console_scripts": ["leaf = leaf.__main__:main", "leaf-version-compare = leaf.tools:leaf_version_compare"]},
     data_files=_find_resources(),
     include_package_data=True,
 )

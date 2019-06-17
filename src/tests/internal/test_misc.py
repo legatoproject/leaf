@@ -6,12 +6,10 @@ from pathlib import Path
 from random import shuffle
 from tempfile import mktemp
 
-from leaf import __version__
 from leaf.core.constants import LeafFiles
 from leaf.core.error import LeafException
 from leaf.core.jsonutils import JsonObject, jloadfile, jwritefile
 from leaf.core.lock import LockFile
-from leaf.core.utils import CURRENT_LEAF_VERSION, Version, version_comparator_lt
 from leaf.model.modelutils import keep_latest
 from leaf.model.package import InstalledPackage, PackageIdentifier
 from leaf.model.steps import VariableResolver
@@ -19,7 +17,6 @@ from tests.testutils import TEST_REMOTE_PACKAGE_SOURCE, LeafTestCase
 
 
 class TestMisc(LeafTestCase):
-
     def test_json(self):
         jo = JsonObject({})
         self.assertIsNone(jo.jsonpath(["a"]))
@@ -140,37 +137,3 @@ class TestMisc(LeafTestCase):
 
         with lf.acquire(advisory=advisory):
             pass
-
-    def test_comparator(self):
-
-        for a, b, c in (
-            ("a", "a", 0),
-            (" a ", "a", 0),
-            ("0", "1", -1),
-            ("2", "10", -1),
-            ("1.10", "1.1", 1),
-            ("1.0", "2.2", -1),
-            ("1.0.0.9", "1.0.0.8.9", 1),
-            ("1.a.0.zz00.9", "1.a.0.zz00.9", 0),
-            ("a", "0", 1),
-            ("a", "0.9", 1),
-            ("", "0", -1),
-            (" ", "0", -1),
-            ("1.8", "1.8.0", -1),
-        ):
-            message = "{a} ? {b}".format(a=a, b=b)
-            self.assertEqual(c < 0, version_comparator_lt(a, b), msg=message)
-            self.assertEqual(c > 0, version_comparator_lt(b, a), msg=message)
-            if c > 0:
-                self.assertTrue(Version(a) > Version(b))
-                self.assertTrue(Version(a) > b)
-                self.assertTrue(Version(b) < Version(a))
-                self.assertTrue(Version(b) < a)
-            elif c < 0:
-                self.assertTrue(Version(a) < Version(b))
-                self.assertTrue(Version(b) > Version(a))
-            else:
-                self.assertTrue(Version(a) == Version(b))
-                self.assertTrue(Version(a) == b)
-
-        self.assertEqual(CURRENT_LEAF_VERSION, __version__)

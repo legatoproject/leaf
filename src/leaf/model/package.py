@@ -20,8 +20,7 @@ from leaf.core.constants import JsonConstants, LeafFiles
 from leaf.core.download import url_resolve
 from leaf.core.error import InvalidPackageNameException
 from leaf.core.jsonutils import JsonObject, jload, jloadfile
-from leaf.core.utils import (Version, version_comparator_lt,
-                             version_string_to_tuple)
+from leaf.core.utils import Version
 from leaf.model.environment import Environment, IEnvProvider
 from leaf.model.settings import ScopeSetting
 
@@ -72,9 +71,8 @@ class PackageIdentifier:
     def version(self):
         return self.__version
 
-    @property
-    def version_tuple(self):
-        return version_string_to_tuple(self.version)
+    def get_version(self):
+        return Version(self.__version)
 
     def __str__(self):
         return self.name + PackageIdentifier.SEPARATOR + self.version
@@ -85,16 +83,14 @@ class PackageIdentifier:
     def __eq__(self, other):
         if not isinstance(other, PackageIdentifier):
             return NotImplemented
-        return self.name == other.name and self.version == other.version
+        return self.name == other.name and self.get_version() == other.get_version()
 
     def __lt__(self, other):
         if not isinstance(other, PackageIdentifier):
             return NotImplemented
         if not self.name == other.name:
             return self.name < other.name
-        if self.version == other.version:
-            return False
-        return version_comparator_lt(self.version, other.version)
+        return self.get_version() < other.get_version()
 
 
 class ConditionalPackageIdentifier(PackageIdentifier):

@@ -18,8 +18,8 @@ import tempfile
 import time
 from collections import OrderedDict
 from functools import total_ordering
+from itertools import zip_longest
 from pathlib import Path
-
 
 from leaf import __version__
 from leaf.core.constants import LeafConstants
@@ -49,12 +49,12 @@ class Version:
             return self.__eq__(Version(other))
         if not isinstance(other, Version):
             return NotImplemented
-        return self.value == other.value
+        return version_comparator(self.value, other.value) == 0
 
     def __lt__(self, other):
         if isinstance(other, str):
             return self.__lt__(Version(other))
-        return version_comparator_lt(self.value, other.value)
+        return version_comparator(self.value, other.value) < 0
 
 
 CURRENT_LEAF_VERSION = Version(__version__)
@@ -70,30 +70,47 @@ def version_string_to_tuple(version):
     return tuple(tryint(x) for x in _VERSION_SEPARATOR.split(version.strip()))
 
 
-def version_comparator_lt(a: str, b: str):
+def version_comparator(a: str, b: str, implicit_zero: bool = False):
     # Check string given
     if not isinstance(a, str) or not isinstance(b, str):
         raise ValueError()
+
     # extract tuples
-    a = version_string_to_tuple(a)
-    b = version_string_to_tuple(b)
+    a, b = version_string_to_tuple(a), version_string_to_tuple(b)
+
+    if implicit_zero:
+        # Fill with 0 the shortest
+        if len(a) < len(b):
+            a += (0,) * (len(b) - len(a))
+        elif len(b) < len(a):
+            b += (0,) * (len(a) - len(b))
+        assert len(a) == len(b)
+
     # Check equality
     if a == b:
-        return False
-    i = 0
-    while True:
-        if i >= len(a):
-            return True
-        if i >= len(b):
-            return False
-        itema = a[i]
-        itemb = b[i]
-        if not type(itema) == type(itemb):
-            itema = str(itema)
-            itemb = str(itemb)
-        if not itema == itemb:
-            return itema < itemb
-        i += 1
+        return 0
+
+    # Iterate over values
+    for va, vb in zip_longest(a, b):
+        # Detect shorter version
+        if va is None:
+            return -1
+        if vb is None:
+            return 1
+        # If different type, use str comparison
+        if type(va) != type(vb):
+            va, vb = str(va), str(vb)
+        if va < vb:
+            return -1
+        if va > vb:
+            return 1
+
+    # Tuple are equal
+    return 0
+
+
+def version_comparator_lt(a: str, b: str):
+    return version_comparator(a, b) < 0
 
 
 def check_supported_python_version():
