@@ -10,16 +10,16 @@ Leaf Package Manager
 import sys
 from signal import SIGINT, signal
 
-from leaf.api import ConfigurationManager
+from leaf.api import ConfigurationManager, LoggerManager
 from leaf.cli.commands import LeafRootCommand
 from leaf.cli.plugins import LeafPluginManager
-from leaf.core.constants import LeafSettings
-from leaf.core.error import UserCancelException
+from leaf.core.constants import LeafConstants, LeafSettings
+from leaf.core.error import LeafException, UserCancelException
 from leaf.core.utils import check_supported_python_version
 
 
 def main():
-    return run_leaf(sys.argv[1:])
+    sys.exit(run_leaf(sys.argv[1:]))
 
 
 def run_leaf(argv, catch_int_sig=True):
@@ -33,27 +33,34 @@ def run_leaf(argv, catch_int_sig=True):
             raise UserCancelException()
 
         signal(SIGINT, signal_handler)
-    # Init leaf configuration
-    cm = ConfigurationManager()
-    cm.init_leaf_settings()
-    # Plugin manager
-    pm = None
-    if not LeafSettings.NOPLUGIN.as_boolean():
-        pm = LeafPluginManager(cm.list_installed_packages(only_latest=True))
-    # Setup the app CLI parser
-    parser = LeafRootCommand(pm).setup(None)
-    # Try to enable argcomplete library
+
+    out = None
     try:
-        import argcomplete
+        # Init leaf configuration
+        cm = ConfigurationManager()
+        cm.init_leaf_settings()
+        # Plugin manager
+        pm = None
+        if not LeafSettings.NOPLUGIN.as_boolean():
+            pm = LeafPluginManager(cm.list_installed_packages(only_latest=True))
+        # Setup the app CLI parser
+        parser = LeafRootCommand(pm).setup(None)
+        # Try to enable argcomplete library
+        try:
+            import argcomplete
 
-        argcomplete.autocomplete(parser)
-    except ImportError:
-        pass
+            argcomplete.autocomplete(parser)
+        except ImportError:
+            pass
 
-    # Parse args
-    args, uargs = parser.parse_known_args(argv)
-    # Execute command handler
-    return args.handler.safe_execute(args, uargs)
+        # Parse args
+        args, uargs = parser.parse_known_args(argv)
+        # Execute command handler
+        out = args.handler.safe_execute(args, uargs)
+    except Exception as e:
+        LoggerManager().print_exception(e)
+        out = e.exit_code if isinstance(e, LeafException) else LeafConstants.DEFAULT_ERROR_RC
+    return out if out is not None else 0
 
 
 if __name__ == "__main__":

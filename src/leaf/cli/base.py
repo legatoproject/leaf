@@ -2,10 +2,10 @@ import argparse
 from abc import ABC, abstractmethod
 from argparse import Namespace
 
-from leaf.api import LoggerManager, WorkspaceManager
+from leaf.api import WorkspaceManager
 from leaf.cli.cliutils import EnvSetterAction
-from leaf.core.constants import LeafConstants, LeafSettings
-from leaf.core.error import LeafException, UnknownArgsException, WorkspaceNotInitializedException
+from leaf.core.constants import LeafSettings
+from leaf.core.error import UnknownArgsException, WorkspaceNotInitializedException
 
 """
 Leaf Package Manager
@@ -98,20 +98,9 @@ class LeafCommand(ABC):
         pass
 
     def safe_execute(self, args: Namespace, uargs: list):
-        out = 0
-        try:
-            if uargs is not None and len(uargs) > 0 and not self.__allow_uargs:
-                raise UnknownArgsException(uargs)
-            out = self.execute(args, uargs)
-        except Exception as e:
-            lm = LoggerManager()
-            if isinstance(e, LeafException):
-                lm.print_exception(e)
-                out = e.exit_code
-            else:
-                lm.logger.print_error(e)
-                out = LeafConstants.DEFAULT_ERROR_RC
-        return out if out is not None else 0
+        if uargs is not None and len(uargs) > 0 and not self.__allow_uargs:
+            raise UnknownArgsException(uargs)
+        return self.execute(args, uargs)
 
     def get_workspacemanager(self, check_parents=True, check_initialized=True):
         out = WorkspaceManager(WorkspaceManager.find_root(check_parents=check_parents))
