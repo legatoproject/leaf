@@ -90,14 +90,15 @@ class RemoteManager(GPGManager):
             remote = Remote(alias, json)
             if remote.enabled or not only_enabled:
                 out[alias] = remote
-                rindex, rsig = self.__get_remote_files(alias)
-                # Load content if cache exists and check signature is present if needed
-                if rindex.exists() and (remote.gpg_key is None or rsig.exists()):
-                    try:
-                        remote.content = jloadfile(rindex)
-                    except Exception:
-                        self.logger.print_default("Invalid json file cache for remote {alias}".format(alias=alias))
-                        self.__clean_remote_files(alias)
+                if remote.enabled:
+                    # Load content if remote is enabled cache exists and check signature is present if needed
+                    rindex, rsig = self.__get_remote_files(alias)
+                    if rindex.exists() and (remote.gpg_key is None or rsig.exists()):
+                        try:
+                            remote.content = jloadfile(rindex)
+                        except Exception:
+                            self.logger.print_default("Invalid json file cache for remote {alias}".format(alias=alias))
+                            self.__clean_remote_files(alias)
         if len(out) == 0 and only_enabled:
             raise NoEnabledRemoteException()
 
