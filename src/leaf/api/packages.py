@@ -140,6 +140,8 @@ class PackageManager(RemoteManager):
             out = InstalledPackage(target_folder / LeafFiles.MANIFEST)
             ipmap[out.identifier] = out
             self.__execute_steps(out.identifier, ipmap, StepExecutor.install, env=env)
+            # Touch folder to trigger FS event
+            target_folder.touch(exist_ok=True)
             return out
         except Exception as e:
             self.logger.print_error("Error during installation:", e)
