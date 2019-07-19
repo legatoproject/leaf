@@ -232,6 +232,14 @@ class TestCliPackageManager(LeafTestCaseWithCli):
             if "LEAF_RETRY" in os.environ:
                 del os.environ["LEAF_RETRY"]
 
+    def test_local_install(self):
+        file1 = self.repository_folder / "condition_1.0.leaf"
+        file2 = self.repository_folder / "condition-B_1.0.leaf"
+        self.leaf_exec(["package", "install"], file1, "install_1.0", file2)
+        self.check_installed_packages(["condition_1.0", "condition-B_1.0", "condition-D_1.0", "condition-F_1.0", "condition-H_1.0", "install_1.0"])
+        cached_filenames = [f.name[8:] for f in (self.cache_folder / "files").iterdir()]
+        self.assertEqual(sorted(cached_filenames), ["condition-D_1.0.leaf", "condition-F_1.0.leaf", "condition-H_1.0.leaf", "install_1.0.leaf"])
+
 
 class TestCliPackageManagerVerbose(TestCliPackageManager):
     def __init__(self, *args, **kwargs):

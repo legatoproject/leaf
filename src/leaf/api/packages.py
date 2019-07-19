@@ -8,14 +8,15 @@ Leaf Package Manager
 """
 
 from collections import OrderedDict
+from pathlib import Path
 from tarfile import TarFile
 
 from leaf.api.remotes import RemoteManager
 from leaf.core.constants import LeafConstants, LeafFiles
 from leaf.core.download import download_and_verify_file
+from leaf.core.error import InvalidPackageNameException, LeafException, LeafOutOfDateException, NoPackagesInCacheException, PrereqException
 from leaf.core.lock import LockFile
 from leaf.core.utils import fs_check_free_space, fs_compute_total_size, get_cached_artifact_name, mark_folder_as_ignored, mkdirs, rmtree_force
-from leaf.core.error import InvalidPackageNameException, LeafException, LeafOutOfDateException, NoPackagesInCacheException, PrereqException
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
 from leaf.model.modelutils import check_leaf_min_version, find_manifest, is_latest_package
@@ -155,6 +156,12 @@ class PackageManager(RemoteManager):
                 prereqla = self.__download_ap(mf)
                 prereqip = self.__extract_artifact(prereqla, env, ipmap, keep_folder_on_error=keep_folder_on_error)
                 ip_to_sync.append(prereqip)
+            elif isinstance(mf, LeafArtifact):
+                # Install package
+                self.logger.print_verbose("Prereq package {la.identifier} is being installed".format(la=mf))
+                prereqla = mf
+                prereqip = self.__extract_artifact(prereqla, env, ipmap, keep_folder_on_error=keep_folder_on_error)
+                ip_to_sync.append(prereqip)
             else:
                 raise ValueError()
         # Then, sync package sorted alphabetically
@@ -162,7 +169,7 @@ class PackageManager(RemoteManager):
             # Sync package
             self.__execute_steps(ip.identifier, ipmap, StepExecutor.sync, env=env)
 
-    def install_packages(self, pilist: list, env: Environment = None, keep_folder_on_error: bool = False):
+    def install_packages(self, items: list, env: Environment = None, keep_folder_on_error: bool = False):
         """
         Compute dependency tree, check compatibility, download from remotes and extract needed packages
         @return: InstalledPackage list
@@ -170,6 +177,19 @@ class PackageManager(RemoteManager):
         with self.application_lock.acquire():
             ipmap = self.list_installed_packages()
             apmap = self.list_available_packages()
+            pilist = []
+            for item in items:
+                if isinstance(item, PackageIdentifier):
+                    # Package identifier is given
+                    pilist.append(item)
+                elif PackageIdentifier.is_valid_identifier(item):
+                    # Package identifier string given
+                    pilist.append(PackageIdentifier.parse(item))
+                else:
+                    # If leaf artifacts are given, add/replace identifiers of available packages
+                    la = LeafArtifact(Path(item))
+                    pilist.append(la.identifier)
+                    apmap[la.identifier] = la
             out = []
 
             # Build env to resolve dynamic dependencies
@@ -193,7 +213,9 @@ class PackageManager(RemoteManager):
             else:
                 # Check available size
                 download_totalsize = 0
-                for ap in ap_to_install:
+                download_count = 0
+                for ap in [ap for ap in ap_to_install if isinstance(ap, AvailablePackage)]:
+                    download_count += 1
                     if ap.size is not None:
                         download_totalsize += ap.size
                 fs_check_free_space(self.download_cache_folder, download_totalsize)
@@ -215,10 +237,13 @@ class PackageManager(RemoteManager):
                         raise PrereqException(e)
 
                 # Download ap list
-                self.logger.print_default("Downloading {size} package(s)".format(size=len(ap_to_install)))
+                self.logger.print_default("Downloading {size} package(s)".format(size=download_count))
                 la_to_install = []
-                for ap in ap_to_install:
-                    la_to_install.append(self.__download_ap(ap))
+                for mf in ap_to_install:
+                    if isinstance(mf, AvailablePackage):
+                        la_to_install.append(self.__download_ap(mf))
+                    elif isinstance(mf, LeafArtifact):
+                        la_to_install.append(mf)
 
                 # Check the extracted size
                 extracted_totalsize = 0

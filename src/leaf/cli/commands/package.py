@@ -137,7 +137,7 @@ class PackageInstallCommand(LeafCommand):
 
         complete_available_packages()
         try:
-            items = pm.install_packages(PackageIdentifier.parse_list(args.packages), keep_folder_on_error=args.keep_on_error)
+            items = pm.install_packages(args.packages, keep_folder_on_error=args.keep_on_error)
         except Exception as e:
             raise PackageInstallInterruptedException(args.packages, e)
 

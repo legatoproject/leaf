@@ -79,11 +79,8 @@ class DependencyUtils:
         Returns a list of AvailablePackage
         """
         out = []
-
         # Build a map containing all knwon packages
-        all_packages = dict(apmap)
-        all_packages.update(ipmap)
-
+        all_packages = reduce(lambda a, b: a.update(b) or a, [apmap, ipmap], {})
         # Build the list from available packages
         DependencyUtils.__build_tree(pilist, all_packages, out, env=env)
         # Remove already installed packages
