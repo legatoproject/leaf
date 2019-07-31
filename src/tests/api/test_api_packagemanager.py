@@ -351,6 +351,16 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
         self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_2.0" / "install.log")))
         self.assertEqual(2, len(get_lines(self.install_folder / "prereq-B_2.0" / "sync.log")))
 
+    def test_deps_with_prereq(self):
+        self.pm.install_packages(PackageIdentifier.parse_list(["pkg-with-deps-with-prereq_1.0"]))
+
+        self.check_content(self.pm.list_installed_packages(), ["pkg-with-deps-with-prereq_1.0", "pkg-with-prereq_1.0", "prereq-A_1.0", "prereq-B_1.0"])
+
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-A_1.0" / "install.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-A_1.0" / "sync.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_1.0" / "install.log")))
+        self.assertEqual(1, len(get_lines(self.install_folder / "prereq-B_1.0" / "sync.log")))
+
     def test_depends_available(self):
         deps = DependencyUtils.install(PackageIdentifier.parse_list([]), self.pm.list_available_packages(), self.pm.list_installed_packages())
         self.__assert_deps(deps, [], AvailablePackage)

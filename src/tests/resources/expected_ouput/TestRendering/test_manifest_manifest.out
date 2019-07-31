@@ -2,7 +2,7 @@
 │ 0 package - Filter: None │
 └──────────────────────────┘
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                             118 packages - Filter: None                             │
+│                             120 packages - Filter: None                             │
 ├─────────────────────────────────────┬───────────────────────┬───────────────────────┤
 │              Identifier             │      Description      │          Tags         │
 ╞═════════════════════════════════════╪═══════════════════════╪═══════════════════════╡
@@ -40,6 +40,7 @@
 │ failure-postinstall-exec_1.0        │                       │                       │
 │ install_1.0                         │ this is a description │                       │
 │ multitags_1.0                       │                       │ staticTag1,staticTag2 │
+│ pkg-with-deps-with-prereq_1.0       │                       │                       │
 │ pkg-with-prereq_0.1                 │                       │                       │
 │ pkg-with-prereq_1.0                 │                       │                       │
 │ pkg-with-prereq_2.0                 │                       │                       │
@@ -99,6 +100,7 @@
 │ failure-postinstall-exec_1.0        │                       │                       │
 │ install_1.0                         │ this is a description │                       │
 │ multitags_1.0                       │                       │ staticTag1,staticTag2 │
+│ pkg-with-deps-with-prereq_1.0       │                       │                       │
 │ pkg-with-prereq_0.1                 │                       │                       │
 │ pkg-with-prereq_1.0                 │                       │                       │
 │ pkg-with-prereq_2.0                 │                       │                       │

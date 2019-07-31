@@ -32,6 +32,7 @@ failure-postinstall-exec-silent_1.0
 failure-postinstall-exec_1.0
 install_1.0
 multitags_1.0
+pkg-with-deps-with-prereq_1.0
 pkg-with-prereq_0.1
 pkg-with-prereq_1.0
 pkg-with-prereq_2.0
@@ -91,6 +92,7 @@ failure-postinstall-exec-silent_1.0
 failure-postinstall-exec_1.0
 install_1.0
 multitags_1.0
+pkg-with-deps-with-prereq_1.0
 pkg-with-prereq_0.1
 pkg-with-prereq_1.0
 pkg-with-prereq_2.0

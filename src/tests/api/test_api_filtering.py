@@ -21,7 +21,7 @@ class TestApiFiltering(LeafTestCaseWithRepo):
         f = MetaPackageFilter()
         f.only_master_packages()
         print("Filter:", f)
-        self.assertEqual(7, len(list(filter(f.matches, self.content))))
+        self.assertEqual(8, len(list(filter(f.matches, self.content))))
 
     def test_keywords(self):
         f = MetaPackageFilter()

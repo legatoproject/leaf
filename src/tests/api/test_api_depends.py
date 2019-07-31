@@ -159,6 +159,12 @@ class TestApiDepends(LeafTestCase):
         prereqs = DependencyUtils.prereq(PackageIdentifier.parse_list(["pkg-with-prereq_0.1"]), APMAP, {})
         self.assertEqual(list(map(str, prereqs)), ["prereq-A_0.1-fail"])
 
+        prereqs = DependencyUtils.prereq(PackageIdentifier.parse_list(["pkg-with-deps-with-prereq_1.0"]), APMAP, {})
+        self.assertEqual(list(map(str, prereqs)), [])
+        install = DependencyUtils.install(PackageIdentifier.parse_list(["pkg-with-deps-with-prereq_1.0"]), APMAP, {})
+        prereqs = DependencyUtils.prereq([x.identifier for x in install], APMAP, {})
+        self.assertEqual(list(map(str, prereqs)), ["prereq-A_1.0", "prereq-B_1.0"])
+
     def test_latest_strategy(self):
         deps = DependencyUtils.installed(PackageIdentifier.parse_list(["container-A_1.0", "container-A_2.0"]), IPMAP)
         self.assertEqual(

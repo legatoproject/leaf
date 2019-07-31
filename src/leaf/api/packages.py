@@ -228,7 +228,7 @@ class PackageManager(RemoteManager):
                 self.print_with_confirm(raise_on_decline=True)
 
                 # Install prereq
-                prereq_to_install = DependencyUtils.prereq(pilist, apmap, ipmap, env=env)
+                prereq_to_install = DependencyUtils.prereq([ap.identifier for ap in ap_to_install], apmap, ipmap, env=env)
 
                 if len(prereq_to_install) > 0:
                     try:

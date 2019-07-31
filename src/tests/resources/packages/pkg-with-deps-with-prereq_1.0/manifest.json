@@ -1,0 +1,10 @@
+{
+  "info": {
+    "name": "pkg-with-deps-with-prereq",
+    "version": "1.0",
+    "master": true,
+    "depends": [
+      "pkg-with-prereq_1.0"
+    ]
+  }
+}
