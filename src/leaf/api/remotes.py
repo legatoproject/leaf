@@ -7,6 +7,7 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 """
 
+import re
 from builtins import Exception
 from collections import OrderedDict
 from pathlib import Path
@@ -63,6 +64,9 @@ class GPGManager(LoggerManager):
 
 
 class RemoteManager(GPGManager):
+
+    __REMOTE_ALIAS_PATTERN = re.compile(r"[\S]+")
+
     def __init__(self):
         GPGManager.__init__(self)
 
@@ -105,6 +109,12 @@ class RemoteManager(GPGManager):
         return out
 
     def create_remote(self, alias: str, url: str, enabled: bool = True, insecure: bool = False, gpgkey: str = None):
+        # Do some checks
+        if not RemoteManager.__REMOTE_ALIAS_PATTERN.fullmatch(alias):
+            raise LeafException("Invalid remote alias: '{0}'".format(alias))
+        if len(url) == 0:
+            raise LeafException("Invalid remote url")
+
         with self.open_user_configuration() as usrc:
             remotes = usrc.remotes
             if alias in remotes:
@@ -122,6 +132,10 @@ class RemoteManager(GPGManager):
         self.__clean_remote_files(alias)
 
     def rename_remote(self, oldalias: str, newalias: str):
+        # Do some checks
+        if not RemoteManager.__REMOTE_ALIAS_PATTERN.fullmatch(newalias):
+            raise LeafException("Invalid remote alias: '{0}'".format(newalias))
+
         with self.open_user_configuration() as usrc:
             remotes = usrc.remotes
             if oldalias not in remotes:

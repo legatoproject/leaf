@@ -14,20 +14,18 @@ from multiprocessing import Process
 from time import sleep
 
 from leaf.api import PackageManager
-from leaf.core.error import (
-    InvalidHashException,
-    InvalidPackageNameException,
-    LeafOutOfDateException,
-    NoEnabledRemoteException,
-    NoRemoteException,
-    PrereqException,
-)
+from leaf.core.error import (InvalidHashException, InvalidPackageNameException,
+                             LeafException, LeafOutOfDateException,
+                             NoEnabledRemoteException, NoRemoteException,
+                             PrereqException)
 from leaf.core.settings import EnvVar
 from leaf.core.utils import NotEnoughSpaceException, is_folder_ignored
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
-from leaf.model.package import AvailablePackage, InstalledPackage, LeafArtifact, PackageIdentifier
-from tests.testutils import ALT_INDEX_CONTENT, LEAF_UT_SKIP, LeafTestCaseWithRepo, env_tolist, get_lines
+from leaf.model.package import (AvailablePackage, InstalledPackage,
+                                LeafArtifact, PackageIdentifier)
+from tests.testutils import (ALT_INDEX_CONTENT, LEAF_UT_SKIP,
+                             LeafTestCaseWithRepo, env_tolist, get_lines)
 
 HTTP_PORT = EnvVar("LEAF_HTTP_PORT", random.randint(54000, 54999))
 
@@ -91,6 +89,21 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
         self.assertEqual(2, len(self.pm.list_remotes(False)))
         self.assertEqual(2, len(self.pm.list_remotes(True)))
         self.assertTrue(len(self.pm.list_available_packages()) > 0)
+
+    def test_bad_remote(self):
+        self.assertEqual(2, len(self.pm.list_remotes(True)))
+
+        with self.assertRaises(LeafException):
+            self.pm.create_remote("", "http://foo.tld/bar", insecure=True)
+        self.assertEqual(2, len(self.pm.list_remotes(True)))
+
+        with self.assertRaises(LeafException):
+            self.pm.create_remote("hfosdh fdsojfqsd", "http://foo.tld/bar", insecure=True)
+        self.assertEqual(2, len(self.pm.list_remotes(True)))
+
+        with self.assertRaises(LeafException):
+            self.pm.create_remote("myremote", "", insecure=True)
+        self.assertEqual(2, len(self.pm.list_remotes(True)))
 
     def test_container(self):
         self.pm.install_packages(PackageIdentifier.parse_list(["container-A_1.0"]))
