@@ -150,3 +150,14 @@ class JsonObject:
             if key in self.__json:
                 out += 1
         return out
+
+    def get_dict(self, key: str, json_factory: callable, with_name=False, with_parent=False) -> dict:
+        out = OrderedDict()
+        for name, json in self.jsonget(key, default={}).items():
+            args = [json]
+            if with_name:
+                args.append(name)
+            if with_parent:
+                args.append(self)
+            out[name] = json_factory(*args)
+        return out

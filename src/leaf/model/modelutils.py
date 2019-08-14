@@ -1,9 +1,10 @@
+import operator
 import subprocess
 from builtins import sorted
 
 from leaf.core.constants import LeafConstants, LeafSettings
-from leaf.core.utils import CURRENT_LEAF_VERSION
 from leaf.core.error import InvalidPackageNameException
+from leaf.core.utils import CURRENT_LEAF_VERSION
 from leaf.model.environment import Environment
 from leaf.model.package import PackageIdentifier
 
@@ -123,3 +124,11 @@ def keep_latest(pilist: list) -> list:
         if pi.name not in pkgmap or pi > pkgmap[pi.name]:
             pkgmap[pi.name] = pi
     return sorted(pkgmap.values())
+
+
+def keep_latest_mf(mflist: list) -> list:
+    mfmap = {}
+    for mf in mflist:
+        if mf.name not in mfmap or mf.identifier > mfmap[mf.name].identifier:
+            mfmap[mf.name] = mf
+    return sorted(mfmap.values(), key=operator.attrgetter("identifier"))

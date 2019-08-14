@@ -22,6 +22,7 @@ from leaf.core.error import InvalidPackageNameException
 from leaf.core.jsonutils import JsonObject, jload, jloadfile
 from leaf.core.utils import Version
 from leaf.model.environment import Environment, IEnvProvider
+from leaf.model.help import HelpTopic
 from leaf.model.settings import ScopeSetting
 
 IDENTIFIER_GETTER = operator.attrgetter("identifier")
@@ -335,17 +336,11 @@ class InstalledPackage(Manifest, IEnvProvider):
 
     @property
     def binaries(self) -> dict:
-        out = OrderedDict()
-        for name, json in self.jsonget(JsonConstants.ENTRYPOINTS, default={}).items():
-            out[name] = Entrypoint(name, json)
-        return out
+        return self.get_dict(JsonConstants.ENTRYPOINTS, Entrypoint, with_name=True)
 
     @property
     def plugins(self) -> dict:
-        out = OrderedDict()
-        for name, json in self.jsonget(JsonConstants.PLUGINS, default={}).items():
-            out[name] = PluginDefinition(name, self, json)
-        return out
+        return self.get_dict(JsonConstants.PLUGINS, PluginDefinition, with_name=True, with_parent=True)
 
     @property
     def settings(self) -> dict:
@@ -364,12 +359,16 @@ class InstalledPackage(Manifest, IEnvProvider):
     def _getenvoutfiles(self) -> list:
         return self.jsonget(JsonConstants.ENVOUT, default=[])
 
+    @property
+    def help_topics(self):
+        return self.get_dict(JsonConstants.HELPTOPICS, HelpTopic, with_name=True, with_parent=True)
+
 
 class PluginDefinition(JsonObject):
-    def __init__(self, location: str, ip: InstalledPackage, json: dict):
+    def __init__(self, json: dict, name: str, parent: InstalledPackage):
         JsonObject.__init__(self, json)
-        self.__location = location
-        self.__ip = ip
+        self.__location = name
+        self.__ip = parent
         self.__command = None
 
     @property
@@ -413,8 +412,8 @@ class PluginDefinition(JsonObject):
 
 
 class Entrypoint(JsonObject):
-    def __init__(self, name, json):
-        JsonObject.__init__(self, json)
+    def __init__(self, payload: dict, name: str):
+        JsonObject.__init__(self, payload)
         self.__name = name
 
     @property

@@ -61,6 +61,10 @@ class LeafSettings(CommonSettings):
         default=1,
         validator=RegexValidator("[0-9]+"),
     )
+    HELP_DEFAULT_FORMAT = LeafSetting("leaf.help.default.format", "LEAF_HELP_DEFAULT_FORMAT", description="Default format for help topics", default="man")
+    HELP_DEFAULT_OPEN = LeafSetting(
+        "leaf.help.default.open", "LEAF_HELP_DEFAULT_OPEN", description="Default command to open help topics if not 'manpage' format", default="xdg-open"
+    )
 
 
 class LeafConstants:
@@ -165,6 +169,7 @@ class JsonConstants(object):
     SETTING_KEY = "key"
     SETTING_REGEX = "regex"
     SETTING_SCOPES = "scopes"
+    HELPTOPICS = "help"
 
     # Profiles
     WS_PROFILES = "profiles"

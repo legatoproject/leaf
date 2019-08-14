@@ -38,20 +38,6 @@ class EntrypointListRenderer(Renderer):
         ┌────────────────────────────────────────────────────────────────────────────────┐
         │              Package                │                Binaries                  │
         ╞═════════════════════════════════════╪══════════════════════════════════════════╡
-        │ condition_1.0                       │       Description: None                  │
-        │                                     │              Tags: latest                │
-        │                                     │              Size: 528 bytes             │
-        │                                     │      Release date: 29/12/2015            │
-        │                                     │            Source: remote2               │
-        │                                     │ Included Packages: condition-A_1.0       │
-        │                                     │                    condition-B_1.0       │
-        │                                     │                    condition-C_1.0       │
-        │                                     │                    condition-D_1.0       │
-        │                                     │                    condition-E_1.0       │
-        │                                     │                    condition-F_1.0       │
-        │                                     │                    condition-G_1.0       │
-        │                                     │                    condition-H_1.0       │
-        ├─────────────────────────────────────┼──────────────────────────────────────────┤
         │ ...                                 │                ... ...                   │
         """
         count = 6

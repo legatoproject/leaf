@@ -14,6 +14,7 @@ from leaf.cli.cliutils import EnvSetterAction
 from leaf.cli.commands.build import BuildIndexSubCommand, BuildManifestSubCommand, BuildPackSubCommand
 from leaf.cli.commands.config import ConfigListCommand, ConfigMetaCommand, SettingGetCommand, SettingResetCommand, SettingSetCommand
 from leaf.cli.commands.env import EnvBuiltinCommand, EnvPackageCommand, EnvPrintCommand, EnvProfileCommand, EnvUserCommand, EnvWorkspaceCommand
+from leaf.cli.commands.help import HelpCommand
 from leaf.cli.commands.package import (
     PackageDepsCommand,
     PackageInstallCommand,
@@ -118,6 +119,8 @@ class LeafRootCommand(LeafMetaCommand):
                     [BuildPackSubCommand(), BuildIndexSubCommand(), BuildManifestSubCommand()],
                     plugins_manager=plugins_manager,
                 ),
+                # Help
+                HelpCommand(),
             ],
             plugins_manager=plugins_manager,
         )

@@ -81,3 +81,11 @@ def complete_binaries(*args, **kwargs):
         for e in ip.binaries.values():
             out.append(e.name)
     return out
+
+
+def complete_help(*args, **kwargs):
+    out = []
+    for ip in PackageManager().list_installed_packages().values():
+        for t in ip.help_topics.values():
+            out += [t.full_name, t.name]
+    return out

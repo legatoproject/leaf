@@ -27,7 +27,7 @@ docker-test:
 		sh -c 'cp -R /mnt/leaf /leaf && cd /leaf && git clean -fdX && make clean test'
 
 venv: requirements.txt
-	virtualenv -p $(VENV_PYTHON_PATH) venv --no-site-packages
+	python3 -m virtualenv -p $(VENV_PYTHON_PATH) venv --no-site-packages
 	./venv/bin/pip install -r requirements.txt
 	./venv/bin/pip install -r requirements-dev.txt
 	touch venv
