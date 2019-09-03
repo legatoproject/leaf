@@ -200,9 +200,9 @@ def mkdirs(folder: Path):
 def chmod_write(item: Path):
     if item.exists() and not item.is_symlink():
         item.chmod(item.stat().st_mode | 0o222)
-    if item.is_dir():
-        for i in item.iterdir():
-            chmod_write(i)
+        if item.is_dir():
+            for i in item.iterdir():
+                chmod_write(i)
 
 
 def rmtree_force(item: Path):

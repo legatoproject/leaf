@@ -51,6 +51,14 @@
                 "-c",
                 "env > dump.env"
             ]
+        },
+        {
+            "command": [
+                "ln",
+                "-s",
+                "/etc/ssl/certs",
+                "ssl"
+            ]
         }
     ],
     "uninstall": [
