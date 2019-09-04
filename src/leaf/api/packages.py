@@ -308,6 +308,8 @@ class PackageManager(RemoteManager):
         deps = DependencyUtils.installed([pi], ipmap, env=env, ignore_unknown=True)
         # Update env
         env.append(self.build_packages_environment(deps))
+        # Fix PREREQ_ROOT
+        env.set_variable("LEAF_PREREQ_ROOT", self.install_folder)
         # The Variable resolver
         vr = VariableResolver(ip, ipmap.values())
         # Execute steps
