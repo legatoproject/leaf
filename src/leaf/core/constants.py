@@ -28,7 +28,7 @@ class LeafSettings(CommonSettings):
         "leaf.system.roots",
         "LEAF_SYSTEM_ROOTS",
         description="Folders where system leaf packages are installed",
-        default=os.pathsep.join(("/usr/share/leaf/packages", "~/.local/share/leaf/packages")),
+        default=os.pathsep.join(("/usr/share/leaf/packages", "/usr/local/share/leaf/packages", "~/.local/share/leaf/packages")),
     )
     CACHE_FOLDER = LeafSetting("leaf.cache", "LEAF_CACHE", description="Leaf cache", default="~/.cache/leaf")
     DEBUG_MODE = LeafSetting("leaf.debug", "LEAF_DEBUG", description="Enable traces")
