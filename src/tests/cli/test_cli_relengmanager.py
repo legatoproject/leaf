@@ -251,6 +251,30 @@ class TestCliRelengManager(LeafTestCaseWithCli):
         self.assertEqual(["foo", "bar", "hello", "world"], jloadfile(index1)[JsonConstants.REMOTE_PACKAGES][0]["info"]["tags"])
         self.assertEqual(["foo"], jloadfile(index2)[JsonConstants.REMOTE_PACKAGES][0]["info"]["tags"])
 
+    def test_index_generation_error(self):
+        index = self.workspace_folder / "index.json"
+
+        # Build some packages
+        self.leaf_exec(("build", "pack"), "--output", self.workspace_folder / "a.leaf", "--input", TEST_REMOTE_PACKAGE_SOURCE / "install_1.0")
+        self.leaf_exec(("build", "pack"), "--output", self.workspace_folder / "b.leaf", "--input", TEST_REMOTE_PACKAGE_SOURCE / "condition_1.0")
+
+        self.leaf_exec(
+            ("build", "index"),
+            "--resolve",
+            "--output",
+            index,
+            "--name",
+            "Name",
+            "--description",
+            "Description here",
+            "--prettyprint",
+            self.workspace_folder / "a.leaf",
+            self.workspace_folder / "b.leaf",
+            self.workspace_folder / "c.leaf",
+            expected_rc=2
+        )
+        self.assertFalse(index.exists())
+
     def test_reproductible_build(self):
         # Build some packages
         pis = "install_1.0"

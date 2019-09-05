@@ -116,73 +116,79 @@ class RelengManager(LoggerManager):
         """
         Create an index.json referencing all given artifacts
         """
-        # Create the "info" node
         if not index_file.exists():
             index_file.touch()
         if resolve:
             index_file = index_file.resolve()
 
-        info_node = OrderedDict()
-        if name is not None:
-            info_node[JsonConstants.REMOTE_NAME] = name
-        if description is not None:
-            info_node[JsonConstants.REMOTE_DESCRIPTION] = description
-        info_node[JsonConstants.REMOTE_DATE] = self.__get_date_now()
+        try:
+            # Create the "info" node
+            info_node = OrderedDict()
+            if name is not None:
+                info_node[JsonConstants.REMOTE_NAME] = name
+            if description is not None:
+                info_node[JsonConstants.REMOTE_DESCRIPTION] = description
+            info_node[JsonConstants.REMOTE_DATE] = self.__get_date_now()
 
-        packages_map = OrderedDict()
-        # Resolve artifacts if needed
-        if resolve:
-            artifacts = [a.resolve() for a in artifacts]
-        for artifact in artifacts:
-            artifact_node = None
+            packages_map = OrderedDict()
+            # Resolve artifacts if needed
+            if resolve:
+                artifacts = [a.resolve() for a in artifacts]
+            for artifact in artifacts:
+                artifact_node = None
 
-            if use_external_info:
-                infofile = self.find_external_info_file(artifact)
-                if infofile.exists():
-                    self.logger.print_default("Reading info from {file}".format(file=infofile))
-                    artifact_node = jloadfile(infofile)
+                if use_external_info:
+                    infofile = self.find_external_info_file(artifact)
+                    if infofile.exists():
+                        self.logger.print_default("Reading info from {file}".format(file=infofile))
+                        artifact_node = jloadfile(infofile)
 
-            if artifact_node is None:
-                self.logger.print_default("Compute info for {artifact}".format(artifact=artifact))
-                artifact_node = self.__build_pkg_node(artifact)
+                if artifact_node is None:
+                    self.logger.print_default("Compute info for {artifact}".format(artifact=artifact))
+                    artifact_node = self.__build_pkg_node(artifact)
 
-            ap = AvailablePackage(artifact_node, None)
-            pi = ap.identifier
-            if is_latest_package(pi):
-                raise LeafException(
-                    "Invalid version for package {artifact} ({word} is a reserved keyword)".format(artifact=artifact, word=LeafConstants.LATEST)
-                )
+                ap = AvailablePackage(artifact_node, None)
+                pi = ap.identifier
+                if is_latest_package(pi):
+                    raise LeafException(
+                        "Invalid version for package {artifact} ({word} is a reserved keyword)".format(artifact=artifact, word=LeafConstants.LATEST)
+                    )
 
-            if pi in packages_map:
-                self.logger.print_default("Artifact already present: {pi}".format(pi=pi))
-                if ap.hashsum != AvailablePackage(packages_map[pi], None).hashsum:
-                    raise LeafException("Artifact {pi} has multiple different artifacts for same version".format(pi=pi))
-            else:
-                # Read extra tags
-                extratags_file = artifact.parent / (artifact.name + ".tags")
-                if use_extra_tags and extratags_file.exists():
-                    with extratags_file.open() as fp:
-                        for tag in filter(None, map(str.strip, fp.read().splitlines())):
-                            if tag not in ap.tags:
-                                self.logger.print_default("Add extra tag {tag}".format(tag=tag))
-                                ap.tags.append(tag)
+                if pi in packages_map:
+                    self.logger.print_default("Artifact already present: {pi}".format(pi=pi))
+                    if ap.hashsum != AvailablePackage(packages_map[pi], None).hashsum:
+                        raise LeafException("Artifact {pi} has multiple different artifacts for same version".format(pi=pi))
+                else:
+                    # Read extra tags
+                    extratags_file = artifact.parent / (artifact.name + ".tags")
+                    if use_extra_tags and extratags_file.exists():
+                        with extratags_file.open() as fp:
+                            for tag in filter(None, map(str.strip, fp.read().splitlines())):
+                                if tag not in ap.tags:
+                                    self.logger.print_default("Add extra tag {tag}".format(tag=tag))
+                                    ap.tags.append(tag)
 
-                self.logger.print_default("Add package {pi}".format(pi=pi))
-                try:
+                    self.logger.print_default("Add package {pi}".format(pi=pi))
+                    try:
 
-                    relative_path = artifact.relative_to(index_file.parent)
-                    artifact_node[JsonConstants.REMOTE_PACKAGE_FILE] = str(relative_path)
-                except ValueError:
-                    raise LeafException("Artifact {a} must be relative to {i.parent}".format(a=artifact, i=index_file))
-                packages_map[pi] = artifact_node
+                        relative_path = artifact.relative_to(index_file.parent)
+                        artifact_node[JsonConstants.REMOTE_PACKAGE_FILE] = str(relative_path)
+                    except ValueError:
+                        raise LeafException("Artifact {a} must be relative to {i.parent}".format(a=artifact, i=index_file))
+                    packages_map[pi] = artifact_node
 
-        # Create the json structure
-        root_node = OrderedDict()
-        root_node[JsonConstants.INFO] = info_node
-        root_node[JsonConstants.REMOTE_PACKAGES] = list(packages_map.values())
+            # Create the json structure
+            root_node = OrderedDict()
+            root_node[JsonConstants.INFO] = info_node
+            root_node[JsonConstants.REMOTE_PACKAGES] = list(packages_map.values())
 
-        jwritefile(index_file, root_node, pp=prettyprint)
-        self.logger.print_default("Index created: {index}".format(index=index_file))
+            jwritefile(index_file, root_node, pp=prettyprint)
+            self.logger.print_default("Index created: {index}".format(index=index_file))
+        except BaseException as e:
+            # Clean the invalid index file
+            if index_file.exists():
+                index_file.unlink()
+            raise e
 
     def generate_manifest(self, output_file: Path, fragment_files: list = None, info_map: dict = None, resolve_envvars: bool = False):
         """
