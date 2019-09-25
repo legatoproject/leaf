@@ -10,16 +10,18 @@ Leaf Package Manager
 import io
 import operator
 import re
-from builtins import ValueError, bool
 from collections import OrderedDict
 from functools import total_ordering
 from pathlib import Path
 from tarfile import TarFile
 
+from jsonschema import validate
+from pkg_resources import resource_string
+
 from leaf.core.constants import JsonConstants, LeafFiles
 from leaf.core.download import url_resolve
 from leaf.core.error import InvalidPackageNameException
-from leaf.core.jsonutils import JsonObject, jload, jloadfile
+from leaf.core.jsonutils import JsonObject, jload, jloadfile, jloads
 from leaf.core.utils import Version
 from leaf.model.environment import Environment, IEnvProvider
 from leaf.model.help import HelpTopic
@@ -153,7 +155,6 @@ class ConditionalPackageIdentifier(PackageIdentifier):
 
 
 class Manifest(JsonObject):
-
     """
     Represent a Manifest model object
     """
@@ -165,6 +166,9 @@ class Manifest(JsonObject):
     def __init__(self, json: dict):
         JsonObject.__init__(self, json)
         self.__custom_tags = []
+
+    def validate_model(self):
+        validate(self.json, jloads(resource_string(__name__, LeafFiles.SCHEMA).decode()))
 
     @property
     def identifier(self):

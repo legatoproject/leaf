@@ -8,7 +8,7 @@ import time
 
 from leaf.core.constants import JsonConstants, LeafFiles
 from leaf.core.jsonutils import jloadfile, jwritefile
-from leaf.core.utils import hash_compute
+from leaf.core.utils import hash_compute, mkdirs
 from tests.testutils import TEST_REMOTE_PACKAGE_SOURCE, LeafTestCaseWithCli, check_mime
 
 
@@ -355,6 +355,32 @@ class TestCliRelengManager(LeafTestCaseWithCli):
 
         # Error cases
         self.leaf_exec(("build", "pack"), "--no-info", "--output", self.workspace_folder / "error.leaf", "--input", folder, "--", "-v", expected_rc=2)
+
+    def test_validate_model(self):
+        pkg_folder = self.workspace_folder / "mypackage_1.0"
+        mffile = pkg_folder / "manifest.json"
+        artifact = self.workspace_folder / "foo.leaf"
+        mkdirs(pkg_folder)
+
+        # Validate only, invalid model
+        jwritefile(mffile, {"info": {"name": "my_package", "version": "1.0"}})
+        self.leaf_exec(("build", "pack"), "--output", artifact, "--input", pkg_folder, "--validate-only", expected_rc=2)
+        self.assertFalse(artifact.exists())
+
+        # Validate only, valid model
+        jwritefile(mffile, {"info": {"name": "mypackage", "version": "1.0"}})
+        self.leaf_exec(("build", "pack"), "--output", artifact, "--input", pkg_folder, "--validate-only")
+        self.assertFalse(artifact.exists())
+
+        # Build package, invalid model
+        jwritefile(mffile, {"info": {"name": "my_package", "version": "1.0"}})
+        self.leaf_exec(("build", "pack"), "--output", artifact, "--input", pkg_folder, expected_rc=2)
+        self.assertFalse(artifact.exists())
+
+        # Build package, valid model
+        jwritefile(mffile, {"info": {"name": "mypackage", "version": "1.0"}})
+        self.leaf_exec(("build", "pack"), "--output", artifact, "--input", pkg_folder)
+        self.assertTrue(artifact.exists())
 
 
 class TestCliRelengManagerVerbose(TestCliRelengManager):

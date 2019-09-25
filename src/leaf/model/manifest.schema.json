@@ -1,0 +1,263 @@
+{
+  "definitions": {
+    "pi": {
+      "description": "Package Identifier",
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][-a-zA-Z0-9]*_[a-zA-Z0-9][-._a-zA-Z0-9]*$"
+    },
+    "cpi": {
+      "description": "Package Identifier with optional conditions",
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][-a-zA-Z0-9]*_[a-zA-Z0-9][-._a-zA-Z0-9]*(\\(.*\\))?$"
+    },
+    "env": {
+      "description": "A generic environment",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "patternProperties": {
+        ".*": {
+          "type": "string"
+        }
+      }
+    },
+    "step": {
+      "description": "A generic step for install/uninstall/sync",
+      "type": "object",
+      "required": [
+        "command"
+      ],
+      "properties": {
+        "label": {
+          "description": "Displayed when executed",
+          "type": "string"
+        },
+        "ignoreFail": {
+          "description": "Continue execution if an error is returned",
+          "type": "boolean"
+        },
+        "verbose": {
+          "description": "Display stdout when executing (usefull for interactive scripts for example)",
+          "type": "boolean"
+        },
+        "command": {
+          "description": "Command to be executed",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "env": {
+          "description": "Extra env for execution",
+          "$ref": "#/definitions/env"
+        }
+      }
+    }
+  },
+  "description": "manifest",
+  "type": "object",
+  "required": [
+    "info"
+  ],
+  "properties": {
+    "info": {
+      "description": "Package information",
+      "type": "object",
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "description": "The package name",
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][-a-zA-Z0-9]*$"
+        },
+        "version": {
+          "description": "The package version, see leaf version comparison for details",
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][-._a-zA-Z0-9]*$"
+        },
+        "description": {
+          "description": "A short description",
+          "type": "string"
+        },
+        "documentation": {
+          "description": "An URL pointing to some documentation",
+          "type": "string"
+        },
+        "date": {
+          "description": "The release date of the package",
+          "type": "string"
+        },
+        "leafMinVersion": {
+          "description": "The minimum version of leaf that can install and/or use this package",
+          "type": "string"
+        },
+        "master": {
+          "description": "Non master packages are hidden by default when searching",
+          "type": "boolean"
+        },
+        "upgrade": {
+          "description": "To auto upgrade package with 'leaf package upgrade' operation",
+          "type": "boolean"
+        },
+        "finalSize": {
+          "description": "To ensure a minimum available space on filesystem before installation",
+          "type": "integer"
+        },
+        "requires": {
+          "description": "Packages to installed *before* installing any other package",
+          "type": "array",
+          "items": {
+            "description": "Package identifier: name_version",
+            "$ref": "#/definitions/pi"
+          }
+        },
+        "depends": {
+          "description": "Packages to installed with current package",
+          "type": "array",
+          "items": {
+            "description": "Package identifier: name_version",
+            "$ref": "#/definitions/cpi"
+          }
+        },
+        "tags": {
+          "description": "Used to filter results of search",
+          "type": "array",
+          "items": {
+            "description": "Reserved values are 'installed', 'latest' and 'current'",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "env": {
+      "description": "Environment exported by package",
+      "$ref": "#/definitions/env"
+    },
+    "bin": {
+      "description": "Binaries exported by package, see 'leaf run'",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9]+$"
+      },
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "plugins": {
+      "description": "Leaf command line plugins, to extend leaf via 'leaf myMommand'",
+      "type": "object",
+      "propertyNames": {
+        "description": "Name is alpha-numeric and can contain spaces for subcommands",
+        "pattern": "^[A-Za-z0-9 ]+$"
+      },
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "required": [
+            "source"
+          ],
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "source": {
+              "description": "Python source code that contains the plugin",
+              "type": "string"
+            },
+            "class": {
+              "description": "Optionnal class of the plugin",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "settings": {
+      "description": "Settings used by package",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9\\._-]+$"
+      },
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "required": [
+            "key"
+          ],
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "key": {
+              "description": "The env var name to be exported",
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            },
+            "regex": {
+              "description": "An optional pattern to validate the entered value",
+              "type": "string"
+            },
+            "scopes": {
+              "description": "In which scope value be could be saved: 'user', 'workspace' or 'profile'",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "install": {
+      "description": "The steps to be executed when the package is installed",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/step"
+      }
+    },
+    "uninstall": {
+      "description": "The steps to be executed when the package is uninstalled",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/step"
+      }
+    },
+    "sync": {
+      "description": "The steps to be executed when the package is synchronized (for example on profile change/update)",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/step"
+      }
+    },
+    "help": {
+      "description": "List of help topics",
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "description": "The multiple type and resource for a given topic",
+          "type": "object",
+          "patternProperties": {
+            ".*": {
+              "description": "A URI or path to the resource",
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

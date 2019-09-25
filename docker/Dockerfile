@@ -2,14 +2,12 @@ FROM buildpack-deps:stretch
 
 ENV LANG C.UTF-8
 
-RUN apt-get update \
-	&& apt-get install -y --no-install-recommends \
+RUN apt update && apt install -y --no-install-recommends \
 	python3-all python3-pip python3-setuptools python3-setuptools-scm tox \
-	python3-requests python3-argcomplete python3-colorama python3-gnupg \
+	python3-requests python3-argcomplete python3-colorama python3-gnupg python3-jsonschema \
 	debhelper dh-python devscripts build-essential fakeroot bash-completion \
 	file git rsync zsh \
-	asciidoc-base docbook docbook-xml xsltproc xmlto \
-	&& apt-get clean
+	asciidoc-base docbook docbook-xml xsltproc xmlto && apt-get clean
 
 WORKDIR /tmp
 ADD installPython.sh /tmp

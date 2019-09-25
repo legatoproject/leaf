@@ -91,6 +91,7 @@ class LeafFiles:
     """
 
     MANIFEST = "manifest.json"
+    SCHEMA = "manifest.schema.json"
     # Workspace
     WS_CONFIG_FILENAME = "leaf-workspace.json"
     WS_DATA_FOLDERNAME = "leaf-data"
@@ -160,7 +161,6 @@ class JsonConstants(object):
     ENTRYPOINT_PATH = "path"
     ENTRYPOINT_DESCRIPTION = "description"
     PLUGINS = "plugins"
-    PLUGIN_PREFIX = "location"
     PLUGIN_DESCRIPTION = "description"
     PLUGIN_SOURCE = "source"
     PLUGIN_CLASS = "class"

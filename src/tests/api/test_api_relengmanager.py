@@ -5,6 +5,8 @@
 import json
 import os
 
+from jsonschema.exceptions import ValidationError
+
 from leaf.api import RelengManager
 from leaf.core.constants import JsonConstants, LeafFiles
 from leaf.core.error import LeafException
@@ -215,3 +217,43 @@ class TestApiRelengManager(LeafTestCaseWithRepo):
             self.rm.generate_index(
                 self.workspace_folder / "indexAB.json", [self.workspace_folder / "a.leaf", self.workspace_folder / "b.leaf"], prettyprint=True
             )
+
+    def test_invalid_manifest(self):
+        pkg_folder = self.workspace_folder / "mypackage_1.0"
+        mffile = pkg_folder / "manifest.json"
+        artifact = self.workspace_folder / "foo.leaf"
+        mkdirs(pkg_folder)
+
+        # No name/version
+        jwritefile(mffile, {})
+        with self.assertRaises(ValidationError):
+            self.rm.create_package(pkg_folder, artifact)
+
+        # Invalid name
+        jwritefile(mffile, {"info": {"name": "my_package", "version": "1.0"}})
+        with self.assertRaises(ValidationError):
+            self.rm.create_package(pkg_folder, artifact)
+
+        # Invalid version
+        jwritefile(mffile, {"info": {"name": "mypackage", "version": "_1.0"}})
+        with self.assertRaises(ValidationError):
+            self.rm.create_package(pkg_folder, artifact)
+
+        # Invalid dependency
+        jwritefile(mffile, {"info": {"name": "mypackage", "version": "1.0", "depends": ["foo-bar"]}})
+        with self.assertRaises(ValidationError):
+            self.rm.create_package(pkg_folder, artifact)
+        jwritefile(mffile, {"info": {"name": "mypackage", "version": "1.0", "requires": ["foo_bar(FOO=BAR)(TEDDY!=BEAR)"]}})
+        with self.assertRaises(ValidationError):
+            self.rm.create_package(pkg_folder, artifact)
+        jwritefile(mffile, {"info": {"name": "mypackage", "version": "1.0", "depends": ["foo_bar(FOO=BAR)(TEDDY!=BEAR)"], "requires": ["teddy_bear"]}})
+        self.rm.create_package(pkg_folder, artifact)
+
+        # Valid model
+        jwritefile(mffile, {"info": {"name": "mypackage", "version": "1.0"}})
+        self.rm.create_package(pkg_folder, artifact)
+
+        # Empty step
+        jwritefile(mffile, {"info": {"name": "mypackage", "version": "1.0"}, "install": [{}]})
+        with self.assertRaises(ValidationError):
+            self.rm.create_package(pkg_folder, artifact)

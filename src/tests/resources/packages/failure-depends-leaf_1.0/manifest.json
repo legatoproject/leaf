@@ -3,7 +3,7 @@
     "name": "failure-depends-leaf",
     "version": "1.0",
     "depends": [
-      "foobar"
+      "unknown-package_1.0"
     ]
   }
 }

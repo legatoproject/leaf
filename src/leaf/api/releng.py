@@ -9,6 +9,7 @@ Leaf Package Manager
 import os
 import re
 import subprocess
+from builtins import bool
 from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
@@ -70,7 +71,7 @@ class RelengManager(LoggerManager):
         out[JsonConstants.REMOTE_PACKAGE_SIZE] = tarfile.stat().st_size
         return out
 
-    def create_package(self, input_folder: Path, output_file: Path, store_extenal_info: bool = True, tar_extra_args: list = None):
+    def create_package(self, input_folder: Path, output_file: Path, store_extenal_info: bool = True, tar_extra_args: list = None, validate_only: bool = False):
         """
         Create a leaf artifact from given folder containing a manifest.json
         """
@@ -81,26 +82,28 @@ class RelengManager(LoggerManager):
             raise LeafException("Cannot find manifest: {file}".format(file=mffile))
 
         manifest = Manifest.parse(mffile)
+        manifest.validate_model()
 
-        if is_latest_package(manifest.identifier):
-            raise LeafException("Invalid version for manifest {mf} ({kw} is a reserved keyword)".format(mf=mffile, kw=LeafConstants.LATEST))
+        if not validate_only:
+            if is_latest_package(manifest.identifier):
+                raise LeafException("Invalid version for manifest {mf} ({kw} is a reserved keyword)".format(mf=mffile, kw=LeafConstants.LATEST))
 
-        self.logger.print_default("Found package {mf.identifier} in {folder}".format(mf=manifest, folder=input_folder))
+            self.logger.print_default("Found package {mf.identifier} in {folder}".format(mf=manifest, folder=input_folder))
 
-        # Check if external info file exists
-        if not store_extenal_info and infofile.exists():
-            raise LeafException(
-                "A previous info file ({file}) exists for your package".format(file=infofile),
-                hints="You should remove it with 'rm {file}'".format(file=infofile),
-            )
+            # Check if external info file exists
+            if not store_extenal_info and infofile.exists():
+                raise LeafException(
+                    "A previous info file ({file}) exists for your package".format(file=infofile),
+                    hints="You should remove it with 'rm {file}'".format(file=infofile),
+                )
 
-        self.__exec_tar(output_file, input_folder, extra_args=tar_extra_args)
+            self.__exec_tar(output_file, input_folder, extra_args=tar_extra_args)
 
-        self.logger.print_default("Leaf package created: {file}".format(file=output_file))
+            self.logger.print_default("Leaf package created: {file}".format(file=output_file))
 
-        if store_extenal_info:
-            self.logger.print_default("Write info to {file}".format(file=infofile))
-            jwritefile(infofile, self.__build_pkg_node(output_file, manifest=manifest), pp=True)
+            if store_extenal_info:
+                self.logger.print_default("Write info to {file}".format(file=infofile))
+                jwritefile(infofile, self.__build_pkg_node(output_file, manifest=manifest), pp=True)
 
     def generate_index(
         self,

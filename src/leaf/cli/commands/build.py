@@ -46,7 +46,8 @@ class BuildPackSubCommand(LeafCommand):
         super()._configure_parser(parser)
         parser.add_argument("-o", "--output", metavar="FILE", required=True, type=Path, dest="output_file", help="output file")
         parser.add_argument("-i", "--input", metavar="FOLDER", type=Path, dest="input_folder", help="package folder")
-        parser.add_argument("--no-info", action="store_false", dest="sore_external_info", help="do not store artifact info in a separate file")
+        parser.add_argument("--no-info", action="store_false", dest="syore_external_info", help="do not store artifact info in a separate file")
+        parser.add_argument("--validate-only", action="store_true", dest="validate_only", help="only validate manifest.json model, do not create the package")
         parser.add_argument("tar_extra_args", metavar="TAR_ARGS", nargs="*", help="extra arguments given to tar command line\n(must start with '--')")
 
     def execute(self, args, uargs):
@@ -63,7 +64,9 @@ class BuildPackSubCommand(LeafCommand):
         else:
             raise ValueError("Invalid input folder")
 
-        rm.create_package(pkg_folder, args.output_file, store_extenal_info=args.sore_external_info, tar_extra_args=args.tar_extra_args)
+        rm.create_package(
+            pkg_folder, args.output_file, store_extenal_info=args.syore_external_info, tar_extra_args=args.tar_extra_args, validate_only=args.validate_only
+        )
 
 
 class BuildIndexSubCommand(LeafCommand):
