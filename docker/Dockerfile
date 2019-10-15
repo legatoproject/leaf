@@ -12,11 +12,12 @@ RUN apt update && apt install -y --no-install-recommends \
 WORKDIR /tmp
 ADD installPython.sh /tmp
 
-RUN /tmp/installPython.sh 3.7.2 altinstall
-RUN /tmp/installPython.sh 3.6.8 altinstall
+RUN /tmp/installPython.sh 3.8.0 altinstall
+RUN /tmp/installPython.sh 3.7.4 altinstall
+RUN /tmp/installPython.sh 3.6.9 altinstall
 
 RUN apt-get install -y libssl1.0-dev
-RUN ./installPython.sh 3.4.9 altinstall
+RUN ./installPython.sh 3.4.10 altinstall
 RUN apt-get install -y libssl-dev
 
 RUN useradd -m -u 1000 leaf
