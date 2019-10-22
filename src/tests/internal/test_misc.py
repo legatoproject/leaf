@@ -11,7 +11,8 @@ from leaf.core.error import LeafException
 from leaf.core.jsonutils import JsonObject, jloadfile, jwritefile
 from leaf.core.lock import LockFile
 from leaf.model.modelutils import keep_latest
-from leaf.model.package import InstalledPackage, PackageIdentifier
+from leaf.model.package import AvailablePackage, InstalledPackage, PackageIdentifier
+from leaf.model.remote import Remote
 from leaf.model.steps import VariableResolver
 from tests.testutils import TEST_REMOTE_PACKAGE_SOURCE, LeafTestCase
 
@@ -137,3 +138,48 @@ class TestMisc(LeafTestCase):
 
         with lf.acquire(advisory=advisory):
             pass
+
+    def test_ap_candidates(self):
+        remote_file = Remote("remote_file", {"url": "file:///tmp/file/index.json"})
+        remote_fs = Remote("remote_fs", {"url": "/tmp/fs/index.json"})
+        remote_custom = Remote("remote_custom", {"url": "https://foo.tld/custom/index.json", "priority": 150})
+        remote_https = Remote("remote_https", {"url": "https://foo.tld/https/index.json"})
+        remote_http = Remote("remote_http", {"url": "http://foo.tld/http/index.json"})
+        remote_other = Remote("remote_other", {"url": "nfs://foo.tld/other/index.json"})
+
+        self.assertEqual(100, remote_file.priority)
+        self.assertEqual(100, remote_fs.priority)
+        self.assertEqual(150, remote_custom.priority)
+        self.assertEqual(200, remote_https.priority)
+        self.assertEqual(201, remote_http.priority)
+        self.assertEqual(500, remote_other.priority)
+
+        ap_json = {"file": "pack.leaf"}
+        ap_json["info"] = jloadfile(TEST_REMOTE_PACKAGE_SOURCE / "version_1.0" / LeafFiles.MANIFEST)["info"]
+
+        ap = AvailablePackage(ap_json, remote=remote_other)
+        self.assertEqual("nfs://foo.tld/other/pack.leaf", ap.best_candidate.url)
+
+        ap.add_duplicate(AvailablePackage(ap_json, remote=remote_https))
+        self.assertEqual("https://foo.tld/https/pack.leaf", ap.best_candidate.url)
+
+        ap.add_duplicate(AvailablePackage(ap_json, remote=remote_http))
+        self.assertEqual("https://foo.tld/https/pack.leaf", ap.best_candidate.url)
+
+        ap.add_duplicate(AvailablePackage(ap_json, remote=remote_custom))
+        self.assertEqual("https://foo.tld/custom/pack.leaf", ap.best_candidate.url)
+
+        ap.add_duplicate(AvailablePackage(ap_json, remote=remote_file))
+        self.assertEqual("file:///tmp/file/pack.leaf", ap.best_candidate.url)
+
+        ap.add_duplicate(AvailablePackage(ap_json, remote=remote_fs))
+        self.assertEqual("file:///tmp/file/pack.leaf", ap.best_candidate.url)
+
+        remote_custom.json["priority"] = 1
+        self.assertEqual("https://foo.tld/custom/pack.leaf", ap.best_candidate.url)
+
+        remote_custom.json["priority"] = 999
+        self.assertEqual("file:///tmp/file/pack.leaf", ap.best_candidate.url)
+
+        remote_custom.json["priority"] = 100
+        self.assertEqual("https://foo.tld/custom/pack.leaf", ap.best_candidate.url)

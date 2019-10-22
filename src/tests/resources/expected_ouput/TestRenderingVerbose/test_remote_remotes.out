@@ -10,6 +10,7 @@
 │                           │        Name: remote_name1 │
 │                           │ Description: remote_desc1 │
 │                           │ Last update: remote_date1 │
+│                           │    Priority: 100          │
 │                           │     Enabled: yes          │
 │                           │     Fetched: yes          │
 ├───────────────────────────┼───────────────────────────┤
@@ -21,5 +22,6 @@
 │                           │        Name: remote_name3 │
 │                           │ Description: remote_desc3 │
 │                           │ Last update: remote_date3 │
+│                           │    Priority: 100          │
 │                           │     Enabled: no           │
 └───────────────────────────┴───────────────────────────┘

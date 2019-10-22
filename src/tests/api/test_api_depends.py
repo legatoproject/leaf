@@ -9,6 +9,7 @@ from leaf.core.constants import LeafFiles
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
 from leaf.model.package import IDENTIFIER_GETTER, AvailablePackage, InstalledPackage, Manifest, PackageIdentifier
+from leaf.model.remote import Remote
 from tests.testutils import TEST_REMOTE_PACKAGE_SOURCE, LeafTestCase
 
 
@@ -44,7 +45,7 @@ class TestApiDepends(LeafTestCase):
                 try:
                     mf = Manifest.parse(mffile)
                     ip = InstalledPackage(mffile)
-                    ap = AvailablePackage({"info": mf.info_node}, "https://fake.tld/foo")
+                    ap = AvailablePackage({"info": mf.info_node}, remote=Remote("alias", {"url": "https://fake.tld/foo"}))
                     APMAP[mf.identifier] = ap
                     IPMAP[mf.identifier] = ip
                 except Exception:

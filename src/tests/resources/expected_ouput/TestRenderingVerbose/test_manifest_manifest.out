@@ -6,33 +6,47 @@
 ├─────────────────────────────────────┬───────────────────────────────────────────────────────┤
 │              Identifier             │                       Properties                      │
 ╞═════════════════════════════════════╪═══════════════════════════════════════════════════════╡
-│ compress-bz2_1.0                    │              Size: 0 bytes                            │
+│ compress-bz2_1.0                    │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ compress-gz_1.0                     │              Size: 0 bytes                            │
+│ compress-gz_1.0                     │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ compress-tar_1.0                    │              Size: 0 bytes                            │
+│ compress-tar_1.0                    │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ compress-xz_1.0                     │              Size: 0 bytes                            │
+│ compress-xz_1.0                     │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ condition-A_1.0                     │              Size: 0 bytes                            │
+│ condition-A_1.0                     │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ condition-A_2.0                     │              Size: 0 bytes                            │
+│ condition-A_2.0                     │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ condition-B_1.0                     │              Size: 0 bytes                            │
+│ condition-B_1.0                     │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ condition-C_1.0                     │              Size: 0 bytes                            │
+│ condition-C_1.0                     │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ condition-D_1.0                     │              Size: 0 bytes                            │
+│ condition-D_1.0                     │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ condition-E_1.0                     │              Size: 0 bytes                            │
+│ condition-E_1.0                     │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ condition-F_1.0                     │              Size: 0 bytes                            │
+│ condition-F_1.0                     │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ condition-G_1.0                     │              Size: 0 bytes                            │
+│ condition-G_1.0                     │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ condition-H_1.0                     │              Size: 0 bytes                            │
+│ condition-H_1.0                     │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ condition_1.0                       │ Included Packages: condition-A_1.0                    │
+│ condition_1.0                       │            Source: alias                              │
+│                                     │ Included Packages: condition-A_1.0                    │
 │                                     │                    condition-B_1.0                    │
 │                                     │                    condition-C_1.0                    │
 │                                     │                    condition-D_1.0                    │
@@ -42,111 +56,157 @@
 │                                     │                    condition-H_1.0                    │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
 │ container-A_1.0                     │               Tag: foo                                │
+│                                     │            Source: alias                              │
 │                                     │ Included Packages: container-B_1.0                    │
 │                                     │                    container-C_1.0                    │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
 │ container-A_1.1                     │               Tag: bar                                │
+│                                     │            Source: alias                              │
 │                                     │ Included Packages: container-B_1.0                    │
 │                                     │                    container-C_1.0                    │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
 │ container-A_2.0                     │              Tags: foo,bar                            │
+│                                     │            Source: alias                              │
 │                                     │ Included Packages: container-C_1.0                    │
 │                                     │                    container-D_1.0                    │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
 │ container-A_2.1                     │              Tags: foo,bar                            │
+│                                     │            Source: alias                              │
 │                                     │ Included Packages: container-C_1.0                    │
 │                                     │                    container-D_1.0                    │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
 │ container-B_1.0                     │               Tag: foo                                │
+│                                     │            Source: alias                              │
 │                                     │  Included Package: container-E_1.0                    │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
 │ container-C_1.0                     │               Tag: bar                                │
+│                                     │            Source: alias                              │
 │                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
 │ container-D_1.0                     │              Tags: foo,bar                            │
+│                                     │            Source: alias                              │
 │                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ container-E_1.0                     │              Size: 0 bytes                            │
+│ container-E_1.0                     │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ container-E_1.1                     │              Size: 0 bytes                            │
+│ container-E_1.1                     │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ env-A_1.0                           │  Included Package: env-B_1.0                          │
+│ env-A_1.0                           │            Source: alias                              │
+│                                     │  Included Package: env-B_1.0                          │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ env-B_1.0                           │              Size: 0 bytes                            │
+│ env-B_1.0                           │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ failure-badhash_1.0                 │              Size: 0 bytes                            │
+│ failure-badhash_1.0                 │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ failure-depends-leaf_1.0            │  Included Package: unknown-package_1.0                │
+│ failure-depends-leaf_1.0            │            Source: alias                              │
+│                                     │  Included Package: unknown-package_1.0                │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ failure-large-ap_1.0                │              Size: 0 bytes                            │
+│ failure-large-ap_1.0                │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ failure-large-extracted_1.0         │              Size: 0 bytes                            │
+│ failure-large-extracted_1.0         │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ failure-minver_1.0                  │              Size: 0 bytes                            │
+│ failure-minver_1.0                  │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ failure-postinstall-exec-silent_1.0 │              Size: 0 bytes                            │
+│ failure-postinstall-exec-silent_1.0 │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ failure-postinstall-exec_1.0        │              Size: 0 bytes                            │
+│ failure-postinstall-exec_1.0        │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
 │ install_1.0                         │       Description: this is a description              │
 │                                     │     Documentation: https://docs.python.org/3/library/ │
 │                                     │      Release date: 2018-09-24 12:05:22                │
+│                                     │            Source: alias                              │
 │                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
 │ multitags_1.0                       │              Tags: staticTag1,staticTag2              │
+│                                     │            Source: alias                              │
 │                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ pkg-with-deps-with-prereq_1.0       │  Included Package: pkg-with-prereq_1.0                │
+│ pkg-with-deps-with-prereq_1.0       │            Source: alias                              │
+│                                     │  Included Package: pkg-with-prereq_1.0                │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ pkg-with-prereq_0.1                 │              Size: 0 bytes                            │
+│ pkg-with-prereq_0.1                 │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ pkg-with-prereq_1.0                 │              Size: 0 bytes                            │
+│ pkg-with-prereq_1.0                 │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ pkg-with-prereq_2.0                 │              Size: 0 bytes                            │
+│ pkg-with-prereq_2.0                 │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ pluginA_1.0                         │              Size: 0 bytes                            │
+│ pluginA_1.0                         │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ pluginA_1.1                         │              Size: 0 bytes                            │
+│ pluginA_1.1                         │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ pluginB_1.0                         │              Size: 0 bytes                            │
+│ pluginB_1.0                         │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ prereq-A_0.1-fail                   │              Size: 0 bytes                            │
+│ prereq-A_0.1-fail                   │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ prereq-A_1.0                        │              Size: 0 bytes                            │
+│ prereq-A_1.0                        │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ prereq-B_1.0                        │              Size: 0 bytes                            │
+│ prereq-B_1.0                        │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ prereq-B_2.0                        │  Included Package: prereq-A_1.0                       │
+│ prereq-B_2.0                        │            Source: alias                              │
+│                                     │  Included Package: prereq-A_1.0                       │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ scripts_1.0                         │  Included Package: subscripts_1.0                     │
+│ scripts_1.0                         │            Source: alias                              │
+│                                     │  Included Package: subscripts_1.0                     │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ settings_1.0                        │              Size: 0 bytes                            │
+│ settings_1.0                        │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ subscripts_1.0                      │              Size: 0 bytes                            │
+│ subscripts_1.0                      │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ subscripts_1.1                      │              Size: 0 bytes                            │
+│ subscripts_1.1                      │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ sync_1.0                            │              Size: 0 bytes                            │
+│ sync_1.0                            │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ testlatest_1.0                      │  Included Package: version_latest                     │
+│ testlatest_1.0                      │            Source: alias                              │
+│                                     │  Included Package: version_latest                     │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ testlatest_2.0                      │  Included Package: version_latest                     │
+│ testlatest_2.0                      │            Source: alias                              │
+│                                     │  Included Package: version_latest                     │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ testlatest_2.1                      │  Included Package: version_2.0                        │
+│ testlatest_2.1                      │            Source: alias                              │
+│                                     │  Included Package: version_2.0                        │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ upgrade_1.0                         │              Size: 0 bytes                            │
+│ upgrade_1.0                         │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ upgrade_1.1                         │              Size: 0 bytes                            │
+│ upgrade_1.1                         │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ upgrade_1.2                         │              Size: 0 bytes                            │
+│ upgrade_1.2                         │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ upgrade_2.0                         │              Size: 0 bytes                            │
+│ upgrade_2.0                         │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ version_1.0                         │              Size: 0 bytes                            │
+│ version_1.0                         │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ version_1.1                         │              Size: 0 bytes                            │
+│ version_1.1                         │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ version_2.0                         │              Size: 0 bytes                            │
+│ version_2.0                         │            Source: alias                              │
+│                                     │              Size: 0 bytes                            │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤
 │ compress-bz2_1.0                    │            Folder: /fake/folder                       │
 ├─────────────────────────────────────┼───────────────────────────────────────────────────────┤

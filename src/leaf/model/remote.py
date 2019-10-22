@@ -6,12 +6,16 @@ Leaf Package Manager
 @contact:   Legato Tooling Team <letools@sierrawireless.com>
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 """
+from functools import total_ordering
+
 from leaf.core.constants import JsonConstants
+from leaf.core.download import PRIORITIES_RANGE, get_url_priority
 from leaf.core.error import LeafException
 from leaf.core.jsonutils import JsonObject
 from leaf.model.package import AvailablePackage
 
 
+@total_ordering
 class Remote(JsonObject):
     def __init__(self, alias, json, content=None):
         JsonObject.__init__(self, json)
@@ -47,6 +51,11 @@ class Remote(JsonObject):
         return self.jsonget(JsonConstants.CONFIG_REMOTE_URL, mandatory=True)
 
     @property
+    def priority(self):
+        out = self.jsonget(JsonConstants.CONFIG_REMOTE_PRIORITY)
+        return out if out in PRIORITIES_RANGE else get_url_priority(self.url)
+
+    @property
     def is_fetched(self):
         return self.content is not None
 
@@ -77,7 +86,11 @@ class Remote(JsonObject):
             raise LeafException("Remote is not fetched")
         out = []
         for json in JsonObject(self.content).jsonget(JsonConstants.REMOTE_PACKAGES, []):
-            ap = AvailablePackage(json, self.url)
-            ap.remotes.append(self)
+            ap = AvailablePackage(json, remote=self)
             out.append(ap)
         return out
+
+    def __lt__(self, other):
+        if not isinstance(other, Remote):
+            return NotImplemented
+        return self.priority < other.priority

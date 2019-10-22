@@ -43,6 +43,11 @@ class TestCliPackageManager(LeafTestCaseWithCli):
 
         self.leaf_exec(["remote", "enable"], "remote3")
 
+        self.leaf_exec(["remote", "add"], "--insecure", "--priority", "1", "newremote1", self.remote_url1)
+        self.leaf_exec(["remote", "add"], "--insecure", "--priority", "999", "newremote2", self.remote_url1)
+        self.leaf_exec(["remote", "add"], "--insecure", "--priority", "0", "newremote3", self.remote_url1, expected_rc=2)
+        self.leaf_exec(["remote", "add"], "--insecure", "--priority", "1000", "newremote4", self.remote_url1, expected_rc=2)
+
     def test_search(self):
         self.leaf_exec("search")
         self.leaf_exec("search", "--all")

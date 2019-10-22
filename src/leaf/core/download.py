@@ -9,8 +9,8 @@ Leaf Package Manager
 
 import os
 import shutil
+import time
 from pathlib import Path
-from time import sleep
 from urllib.parse import urlparse, urlunparse
 from urllib.request import urlopen
 
@@ -19,6 +19,13 @@ import requests
 from leaf.core.constants import LeafSettings
 from leaf.core.logger import TextLogger, print_trace
 from leaf.core.utils import hash_check
+
+PRIORITIES_RANGE = range(1, 1000)
+PROTOCOLS_PRIORITIES = {"https": 200, "http": 201, "file": 100, "": 100}
+
+
+def get_url_priority(url: str):
+    return PROTOCOLS_PRIORITIES.get(urlparse(url).scheme, 500)
 
 
 def url_resolve(url: str, subpath: str):
@@ -95,7 +102,7 @@ def _download_file_http(url: str, output: Path, logger: TextLogger, resume: bool
                 logger.print_default("\nError while downloading, retry {0}/{1}".format(iteration, retry))
             print_trace()
             # Prevent imediate retry
-            sleep(1)
+            time.sleep(1)
 
 
 def download_file(url: str, output: Path, logger: TextLogger = None):

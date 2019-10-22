@@ -20,7 +20,7 @@ from pkg_resources import resource_string
 
 from leaf.core.constants import JsonConstants, LeafFiles
 from leaf.core.download import url_resolve
-from leaf.core.error import InvalidPackageNameException
+from leaf.core.error import InvalidPackageNameException, LeafException
 from leaf.core.jsonutils import JsonObject, jload, jloadfile, jloads
 from leaf.core.utils import Version
 from leaf.model.environment import Environment, IEnvProvider
@@ -286,10 +286,10 @@ class AvailablePackage(Manifest):
     Represent a package available in a remote repository
     """
 
-    def __init__(self, json: dict, url: str):
+    def __init__(self, json: dict, remote=None):
         Manifest.__init__(self, json)
-        self.__url = url
-        self.__remotes = []
+        self.remote = remote
+        self.__duplicates = []
 
     @property
     def size(self):
@@ -309,11 +309,33 @@ class AvailablePackage(Manifest):
 
     @property
     def url(self):
-        return url_resolve(self.__url, self.subpath)
+        return url_resolve(self.remote.url, self.subpath)
 
     @property
-    def remotes(self):
-        return self.__remotes
+    def tags(self):
+        out = self.jsonpath([JsonConstants.INFO, JsonConstants.INFO_TAGS], default=[])
+        for c in self.__duplicates:
+            out += [t for t in c.tags if t not in out]
+        return out
+
+    def add_duplicate(self, dupp_ap):
+        if not isinstance(dupp_ap, AvailablePackage):
+            raise ValueError()
+        if dupp_ap.hashsum is not None:
+            for c in self.candidates:
+                if c.hashsum is not None and c.hashsum != dupp_ap.hashsum:
+                    raise LeafException("Package {ap.identifier} has multiple artifacts for the same version".format(ap=self))
+        self.__duplicates.append(dupp_ap)
+
+    @property
+    def candidates(self):
+        out = [self] + self.__duplicates
+        out.sort(key=lambda ap: ap.remote.priority)
+        return out
+
+    @property
+    def best_candidate(self):
+        return self.candidates[0]
 
 
 class InstalledPackage(Manifest, IEnvProvider):

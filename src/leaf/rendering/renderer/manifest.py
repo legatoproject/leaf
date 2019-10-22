@@ -144,10 +144,10 @@ class ManifestListRenderer(Renderer):
         # For Availables Packages
         if isinstance(element, AvailablePackage):
             # Sources
-            remote_count = len(element.remotes)
-            if remote_count > 0:
-                labels.append("Source{s}:".format(s=("s" if remote_count > 1 else "")))
-                values.append(",".join(remote.alias for remote in element.remotes))
+            remotes = [c.remote.alias for c in element.candidates]
+            if len(remotes) > 0:
+                labels.append("Source{s}:".format(s=("s" if len(remotes) > 1 else "")))
+                values.append(", ".join(remotes))
 
             if dependency_count == 0:
                 # Size

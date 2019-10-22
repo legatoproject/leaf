@@ -72,7 +72,7 @@ class TestRendering(LeafTestCase):
             if folder.is_dir():
                 mffile = folder / LeafFiles.MANIFEST
                 if mffile.is_file():
-                    out.append(AvailablePackage2(jloadfile(mffile), "http://fakeUrl"))
+                    out.append(AvailablePackage2(jloadfile(mffile), remote=Remote("alias", {"url": "http://fakeUrl"})))
                     out.append(InstalledPackage2(mffile))
         return sorted(out, key=lambda mf: str(type(mf)) + str(mf))
 

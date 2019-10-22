@@ -50,7 +50,7 @@ class TestApiRelengManager(LeafTestCaseWithRepo):
         self.assertTrue(artifact.exists())
         self.assertTrue(info_file.exists())
         self.assertEqual(info_file, self.rm.find_external_info_file(artifact))
-        self.assertEqual(hash_compute(artifact), AvailablePackage(jloadfile(info_file), None).hashsum)
+        self.assertEqual(hash_compute(artifact), AvailablePackage(jloadfile(info_file)).hashsum)
 
         with self.assertRaises(LeafException):
             self.rm.create_package(folder, artifact, store_extenal_info=False)

@@ -16,7 +16,7 @@ import gnupg
 
 from leaf.api.base import LoggerManager
 from leaf.core.constants import JsonConstants, LeafConstants, LeafFiles, LeafSettings
-from leaf.core.download import download_file
+from leaf.core.download import PRIORITIES_RANGE, download_file
 from leaf.core.error import LeafException, NoEnabledRemoteException, NoRemoteException, RemoteFetchException
 from leaf.core.jsonutils import jloadfile
 from leaf.core.utils import mkdirs
@@ -108,7 +108,7 @@ class RemoteManager(GPGManager):
 
         return out
 
-    def create_remote(self, alias: str, url: str, enabled: bool = True, insecure: bool = False, gpgkey: str = None):
+    def create_remote(self, alias: str, url: str, enabled: bool = True, insecure: bool = False, gpgkey: str = None, priority: int = None):
         # Do some checks
         if not RemoteManager.__REMOTE_ALIAS_PATTERN.fullmatch(alias):
             raise LeafException("Invalid remote alias: '{0}'".format(alias))
@@ -129,6 +129,12 @@ class RemoteManager(GPGManager):
                 }
             else:
                 raise LeafException("Invalid security for remote {alias}".format(alias=alias))
+            # Set the priority
+            if priority is not None:
+                if priority not in PRIORITIES_RANGE:
+                    raise LeafException("Invalid priority, must be between {min} and {max}".format(min=PRIORITIES_RANGE[0], max=PRIORITIES_RANGE[-1]))
+                remotes[alias][JsonConstants.CONFIG_REMOTE_PRIORITY] = priority
+
         self.__clean_remote_files(alias)
 
     def rename_remote(self, oldalias: str, newalias: str):

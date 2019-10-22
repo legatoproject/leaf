@@ -9,7 +9,6 @@ Leaf Package Manager
 import os
 import re
 import subprocess
-from builtins import bool
 from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
@@ -150,7 +149,7 @@ class RelengManager(LoggerManager):
                     self.logger.print_default("Compute info for {artifact}".format(artifact=artifact))
                     artifact_node = self.__build_pkg_node(artifact)
 
-                ap = AvailablePackage(artifact_node, None)
+                ap = AvailablePackage(artifact_node)
                 pi = ap.identifier
                 if is_latest_package(pi):
                     raise LeafException(
@@ -159,7 +158,7 @@ class RelengManager(LoggerManager):
 
                 if pi in packages_map:
                     self.logger.print_default("Artifact already present: {pi}".format(pi=pi))
-                    if ap.hashsum != AvailablePackage(packages_map[pi], None).hashsum:
+                    if ap.hashsum != AvailablePackage(packages_map[pi]).hashsum:
                         raise LeafException("Artifact {pi} has multiple different artifacts for same version".format(pi=pi))
                 else:
                     # Read extra tags

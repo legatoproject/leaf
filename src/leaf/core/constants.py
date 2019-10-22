@@ -119,6 +119,7 @@ class JsonConstants(object):
     # Configuration
     CONFIG_REMOTES = "remotes"
     CONFIG_REMOTE_URL = "url"
+    CONFIG_REMOTE_PRIORITY = "priority"
     CONFIG_REMOTE_ENABLED = "enabled"
     CONFIG_REMOTE_GPGKEY = "gpgKey"
     CONFIG_ENV = "env"

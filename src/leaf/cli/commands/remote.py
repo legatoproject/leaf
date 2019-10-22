@@ -10,6 +10,7 @@ Leaf Package Manager
 from leaf.api import RemoteManager
 from leaf.cli.base import LeafCommand
 from leaf.cli.completion import complete_remotes
+from leaf.core.download import PRIORITIES_RANGE
 from leaf.core.error import LeafException
 from leaf.rendering.renderer.remote import RemoteListRenderer
 
@@ -34,6 +35,12 @@ class RemoteAddCommand(LeafCommand):
         super()._configure_parser(parser)
         parser.add_argument("alias", metavar="ALIAS", nargs=1, help="the alias of the new remote")
         parser.add_argument("url", metavar="URL", nargs=1, help="the remote URL (supported url schemes: http(s)://, file://)")
+        parser.add_argument(
+            "--priority",
+            dest="priority",
+            type=int,
+            help="remote priority between {min} and {max}, lower number means higher priority".format(min=PRIORITIES_RANGE[0], max=PRIORITIES_RANGE[-1]),
+        )
         group = parser.add_mutually_exclusive_group()
         group.required = True
         group.add_argument("--insecure", dest="insecure", action="store_true", help="disable content checking for remote")
@@ -41,8 +48,9 @@ class RemoteAddCommand(LeafCommand):
 
     def execute(self, args, uargs):
         rm = RemoteManager()
-
-        rm.create_remote(args.alias[0], args.url[0], insecure=args.insecure, gpgkey=args.gpgkey)
+        if args.priority is not None and args.priority not in PRIORITIES_RANGE:
+            raise LeafException("Invalid priority, must be between {min} and {max}".format(min=PRIORITIES_RANGE[0], max=PRIORITIES_RANGE[-1]))
+        rm.create_remote(args.alias[0], args.url[0], insecure=args.insecure, gpgkey=args.gpgkey, priority=args.priority)
 
 
 class RemoteRemoveCommand(LeafCommand):

@@ -127,6 +127,10 @@ class RemoteListRenderer(Renderer):
                 labels.append("Last update:")
                 values.append(element.info_date)
 
+            # Priority
+            labels.append("Priority:")
+            values.append(element.priority)
+
         labels.append("Enabled:")
         values.append(self._bool_to_text(element.enabled))
 

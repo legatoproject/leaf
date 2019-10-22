@@ -74,12 +74,12 @@ class PackageManager(RemoteManager):
                         out[ap.identifier] = ap
                     else:
                         ap2 = out[ap.identifier]
-                        ap2.remotes.append(remote)
                         if ap.hashsum != ap2.hashsum:
                             self.logger.print_error(
                                 "Package {ap.identifier} is available in several remotes with same version but different content!".format(ap=ap)
                             )
                             raise LeafException("Package {ap.identifier} has multiple artifacts for the same version".format(ap=ap))
+                        ap2.add_duplicate(ap)
                         # Keep tags
                         for t in ap.tags:
                             if t not in ap2.tags:
@@ -95,7 +95,10 @@ class PackageManager(RemoteManager):
         @return LeafArtifact
         """
         cachedfile = self.__download_cache_folder / get_cached_artifact_name(ap.filename, ap.hashsum)
-        download_and_verify_file(ap.url, cachedfile, logger=self.logger, hashstr=ap.hashsum)
+        # Select best candidate
+        candidate = ap.best_candidate
+        self.logger.print_verbose("Downloading {ap.identifier} from {ap.remote.alias}: {ap.url}".format(ap=candidate))
+        download_and_verify_file(candidate.url, cachedfile, logger=self.logger, hashstr=ap.hashsum)
         return LeafArtifact(cachedfile)
 
     def __extract_artifact(self, la: LeafArtifact, env: Environment, ipmap: dict, keep_folder_on_error: bool = False) -> InstalledPackage:
