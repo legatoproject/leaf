@@ -17,8 +17,8 @@ class TestCliPackageManager(LeafTestCaseWithCli):
     def test_remote(self):
         self.leaf_exec(("remote", "list"))
 
-        self.leaf_exec(["remote", "add"], "--insecure", "alt", self.remote_url1)
-        self.leaf_exec(["remote", "add"], "--insecure", "alt", self.remote_url1, expected_rc=2)
+        self.leaf_exec(["remote", "add"], "alt", self.remote_url1)
+        self.leaf_exec(["remote", "add"], "alt", self.remote_url1, expected_rc=2)
 
         self.leaf_exec(["remote", "disable"], "alt")
         self.leaf_exec(["remote", "enable"], "alt")
@@ -27,11 +27,11 @@ class TestCliPackageManager(LeafTestCaseWithCli):
         self.leaf_exec(["remote", "remove"], "alt", expected_rc=2)
         self.leaf_exec(["remote", "enable"], "alt", expected_rc=2)
 
-        self.leaf_exec(["remote", "add"], "--insecure", "remote1", self.remote_url1)
+        self.leaf_exec(["remote", "add"], "remote1", self.remote_url1)
 
-        self.leaf_exec(["remote", "add"], "--insecure", "remote2", self.remote_url1)
+        self.leaf_exec(["remote", "add"], "remote2", self.remote_url1)
 
-        self.leaf_exec(["remote", "add"], "--insecure", "remote3", self.remote_url1)
+        self.leaf_exec(["remote", "add"], "remote3", self.remote_url1)
 
         self.leaf_exec(["remote", "disable"], "remote1", "remote2", "remote3")
 

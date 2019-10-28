@@ -16,7 +16,7 @@ class TestCliRendering(LeafTestCaseWithCli):
             self.leaf_exec(["package", "list"], "--all")
 
     def test_remote(self):
-        self.leaf_exec(["remote", "add"], "alt", self.remote_url1, "--insecure")
+        self.leaf_exec(["remote", "add"], "alt", self.remote_url1)
         self.leaf_exec(["remote", "disable"], "alt")
         with self.assertStdout(template_out="remote_list.out"):
             self.leaf_exec(("remote", "list"))

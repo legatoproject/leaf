@@ -261,8 +261,8 @@ class LeafTestCaseWithCli(LeafTestCaseWithRepo):
     def setUp(self):
         super().setUp()
         LeafSettings.SYSTEM_PKG_FOLDERS.value = ""
-        self.leaf_exec(("remote", "add"), "--insecure", "default", self.remote_url1)
-        self.leaf_exec(("remote", "add"), "--insecure", "other", self.remote_url2)
+        self.leaf_exec(("remote", "add"), "default", self.remote_url1)
+        self.leaf_exec(("remote", "add"), "other", self.remote_url2)
 
     def tearDown(self):
         super().tearDown()

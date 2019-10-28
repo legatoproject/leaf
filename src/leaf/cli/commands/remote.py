@@ -42,8 +42,8 @@ class RemoteAddCommand(LeafCommand):
             help="remote priority between {min} and {max}, lower number means higher priority".format(min=PRIORITIES_RANGE[0], max=PRIORITIES_RANGE[-1]),
         )
         group = parser.add_mutually_exclusive_group()
-        group.required = True
-        group.add_argument("--insecure", dest="insecure", action="store_true", help="disable content checking for remote")
+        group.required = False
+        group.add_argument("--insecure", dest="insecure", action="store_true", help="disable content checking for remote (default mode)")
         group.add_argument("--gpg", dest="gpgkey", action="store", help="GPG fingerprint to verify signature")
 
     def execute(self, args, uargs):

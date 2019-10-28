@@ -48,9 +48,11 @@ class TestGPG(LeafTestCaseWithCli):
         with self.assertRaises(LeafException):
             gpg.gpg_verify_file(datafile, sigfile, "8C20018BE986D5300A346323FAE026860F1F8AEE")
 
-    def test_remote_without_security(self):
-        with self.assertRaises(SystemExit):
-            self.leaf_exec(("remote", "add"), "default", self.remote_url1)
+    def test_remote_insecure_default(self):
+        self.leaf_exec(("remote", "add"), "default", self.remote_url1)
+        self.leaf_exec(("remote", "fetch"))
+
+        self.assertTrue(self.remote_cache_file.exists())
 
     def test_remote_insecure(self):
         self.leaf_exec(("remote", "add"), "--insecure", "default", self.remote_url1)

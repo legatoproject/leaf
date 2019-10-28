@@ -119,22 +119,15 @@ class RemoteManager(GPGManager):
             remotes = usrc.remotes
             if alias in remotes:
                 raise LeafException("Remote {alias} already exists".format(alias=alias))
-            if insecure:
-                remotes[alias] = {JsonConstants.CONFIG_REMOTE_URL: str(url), JsonConstants.CONFIG_REMOTE_ENABLED: enabled}
-            elif gpgkey is not None:
-                remotes[alias] = {
-                    JsonConstants.CONFIG_REMOTE_URL: str(url),
-                    JsonConstants.CONFIG_REMOTE_ENABLED: enabled,
-                    JsonConstants.CONFIG_REMOTE_GPGKEY: gpgkey,
-                }
-            else:
-                raise LeafException("Invalid security for remote {alias}".format(alias=alias))
+            remotes[alias] = {JsonConstants.CONFIG_REMOTE_URL: str(url), JsonConstants.CONFIG_REMOTE_ENABLED: enabled}
             # Set the priority
-            if priority is not None:
+            if isinstance(priority, int):
                 if priority not in PRIORITIES_RANGE:
                     raise LeafException("Invalid priority, must be between {min} and {max}".format(min=PRIORITIES_RANGE[0], max=PRIORITIES_RANGE[-1]))
                 remotes[alias][JsonConstants.CONFIG_REMOTE_PRIORITY] = priority
-
+            # Set the GPG key if set
+            if isinstance(gpgkey, str):
+                remotes[alias][JsonConstants.CONFIG_REMOTE_GPGKEY] = gpgkey
         self.__clean_remote_files(alias)
 
     def rename_remote(self, oldalias: str, newalias: str):
