@@ -30,7 +30,7 @@ class BuildPackSubCommand(LeafCommand):
                 "Build an XZ compressed archive with some files excluded (from /tmp/exclude.list), tar will be verbose",
             ),
             (
-                "leaf build pack -i path/to/packageFolder/ -o package.leaf -- manifest.json",
+                "leaf build pack -i path/to/packageFolder/ -o package.leaf -- -J manifest.json",
                 "Build an XZ compressed archive containing only the manifest.json file",
             ),
         ]
