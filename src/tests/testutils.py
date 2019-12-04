@@ -404,10 +404,17 @@ def check_archive_format(file, compression):
         check_mime(file, "x-tar")
 
 
-def check_mime(file, expected_mime):
+def check_mime(file, expected_mime, support_legacy=True):
     mime = subprocess.getoutput("file -bi " + str(file))
-    if not mime.startswith("application/" + expected_mime):
-        raise ValueError("File {file} has invalid mime type {mime}".format(file=file, mime=mime))
+    accepted_types = [expected_mime]
+    if support_legacy and not expected_mime.startswith("x-"):
+        # Handle case x-MIME for legacy types like gzip
+        accepted_types.append("x-" + expected_mime)
+
+    for t in accepted_types:
+        if mime.startswith("application/" + t):
+            return
+    raise ValueError("File {file} has invalid mime type {mime}".format(file=file, mime=mime))
 
 
 def env_tolist(env: Environment):
