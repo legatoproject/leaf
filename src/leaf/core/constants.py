@@ -31,6 +31,9 @@ class LeafSettings(CommonSettings):
         default=os.pathsep.join(("/usr/share/leaf/packages", "/usr/local/share/leaf/packages", "~/.local/share/leaf/packages")),
     )
     CACHE_FOLDER = LeafSetting("leaf.cache", "LEAF_CACHE", description="Leaf cache", default="~/.cache/leaf")
+    CACHE_AUTOCLEAN = LeafSetting(
+        "leaf.cache.autoclean", "LEAF_CACHE_AUTOCLEAN", description="Leaf cache auto clean up", default=1, validator=RegexValidator("[0-1]")
+    )
     DEBUG_MODE = LeafSetting("leaf.debug", "LEAF_DEBUG", description="Enable traces")
     NON_INTERACTIVE = LeafSetting("leaf.noninteractive", "LEAF_NON_INTERACTIVE", description="Do not ask for confirmations, assume yes")
     DISABLE_LOCKS = LeafSetting("leaf.locks.disable", "LEAF_DISABLE_LOCKS", description="Disable lock files for install operations")

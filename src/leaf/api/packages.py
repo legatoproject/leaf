@@ -7,12 +7,13 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 """
 
+import shutil
 from collections import OrderedDict
 from pathlib import Path
 from tarfile import TarFile
 
 from leaf.api.remotes import RemoteManager
-from leaf.core.constants import LeafConstants, LeafFiles
+from leaf.core.constants import LeafConstants, LeafFiles, LeafSettings
 from leaf.core.download import download_and_verify_file
 from leaf.core.error import InvalidPackageNameException, LeafException, LeafOutOfDateException, NoPackagesInCacheException, PrereqException
 from leaf.core.lock import LockFile
@@ -58,6 +59,10 @@ class PackageManager(RemoteManager):
                 # Display a message
                 self.logger.print_error("You can save {size} by cleaning the leaf cache folder".format(size=sizeof_fmt(totalsize)))
                 self.print_hints("to clean the cache, you can run: 'rm -r {folder}'".format(folder=self.download_cache_folder))
+                # Clean the cache
+                if not LeafSettings.NON_INTERACTIVE.as_boolean() and LeafSettings.CACHE_AUTOCLEAN.as_boolean():
+                    if self.print_with_confirm(question="Do you want to clean the cache?"):
+                        shutil.rmtree(str(self.download_cache_folder))
                 # Update the mtime
                 self.download_cache_folder.touch()
 
