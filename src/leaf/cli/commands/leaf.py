@@ -17,6 +17,7 @@ from leaf.cli.commands.env import EnvBuiltinCommand, EnvPackageCommand, EnvPrint
 from leaf.cli.commands.help import HelpCommand
 from leaf.cli.commands.package import (
     PackageDepsCommand,
+    PackageInspectCommand,
     PackageInstallCommand,
     PackageListCommand,
     PackageSyncCommand,
@@ -108,6 +109,7 @@ class LeafRootCommand(LeafMetaCommand):
                         PackageUninstallCommand(),
                         PackageSyncCommand(),
                         PackageDepsCommand(),
+                        PackageInspectCommand(),
                     ],
                     accept_default=True,
                     plugins_manager=plugins_manager,

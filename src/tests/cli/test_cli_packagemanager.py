@@ -245,6 +245,20 @@ class TestCliPackageManager(LeafTestCaseWithCli):
         cached_filenames = [f.name[8:] for f in (self.cache_folder / "files").iterdir()]
         self.assertEqual(sorted(cached_filenames), ["condition-D_1.0.leaf", "condition-F_1.0.leaf", "condition-H_1.0.leaf", "install_1.0.leaf"])
 
+    def test_package_inspect(self):
+        file1 = self.repository_folder / "condition_1.0.leaf"
+        file2 = self.repository_folder / "condition-B_1.0.leaf"
+        file3 = self.repository_folder / "unknown.leaf"
+
+        with self.assertStdout("single.out"):
+            self.leaf_exec(["package", "inspect"], file1)
+
+        with self.assertStdout("multiple.out"):
+            self.leaf_exec(["package", "inspect"], file1, file2)
+
+        with self.assertStdout("multiple-with-error.out"):
+            self.leaf_exec(["package", "inspect"], file1, file3, file2)
+
 
 class TestCliPackageManagerVerbose(TestCliPackageManager):
     def __init__(self, *args, **kwargs):

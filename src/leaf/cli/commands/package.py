@@ -10,6 +10,7 @@ Leaf Package Manager
 import argparse
 from builtins import ValueError
 from collections import OrderedDict
+from pathlib import Path
 
 from leaf.api import PackageManager
 from leaf.cli.base import LeafCommand
@@ -20,7 +21,7 @@ from leaf.core.utils import env_list_to_map
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
 from leaf.model.filtering import MetaPackageFilter
-from leaf.model.package import IDENTIFIER_GETTER, PackageIdentifier
+from leaf.model.package import IDENTIFIER_GETTER, LeafArtifact, PackageIdentifier
 from leaf.rendering.renderer.manifest import ManifestListRenderer
 
 
@@ -214,3 +215,33 @@ class PackageUpgradeCommand(LeafCommand):
                     pm.uninstall_packages(map(IDENTIFIER_GETTER, uninstall_list))
                 else:
                     pm.logger.print_default("These packages can be removed:", " ".join([str(ip.identifier) for ip in uninstall_list]))
+
+
+class PackageInspectCommand(LeafCommand):
+    def __init__(self):
+        LeafCommand.__init__(self, "inspect", "display information about packages")
+
+    def _configure_parser(self, parser):
+        parser.add_argument("files", metavar="LEAF_FILE", type=Path, nargs=argparse.ONE_OR_MORE, help="files to inspect")
+
+    def execute(self, args, uargs):
+        for index in range(0, len(args.files)):
+            if index > 0:
+                print("")
+            file = args.files[index]
+            try:
+                la = LeafArtifact(file)
+                print(file)
+                kvfmt = "  {k}: {v}"
+                print(kvfmt.format(k="identifier", v=la.identifier))
+                print(kvfmt.format(k="name", v=la.name))
+                print(kvfmt.format(k="version", v=la.version))
+                for k, v in la.info_node.items():
+                    if k not in ("name", "version"):
+                        if isinstance(v, (tuple, list)):
+                            v = ", ".join(v)
+                        elif isinstance(v, dict):
+                            v = ", ".join(["{0}={1}".format(kk, vv) for kk, vv in v.items()])
+                        print(kvfmt.format(k=k, v=v))
+            except BaseException as e:
+                print("Invalid leaf file {f}: {e}".format(f=file, e=e))
