@@ -24,7 +24,6 @@ from leaf.core.error import (
     WorkspaceNotInitializedException,
 )
 from leaf.core.logger import print_trace
-from leaf.core.utils import mkdirs
 from leaf.model.base import Scope
 from leaf.model.config import ConfigContextManager, WorkspaceConfiguration
 from leaf.model.dependencies import DependencyUtils
@@ -76,7 +75,9 @@ class WorkspaceManager(PackageManager):
 
     @property
     def ws_data_folder(self):
-        return mkdirs(self.__ws_root / LeafFiles.WS_DATA_FOLDERNAME)
+        out = self.__ws_root / LeafFiles.WS_DATA_FOLDERNAME
+        out.mkdir(parents=True, exist_ok=True)
+        return out
 
     @property
     def ws_current_link(self):
@@ -201,7 +202,7 @@ class WorkspaceManager(PackageManager):
 
     def switch_profile(self, profile: Profile):
         # Check folder exist
-        mkdirs(profile.folder)
+        profile.folder.mkdir(parents=True, exist_ok=True)
         # Update symlink
         self.update_current_link(profile.name)
         self.logger.print_default("Current profile is now {pf.name}".format(pf=profile))

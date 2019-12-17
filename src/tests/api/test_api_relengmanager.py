@@ -11,7 +11,7 @@ from leaf.api import RelengManager
 from leaf.core.constants import JsonConstants, LeafFiles
 from leaf.core.error import LeafException
 from leaf.core.jsonutils import jloadfile, jwritefile
-from leaf.core.utils import hash_compute, mkdirs
+from leaf.core.utils import hash_compute
 from leaf.model.package import AvailablePackage
 from tests.testutils import TEST_REMOTE_PACKAGE_SOURCE, LeafTestCaseWithRepo, check_mime
 
@@ -195,8 +195,8 @@ class TestApiRelengManager(LeafTestCaseWithRepo):
         self.assertEqual(11, len(index_content[JsonConstants.REMOTE_PACKAGES]))
 
     def test_index_same_artifact_different_hash(self):
-        mkdirs(self.workspace_folder / "a")
-        mkdirs(self.workspace_folder / "b")
+        (self.workspace_folder / "a").mkdir(parents=True, exist_ok=True)
+        (self.workspace_folder / "b").mkdir(parents=True, exist_ok=True)
 
         self.rm.generate_manifest(
             self.workspace_folder / "a" / LeafFiles.MANIFEST,
@@ -222,7 +222,7 @@ class TestApiRelengManager(LeafTestCaseWithRepo):
         pkg_folder = self.workspace_folder / "mypackage_1.0"
         mffile = pkg_folder / "manifest.json"
         artifact = self.workspace_folder / "foo.leaf"
-        mkdirs(pkg_folder)
+        pkg_folder.mkdir(parents=True, exist_ok=True)
 
         # No name/version
         jwritefile(mffile, {})

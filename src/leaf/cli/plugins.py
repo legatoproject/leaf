@@ -92,15 +92,10 @@ class LeafPluginManager:
     def __load_spec(self, pyfile: Path, module_name: str, force=True):
         # Skip if module already present in sys.modules
         if force or module_name not in sys.modules:
-            if sys.version_info > (3, 5):
-                spec = importlib.util.spec_from_file_location(module_name, str(pyfile))
-                module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(module)
-                sys.modules[module_name] = module
-            else:
-                # TODO: Drop this code once python 3.4 is not supported
-                loader = importlib.machinery.SourceFileLoader(module_name, str(pyfile))
-                loader.load_module(loader.name)
+            spec = importlib.util.spec_from_file_location(module_name, str(pyfile))
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            sys.modules[module_name] = module
         return sys.modules[module_name]
 
     def __find_class(self, modules: list, class_: type, classname: str = None):

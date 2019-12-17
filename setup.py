@@ -46,7 +46,6 @@ setup(
     setup_requires=["setuptools_scm"],
     install_requires=["argcomplete", "colorama", "python-gnupg", "requests", "jsonschema"],
     package_dir={"": "src"},
-    include_package_files=True,
     packages=["leaf", "leaf.core", "leaf.model", "leaf.rendering", "leaf.rendering.renderer", "leaf.api", "leaf.cli", "leaf.cli.commands"],
     entry_points={"console_scripts": ["leaf = leaf.__main__:main", "leaf-version-compare = leaf.tools:leaf_version_compare"]},
     data_files=_find_resources(),

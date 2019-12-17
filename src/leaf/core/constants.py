@@ -74,7 +74,7 @@ class LeafConstants:
     """
 
     DEFAULT_ERROR_RC = 2
-    MIN_PYTHON_VERSION = (3, 4)
+    MIN_PYTHON_VERSION = (3, 5)
     COLORAMA_MIN_VERSION = "0.3.3"
     DEFAULT_PROFILE = "default"
     CACHE_SIZE_MAX = 5 * 1024 * 1024 * 1024  # 5GB

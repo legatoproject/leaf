@@ -18,7 +18,7 @@ from leaf import __version__
 from leaf.core.constants import LeafFiles, LeafSettings
 from leaf.core.error import LeafException, UserCancelException
 from leaf.core.logger import TextLogger, print_trace
-from leaf.core.utils import is_folder_ignored, mkdirs
+from leaf.core.utils import is_folder_ignored
 from leaf.model.base import Scope
 from leaf.model.config import ConfigContextManager, UserConfiguration
 from leaf.model.environment import Environment
@@ -32,11 +32,15 @@ from leaf.rendering.theme import ThemeManager
 class ConfigurationManager:
     @property
     def configuration_folder(self):
-        return mkdirs(LeafSettings.CONFIG_FOLDER.as_path())
+        out = LeafSettings.CONFIG_FOLDER.as_path()
+        out.mkdir(parents=True, exist_ok=True)
+        return out
 
     @property
     def cache_folder(self):
-        return mkdirs(LeafSettings.CACHE_FOLDER.as_path())
+        out = LeafSettings.CACHE_FOLDER.as_path()
+        out.mkdir(parents=True, exist_ok=True)
+        return out
 
     @property
     def configuration_file(self):
@@ -44,7 +48,9 @@ class ConfigurationManager:
 
     @property
     def install_folder(self):
-        return mkdirs(LeafSettings.USER_PKG_FOLDER.as_path())
+        out = LeafSettings.USER_PKG_FOLDER.as_path()
+        out.mkdir(parents=True, exist_ok=True)
+        return out
 
     def is_file_outdated(self, file: Path):
         ndays = LeafSettings.SMART_REFRESH_DELTA.as_int()

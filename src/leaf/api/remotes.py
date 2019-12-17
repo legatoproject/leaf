@@ -19,7 +19,6 @@ from leaf.core.constants import JsonConstants, LeafConstants, LeafFiles, LeafSet
 from leaf.core.download import PRIORITIES_RANGE, download_file
 from leaf.core.error import LeafException, NoEnabledRemoteException, NoRemoteException, RemoteFetchException
 from leaf.core.jsonutils import jloadfile
-from leaf.core.utils import mkdirs
 from leaf.model.modelutils import check_leaf_min_version
 from leaf.model.remote import Remote
 
@@ -72,7 +71,9 @@ class RemoteManager(GPGManager):
 
     @property
     def remote_cache_folder(self):
-        return mkdirs(self.cache_folder / LeafFiles.CACHE_REMOTES_FOLDERNAME)
+        out = self.cache_folder / LeafFiles.CACHE_REMOTES_FOLDERNAME
+        out.mkdir(parents=True, exist_ok=True)
+        return out
 
     def __clean_remote_files(self, alias: str):
         for f in self.__get_remote_files(alias):

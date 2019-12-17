@@ -3,7 +3,7 @@ setuptools-scm
 pytest
 pytest-xdist
 pytest-cov
-coverage 
+coverage<5.0
 
 ## Requirements
 argcomplete

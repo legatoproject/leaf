@@ -16,7 +16,7 @@ from leaf.core.constants import LeafConstants, LeafFiles
 from leaf.core.download import download_and_verify_file
 from leaf.core.error import InvalidPackageNameException, LeafException, LeafOutOfDateException, NoPackagesInCacheException, PrereqException
 from leaf.core.lock import LockFile
-from leaf.core.utils import fs_check_free_space, fs_compute_total_size, get_cached_artifact_name, mark_folder_as_ignored, mkdirs, rmtree_force
+from leaf.core.utils import fs_check_free_space, fs_compute_total_size, get_cached_artifact_name, mark_folder_as_ignored, rmtree_force
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
 from leaf.model.modelutils import check_leaf_min_version, find_manifest, is_latest_package
@@ -46,7 +46,8 @@ class PackageManager(RemoteManager):
 
     @property
     def download_cache_folder(self):
-        return mkdirs(self.__download_cache_folder)
+        self.__download_cache_folder.mkdir(parents=True, exist_ok=True)
+        return self.__download_cache_folder
 
     def __check_cache_folder_size(self):
         # Check if it has been checked recently

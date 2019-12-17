@@ -8,7 +8,7 @@ import time
 
 from leaf.core.constants import JsonConstants, LeafFiles
 from leaf.core.jsonutils import jloadfile, jwritefile
-from leaf.core.utils import hash_compute, mkdirs
+from leaf.core.utils import hash_compute
 from tests.testutils import TEST_REMOTE_PACKAGE_SOURCE, LeafTestCaseWithCli, check_mime
 
 
@@ -360,7 +360,7 @@ class TestCliRelengManager(LeafTestCaseWithCli):
         pkg_folder = self.workspace_folder / "mypackage_1.0"
         mffile = pkg_folder / "manifest.json"
         artifact = self.workspace_folder / "foo.leaf"
-        mkdirs(pkg_folder)
+        pkg_folder.mkdir(parents=True, exist_ok=True)
 
         # Validate only, invalid model
         jwritefile(mffile, {"info": {"name": "my_package", "version": "1.0"}})

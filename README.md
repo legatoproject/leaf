@@ -3,137 +3,103 @@
 Leaf is package management software written in Python 3, that manages downloading, installing and workspace configuration.
 
 
-## Prerequisites
+# Install
 
-Python 3.4 or a newer version.
+Python 3.5 or a newer version is required.
 
-## Install
+## Using Sierra Wireless released version
 
-### Using Sierra Wireless released version
+Installing the Leaf Debian package will automatically add the Sierra Wireless APT repository.
 
-Add the *Sierra Wireless* official apt repository and install *leaf*:
-
-```shell
-$ echo "deb https://downloads.sierrawireless.com/tools/debian release/" | sudo tee /etc/apt/sources.list.d/legato-tools.list
-$ sudo apt-get update
-$ sudo apt-get install leaf
+```sh
+$ sudo apt install --yes wget
+$ wget https://downloads.sierrawireless.com/tools/leaf/leaf_latest.deb -O /tmp/leaf.deb
+$ sudo apt install --yes /tmp/leaf.deb
 ```
 
-### Alternative install from sources
+## Virtualenv install for development
 
 Install dependencies:
 
-```shell
-$ sudo apt-get install --no-install-recommends \
-                       python3 python3-all python3-requests python3-argcomplete \
-                       python3-setuptools python3-setuptools-scm python3-pytest
+```sh
+$ sudo apt install --yes --no-install-recommends \
+        python3-all python3-pip python3-virtualenv \
+        git make
 ```
 
-Install *leaf* on your system: using python standard *setup.py*
+Clone the sources
 
-```shell
-$ sudo python3 setup.py install
-$ sudo python3 setup.py install_data
+```sh
+$ git clone https://github.com/legatoproject/leaf
+$ cd leaf
 ```
 
-To install *leaf* only for your user:
+Create the virtualenv and install leaf for development
 
-```shell
-$ python3 setup.py install --user
-$ python3 setup.py install_data -d $HOME/.local/
-```
-
-### Alternative install in a *virtual env*
-
-If you are not familiar with python virtualenv, see http://docs.python-guide.org/en/latest/dev/virtualenvs/
-
-First if you don't have * virtualenv* installed:
-
-```shell
-$ sudo apt-get install python3-virtualenv
-```
-
-Then, create a virtualenv and install required packages:
-
-```shell
+```sh
 $ make venv
-# or
-$ python3 -m virtualenv -p python3 venv --no-site-packages
 $ source venv/bin/activate
-$ pip install -r requirements.txt
-$ pip install -r requirements-dev.txt
+(venv) $ pip install -e .
+```
+> Note: Once installed using `-e`, leaf is installed in development mode, you don't need to reinstall it after you modify the code
+
+# Running tests
+
+## Using pytest
+
+> You must be in a configured virtualenv, see "Install for development"
+
+```sh
+# Run all the tests
+(venv) $ pytest
+# Run only some tests
+(venv) $ pytest src/tests/api
+(venv) $ pytest -x src/tests/api/test_api_depends.py
 ```
 
-Finally, install leaf in your virtualenv:
+## Using Tox
 
-```shell
-$ ./setup.py install
-$ ./setup.py install_data
-```
+Tox can automatically run unit tests with supported python versions.
 
+> Note: Tox is used to run all tests on multiple python environments, that means you need to have all supported python versions installed on your system to run Tox.
 
-### Troubleshooting
-
-#### Ubuntu 14.04 LTS support
-
-On Ubuntu 14.04 LTS, some library dependencies are not available at the correct version in the system
-install. This will make leaf crashing on this distribution.
-As an alternative, these libraries can be installed in user land:
-```shell
-$ sudo apt install python3-pip
-$ pip3 install argcomplete --user
-$ pip3 install setuptools --user --upgrade
-```
-
-## Running tests
-
-### Using Nose
-
-If you setup your virtualenv with the requirements, you can use pytest to run tests directly:
-
-```shell
-# First, install leaf in the venv
-$ ./setup.py install
-$ ./setup.py install_data
-# Run all tests
-$ pytest src/
-# or a single class
-$ pytest src/tests/api/test_api_filtering.py
-```
-
-### Using Tox
-
-Tox can automatically run unit tests with supported python versions (3.4, 3.5 & 3.6).
-If you have all supported python versions installed on your system, you can use tox to run unit tests:
-
-```shell
+```sh
 # Install tox inside a virtualenv
-$ pip install tox
+(venv) $ pip install tox
 # or install tox on your system
-$ sudo apt-get install tox
+$ sudo apt install tox
 # then run tests
 $ tox
 # or a single python version
-$ tox -e py35
+$ tox -e py37
 ```
 
-### Using Docker
+## Using Docker
 
-You can also run all tests using Tox inside a Docker container. if you have docker configured.
+You can also run all tests using Tox inside a Docker container.
 
-```shell
+> You need to install Docker before, for example use `sudo apt install docker.io` on Debian Buster
+
+```sh
 # build the docker image
 $ make docker-image
 # run tests
 $ make docker-test
 ```
 
+You can also use the docker command line to tweak the arguments:
+
+```sh
+# Only run test using python37 with coverage and code analysis
+$ export TOXENV=clean,py37,coverage,flake8
+$ docker run --rm --volume $PWD:/src:ro \
+        -e GIT_CLEAN=1 \
+        -e TOXENV \
+        multipy:leaf --alwayscopy -- -n 4 src/tests/api
+```
+
 You can tweak the tests with:
- - *LEAF_TEST_CLASS* to execute a single test class, for exemple `export LEAF_TEST_CLASS=src/tests/api`
- - *LEAF_TEST_TOX_ARGS* to tweak tox execution to select a specific python version, for example `export LEAF_TEST_TOX_ARGS="-e py35"`
- - *LEAF_TEST_PYTEST_ARGS* to tweak pytest execution, for example `export *LEAF_TEST_PYTEST_ARGS="-n 4"`
-
-
-## Usage
-
-See `leaf --help` of `leaf help` for more details.
+ - `TOXENV`: env variable to overide the list of Tox environments to execute, `clean`,`py37`, `coverage` and `flake8` in the previous example
+ - `TOX_SKIP_ENV`: regular expression to filter down from running tox environments
+ - Tox arguments: `--alwayscopy` in the previous example (Tox args are *before* the `--`)
+ - Pytest arguments: `-n 4 -x src/tests/api` in the previous example (Tox args are *after* the `--`)

@@ -191,12 +191,6 @@ def fs_check_free_space(folder: Path, neededspace: int):
         raise NotEnoughSpaceException(folder, freespace, neededspace)
 
 
-def mkdirs(folder: Path):
-    if not folder.exists():
-        os.makedirs(str(folder), exist_ok=True)
-    return folder
-
-
 def chmod_write(item: Path):
     if item.exists() and not item.is_symlink():
         item.chmod(item.stat().st_mode | 0o222)

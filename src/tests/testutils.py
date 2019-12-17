@@ -15,7 +15,7 @@ from leaf.api import RelengManager
 from leaf.core.constants import JsonConstants, LeafFiles, LeafSettings
 from leaf.core.jsonutils import jloadfile, jwritefile
 from leaf.core.settings import EnvVar
-from leaf.core.utils import mkdirs, rmtree_force
+from leaf.core.utils import rmtree_force
 from leaf.model.environment import Environment
 from leaf.model.package import Manifest, PackageIdentifier
 
@@ -105,31 +105,44 @@ class LeafTestCase(unittest.TestCase):
 
     @property
     def test_folder(self):
-        return mkdirs(LeafTestCase._TEST_FOLDER)
+        LeafTestCase._TEST_FOLDER.mkdir(parents=True, exist_ok=True)
+        return LeafTestCase._TEST_FOLDER
 
     @property
     def volatile_folder(self):
-        return mkdirs(self.test_folder / "volatile")
+        out = self.test_folder / "volatile"
+        out.mkdir(parents=True, exist_ok=True)
+        return out
 
     @property
     def config_folder(self):
-        return mkdirs(self.volatile_folder / "config")
+        out = self.volatile_folder / "config"
+        out.mkdir(parents=True, exist_ok=True)
+        return out
 
     @property
     def cache_folder(self):
-        return mkdirs(self.volatile_folder / "cache")
+        out = self.volatile_folder / "cache"
+        out.mkdir(parents=True, exist_ok=True)
+        return out
 
     @property
     def install_folder(self):
-        return mkdirs(self.volatile_folder / "packages")
+        out = self.volatile_folder / "packages"
+        out.mkdir(parents=True, exist_ok=True)
+        return out
 
     @property
     def workspace_folder(self):
-        return mkdirs(self.volatile_folder / "workspace")
+        out = self.volatile_folder / "workspace"
+        out.mkdir(parents=True, exist_ok=True)
+        return out
 
     @property
     def alt_workspace_folder(self):
-        return mkdirs(self.volatile_folder / "alt-workspace")
+        out = self.volatile_folder / "alt-workspace"
+        out.mkdir(parents=True, exist_ok=True)
+        return out
 
     def setUp(self):
         if self.verbosity and LEAF_UT_SKIP.is_set():
@@ -202,7 +215,9 @@ class LeafTestCaseWithRepo(LeafTestCase):
 
     @property
     def repository_folder(self):
-        return mkdirs(self.test_folder / "repository")
+        out = self.test_folder / "repository"
+        out.mkdir(parents=True, exist_ok=True)
+        return out
 
     @property
     def remote_url1(self):
@@ -332,7 +347,7 @@ def env_file_to_map(dump_file):
 
 def generate_repository(source_folder, output_folder):
 
-    mkdirs(output_folder)
+    output_folder.mkdir(parents=True, exist_ok=True)
 
     artifacts_list1 = []
     artifacts_list2 = []
@@ -457,5 +472,5 @@ if __name__ == "__main__":
     output = Path("/tmp/leaf/repository")
     print("Generate repository in {output}".format(output=output))
     rmtree_force(output)
-    mkdirs(output)
+    output.mkdir(parents=True, exist_ok=True)
     generate_repository(TEST_REMOTE_PACKAGE_SOURCE, output)
