@@ -11,12 +11,14 @@ import argparse
 from builtins import ValueError
 from collections import OrderedDict
 from pathlib import Path
+from string import Formatter
 
 from leaf.api import PackageManager
 from leaf.cli.base import LeafCommand
 from leaf.cli.cliutils import get_optional_arg
 from leaf.cli.completion import complete_all_packages, complete_available_packages, complete_installed_packages, complete_installed_packages_tags
 from leaf.core.error import PackageInstallInterruptedException
+from leaf.core.jsonutils import jtostring
 from leaf.core.utils import env_list_to_map
 from leaf.model.dependencies import DependencyUtils
 from leaf.model.environment import Environment
@@ -221,27 +223,57 @@ class PackageInspectCommand(LeafCommand):
     def __init__(self):
         LeafCommand.__init__(self, "inspect", "display information about packages")
 
+    def _get_examples(self):
+        return [
+            ("leaf package inspect package.leaf", "To display all fields of the manifest.json 'info' node "),
+            ("leaf package inspect --format json package.leaf", "To display the 'info' node of the manifest.json"),
+            ("leaf package inspect --format 'my package {name} @ {version} -> {depends}' package.leaf", "To print custom formatted strings"),
+        ]
+
     def _configure_parser(self, parser):
+        parser.add_argument(
+            "-f",
+            "--format",
+            help="output format, can be 'json' to get the raw json content or any string containing fields of the 'info' node, example: 'Name:{name} at version {version} ({description})'",
+        )
         parser.add_argument("files", metavar="LEAF_FILE", type=Path, nargs=argparse.ONE_OR_MORE, help="files to inspect")
 
     def execute(self, args, uargs):
+        def tostring(item):
+            if item is None:
+                return ""
+            if isinstance(item, (list, tuple)):
+                return ", ".join(map(tostring, item))
+            if isinstance(item, dict):
+                return tostring(list(map(lambda kv: "{0}={1}".format(kv[0], kv[1]), item.items())))
+            return str(item)
+
         for index in range(0, len(args.files)):
             if index > 0:
                 print("")
             file = args.files[index]
             try:
                 la = LeafArtifact(file)
-                print(file)
-                kvfmt = "  {k}: {v}"
-                print(kvfmt.format(k="identifier", v=la.identifier))
-                print(kvfmt.format(k="name", v=la.name))
-                print(kvfmt.format(k="version", v=la.version))
-                for k, v in la.info_node.items():
-                    if k not in ("name", "version"):
-                        if isinstance(v, (tuple, list)):
-                            v = ", ".join(v)
-                        elif isinstance(v, dict):
-                            v = ", ".join(["{0}={1}".format(kk, vv) for kk, vv in v.items()])
-                        print(kvfmt.format(k=k, v=v))
+                if args.format is None:
+                    print(file)
+                    kvfmt = "  {k}: {v}"
+                    print(kvfmt.format(k="identifier", v=la.identifier))
+                    print(kvfmt.format(k="name", v=la.name))
+                    print(kvfmt.format(k="version", v=la.version))
+                    for k, v in la.info_node.items():
+                        if k not in ("name", "version"):
+                            print(kvfmt.format(k=k, v=tostring(v)))
+                elif args.format == "json":
+                    print(jtostring(la.info_node, pp=True))
+                else:
+
+                    class MyFormatter(Formatter):
+                        def __init__(self, la, *args, **kwargs):
+                            Formatter.__init__(self, *args, **kwargs)
+
+                        def get_value(self, key, args, kwargs):
+                            return tostring(la.info_node.get(key))
+
+                    print(MyFormatter(la).format(args.format))
             except BaseException as e:
                 print("Invalid leaf file {f}: {e}".format(f=file, e=e))

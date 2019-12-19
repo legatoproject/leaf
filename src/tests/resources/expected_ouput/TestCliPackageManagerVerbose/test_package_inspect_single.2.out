@@ -1,0 +1,8 @@
+{TESTS_FOLDER}/repository/install_1.0.leaf
+  identifier: install_1.0
+  name: install
+  version: 1.0
+  description: this is a description
+  documentation: https://docs.python.org/3/library/
+  date: 2018-09-24 12:05:22
+  extraField: mykey=myvar, myotherkey=anothervar

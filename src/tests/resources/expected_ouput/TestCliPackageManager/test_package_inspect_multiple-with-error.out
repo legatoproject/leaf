@@ -7,7 +7,11 @@
 
 Invalid leaf file {TESTS_FOLDER}/repository/unknown.leaf: [Errno 2] No such file or directory: '{TESTS_FOLDER}/repository/unknown.leaf'
 
-{TESTS_FOLDER}/repository/condition-B_1.0.leaf
-  identifier: condition-B_1.0
-  name: condition-B
+{TESTS_FOLDER}/repository/install_1.0.leaf
+  identifier: install_1.0
+  name: install
   version: 1.0
+  description: this is a description
+  documentation: https://docs.python.org/3/library/
+  date: 2018-09-24 12:05:22
+  extraField: mykey=myvar, myotherkey=anothervar

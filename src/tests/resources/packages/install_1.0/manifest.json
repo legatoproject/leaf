@@ -4,7 +4,11 @@
         "version": "1.0",
         "description": "this is a description",
         "documentation": "https://docs.python.org/3/library/",
-        "date": "2018-09-24 12:05:22"
+        "date": "2018-09-24 12:05:22",
+        "extraField": {
+            "mykey": "myvar",
+            "myotherkey": "anothervar"
+        }
     },
     "install": [
         {

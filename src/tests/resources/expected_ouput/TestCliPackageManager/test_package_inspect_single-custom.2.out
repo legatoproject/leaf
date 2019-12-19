@@ -1,0 +1,5 @@
+install (1.0)
+description: this is a description
+dependencies: 
+extra values: mykey=myvar, myotherkey=anothervar
+

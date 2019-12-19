@@ -1,0 +1,29 @@
+{
+    "name": "condition",
+    "version": "1.0",
+    "master": true,
+    "depends": [
+        "condition-A_1.0(FOO)",
+        "condition-B_1.0(!FOO)",
+        "condition-C_1.0(FOO=BAR)",
+        "condition-D_1.0(FOO!=BAR)",
+        "condition-E_1.0(HELLO~WoRlD)",
+        "condition-F_1.0(HELLO!~WoRlD)",
+        "condition-G_1.0(FOO=BAR)(FOO2=BAR2)(HELLO~WoRlD)",
+        "condition-H_1.0(FOO!=BAR)(FOO2!=BAR2)(HELLO!~WoRlD)"
+    ]
+}
+
+Invalid leaf file {TESTS_FOLDER}/repository/unknown.leaf: [Errno 2] No such file or directory: '{TESTS_FOLDER}/repository/unknown.leaf'
+
+{
+    "name": "install",
+    "version": "1.0",
+    "description": "this is a description",
+    "documentation": "https://docs.python.org/3/library/",
+    "date": "2018-09-24 12:05:22",
+    "extraField": {
+        "mykey": "myvar",
+        "myotherkey": "anothervar"
+    }
+}

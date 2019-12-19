@@ -247,11 +247,32 @@ class TestCliPackageManager(LeafTestCaseWithCli):
 
     def test_package_inspect(self):
         file1 = self.repository_folder / "condition_1.0.leaf"
-        file2 = self.repository_folder / "condition-B_1.0.leaf"
+        file2 = self.repository_folder / "install_1.0.leaf"
         file3 = self.repository_folder / "unknown.leaf"
 
-        with self.assertStdout("single.out"):
+        for fmtid, fmt in {
+            "json": "json",
+            "custom": """{name} ({version})
+description: {description}
+dependencies: {depends}
+extra values: {extraField}
+""",
+        }.items():
+            with self.assertStdout("single-{0}.1.out".format(fmtid)):
+                self.leaf_exec(["package", "inspect"], "--format", fmt, file1)
+            with self.assertStdout("single-{0}.2.out".format(fmtid)):
+                self.leaf_exec(["package", "inspect"], "--format", fmt, file2)
+
+            with self.assertStdout("multiple-{0}.out".format(fmtid)):
+                self.leaf_exec(["package", "inspect"], "-f", fmt, file1, file2)
+
+            with self.assertStdout("multiple-with-error-{0}.out".format(fmtid)):
+                self.leaf_exec(["package", "inspect"], "-f", fmt, file1, file3, file2)
+
+        with self.assertStdout("single.1.out"):
             self.leaf_exec(["package", "inspect"], file1)
+        with self.assertStdout("single.2.out"):
+            self.leaf_exec(["package", "inspect"], file2)
 
         with self.assertStdout("multiple.out"):
             self.leaf_exec(["package", "inspect"], file1, file2)
