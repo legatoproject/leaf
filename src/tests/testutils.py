@@ -283,10 +283,10 @@ class LeafTestCaseWithCli(LeafTestCaseWithRepo):
         super().tearDown()
         LeafSettings.SYSTEM_PKG_FOLDERS.value = None
 
-    def simple_exec(self, *command, bin="leaf", expected_rc=0, silent=True):
+    def simple_exec(self, *command, bin_exec="leaf", expected_rc=0, silent=True):
         cmd = " ".join(map(str, command))
-        if bin is not None:
-            cmd = bin + " " + cmd
+        if bin_exec is not None:
+            cmd = bin_exec + " " + cmd
         # Mask verbosity if set
         oldverbosity = LeafSettings.VERBOSITY.value
         try:

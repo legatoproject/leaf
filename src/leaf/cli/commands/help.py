@@ -69,11 +69,6 @@ class HelpCommand(LeafCommand):
             searching_iplist = DependencyUtils.installed(
                 [args.package], ipmap, env=Environment.build(wm.build_builtin_environment(), wm.build_user_environment())
             )
-        elif wm.is_initialized:
-            # We are in a workspace, use the current profile
-            profile = wm.get_current_profile()
-            wm.is_profile_sync(profile, raise_if_not_sync=True)
-            searching_iplist = wm.get_profile_dependencies(profile)
         else:
             # Use installed packages
             searching_iplist = keep_latest_mf(ipmap.values())
@@ -113,8 +108,6 @@ class HelpCommand(LeafCommand):
             scope = "installed packages"
             if args.package is not None:
                 scope = args.package
-            elif wm.is_initialized:
-                scope = "workspace"
             rend = HelpTopicListRenderer(scope, filter_format=args.format)
             rend.extend(searching_iplist)
             wm.print_renderer(rend)
