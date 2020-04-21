@@ -7,7 +7,7 @@ Leaf Package Manager
 @license:   https://www.mozilla.org/en-US/MPL/2.0/
 """
 import sys
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from argparse import ArgumentParser, RawDescriptionHelpFormatter, SUPPRESS
 
 from leaf import __help_description__, __version__
 from leaf.cli.cliutils import EnvSetterAction
@@ -146,7 +146,14 @@ class LeafRootCommand(LeafMetaCommand):
             const="1",
             help="assume yes if a print_with_confirmation is asked",
         )
-        parser.add_argument("-w", "--workspace", action=EnvSetterAction, dest=LeafSettings.WORKSPACE.key, nargs=1, help="use given workspace")
+        parser.add_argument(
+            "-w",
+            "--workspace",
+            action=EnvSetterAction,
+            dest=LeafSettings.WORKSPACE.key,
+            nargs=1,
+            help=SUPPRESS
+        )
 
 
 class _MyArgumentParser(ArgumentParser):
