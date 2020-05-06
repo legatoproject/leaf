@@ -134,17 +134,17 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
 
             self.assertEqual(
                 [
+                    ("LEAF_ENV_B", "BAR"),
+                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                    ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_ENV_A2", "Hello"),
+                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                     ("LEAF_VERSION", leaf.__version__),
                     ("LEAF_PLATFORM_SYSTEM", platform.system()),
                     ("LEAF_PLATFORM_MACHINE", platform.machine()),
                     ("LEAF_PLATFORM_RELEASE", platform.release()),
                     ("LEAF_WORKSPACE", str(self.workspace_folder)),
                     ("LEAF_PROFILE", "myenv"),
-                    ("LEAF_ENV_B", "BAR"),
-                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
-                    ("LEAF_ENV_A", "FOO"),
-                    ("LEAF_ENV_A2", "Hello"),
-                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                 ],
                 env_tolist(self.wm.build_full_environment(profile)),
             )
@@ -152,6 +152,11 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
             self.wm.update_user_environment(set_map=OrderedDict((("scope", "user"), ("HELLO", "world"))))
             self.assertEqual(
                 [
+                    ("LEAF_ENV_B", "BAR"),
+                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                    ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_ENV_A2", "Hello"),
+                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                     ("LEAF_VERSION", leaf.__version__),
                     ("LEAF_PLATFORM_SYSTEM", platform.system()),
                     ("LEAF_PLATFORM_MACHINE", platform.machine()),
@@ -160,11 +165,6 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                     ("HELLO", "world"),
                     ("LEAF_WORKSPACE", str(self.workspace_folder)),
                     ("LEAF_PROFILE", "myenv"),
-                    ("LEAF_ENV_B", "BAR"),
-                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
-                    ("LEAF_ENV_A", "FOO"),
-                    ("LEAF_ENV_A2", "Hello"),
-                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                 ],
                 env_tolist(self.wm.build_full_environment(profile)),
             )
@@ -172,6 +172,11 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
             self.wm.update_user_environment(unset_list=["HELLO"])
             self.assertEqual(
                 [
+                    ("LEAF_ENV_B", "BAR"),
+                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                    ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_ENV_A2", "Hello"),
+                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                     ("LEAF_VERSION", leaf.__version__),
                     ("LEAF_PLATFORM_SYSTEM", platform.system()),
                     ("LEAF_PLATFORM_MACHINE", platform.machine()),
@@ -179,11 +184,6 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                     ("scope", "user"),
                     ("LEAF_WORKSPACE", str(self.workspace_folder)),
                     ("LEAF_PROFILE", "myenv"),
-                    ("LEAF_ENV_B", "BAR"),
-                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
-                    ("LEAF_ENV_A", "FOO"),
-                    ("LEAF_ENV_A2", "Hello"),
-                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                 ],
                 env_tolist(self.wm.build_full_environment(profile)),
             )
@@ -191,6 +191,11 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
             self.wm.update_ws_environment(set_map=OrderedDict((("scope", "workspace"), ("HELLO", "world"))))
             self.assertEqual(
                 [
+                    ("LEAF_ENV_B", "BAR"),
+                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                    ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_ENV_A2", "Hello"),
+                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                     ("LEAF_VERSION", leaf.__version__),
                     ("LEAF_PLATFORM_SYSTEM", platform.system()),
                     ("LEAF_PLATFORM_MACHINE", platform.machine()),
@@ -200,11 +205,6 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                     ("scope", "workspace"),
                     ("HELLO", "world"),
                     ("LEAF_PROFILE", "myenv"),
-                    ("LEAF_ENV_B", "BAR"),
-                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
-                    ("LEAF_ENV_A", "FOO"),
-                    ("LEAF_ENV_A2", "Hello"),
-                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                 ],
                 env_tolist(self.wm.build_full_environment(profile)),
             )
@@ -212,6 +212,11 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
             self.wm.update_ws_environment(unset_list=["HELLO"])
             self.assertEqual(
                 [
+                    ("LEAF_ENV_B", "BAR"),
+                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                    ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_ENV_A2", "Hello"),
+                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                     ("LEAF_VERSION", leaf.__version__),
                     ("LEAF_PLATFORM_SYSTEM", platform.system()),
                     ("LEAF_PLATFORM_MACHINE", platform.machine()),
@@ -220,11 +225,6 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                     ("LEAF_WORKSPACE", str(self.workspace_folder)),
                     ("scope", "workspace"),
                     ("LEAF_PROFILE", "myenv"),
-                    ("LEAF_ENV_B", "BAR"),
-                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
-                    ("LEAF_ENV_A", "FOO"),
-                    ("LEAF_ENV_A2", "Hello"),
-                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                 ],
                 env_tolist(self.wm.build_full_environment(profile)),
             )
@@ -233,6 +233,11 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
             self.wm.update_profile(profile)
             self.assertEqual(
                 [
+                    ("LEAF_ENV_B", "BAR"),
+                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                    ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_ENV_A2", "Hello"),
+                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                     ("LEAF_VERSION", leaf.__version__),
                     ("LEAF_PLATFORM_SYSTEM", platform.system()),
                     ("LEAF_PLATFORM_MACHINE", platform.machine()),
@@ -243,11 +248,6 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                     ("LEAF_PROFILE", "myenv"),
                     ("scope", "profile"),
                     ("HELLO", "world"),
-                    ("LEAF_ENV_B", "BAR"),
-                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
-                    ("LEAF_ENV_A", "FOO"),
-                    ("LEAF_ENV_A2", "Hello"),
-                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                 ],
                 env_tolist(self.wm.build_full_environment(profile)),
             )
@@ -256,6 +256,11 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
             self.wm.update_profile(profile)
             self.assertEqual(
                 [
+                    ("LEAF_ENV_B", "BAR"),
+                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
+                    ("LEAF_ENV_A", "FOO"),
+                    ("LEAF_ENV_A2", "Hello"),
+                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                     ("LEAF_VERSION", leaf.__version__),
                     ("LEAF_PLATFORM_SYSTEM", platform.system()),
                     ("LEAF_PLATFORM_MACHINE", platform.machine()),
@@ -265,11 +270,6 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
                     ("scope", "workspace"),
                     ("LEAF_PROFILE", "myenv"),
                     ("scope", "profile"),
-                    ("LEAF_ENV_B", "BAR"),
-                    ("LEAF_PATH_B", "$PATH:{folder}/env-B_1.0".format(folder=self.install_folder)),
-                    ("LEAF_ENV_A", "FOO"),
-                    ("LEAF_ENV_A2", "Hello"),
-                    ("LEAF_PATH_A", "$PATH:{folder}/env-A_1.0:{folder}/env-B_1.0".format(folder=self.install_folder)),
                 ],
                 env_tolist(self.wm.build_full_environment(profile)),
             )

@@ -1,4 +1,5 @@
 ------------------------
+export MY_SPECIAL_VAR="{TESTS_FOLDER}/volatile/packages/condition-A_1.0/1.0";
 export LEAF_VERSION="{TESTS_LEAF_VERSION}";
 export LEAF_PLATFORM_SYSTEM="{TESTS_PLATFORM_SYSTEM}";
 export LEAF_PLATFORM_MACHINE="{TESTS_PLATFORM_MACHINE}";
@@ -7,8 +8,8 @@ export LEAF_PROFILE_NORELATIVE="1";
 export LEAF_WORKSPACE="{TESTS_FOLDER}/volatile/workspace";
 export LEAF_PROFILE="foo2";
 export FOO="BAR";
-export MY_SPECIAL_VAR="{TESTS_FOLDER}/volatile/packages/condition-A_1.0/1.0";
 ------------------------
+export MY_SPECIAL_VAR="{TESTS_FOLDER}/volatile/workspace/leaf-data/foo2/condition-A/1.0";
 export LEAF_VERSION="{TESTS_LEAF_VERSION}";
 export LEAF_PLATFORM_SYSTEM="{TESTS_PLATFORM_SYSTEM}";
 export LEAF_PLATFORM_MACHINE="{TESTS_PLATFORM_MACHINE}";
@@ -17,4 +18,3 @@ export LEAF_PROFILE_NORELATIVE="0";
 export LEAF_WORKSPACE="{TESTS_FOLDER}/volatile/workspace";
 export LEAF_PROFILE="foo2";
 export FOO="BAR";
-export MY_SPECIAL_VAR="{TESTS_FOLDER}/volatile/workspace/leaf-data/foo2/condition-A/1.0";
