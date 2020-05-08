@@ -391,7 +391,6 @@ class TestCliWorkspaceManager(LeafTestCaseWithCli):
     def test_settings1(self):
 
         self.leaf_exec(("config", "list"))
-        self.leaf_exec(("config", "list"), "-a")
 
         self.leaf_exec(("config", "get"), "settings.lowercase", expected_rc=2)
         self.leaf_exec(("package", "install"), "settings_1.0")

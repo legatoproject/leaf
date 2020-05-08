@@ -52,17 +52,14 @@ class ConfigListCommand(LeafCommand):
 
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
-        parser.add_argument("-a", "--all", dest="show_all_settings", action="store_true", help="show all settings, even those not set")
         parser.add_argument("keywords", metavar="KEYWORD", nargs=argparse.OPTIONAL).completer = complete_settings
 
     def execute(self, args, uargs):
         wm = self.get_workspacemanager(check_initialized=False)
 
-        show_all_settings = "show_all_settings" in args and args.show_all_settings
         motif = None
         if "keywords" in args and args.keywords is not None:
             motif = args.keywords
-            show_all_settings = True
 
         settings_map = OrderedDict()
         for sid, setting in wm.get_settings().items():  # filter if setting is set
@@ -74,7 +71,7 @@ class ConfigListCommand(LeafCommand):
         values_map = wm.get_settings_value(*settings_map.keys())
 
         # Build renderer
-        renderer = SettingsListRenderer(wm.configuration_folder, values_map, filter_unset=not show_all_settings)
+        renderer = SettingsListRenderer(wm.configuration_folder, values_map, filter_unset=False)
         renderer.extend(settings_map.values())
         wm.print_renderer(renderer)
 
