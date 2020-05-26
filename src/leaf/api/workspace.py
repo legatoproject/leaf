@@ -296,11 +296,11 @@ class WorkspaceManager(PackageManager):
 
     def build_full_environment(self, profile: Profile):
         self.is_profile_sync(profile, raise_if_not_sync=True)
+        out = self.build_pf_environment(profile)
         ipmap = self.list_installed_packages()
         if not LeafSettings.PROFILE_NORELATIVE.as_boolean():
             ipmap.update(self.list_installed_packages(alt_user_root_folder=profile.folder))
-        out = self.build_packages_environment(self.get_profile_dependencies(profile, ipmap=ipmap), ipmap=ipmap)
-        out.append(self.build_pf_environment(profile))
+        out.append(self.build_packages_environment(self.get_profile_dependencies(profile, ipmap=ipmap), ipmap=ipmap))
         return out
 
     def build_pf_environment(self, profile: Profile):
