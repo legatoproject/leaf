@@ -53,11 +53,6 @@ class HelpCommand(LeafCommand):
         # Partial match
         matching_topics = [t for t in topics if t.name == name]
         if len(matching_topics) == 0:
-            # No partial matches found
-            # Add default "leaf-" prefix to search name and try again
-            matching_topics = [t for t in topics if t.name == ("leaf-" + name)]
-            if len(matching_topics) == 1:
-                return matching_topics[0]
             raise LeafException("Cannot find topic: {0}".format(name), hints="Use 'leaf help' to list all available topics")
         if len(matching_topics) > 1:
             raise LeafException("Ambiguous topic name: {0}".format(name), hints=["You can use 'leaf help {t.full_name}'".format(t=t) for t in matching_topics])
