@@ -1,6 +1,4 @@
 ------------------------
-# Exported by package condition-A_1.0
-export MY_SPECIAL_VAR="{TESTS_FOLDER}/volatile/packages/condition-A_1.0/1.0";
 # Leaf built-in variables
 export LEAF_VERSION="{TESTS_LEAF_VERSION}";
 export LEAF_PLATFORM_SYSTEM="{TESTS_PLATFORM_SYSTEM}";
@@ -13,9 +11,9 @@ export LEAF_WORKSPACE="{TESTS_FOLDER}/volatile/workspace";
 # Exported by profile foo2
 export LEAF_PROFILE="foo2";
 export FOO="BAR";
-------------------------
 # Exported by package condition-A_1.0
-export MY_SPECIAL_VAR="{TESTS_FOLDER}/volatile/workspace/leaf-data/foo2/condition-A/1.0";
+export MY_SPECIAL_VAR="{TESTS_FOLDER}/volatile/packages/condition-A_1.0/1.0";
+------------------------
 # Leaf built-in variables
 export LEAF_VERSION="{TESTS_LEAF_VERSION}";
 export LEAF_PLATFORM_SYSTEM="{TESTS_PLATFORM_SYSTEM}";
@@ -28,3 +26,5 @@ export LEAF_WORKSPACE="{TESTS_FOLDER}/volatile/workspace";
 # Exported by profile foo2
 export LEAF_PROFILE="foo2";
 export FOO="BAR";
+# Exported by package condition-A_1.0
+export MY_SPECIAL_VAR="{TESTS_FOLDER}/volatile/workspace/leaf-data/foo2/condition-A/1.0";
