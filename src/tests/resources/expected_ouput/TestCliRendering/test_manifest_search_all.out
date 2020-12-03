@@ -3,8 +3,8 @@
 ├─────────────────┬─────────────┬──────────────────────────┤
 │    Identifier   │ Description │           Tags           │
 ╞═════════════════╪═════════════╪══════════════════════════╡
-│ container-A_1.0 │             │ foo                      │
-│ container-A_1.1 │             │ bar                      │
+│ container-A_1.0 │             │ latest,foo               │
+│ container-A_1.1 │             │ latest,bar               │
 │ container-A_2.0 │             │ foo,bar                  │
 │ container-A_2.1 │             │ latest,installed,foo,bar │
 └─────────────────┴─────────────┴──────────────────────────┘

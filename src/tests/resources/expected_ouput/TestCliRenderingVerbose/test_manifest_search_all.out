@@ -3,12 +3,12 @@
 ├─────────────────┬─────────────────────────────────────────────┤
 │    Identifier   │                  Properties                 │
 ╞═════════════════╪═════════════════════════════════════════════╡
-│ container-A_1.0 │               Tag: foo                      │
+│ container-A_1.0 │              Tags: latest,foo               │
 │                 │            Source: default                  │
 │                 │ Included Packages: container-B_1.0          │
 │                 │                    container-C_1.0          │
 ├─────────────────┼─────────────────────────────────────────────┤
-│ container-A_1.1 │               Tag: bar                      │
+│ container-A_1.1 │              Tags: latest,bar               │
 │                 │            Source: default                  │
 │                 │ Included Packages: container-B_1.0          │
 │                 │                    container-C_1.0          │

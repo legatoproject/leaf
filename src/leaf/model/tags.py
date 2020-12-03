@@ -28,7 +28,21 @@ class TagUtils:
         """
         Add the 'latest' tag to packages with the latest version
         """
-        latest_pilist = keep_latest(map(IDENTIFIER_GETTER, mflist))
+        # Split packages into groups based on tags
+        tag_groups = {}
+        for mf in mflist:
+            tag = tuple(sorted(mf.tags))
+            pi = IDENTIFIER_GETTER(mf)
+            if tag not in tag_groups:
+                tag_groups[tag] = [pi]
+            else:
+                tag_groups[tag].append(pi)
+
+        # Gather latest packages from each group
+        latest_pilist = []
+        for _, packages in tag_groups.items():
+            latest_pilist += keep_latest(packages)
+
         for mf in mflist:
             if mf.identifier in latest_pilist:
                 mf.custom_tags.append(TagUtils.LATEST)
