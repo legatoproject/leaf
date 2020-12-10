@@ -41,7 +41,7 @@ TAR_EXTRA_ARGS = {
     PackageIdentifier.parse("compress-gz_1.0"): ("-J", "."),
 }
 ALT_INDEX_CONTENT = {"multitags_1.0": True, "version_2.0": False, "upgrade_1.2": False, "upgrade_2.0": False}
-TEST_GPG_FINGERPRINT = "E35D6817397359074160F68952ECE808A2BC372C"
+TEST_GPG_FINGERPRINT = "D41C82FCE623F40322D5B03123FC04084DD1BA0B"
 
 
 class StringIOWrapper(StringIO):

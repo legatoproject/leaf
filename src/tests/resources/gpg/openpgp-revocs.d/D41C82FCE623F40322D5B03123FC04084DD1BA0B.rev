@@ -1,9 +1,8 @@
 This is a revocation certificate for the OpenPGP key:
 
-pub   rsa2048/52ECE808A2BC372C 2018-08-09 [SC] [expires: 2020-08-08]
-      E35D6817397359074160F68952ECE808A2BC372C
-      Key fingerprint = E35D 6817 3973 5907 4160  F689 52EC E808 A2BC 372C
-uid                          leaf package manager <leaf@leaf.tld>
+pub   rsa2048 2020-12-10 [S] [expires: 2022-12-10]
+      D41C82FCE623F40322D5B03123FC04084DD1BA0B
+uid          leaf package manager <leaf@leaf.tld>
 
 A revocation certificate is a kind of "kill switch" to publicly
 declare that a key shall not anymore be used.  It is not possible
@@ -22,12 +21,12 @@ before importing and publishing this revocation certificate.
 :-----BEGIN PGP PUBLIC KEY BLOCK-----
 Comment: This is a revocation certificate
 
-iQE2BCABCAAgFiEE411oFzlzWQdBYPaJUuzoCKK8NywFAltsN88CHQAACgkQUuzo
-CKK8Nyz6sgf/X8TUH5eEa8BbsOzoXqTCqOlkLo9MJrzvr3/tR+4ajFoX35zYfffu
-Lii1um/mmZ3qUqM1EcxPwHQ/UJfcrlXYHuk3wNxrX7hRK5PwOuq/P2udnsXF70qa
-L/KjLxHE4sz62xiUQHGZDGTG2P1Qbzcmh4Z3v2TjuyhxTxEvXB43bO0rlNT1Er62
-ysjNMwXAhcMgOKwCyIDm4ROMcIE9EP2Q4vYxAdbj6jxRIDtMxm4knFKxHpMPNjO9
-fhWjGx9Go5+H+TaFX3/KC8xbGdIx1LnnHredGjdg/2Xj/XfVg4ZDGzvPhQkKcC5S
-IjYvc8r6ObcVx2QuHn4p6LOSGLpNAVOhjA==
-=lTFK
+iQE2BCABCgAgFiEE1ByC/OYj9AMi1bAxI/wECE3RugsFAl/RbikCHQAACgkQI/wE
+CE3RugtUqAgAh49WbEdCPDSqy3qeQKteIBh0rYzOqwtfGz3NW/SIGgbBIvjJE/bW
+kO+i/ZoIWcqKytmfmbWMifS9UGv3mMyPhIEJLf3CGgbs5QtjU5UFQcuwSbf9cBDq
+yg9sLZZ9sJTbaaazTg7N2D4wUFXKfnIw5tmdN4aPu3jOalKjq3SrZo+X4+6KipZO
+j4nTF0gJqUy89SbrvWAgKv5nTVN57qgtxhsnKr7p5gQY08VzD1VobwPH7GJU84F+
+6slF5veTlXd7kbcTy3Z4acWL9nn2cWAymysR/i+4vJ8cuzegwzYTl8Nu9TIHNWb/
+iWlnYk1AcQAeiSnY/uM3efD6CY7I5ptJqA==
+=7bO4
 -----END PGP PUBLIC KEY BLOCK-----
