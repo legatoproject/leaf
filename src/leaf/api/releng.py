@@ -75,13 +75,18 @@ class RelengManager(LoggerManager):
         Create a leaf artifact from given folder containing a manifest.json
         """
         mffile = input_folder / LeafFiles.MANIFEST
-        infofile = self.find_external_info_file(output_file)
 
         if not mffile.exists():
             raise LeafException("Cannot find manifest: {file}".format(file=mffile))
 
         manifest = Manifest.parse(mffile)
         manifest.validate_model()
+        if output_file is None:
+            packagename = manifest.name
+            packageversion = manifest.version
+            output_file = Path("{name}_{version}.leaf".format(name=packagename, version=packageversion))
+
+        infofile = self.find_external_info_file(output_file)
 
         if not validate_only:
             if is_latest_package(manifest.identifier):

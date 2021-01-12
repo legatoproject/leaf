@@ -44,7 +44,7 @@ class BuildPackSubCommand(LeafCommand):
 
     def _configure_parser(self, parser):
         super()._configure_parser(parser)
-        parser.add_argument("-o", "--output", metavar="FILE", required=True, type=Path, dest="output_file", help="output file")
+        parser.add_argument("-o", "--output", metavar="FILE", type=Path, dest="output_file", help="output file")
         parser.add_argument("-i", "--input", metavar="FOLDER", type=Path, dest="input_folder", help="package folder")
         parser.add_argument("--no-info", action="store_false", dest="syore_external_info", help="do not store artifact info in a separate file")
         parser.add_argument("--validate-only", action="store_true", dest="validate_only", help="only validate manifest.json model, do not create the package")
