@@ -22,12 +22,15 @@ from leaf.model.migration import update_root_folder, update_packages_map
 class ConfigFileWithLayer(JsonObject):
     def __init__(self, *layers: Path, default_factory=OrderedDict):
         model = None
+        self.exist_layers = []
         for layer in layers:
             if layer is not None and layer.is_file():
                 if model is None:
                     model = jloadfile(layer)
                 else:
                     jlayer_update(model, jloadfile(layer))
+                self.exist_layers.append(str(layer))
+
         if model is None:
             model = default_factory()
         JsonObject.__init__(self, model)
@@ -42,7 +45,11 @@ class ConfigFileWithLayer(JsonObject):
         """
         # Check leaf min version
         if CURRENT_LEAF_VERSION < self.leaf_min_version:
-            raise LeafOutOfDateException("Leaf has to be updated to version {min_ver}".format(min_ver=self.leaf_min_version))
+            config_files = None
+            if self.exist_layers:
+                config_files = " ".join(self.exist_layers)
+            raise LeafOutOfDateException("Leaf has to be updated to version {min_ver} or higher".format(
+                min_ver=self.leaf_min_version), config_files)
 
         # perform upgrade if needed
         if CURRENT_LEAF_VERSION > self.leaf_min_version:

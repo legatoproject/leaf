@@ -160,8 +160,14 @@ class LockException(LeafException):
 
 
 class LeafOutOfDateException(LeafException):
-    def __init__(self, message):
-        LeafException.__init__(self, message, hints="You may want to update leaf with 'sudo apt-get install --only-upgrade leaf'")
+    def __init__(self, message, config_files=None):
+        hints = []
+        hints.append("You may want to update leaf with 'sudo apt-get install --only-upgrade leaf'")
+        if config_files:
+            hints.append("To use an older version of Leaf, please check and remove old configuration files with 'sudo rm {files}'".format(
+                files=config_files))
+        hints.append("Note: It is not recommended to downgrade Leaf for compatibility reasons")
+        LeafException.__init__(self, message, hints=hints)
 
 
 class UnknownArgsException(LeafException):
