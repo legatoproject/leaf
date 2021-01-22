@@ -25,6 +25,7 @@ from leaf.model.environment import Environment
 from leaf.model.filtering import MetaPackageFilter
 from leaf.model.package import IDENTIFIER_GETTER, LeafArtifact, PackageIdentifier
 from leaf.rendering.renderer.manifest import ManifestListRenderer
+from leaf.model.modelutils import group_package_identifiers_by_name
 
 
 class PackageListCommand(LeafCommand):
@@ -193,10 +194,13 @@ class PackageUpgradeCommand(LeafCommand):
 
     def execute(self, args, uargs):
         pm = PackageManager()
+        wm = self.get_workspacemanager()
+        profilename = wm.current_profile_name
+        profile = wm.get_profile(profilename)
 
         env = Environment.build(pm.build_builtin_environment(), pm.build_user_environment())
 
-        install_list, uninstall_list = DependencyUtils.upgrade(
+        install_list, upgraded_list = DependencyUtils.upgrade(
             None if len(args.packages) == 0 else args.packages, pm.list_available_packages(), pm.list_installed_packages(), env=env
         )
 
@@ -205,18 +209,53 @@ class PackageUpgradeCommand(LeafCommand):
         )
         if args.clean:
             pm.logger.print_verbose(
-                "{count} package(s) to be removed: {text}".format(count=len(uninstall_list), text=" ".join([str(ip.identifier) for ip in uninstall_list]))
+                "{count} package(s) to be removed: {text}".format(count=len(upgraded_list), text=" ".join([str(ip.identifier) for ip in upgraded_list]))
             )
 
         if len(install_list) == 0:
             pm.logger.print_default("No package to upgrade")
         else:
             pm.install_packages(map(IDENTIFIER_GETTER, install_list), env=env)
-            if len(uninstall_list) > 0:
+            if len(upgraded_list) > 0:
                 if args.clean:
-                    pm.uninstall_packages(map(IDENTIFIER_GETTER, uninstall_list))
+                    pm.uninstall_packages(map(IDENTIFIER_GETTER, upgraded_list))
                 else:
-                    pm.logger.print_default("These packages can be removed:", " ".join([str(ip.identifier) for ip in uninstall_list]))
+                    pm.logger.print_default("Packages upgraded:", " ".join(
+                        [str(ip.identifier) for ip in upgraded_list]))
+                    pm.logger.print_default(
+                        'Hint: Use "leaf profile config -p {PACKAGENAME}" to add these packages to your workspace profile')
+
+        update_pilist = install_list
+        profile_pkg_map = profile.pkg_map
+
+        installed_packages = group_package_identifiers_by_name(wm.list_installed_packages())
+        pkg_list = args.packages if args.packages else profile_pkg_map.keys()
+
+        for pkg in pkg_list:
+            pi = None
+            if pkg in installed_packages.keys():
+                # Get latest version
+                pi = installed_packages[pkg][-1]
+
+            if pi is not None and pi not in update_pilist:
+                # Get PI in profile
+                previous_pi = PackageIdentifier(pi.name, profile_pkg_map[pi.name]) if pi.name in profile_pkg_map else None
+                if previous_pi is None:
+                    # Package is not in profile yet, add it
+                    update_pilist.append(pi)
+                elif previous_pi != pi:
+                    # Package is already in profile with a different version, update it
+                    update_pilist.append(pi)
+                else:
+                    # Package is already in profile with same version, do nothing
+                    pass
+
+        if len(update_pilist) == 0:
+            pm.logger.print_default("Packages are already in profile with same version")
+        else:
+            pm.logger.print_default("Packages to be updated in profile:", " ".join([str(pi) for pi in update_pilist]))
+            profile.add_packages(update_pilist)
+            wm.update_profile(profile)
 
 
 class PackageInspectCommand(LeafCommand):

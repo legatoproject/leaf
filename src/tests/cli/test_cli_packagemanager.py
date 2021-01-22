@@ -192,9 +192,12 @@ class TestCliPackageManager(LeafTestCaseWithCli):
         self.leaf_exec(["package", "install"], "container-A", expected_rc=2)
 
     def test_upgrade(self):
+        self.leaf_exec("init")
+        self.leaf_exec(("profile", "create"), "foo")
         self.leaf_exec(["remote", "disable"], "other")
 
         self.leaf_exec(["package", "install"], "upgrade_1.0")
+        self.leaf_exec(["profile", "config"], "-p", "upgrade_1")
         self.check_installed_packages(["upgrade_1.0"])
 
         self.leaf_exec(["package", "upgrade"])
