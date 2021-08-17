@@ -2,6 +2,6 @@
   "info": {
     "name": "failure-large-extracted",
     "version": "1.0",
-    "finalSize": 999999999999
+    "finalSize": 9999999999999
   }
 }

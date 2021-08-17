@@ -8,7 +8,8 @@ from collections import OrderedDict
 import leaf
 from leaf.api import WorkspaceManager
 from leaf.core.constants import LeafSettings
-from leaf.core.error import InvalidProfileNameException, LeafException, NoProfileSelected, ProfileNameAlreadyExistException
+from leaf.core.error import (InvalidProfileNameException, LeafException, NoProfileSelected,
+                             ProfileNameAlreadyExistException, WorkspaceNotInitializedException)
 from leaf.model.base import Scope
 from leaf.model.package import IDENTIFIER_GETTER, PackageIdentifier
 from tests.testutils import LeafTestCaseWithRepo, env_tolist
@@ -22,7 +23,7 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
         self.wm.create_remote("other", self.remote_url2, insecure=True)
 
     def test_init(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(WorkspaceNotInitializedException):
             self.wm.create_profile("foo")
         self.wm.init_ws()
         profile = self.wm.create_profile("foo")
@@ -34,19 +35,19 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
         self.wm.create_profile("foo")
         self.assertEqual(1, len(self.wm.list_profiles()))
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(ProfileNameAlreadyExistException):
             self.wm.create_profile("foo")
 
         self.wm.create_profile("bar")
         self.assertEqual(2, len(self.wm.list_profiles()))
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(ProfileNameAlreadyExistException):
             self.wm.create_profile("bar")
 
         self.wm.delete_profile("foo")
         self.assertEqual(1, len(self.wm.list_profiles()))
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(InvalidProfileNameException):
             self.wm.delete_profile("foo")
         self.assertEqual(1, len(self.wm.list_profiles()))
 
@@ -75,7 +76,7 @@ class TestApiWorkspaceManager(LeafTestCaseWithRepo):
         self.wm.update_profile(profile)
         self.assertEqual(PackageIdentifier.parse_list(["env-A_1.0"]), profile.packages)
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(AttributeError):
             profile.name = "fooooooo"
             self.wm.update_profile(profile)
 

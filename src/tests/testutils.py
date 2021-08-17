@@ -400,7 +400,7 @@ def generate_repository(source_folder, output_folder):
     index1json = jloadfile(output_folder / "index.json")
     for pkgjson in index1json[JsonConstants.REMOTE_PACKAGES]:
         if pkgjson["info"]["name"] == "failure-large-ap":
-            pkgjson["size"] = 999999999999
+            pkgjson["size"] = 9999999999999
     jwritefile(output_folder / "index.json", index1json, pp=True)
 
     # Sign with GPG

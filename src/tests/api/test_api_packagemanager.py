@@ -130,7 +130,7 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
             self.pm.install_packages(PackageIdentifier.parse_list(["unknwonPackage_1.0"]))
 
     def test_bad_container(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(InvalidPackageNameException):
             self.pm.install_packages(PackageIdentifier.parse_list(["failure-depends-leaf_1.0"]))
         self.check_content(self.pm.list_installed_packages(), [])
 
@@ -177,7 +177,7 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
         self.assertTrue((self.install_folder / "uninstall.log").is_file())
 
     def test_postinstall_error(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(LeafException):
             self.pm.install_packages(PackageIdentifier.parse_list(["failure-postinstall-exec_1.0"]), keep_folder_on_error=True)
         found = False
         for folder in self.install_folder.iterdir():
@@ -224,10 +224,9 @@ class TestApiPackageManager(LeafTestCaseWithRepo):
         self.assertFileContentEquals(self.install_folder / "env-A_1.0" / "dump.out", "dump.out")
 
     def test_silent_fail(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(LeafException):
             self.pm.install_packages(PackageIdentifier.parse_list(["failure-postinstall-exec_1.0"]))
         self.check_content(self.pm.list_installed_packages(), [])
-
         self.pm.install_packages(PackageIdentifier.parse_list(["failure-postinstall-exec-silent_1.0"]))
         self.check_content(self.pm.list_installed_packages(), ["failure-postinstall-exec-silent_1.0"])
 
